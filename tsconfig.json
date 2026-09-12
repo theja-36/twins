@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/config" },
+    { "path": "apps/api" },
+    { "path": "services/worker" },
+    { "path": "services/scheduler" }
+  ]
+}

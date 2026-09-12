@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+.next/
+coverage/
+*.log
+.DS_Store
+
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+
+# Trading mode safety: never commit live credential dumps or session state
+*.session
+*credentials*.json
+!**/fixtures/**credentials**
+
+.turbo/
+*.tsbuildinfo
