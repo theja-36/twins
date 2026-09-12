@@ -9,7 +9,13 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@twins/config": "*"
+    "@twins/config": "*",
+    "@twins/ingestion": "*",
+    "@twins/adapter-market": "*",
+    "@twins/adapter-news": "*",
+    "@twins/adapter-macro": "*",
+    "@twins/adapter-telegram": "*",
+    "@twins/types": "*"
   },
   "devDependencies": {
     "tsx": "^4.16.0"

@@ -10,11 +10,14 @@ silently deviating.
 
 ## Status
 
-Phase 3 (Provider adapter layer) complete. Repository scaffolding (Phase 1),
-a PostgreSQL/Drizzle domain model (Phase 2), and provider-independent
-contracts + adapter registries for market data, news, macro, Telegram,
-broker, and AI (Phase 3). No concrete vendor adapters, data ingestion, AI
-reasoning, decision/risk engines, execution, or UI yet.
+Phase 4 (Data ingestion) complete. Repository scaffolding (Phase 1), a
+PostgreSQL/Drizzle domain model (Phase 2), provider-independent contracts
+(Phase 3), and a provider-independent ingestion framework - validation,
+deduplication, data-quality tagging, bounded retries, and provider-health
+recording - for market data, news, macro, and Telegram (Phase 4). No
+concrete vendor adapters are wired in (no chosen broker/news/macro/
+Telegram provider or credentials exist yet). No AI reasoning, decision/
+risk engines, execution, backtesting, or UI yet.
 
 ## Structure
 

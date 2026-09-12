@@ -6,6 +6,7 @@
     { "path": "packages/types" },
     { "path": "packages/shared" },
     { "path": "packages/ai" },
+    { "path": "packages/ingestion" },
     { "path": "adapters/market" },
     { "path": "adapters/news" },
     { "path": "adapters/macro" },

@@ -2,8 +2,20 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
   },
-  "references": [{ "path": "../../packages/config" }],
+  "references": [
+    { "path": "../../packages/config" },
+    { "path": "../../packages/database" },
+    { "path": "../../packages/types" },
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/ingestion" },
+    { "path": "../../adapters/market" },
+    { "path": "../../adapters/news" },
+    { "path": "../../adapters/macro" },
+    { "path": "../../adapters/telegram" }
+  ],
   "include": ["src"]
 }
