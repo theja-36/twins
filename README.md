@@ -10,8 +10,10 @@ silently deviating.
 
 ## Status
 
-Phase 1 (Foundation) — repository scaffolding only. No data ingestion, no AI
-integration, no broker connectivity, no trading logic yet.
+Phase 2 (Database + domain model) complete. Repository scaffolding (Phase 1)
+plus a PostgreSQL/Drizzle schema for the core domain model. No provider
+adapters, data ingestion, AI integration, broker connectivity, or trading
+logic yet.
 
 ## Structure
 
@@ -34,4 +36,36 @@ integration, no broker connectivity, no trading logic yet.
 cp .env.example .env.development
 npm install
 npm run typecheck
+```
+
+## Database
+
+PostgreSQL is the source of record (spec section 47); Redis is never used
+for durable authoritative state. Schema lives in `packages/database` as
+Drizzle ORM table definitions, grouped by domain area under
+`packages/database/src/schema/`.
+
+For local development, run a disposable Postgres instance and point
+`DATABASE_URL` at it, e.g.:
+
+```
+docker run -d --name twins-postgres \
+  -e POSTGRES_USER=twins -e POSTGRES_PASSWORD=twins_dev_password \
+  -e POSTGRES_DB=twins_dev -p 15432:5432 postgres:16-alpine
+
+export DATABASE_URL=postgresql://twins:twins_dev_password@localhost:15432/twins_dev
+```
+
+Common commands (run from `packages/database`):
+
+```
+npm run db:generate   # generate a migration from schema changes
+npm run db:migrate    # apply pending migrations
+npm run db:studio     # inspect the database visually
+```
+
+Integration tests exercise the schema against a real database:
+
+```
+npm run test:integration
 ```

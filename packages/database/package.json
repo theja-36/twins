@@ -1,0 +1,25 @@
+{
+  "name": "@twins/database",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/migrate.ts",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@twins/config": "*",
+    "drizzle-orm": "^0.45.2",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.16.0",
+    "@types/pg": "^8.11.6",
+    "dotenv": "^16.4.5"
+  }
+}
