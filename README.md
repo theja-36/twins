@@ -10,10 +10,11 @@ silently deviating.
 
 ## Status
 
-Phase 2 (Database + domain model) complete. Repository scaffolding (Phase 1)
-plus a PostgreSQL/Drizzle schema for the core domain model. No provider
-adapters, data ingestion, AI integration, broker connectivity, or trading
-logic yet.
+Phase 3 (Provider adapter layer) complete. Repository scaffolding (Phase 1),
+a PostgreSQL/Drizzle domain model (Phase 2), and provider-independent
+contracts + adapter registries for market data, news, macro, Telegram,
+broker, and AI (Phase 3). No concrete vendor adapters, data ingestion, AI
+reasoning, decision/risk engines, execution, or UI yet.
 
 ## Structure
 
