@@ -10,14 +10,16 @@ silently deviating.
 
 ## Status
 
-Phase 4 (Data ingestion) complete. Repository scaffolding (Phase 1), a
-PostgreSQL/Drizzle domain model (Phase 2), provider-independent contracts
-(Phase 3), and a provider-independent ingestion framework - validation,
-deduplication, data-quality tagging, bounded retries, and provider-health
-recording - for market data, news, macro, and Telegram (Phase 4). No
-concrete vendor adapters are wired in (no chosen broker/news/macro/
-Telegram provider or credentials exist yet). No AI reasoning, decision/
-risk engines, execution, backtesting, or UI yet.
+Phase 5 (Data Quality & Integrity Engine) complete. Repository scaffolding
+(Phase 1), a PostgreSQL/Drizzle domain model (Phase 2), provider-independent
+contracts (Phase 3), an ingestion framework (Phase 4), and a deterministic,
+explainable data-quality engine (Phase 5) that scores already-ingested
+observations across validity/completeness/freshness/consistency/uniqueness/
+source-reliability/temporal-integrity/cross-source-conflict/anomaly/lineage
+and persists the result to `quality_assessments`. No LLM is used anywhere
+in this engine, and it makes no trading decisions. No concrete vendor
+adapters are wired in. No AI reasoning, decision/risk engines, execution,
+backtesting, or UI yet.
 
 ## Structure
 
