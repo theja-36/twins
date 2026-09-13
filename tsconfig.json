@@ -8,6 +8,7 @@
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },
     { "path": "packages/dataquality" },
+    { "path": "packages/signals" },
     { "path": "adapters/market" },
     { "path": "adapters/news" },
     { "path": "adapters/macro" },
