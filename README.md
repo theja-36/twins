@@ -10,21 +10,23 @@ silently deviating.
 
 ## Status
 
-Phase 8 (Signal Intelligence Engine) complete. Repository scaffolding
+Phase 9 (Decision Intelligence Engine) complete. Repository scaffolding
 (Phase 1), a PostgreSQL/Drizzle domain model (Phase 2), provider-independent
 contracts (Phase 3), an ingestion framework (Phase 4), a deterministic
 data-quality engine (Phase 5), a deterministic signal intelligence engine
-(Phase 6), a deterministic entity/event intelligence layer (Phase 7), and
-now a Phase 8 orchestrator (`assembleSignalIntelligence`) that composes
-Phase 6 + Phase 7 into one structured, evidence-backed report: a context
-window bounding every domain to the signal's own timestamp (no-look-ahead
-enforced for market/macro/news, not just events), uniform evidence
-normalization across market/macro/news/telegram/event evidence, and
-explicit cross-source conflict + staleness surfacing drawn from Phase 5's
-quality assessments. No LLM anywhere in this layer, and it makes no
-trading decisions - it is an evidence object, not a decision. No concrete
-vendor adapters are wired in. No AI reasoning, counter-thesis, decision/
-risk engines, execution, backtesting, or UI yet.
+(Phase 6), a deterministic entity/event intelligence layer (Phase 7), a
+Phase 8 orchestrator composing Phase 6+7 into one evidence-backed report,
+and now `packages/decision-intelligence` (Phase 9): a fully deterministic
+(no AI/LLM) pipeline that validates a signal's own structure, builds an
+independent bull thesis and bear thesis from Phase 8's evidence, derives
+a counter-thesis, and reaches one of three auditable outcomes -
+APPROVE / REJECT / INSUFFICIENT_EVIDENCE - persisted to a new
+`signal_validations` table. Confidence is explicitly documented as
+"confidence the evidence supports this outcome," never a probability of
+profit. Source reliability is always UNKNOWN - no fabricated trust
+scores. This produces a candidate decision only: no position sizing, no
+orders, no trade direction, no execution. No concrete vendor adapters
+are wired in. No Decision/Risk Engine, backtesting, or UI yet.
 
 ## Structure
 

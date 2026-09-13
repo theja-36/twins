@@ -188,3 +188,39 @@ export const newsEventStatusEnum = pgEnum("news_event_status", [
   "confirmed",
   "developing",
 ]);
+
+/**
+ * Phase 9 - Decision Intelligence. Deliberately NOT reusing
+ * `decision_outcome` (BUY/SELL/WAIT/REJECT) - that enum belongs to a
+ * later trade-direction Decision Engine phase. This is an earlier,
+ * distinct gate: whether the available evidence is even sufficient to
+ * let a signal proceed toward that later decision, not what direction
+ * to trade. There is deliberately no "always decide something" pressure -
+ * INSUFFICIENT_EVIDENCE is a first-class, non-failure outcome.
+ */
+export const signalValidationOutcomeEnum = pgEnum("signal_validation_outcome", [
+  "APPROVE",
+  "REJECT",
+  "INSUFFICIENT_EVIDENCE",
+]);
+
+/** Severity of a counter-thesis's strongest invalidating factor - a deterministic classification, never a probability. */
+export const counterThesisSeverityEnum = pgEnum("counter_thesis_severity", [
+  "low",
+  "medium",
+  "high",
+]);
+
+/**
+ * Source reliability must never become a fabricated trust score (spec:
+ * "Do not hardcode arbitrary real-world credibility claims"). Until a
+ * future phase tracks actual historical outcomes, this is always
+ * UNKNOWN - the enum exists now so that future phase has a column to
+ * populate without a schema change, not so Phase 9 can invent a number.
+ */
+export const sourceReliabilityEnum = pgEnum("source_reliability", [
+  "UNKNOWN",
+  "LOW",
+  "MODERATE",
+  "HIGH",
+]);
