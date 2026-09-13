@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, lte } from "drizzle-orm";
 import { schema } from "@twins/database";
 import type { Db } from "./db";
 import { findIssuingCompany } from "./instrumentMapping";
@@ -22,13 +22,25 @@ export async function findEntityForInstrument(db: Db, instrumentId: string): Pro
  * entity yet - an honest "nothing found", identical in shape to what the
  * naive path returned, so callers don't need to change how they handle
  * an empty result.
+ *
+ * `asOf` is optional and defaults to no bound (unchanged behavior for
+ * existing callers). Phase 8 passes the signal's own timestamp here to
+ * enforce no-look-ahead: an article first reported after the signal was
+ * issued could not have informed it.
  */
 export async function findNewsEvidenceMentioningEntity(
   db: Db,
   entityId: string,
-  options: { limit?: number | undefined } = {},
+  options: { limit?: number | undefined; asOf?: Date | undefined } = {},
 ) {
   const limit = options.limit ?? 5;
+  const conditions = [
+    eq(schema.entityRelationships.subjectType, "news_evidence"),
+    eq(schema.entityRelationships.subjectId, schema.newsEvidence.id),
+    eq(schema.entityRelationships.relationshipType, "MENTIONS"),
+    eq(schema.entityRelationships.objectId, entityId),
+  ];
+
   return db
     .select({
       id: schema.newsEvidence.id,
@@ -44,15 +56,8 @@ export async function findNewsEvidenceMentioningEntity(
       createdAt: schema.newsEvidence.createdAt,
     })
     .from(schema.newsEvidence)
-    .innerJoin(
-      schema.entityRelationships,
-      and(
-        eq(schema.entityRelationships.subjectType, "news_evidence"),
-        eq(schema.entityRelationships.subjectId, schema.newsEvidence.id),
-        eq(schema.entityRelationships.relationshipType, "MENTIONS"),
-        eq(schema.entityRelationships.objectId, entityId),
-      ),
-    )
+    .innerJoin(schema.entityRelationships, and(...conditions))
+    .where(options.asOf ? lte(schema.newsEvidence.sourceTimestamp, options.asOf) : undefined)
     .orderBy(desc(schema.newsEvidence.sourceTimestamp))
     .limit(limit);
 }

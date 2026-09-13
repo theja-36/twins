@@ -6,4 +6,7 @@ export * from "./context/market";
 export * from "./context/macro";
 export * from "./context/news";
 export * from "./context/priorSignals";
+export * from "./contextWindow";
+export * from "./evidence";
+export * from "./engine";
 export type { Db } from "./db";

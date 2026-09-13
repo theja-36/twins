@@ -9,8 +9,16 @@ import { gatherPriorSignalStats } from "./context/priorSignals";
 import type { SignalIntelligence } from "./types";
 
 export interface BuildSignalIntelligenceOptions {
-  macro?: MacroContextOptions;
-  newsLimit?: number;
+  macro?: MacroContextOptions | undefined;
+  newsLimit?: number | undefined;
+  /**
+   * When true, bounds market/macro/news retrieval to the signal's own
+   * `signalTimestamp` (no-look-ahead). Defaults to false/omitted, which
+   * preserves this function's original Phase 6 behavior ("latest known"
+   * evidence, unbounded) unchanged for any existing caller. Phase 8's
+   * assembleSignalIntelligence() opts into this explicitly.
+   */
+  enforceNoLookahead?: boolean;
 }
 
 async function linkEvidenceOnce(
@@ -79,17 +87,19 @@ export async function buildSignalIntelligence(
     }
   }
 
-  const marketContext = await gatherMarketContext(db, signal.instrumentId);
+  const asOf = options.enforceNoLookahead ? signal.signalTimestamp : undefined;
+
+  const marketContext = await gatherMarketContext(db, signal.instrumentId, { asOf });
   if (!marketContext) notes.push(`no market_observations found for instrument ${instrument.symbol}`);
   else await linkEvidenceOnce(db, signalId, "market_observation", marketContext.observation.id, "marketObservationId");
 
-  const macroContext = await gatherMacroContext(db, options.macro);
+  const macroContext = await gatherMacroContext(db, { ...options.macro, asOf });
   if (macroContext.length === 0) notes.push("no macro_observations available");
   for (const observation of macroContext) {
     await linkEvidenceOnce(db, signalId, "macro_observation", observation.id, "macroObservationId");
   }
 
-  const newsContext = await gatherNewsContext(db, instrument.id, { limit: options.newsLimit });
+  const newsContext = await gatherNewsContext(db, instrument.id, { limit: options.newsLimit, asOf });
   if (newsContext.length === 0) {
     notes.push(`no news_evidence found mentioning "${instrument.symbol}"`);
   }

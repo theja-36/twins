@@ -10,20 +10,21 @@ silently deviating.
 
 ## Status
 
-Phase 7 (Entity & Event Intelligence) complete. Repository scaffolding
+Phase 8 (Signal Intelligence Engine) complete. Repository scaffolding
 (Phase 1), a PostgreSQL/Drizzle domain model (Phase 2), provider-independent
 contracts (Phase 3), an ingestion framework (Phase 4), a deterministic
 data-quality engine (Phase 5), a deterministic signal intelligence engine
-(Phase 6), and a deterministic entity/event intelligence layer (Phase 7)
-that resolves canonical entities (company/sector/market/country/macro)
-and their aliases, maps instruments to entities, replaces Phase 6's naive
-substring news matching with structured mention resolution, clusters
-distinct articles into typed events with revision history, and supplies
-temporally-safe (no-look-ahead) entity/event context for a future
-Decision Engine. No LLM anywhere in this layer, and it makes no trading
-decisions - it only identifies entities, events, and relationships. No
-concrete vendor adapters are wired in. No AI reasoning, counter-thesis,
-decision/risk engines, execution, backtesting, or UI yet.
+(Phase 6), a deterministic entity/event intelligence layer (Phase 7), and
+now a Phase 8 orchestrator (`assembleSignalIntelligence`) that composes
+Phase 6 + Phase 7 into one structured, evidence-backed report: a context
+window bounding every domain to the signal's own timestamp (no-look-ahead
+enforced for market/macro/news, not just events), uniform evidence
+normalization across market/macro/news/telegram/event evidence, and
+explicit cross-source conflict + staleness surfacing drawn from Phase 5's
+quality assessments. No LLM anywhere in this layer, and it makes no
+trading decisions - it is an evidence object, not a decision. No concrete
+vendor adapters are wired in. No AI reasoning, counter-thesis, decision/
+risk engines, execution, backtesting, or UI yet.
 
 ## Structure
 

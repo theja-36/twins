@@ -1,4 +1,4 @@
-import { desc, inArray } from "drizzle-orm";
+import { and, desc, inArray, lte } from "drizzle-orm";
 import { schema } from "@twins/database";
 import type { Db } from "../db";
 
@@ -6,6 +6,8 @@ export interface MacroContextOptions {
   /** Restrict to specific series (e.g. ["REPO_RATE", "CPI"]); omit for a general snapshot. */
   seriesCodes?: string[];
   limit?: number;
+  /** No-look-ahead bound: only observations at or before this timestamp. Omit for unbounded (Phase 6 default behavior). */
+  asOf?: Date | undefined;
 }
 
 /**
@@ -19,14 +21,14 @@ export async function gatherMacroContext(
   options: MacroContextOptions = {},
 ): Promise<Array<typeof schema.macroObservations.$inferSelect>> {
   const limit = options.limit ?? 10;
-  const query = db.select().from(schema.macroObservations);
+  const conditions = [];
+  if (options.seriesCodes?.length) conditions.push(inArray(schema.macroObservations.seriesCode, options.seriesCodes));
+  if (options.asOf) conditions.push(lte(schema.macroObservations.observedAt, options.asOf));
 
-  const rows = options.seriesCodes?.length
-    ? await query
-        .where(inArray(schema.macroObservations.seriesCode, options.seriesCodes))
-        .orderBy(desc(schema.macroObservations.observedAt))
-        .limit(limit)
-    : await query.orderBy(desc(schema.macroObservations.observedAt)).limit(limit);
-
-  return rows;
+  return db
+    .select()
+    .from(schema.macroObservations)
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(schema.macroObservations.observedAt))
+    .limit(limit);
 }
