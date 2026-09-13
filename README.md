@@ -10,17 +10,20 @@ silently deviating.
 
 ## Status
 
-Phase 6 (Signal Intelligence Engine) complete. Repository scaffolding
+Phase 7 (Entity & Event Intelligence) complete. Repository scaffolding
 (Phase 1), a PostgreSQL/Drizzle domain model (Phase 2), provider-independent
 contracts (Phase 3), an ingestion framework (Phase 4), a deterministic
-data-quality engine (Phase 5), and a deterministic signal intelligence
-engine (Phase 6) that parses Telegram messages into structured `signals`
-rows and assembles evidence-backed context (market/news/macro + quality
-assessments + prior-signal counts) into a `SignalIntelligence` object,
-linking evidence via `signal_evidence`. No LLM is used anywhere in this
-pipeline, and it makes no trading decisions - a signal is an input, never
-a decision. No concrete vendor adapters are wired in. No AI reasoning,
-counter-thesis, decision/risk engines, execution, backtesting, or UI yet.
+data-quality engine (Phase 5), a deterministic signal intelligence engine
+(Phase 6), and a deterministic entity/event intelligence layer (Phase 7)
+that resolves canonical entities (company/sector/market/country/macro)
+and their aliases, maps instruments to entities, replaces Phase 6's naive
+substring news matching with structured mention resolution, clusters
+distinct articles into typed events with revision history, and supplies
+temporally-safe (no-look-ahead) entity/event context for a future
+Decision Engine. No LLM anywhere in this layer, and it makes no trading
+decisions - it only identifies entities, events, and relationships. No
+concrete vendor adapters are wired in. No AI reasoning, counter-thesis,
+decision/risk engines, execution, backtesting, or UI yet.
 
 ## Structure
 

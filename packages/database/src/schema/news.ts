@@ -9,7 +9,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
-import { sourceTierEnum } from "./enums";
+import { newsEventStatusEnum, newsEventTypeEnum, sourceTierEnum } from "./enums";
 import { instruments } from "./instruments";
 
 /** A named news origin, tiered per spec section 11/17. */
@@ -65,13 +65,24 @@ export const newsEvidence = pgTable(
 /**
  * A DERIVED cluster of one or more news_evidence rows describing the same
  * underlying event (spec section 16). Clustering logic itself belongs to
- * Phase 7 (News + event intelligence) - this table only holds the
+ * Phase 7 (Entity & Event Intelligence) - this table only holds the
  * resulting structure.
+ *
+ * `eventType`/`status` were added in Phase 7 (this table existed, unused,
+ * since Phase 2 - no prior phase ever wrote to it, so both columns are
+ * safe to add without a backfill). `eventType` is nullable: an event
+ * whose keyword-based classification doesn't match any known type stays
+ * untyped rather than being forced into the nearest category. Revisions
+ * to title/summary/eventType/status are expected to be logged via
+ * audit_events (entityType='news_events') rather than silently
+ * overwritten, preserving event history (spec: "Event Revision").
  */
 export const newsEvents = pgTable("news_events", {
   id: idColumn(),
   title: text("title").notNull(),
   summary: text("summary"),
+  eventType: newsEventTypeEnum("event_type"),
+  status: newsEventStatusEnum("status").notNull().default("reported"),
   eventTime: timestamp("event_time", { withTimezone: true }),
   firstSeenAt: timestamp("first_seen_at", { withTimezone: true })
     .notNull()

@@ -89,7 +89,7 @@ export async function buildSignalIntelligence(
     await linkEvidenceOnce(db, signalId, "macro_observation", observation.id, "macroObservationId");
   }
 
-  const newsContext = await gatherNewsContext(db, instrument.symbol, { limit: options.newsLimit });
+  const newsContext = await gatherNewsContext(db, instrument.id, { limit: options.newsLimit });
   if (newsContext.length === 0) {
     notes.push(`no news_evidence found mentioning "${instrument.symbol}"`);
   }

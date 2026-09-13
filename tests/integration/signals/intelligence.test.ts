@@ -7,6 +7,12 @@ import { buildSignalIntelligence } from "../../../packages/signals/src/intellige
 import { ingestMarketBars } from "../../../packages/ingestion/src/market";
 import { ingestNewsItems } from "../../../packages/ingestion/src/news";
 import { ingestMacroObservations } from "../../../packages/ingestion/src/macro";
+import {
+  createEntityWithCanonicalAlias,
+  linkInstrumentToCompany,
+  resolveNewsEntityMentions,
+} from "../../../packages/entities/src/index";
+import { findInstrumentByExchangeSymbol } from "../../../packages/entities/src/instrumentMapping";
 import type {
   MacroProvider,
   MarketDataProvider,
@@ -106,6 +112,19 @@ describe("buildSignalIntelligence (integration)", () => {
       { instrumentType: "equity" },
     );
 
+    // Phase 7: news relevance is now entity-based, not naive ILIKE substring
+    // matching - configure the instrument -> company mapping and let the
+    // article's own text resolve against the entity registry, the same way
+    // production ingestion + entity resolution would run as separate steps.
+    const companyName = `Company ${symbol}`;
+    const companyEntityId = await createEntityWithCanonicalAlias(db, {
+      entityType: "company",
+      canonicalName: companyName,
+    });
+    const instrument = await findInstrumentByExchangeSymbol(db, "NSE", symbol);
+    if (!instrument) throw new Error("instrument was not created by createSignalFromTelegramMessage");
+    await linkInstrumentToCompany(db, instrument.id, companyEntityId);
+
     const newsUrl = `https://example.invalid/${randomUUID()}`;
     await ingestNewsItems(
       db,
@@ -114,12 +133,15 @@ describe("buildSignalIntelligence (integration)", () => {
           sourceName: `source-${randomUUID()}`,
           sourceTier: "B",
           sourceUrl: newsUrl,
-          headline: `${symbol} announces strong quarterly results`,
+          headline: `${companyName} announces strong quarterly results`,
           sourceTimestamp: new Date(),
         },
       ]),
       {},
     );
+    const [newsRow] = await db.select().from(schema.newsEvidence).where(eq(schema.newsEvidence.sourceUrl, newsUrl));
+    if (!newsRow) throw new Error("news article was not ingested");
+    await resolveNewsEntityMentions(db, newsRow.id);
 
     await ingestMacroObservations(
       db,

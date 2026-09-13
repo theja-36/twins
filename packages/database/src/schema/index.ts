@@ -15,3 +15,4 @@ export * from "./audit";
 export * from "./operations";
 export * from "./backtests";
 export * from "./qualityAssessments";
+export * from "./entities";

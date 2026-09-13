@@ -1,5 +1,5 @@
-import { desc, ilike } from "drizzle-orm";
 import { schema } from "@twins/database";
+import { findEntityForInstrument, findNewsEvidenceMentioningEntity } from "@twins/entities";
 import type { Db } from "../db";
 
 export interface NewsContextOptions {
@@ -7,22 +7,22 @@ export interface NewsContextOptions {
 }
 
 /**
- * Naive, deterministic instrument-mention matching against news
- * headlines (a plain SQL ILIKE - no NLP, no AI). This is intentionally
- * lightweight: proper entity extraction and event clustering belong to
- * Phase 7 (News + event intelligence), which hasn't run yet. Absence of
- * a match here means "no textual mention found", not "no news exists".
+ * Phase 7 replaced the original naive `ILIKE "%symbol%"` substring match
+ * here with structured entity resolution (@twins/entities) - the same
+ * exported name/shape is kept so packages/signals/src/intelligence.ts
+ * (Phase 6) and its callers needed no changes beyond passing an
+ * instrument id instead of a raw symbol string. There is now exactly one
+ * news-relevance mechanism in the codebase, not two competing ones: if no
+ * ISSUED_BY mapping has been configured for the instrument, this
+ * honestly returns an empty array rather than falling back to substring
+ * matching.
  */
 export async function gatherNewsContext(
   db: Db,
-  instrumentSymbol: string,
+  instrumentId: string,
   options: NewsContextOptions = {},
 ): Promise<Array<typeof schema.newsEvidence.$inferSelect>> {
-  const limit = options.limit ?? 5;
-  return db
-    .select()
-    .from(schema.newsEvidence)
-    .where(ilike(schema.newsEvidence.headline, `%${instrumentSymbol}%`))
-    .orderBy(desc(schema.newsEvidence.sourceTimestamp))
-    .limit(limit);
+  const entityId = await findEntityForInstrument(db, instrumentId);
+  if (!entityId) return [];
+  return findNewsEvidenceMentioningEntity(db, entityId, { limit: options.limit });
 }

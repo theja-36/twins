@@ -9,6 +9,7 @@
   "references": [
     { "path": "../database" },
     { "path": "../dataquality" },
+    { "path": "../entities" },
     { "path": "../ingestion" }
   ],
   "include": ["src"]
