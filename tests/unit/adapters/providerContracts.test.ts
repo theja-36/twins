@@ -21,7 +21,6 @@ import type {
   NewsFetchParams,
   NewsProvider,
   NormalizedAccountSnapshot,
-  NormalizedFillEvent,
   NormalizedMacroObservation,
   NormalizedMarketBar,
   NormalizedNewsItem,

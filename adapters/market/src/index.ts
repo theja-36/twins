@@ -3,15 +3,17 @@ import type { MarketDataProvider } from "@twins/types";
 
 /**
  * Registry of MarketDataProvider adapters, keyed by provider name (e.g.
- * "zerodha", "upstox"). No concrete vendor adapter is implemented here
- * yet - Phase 3 only establishes the contract and wiring point. A real
- * vendor adapter is added in the phase that has an actual provider
- * chosen and credentials configured (spec section 55: never invent
- * provider capabilities).
+ * "yahoo-finance", "zerodha", "upstox"). Core code depends only on this
+ * registry + the MarketDataProvider interface, never on a specific vendor's
+ * client/SDK (spec section 43).
  */
 export const marketDataProviders = createAdapterRegistry<MarketDataProvider>(
   "market data",
 );
+
+// Concrete adapters — imported and exported here so callers can register
+// them by name without importing from the adapter sub-module directly.
+export { YahooFinanceAdapter, YAHOO_PROVIDER_NAME } from "./yahoo.js";
 
 export type {
   InstrumentRef,

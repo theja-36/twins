@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false
+  },
+  "include": [
+    "eslint.config.js",
+    "vitest.config.ts",
+    "vitest.integration.config.ts",
+    "packages/*/src/**/*.ts",
+    "adapters/*/src/**/*.ts",
+    "apps/*/src/**/*.ts",
+    "services/*/src/**/*.ts",
+    "tests/**/*.ts",
+    "packages/database/drizzle.config.ts"
+  ]
+}

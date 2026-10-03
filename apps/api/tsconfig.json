@@ -4,6 +4,14 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "references": [{ "path": "../../packages/config" }],
+  "references": [
+    { "path": "../../packages/config" },
+    { "path": "../../packages/database" },
+    { "path": "../../packages/types" },
+    { "path": "../../packages/shared" },
+    { "path": "../../packages/ingestion" },
+    { "path": "../../packages/decision-intelligence" },
+    { "path": "../../adapters/telegram" }
+  ],
   "include": ["src"]
 }

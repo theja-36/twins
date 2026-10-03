@@ -1,6 +1,7 @@
 {
   "name": "twins",
   "private": true,
+  "type": "module",
   "version": "0.0.1",
   "description": "TWINS - independent AI-assisted signal validation and risk management platform",
   "workspaces": [

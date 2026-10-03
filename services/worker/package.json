@@ -9,13 +9,17 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@twins/config": "*",
-    "@twins/ingestion": "*",
+    "@twins/adapter-macro": "*",
     "@twins/adapter-market": "*",
     "@twins/adapter-news": "*",
-    "@twins/adapter-macro": "*",
     "@twins/adapter-telegram": "*",
-    "@twins/types": "*"
+    "@twins/config": "*",
+    "@twins/database": "*",
+    "@twins/ingestion": "*",
+    "@twins/signals": "*",
+    "@twins/decision-intelligence": "*",
+    "@twins/types": "*",
+    "bullmq": "^6.3.11"
   },
   "devDependencies": {
     "tsx": "^4.16.0"
