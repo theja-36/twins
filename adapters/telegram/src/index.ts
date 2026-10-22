@@ -29,6 +29,20 @@ export {
   chatIdOfQueuedMessage,
 } from "./intakePolicy.js";
 export type { TelegramIntakePolicy } from "./intakePolicy.js";
+export { revisionExternalId, revisionHash12, textSha256Hex } from "./revisionId.js";
+export {
+  USER_CAPTURE_PROVIDER_NAME,
+  USER_CAPTURE_METHODS,
+  channelIdentifierOf,
+  normalizeUserCaptureMessage,
+} from "./userCapture.js";
+export type {
+  UserCaptureChat,
+  UserCaptureEntity,
+  UserCaptureMedia,
+  UserCaptureMessage,
+  UserCaptureMethod,
+} from "./userCapture.js";
 export type {
   TelegramUpdateKind,
   TelegramBotUpdate,

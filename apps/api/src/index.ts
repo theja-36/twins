@@ -39,6 +39,7 @@ import { eq } from "drizzle-orm";
 import { loadConfig } from "@twins/config";
 import { getDb, schema, type Db } from "@twins/database";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
+import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
 import {
   acceptCorrelationId,
@@ -138,6 +139,14 @@ export interface ApiOptions {
    * approved; a malformed value makes buildApp throw, i.e. the API does not start). Tests inject an explicit policy.
    */
   telegramIntakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "approvedChatCount">;
+  /**
+   * Token of the INTERNAL User API capture endpoint (POST /internal/ingest/telegram-user). Default: TWINS_CAPTURE_INGEST_TOKEN.
+   * Unset or empty = the endpoint does not exist. A set token must be 32+ safe characters and differ from the API key and the
+   * webhook secret, otherwise the API refuses to start.
+   */
+  captureIngestToken?: string;
+  /** Volume caps of the internal capture endpoint (defaults 60 requests/min, 600 live messages/hour, 2000 history messages/day). */
+  captureCaps?: Partial<CaptureCaps>;
 }
 
 export interface BuildAppResult {
@@ -167,6 +176,9 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   // Fail-closed intake policy: throws on a malformed allowlist (the API then refuses to start).
   const intakePolicy = options.telegramIntakePolicy ?? loadTelegramIntakePolicy();
   const enqueueTimeoutMs = resolveEnqueueTimeoutMs(options.enqueueTimeoutMs, readEnv("TWINS_ENQUEUE_TIMEOUT_MS"));
+  // Internal capture endpoint configuration: fail closed (throws) when set but unusable; absent when unset.
+  const captureToken = resolveCaptureIngestToken(options.captureIngestToken, readEnv("TWINS_CAPTURE_INGEST_TOKEN"), { apiKey, webhookSecret });
+  const captureCaps = resolveCaptureCaps(options.captureCaps, process.env);
 
   // Resources created here are owned by the app and closed in onClose below.
   // BullMQ's native-ESM path cannot lazily require ioredis from connection
@@ -269,6 +281,44 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
     tradingMode: config.tradingMode,
     liveTradingEnabled: config.liveTradingEnabled,
   }));
+
+  // ── Internal User API capture endpoint (absent unless TWINS_CAPTURE_INGEST_TOKEN is set; never routed publicly) ──
+  if (captureToken !== undefined) {
+    /** Bounded enqueue for capture jobs: same unavailable/timeout semantics as the webhook; a repeated job id is a duplicate. */
+    const addCaptureJob = async (job: AddCaptureJob): Promise<AddCaptureJobResult> => {
+      const remaining = () => Math.max(0, job.deadlineMs - Date.now());
+      if (waitForQueueReady && !(await waitForQueueReady(remaining()))) throw new QueueUnavailableError("not_attempted");
+      if (telegramQueue.getJob) {
+        const lookup = await settleWithin(Promise.resolve(telegramQueue.getJob(job.jobId)), remaining());
+        if (lookup.kind === "timeout") throw new QueueUnavailableError("timed_out_unconfirmed");
+        if (lookup.kind === "error") {
+          if (isDependencyUnavailable(lookup.error)) throw new QueueUnavailableError("failed_unconfirmed");
+          throw lookup.error;
+        }
+        if (lookup.value) return "duplicate";
+      }
+      const outcome = await settleWithin(
+        Promise.resolve().then(() => telegramQueue.add(job.name, job.data, { jobId: job.jobId, attempts: 3, backoff: { type: "exponential", delay: 1000 } })),
+        remaining(),
+      );
+      if (outcome.kind === "timeout") throw new QueueUnavailableError("timed_out_unconfirmed");
+      if (outcome.kind === "error") {
+        if (isDependencyUnavailable(outcome.error)) throw new QueueUnavailableError("failed_unconfirmed");
+        throw outcome.error;
+      }
+      return "added";
+    };
+    registerInternalIngest(app, {
+      token: captureToken,
+      policy: intakePolicy,
+      log: structuredLog,
+      addJob: addCaptureJob,
+      exchange: readEnv("TELEGRAM_SIGNAL_EXCHANGE") ?? "NSE",
+      instrumentType: readEnv("TELEGRAM_SIGNAL_INSTRUMENT_TYPE") ?? "equity",
+      caps: captureCaps,
+      requestBudgetMs: Math.min(30_000, enqueueTimeoutMs * 5),
+    });
+  }
 
   // ── Telegram Bot API webhook receiver ──────────────────────────────────────
   const isWebhookAuthorized = (request: FastifyRequest): boolean => {

@@ -50,6 +50,13 @@
       "when": 1792493154072,
       "tag": "0006_options_claims_unverified",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792679391450,
+      "tag": "0007_telegram_user_capture_provenance",
+      "breakpoints": true
     }
   ]
 }

@@ -26,6 +26,7 @@ import { createStructuredLogger, describeErrorSafely, type StructuredLogger } fr
 import { buildJobLogContext } from "./correlationLog.js";
 import { InvalidJobInputError, ReconciliationRequiredError } from "./jobErrors.js";
 import { parseJobTimestamp } from "./jobTimestamp.js";
+import { parseCapture, processTelegramEventsJob, type CapturePayload, type TelegramEventsJobPayload } from "./telegramEvents.js";
 import { randomUUID } from "node:crypto";
 import { loadConfig } from "@twins/config";
 import { createBoundedDb, type Db } from "@twins/database";
@@ -33,6 +34,7 @@ import {
   getRevisionStates,
   ingestMarketBars,
   ingestTelegramMessages,
+  recordCaptureEvent,
   resolveTelegramSource,
   runIngestionJob,
 } from "@twins/ingestion";
@@ -49,6 +51,8 @@ import {
   TelegramBotWebhookAdapter,
   TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
   chatIdOfQueuedMessage,
+  textSha256Hex,
+  USER_CAPTURE_PROVIDER_NAME,
   loadTelegramIntakePolicy,
   type NormalizedTelegramMessage,
   type TelegramIntakePolicy,
@@ -106,6 +110,11 @@ export interface TelegramJobPayload {
     normalizedMessage: NormalizedTelegramMessage;
     exchange: string;
     instrumentType: string;
+    /**
+     * Provenance of a read-only User API capture (live or history). ABSENT on the original Bot API webhook jobs, which
+     * follow their existing path unchanged.
+     */
+    capture?: CapturePayload;
   };
 }
 
@@ -119,7 +128,9 @@ export interface MarketBarsJobPayload {
   };
 }
 
-export type WorkerJobPayload = TelegramJobPayload | MarketBarsJobPayload;
+/** Everything the signal queue can carry: message jobs (Bot API or User API capture) and observed-deletion event jobs. */
+export type SignalQueueJobPayload = TelegramJobPayload | TelegramEventsJobPayload;
+export type WorkerJobPayload = SignalQueueJobPayload | MarketBarsJobPayload;
 
 // ─── Queue boundary ────────────────────────────────────────────────────────
 
@@ -222,6 +233,49 @@ export async function processTelegramQueueJob(
   }
 }
 
+/**
+ * Queue boundary for observed-deletion event jobs (User API capture). Same log context and error mapping as message jobs:
+ * only permanent invalid input becomes an UnrecoverableError; everything else propagates for the normal attempts/backoff.
+ */
+export async function processTelegramEventsQueueJob(
+  job: Job<TelegramEventsJobPayload>,
+  correlationId?: string,
+  db: Db = workerDb.db,
+  options: TelegramJobOptions = {},
+): Promise<void> {
+  const log = (options.logger ?? defaultWorkerLogger).child(buildJobLogContext(job, correlationId));
+  const startedAt = Date.now();
+  log.info("worker.job.started");
+  try {
+    const result = await processTelegramEventsJob(job.data, db, { logger: log, intakePolicy: options.intakePolicy ?? defaultIntakePolicy });
+    log.info("worker.job.completed", { ...result, durationMs: Date.now() - startedAt });
+  } catch (err) {
+    const permanent = err instanceof InvalidJobInputError;
+    log.error("worker.job.failed", { ...describeErrorSafely(err), retryable: !permanent, durationMs: Date.now() - startedAt });
+    if (err instanceof InvalidJobInputError) {
+      throw new UnrecoverableError(`${err.message} (permanent invalid input; jobId=${job.id ?? "unknown"})`);
+    }
+    throw err;
+  }
+}
+
+/**
+ * The signal queue handler: ONLY `jobType: "telegram_events"` goes to the events handler; every other payload (all existing
+ * jobs, including legacy ones) takes the unchanged message path.
+ */
+export async function processSignalQueueJob(
+  job: Job<SignalQueueJobPayload>,
+  correlationId?: string,
+  db: Db = workerDb.db,
+  options: TelegramJobOptions = {},
+): Promise<void> {
+  const data = job.data as { jobType?: unknown } | undefined;
+  if (data?.jobType === "telegram_events") {
+    return processTelegramEventsQueueJob(job as Job<TelegramEventsJobPayload>, correlationId, db, options);
+  }
+  return processTelegramQueueJob(job as Job<TelegramJobPayload>, correlationId, db, options);
+}
+
 // ─── Telegram pipeline ─────────────────────────────────────────────────────
 
 /**
@@ -281,26 +335,30 @@ export async function processTelegramJob(
   };
 
 
+  // User API captures carry their provenance (validated strictly); Bot API webhook jobs have none and stay on the original path.
+  const capture = telegram.capture !== undefined ? parseCapture(telegram.capture) : undefined;
+  const ingestProviderName = capture ? USER_CAPTURE_PROVIDER_NAME : TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME;
+
   // Step 1 — Ingest the telegram message (idempotent).
   // We wrap the single already-normalized message in a synthetic provider so
   // runIngestionJob's bookkeeping still fires (jobs + provider_health rows).
   const summary = await runIngestionJob(db, {
     jobType: "telegram_messages",
     queueName: "signal_queue",
-    providerName: TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+    providerName: ingestProviderName,
     providerType: "telegram",
     payload: job.data,
     execute: async () => {
       return ingestTelegramMessages(
         db,
         {
-          providerName: TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+          providerName: ingestProviderName,
           async fetchMessages() {
             return [normalizedMessage];
           },
           async getHealth() {
             return {
-              providerName: TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+              providerName: ingestProviderName,
               providerType: "telegram",
               status: "healthy",
               checkedAt: new Date(),
@@ -308,6 +366,9 @@ export async function processTelegramJob(
           },
         },
         telegram.params,
+        capture
+          ? { captureMethod: capture.captureMethod, observedAt: capture.observedAt, ...(capture.importedAt ? { importedAt: capture.importedAt } : {}) }
+          : undefined,
       );
     },
   });
@@ -344,7 +405,7 @@ export async function processTelegramJob(
     displayName: normalizedMessage.channelDisplayName,
   });
   const [telegramRow] = await db
-    .select({ id: schema.telegramMessages.id, originMessageId: schema.telegramMessages.originMessageId })
+    .select({ id: schema.telegramMessages.id, originMessageId: schema.telegramMessages.originMessageId, firstSeenEdited: schema.telegramMessages.firstSeenEdited })
     .from(schema.telegramMessages)
     .where(
       and(
@@ -356,6 +417,26 @@ export async function processTelegramJob(
   if (!telegramRow) {
     log.warn("worker.message.row_missing");
     return { outcome: "message_row_missing" };
+  }
+
+  // Observation record for User API captures: ONE append-only event per message ("seen") or per observed edit
+  // ("edited_observed"); the text itself is never copied (SHA-256 only). Idempotent by key, so a redelivery adds nothing.
+  if (capture) {
+    await recordCaptureEvent(db, {
+      telegramSourceId: sourceId,
+      telegramMessageId: telegramRow.id,
+      externalMessageId: normalizedMessage.originMessageId ?? normalizedMessage.externalMessageId,
+      eventType: normalizedMessage.editDate !== undefined ? "edited_observed" : "seen",
+      captureMethod: capture.captureMethod,
+      observedAt: capture.observedAt,
+      sourceEditDate: normalizedMessage.editDate ?? null,
+      contentSha256: textSha256Hex(normalizedMessage.rawText),
+      meta: {
+        ...(capture.importBatchId ? { importBatchId: capture.importBatchId } : {}),
+        ...(capture.clientObservedAt ? { clientObservedAt: capture.clientObservedAt } : {}),
+        firstSeenEdited: telegramRow.firstSeenEdited,
+      },
+    });
   }
 
   // Informational: where this revision stands. Currentness is derived from edit_date,
@@ -574,11 +655,11 @@ const createWorkerRedis = (): Redis => {
 // In test environment, do not start active BullMQ worker event loops unless explicitly triggered
 export const signalWorker =
   process.env["NODE_ENV"] === "test"
-    ? (null as unknown as Worker<TelegramJobPayload>)
-    : new Worker<TelegramJobPayload>(
+    ? (null as unknown as Worker<SignalQueueJobPayload>)
+    : new Worker<SignalQueueJobPayload>(
         "signal_queue",
-        async (job: Job<TelegramJobPayload>) => {
-          await processTelegramQueueJob(job);
+        async (job: Job<SignalQueueJobPayload>) => {
+          await processSignalQueueJob(job);
         },
         {
           connection: createWorkerRedis(),

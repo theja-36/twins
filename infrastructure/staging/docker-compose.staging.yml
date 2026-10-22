@@ -129,6 +129,9 @@ services:
       # staging.env under a SEPARATE approval. Options-only is a literal here, so the env file cannot switch it off.
       TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
       TWINS_TELEGRAM_OPTIONS_ONLY: "true"
+      # Token of the INTERNAL capture endpoint (POST /internal/ingest/telegram-user, never routed publicly). EMPTY = the endpoint
+      # does not exist. API only: the worker, migrate and scheduler never receive it.
+      TWINS_CAPTURE_INGEST_TOKEN: ${TWINS_CAPTURE_INGEST_TOKEN:-}
     ports:
       - "127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000"
     depends_on:

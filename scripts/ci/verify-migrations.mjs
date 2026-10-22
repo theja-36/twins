@@ -23,7 +23,23 @@ try {
     "select column_default from information_schema.columns where table_name='signals' and column_name='parser_version'",
   );
   if (def.rows[0].column_default !== null) throw new Error("signals.parser_version must have no default");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default`);
+  // 0007: capture provenance columns, the append-only events table and its trigger (read-only catalog checks).
+  const capCols = await client.query(
+    `select column_name from information_schema.columns
+     where table_name = 'telegram_messages' and column_name in ('capture_method','observed_at','imported_at','first_seen_edited')`,
+  );
+  if (capCols.rowCount !== 4) throw new Error(`expected 4 capture provenance columns from 0007, found ${capCols.rowCount}`);
+  const events = await client.query("select to_regclass('public.telegram_message_events') is not null as ok");
+  if (!events.rows[0].ok) throw new Error("telegram_message_events (0007) is missing");
+  const triggers = await client.query(
+    `select tgname from pg_trigger
+     where tgrelid = 'public.telegram_message_events'::regclass and not tgisinternal order by tgname`,
+  );
+  const names = triggers.rows.map((r) => r.tgname).join(",");
+  if (names !== "telegram_message_events_no_truncate,telegram_message_events_no_update_delete") {
+    throw new Error(`append-only triggers missing or unexpected on telegram_message_events: [${names}]`);
+  }
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present`);
 } finally {
   await client.end();
 }

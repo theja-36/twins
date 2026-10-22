@@ -39,7 +39,7 @@
  * by whether webhook updates keep arriving.
  */
 
-import { createHash } from "node:crypto";
+import { revisionExternalId } from "./revisionId.js";
 import {
   ProviderDataError,
   type NormalizedTelegramMessage,
@@ -221,12 +221,11 @@ export function normalizeUpdate(
       "Edited message is missing numeric edit_date; cannot derive a revision identity",
     );
   }
-  const textHash = createHash("sha256").update(rawText, "utf8").digest("hex").slice(0, 12);
 
   return {
     ...channel,
     updateId: update.update_id,
-    externalMessageId: `${originMessageId}_edit_${message.edit_date}_${textHash}`,
+    externalMessageId: revisionExternalId(originMessageId, message.edit_date, rawText),
     originMessageId,
     editDate: new Date(message.edit_date * 1000),
     messageTimestamp: new Date(message.date * 1000),

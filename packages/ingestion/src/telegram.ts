@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { schema } from "@twins/database";
 import type { TelegramFetchParams, TelegramProvider } from "@twins/types";
 import type { Db } from "./db";
@@ -97,11 +97,33 @@ export async function resolveTelegramSource(db: Db, ref: TelegramSourceRef): Pro
  * and are never modified once written (there is no update path here or
  * anywhere else in this package for `telegram_messages`).
  */
+export type CaptureMethodName = "bot_webhook" | "api_live" | "api_history";
+
+/**
+ * How the messages of one ingestion call were obtained. Omitted (or `bot_webhook`) = the original Bot API path, which
+ * stays exactly as it was: the row gets the column defaults (`capture_method='bot_webhook'`, no `observed_at`).
+ * For `api_live` / `api_history` the migration-0007 constraints apply: `observedAt` is required, and `importedAt` is
+ * required if and only if the method is `api_history`.
+ */
+export interface IngestProvenance {
+  captureMethod: CaptureMethodName;
+  observedAt?: Date;
+  importedAt?: Date;
+}
+
 export async function ingestTelegramMessages(
   db: Db,
   provider: TelegramProvider,
   params: TelegramFetchParams,
+  provenance?: IngestProvenance,
 ): Promise<IngestTelegramSummary> {
+  const capture = provenance && provenance.captureMethod !== "bot_webhook" ? provenance : undefined;
+  if (capture) {
+    if (!capture.observedAt) throw new Error("observedAt is required for api_live and api_history captures");
+    if ((capture.captureMethod === "api_history") !== (capture.importedAt !== undefined)) {
+      throw new Error("importedAt is required for api_history and forbidden for api_live");
+    }
+  }
   const messages = await provider.fetchMessages(params);
   const sourceCache = new Map<string, string>();
 
@@ -134,6 +156,26 @@ export async function ingestTelegramMessages(
       sourceCache.set(sourceKey, telegramSourceId);
     }
 
+    // First observation already edited (typical for history import): no earlier row of this message exists, so the stored
+    // text is a LATER revision. It is stored under the revision identity (never as the plain id), flagged here once, at INSERT.
+    let firstSeenEdited = false;
+    if (capture && message.editDate !== undefined && message.originMessageId !== undefined) {
+      const [earlier] = await db
+        .select({ id: schema.telegramMessages.id })
+        .from(schema.telegramMessages)
+        .where(
+          and(
+            eq(schema.telegramMessages.telegramSourceId, telegramSourceId),
+            or(
+              eq(schema.telegramMessages.originMessageId, message.originMessageId),
+              eq(schema.telegramMessages.externalMessageId, message.originMessageId),
+            ),
+          ),
+        )
+        .limit(1);
+      firstSeenEdited = earlier === undefined;
+    }
+
     const [inserted] = await db
       .insert(schema.telegramMessages)
       .values({
@@ -145,6 +187,14 @@ export async function ingestTelegramMessages(
         receivedAt: new Date(),
         rawText: message.rawText,
         rawPayload: message.rawPayload,
+        ...(capture
+          ? {
+              captureMethod: capture.captureMethod,
+              observedAt: capture.observedAt ?? null,
+              importedAt: capture.importedAt ?? null,
+              firstSeenEdited,
+            }
+          : {}),
       })
       .onConflictDoNothing({
         target: [

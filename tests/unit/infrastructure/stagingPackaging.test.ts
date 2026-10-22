@@ -179,6 +179,18 @@ describe("staging packaging (static)", () => {
     expect(api).toMatch(/networks: \[twins_data, twins_edge, coolify\]/);
     for (const name of ["worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/coolify/);
   });
+  it("passes the internal capture token to the API ONLY, empty by default, and never routes /internal on the proxy", () => {
+    expect(service("api")).toMatch(/TWINS_CAPTURE_INGEST_TOKEN: \$\{TWINS_CAPTURE_INGEST_TOKEN:-\}/); // empty = the endpoint does not exist
+    const anchor = /x-app-env: &app-env\n([\s\S]*?)^services:/m.exec(compose)?.[1] ?? "";
+    expect(anchor).not.toMatch(/CAPTURE/);
+    for (const name of ["worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/CAPTURE/);
+    expect(env).toMatch(/^TWINS_CAPTURE_INGEST_TOKEN=$/m);
+    expect(env).not.toMatch(/^TWINS_CAPTURE_INGEST_TOKEN=.+/m);
+    // the proxy exposes only GET /health: no router rule, label or prefix mentions /internal, /webhooks or any other path
+    expect(compose).not.toMatch(/\/internal/);
+    expect([...new Set([...service("api").matchAll(/Path\(`([^`]*)`\)/g)].map((m) => m[1]))]).toEqual(["/health"]);
+    expect(service("api")).not.toMatch(/PathPrefix|PathRegexp/);
+  });
   it("pins PostgreSQL 16 and Redis 7 as the project is tested, and the app image never pulls", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/postgres:16-alpine/);
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);

@@ -9,4 +9,5 @@ export * from "./news";
 export * from "./telegram";
 export type { Db } from "./db";
 export * from "./telegramRevisions";
+export * from "./captureEvents";
 export * from "./history";
