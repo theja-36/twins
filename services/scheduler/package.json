@@ -9,8 +9,10 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@twins/adapter-market": "*",
     "@twins/config": "*",
     "bullmq": "^6.3.11",
+    "ioredis": "^5.11.1",
     "node-cron": "^4.6.0"
   },
   "devDependencies": {

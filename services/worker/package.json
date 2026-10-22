@@ -15,11 +15,13 @@
     "@twins/adapter-telegram": "*",
     "@twins/config": "*",
     "@twins/database": "*",
-    "@twins/ingestion": "*",
-    "@twins/signals": "*",
     "@twins/decision-intelligence": "*",
+    "@twins/ingestion": "*",
+    "@twins/shared": "*",
+    "@twins/signals": "*",
     "@twins/types": "*",
-    "bullmq": "^6.3.11"
+    "bullmq": "^6.3.11",
+    "ioredis": "^5.11.1"
   },
   "devDependencies": {
     "tsx": "^4.16.0"
