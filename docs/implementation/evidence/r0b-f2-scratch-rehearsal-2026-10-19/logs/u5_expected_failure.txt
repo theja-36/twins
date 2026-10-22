@@ -1,0 +1,44 @@
+file://<repo>/node_modules/drizzle-orm/pg-core/session.js:41
+        throw new DrizzleQueryError(queryString, params, e);
+              ^
+
+DrizzleQueryError: Failed query: CREATE UNIQUE INDEX "signal_evidence_signal_market_unique" ON "signal_evidence" USING btree ("signal_id","market_observation_id") WHERE "signal_evidence"."market_observation_id" is not null;
+params: 
+    at NodePgPreparedQuery.queryWithCache (file://<repo>/node_modules/drizzle-orm/pg-core/session.js:41:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async file://<repo>/node_modules/drizzle-orm/pg-core/dialect.js:64:13
+    ... 3 lines matching cause stack trace ...
+    at async file://<repo>/docs/implementation/rehearsal/migrate-folder.mjs:17:3 {
+  query: 'CREATE UNIQUE INDEX "signal_evidence_signal_market_unique" ON "signal_evidence" USING btree ("signal_id","market_observation_id") WHERE "signal_evidence"."market_observation_id" is not null;',
+  params: [],
+  cause: error: could not create unique index "signal_evidence_signal_market_unique"
+      at <repo>/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file://<repo>/node_modules/drizzle-orm/node-postgres/session.js:113:20
+      at async NodePgPreparedQuery.queryWithCache (file://<repo>/node_modules/drizzle-orm/pg-core/session.js:39:16)
+      at async file://<repo>/node_modules/drizzle-orm/pg-core/dialect.js:64:13
+      at async NodePgSession.transaction (file://<repo>/node_modules/drizzle-orm/node-postgres/session.js:186:22)
+      at async PgDialect.migrate (file://<repo>/node_modules/drizzle-orm/pg-core/dialect.js:60:5)
+      at async migrate (file://<repo>/node_modules/drizzle-orm/node-postgres/migrator.js:4:3)
+      at async file://<repo>/docs/implementation/rehearsal/migrate-folder.mjs:17:3 {
+    length: 342,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (signal_id, market_observation_id)=(ffcccf6c-a793-4f04-a96a-a0a67d4bbca2, 3e881898-d90b-4678-b606-16159ed33161) is duplicated.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'signal_evidence',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'signal_evidence_signal_market_unique',
+    file: 'tuplesortvariants.c',
+    line: '1361',
+    routine: 'comparetup_index_btree'
+  }
+}
+
+Node.js v26.5.0

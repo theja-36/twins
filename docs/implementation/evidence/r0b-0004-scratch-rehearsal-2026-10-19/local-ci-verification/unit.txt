@@ -1,0 +1,50 @@
+
+> twins@0.0.1 test
+> vitest run --reporter=default --reporter=junit --outputFile.junit=reports/unit-junit.xml
+
+
+ RUN  v2.1.9 $SCRATCH/clean-check
+
+ ✓ tests/unit/decision-intelligence/structuralValidation.test.ts (8 tests) 6ms
+ ✓ tests/unit/signals/extract.test.ts (19 tests) 6ms
+ ✓ tests/unit/decision-intelligence/thesis.test.ts (12 tests) 5ms
+ ✓ tests/unit/ingestion/dataQuality.test.ts (19 tests) 6ms
+ ✓ tests/unit/decision-intelligence/decide.test.ts (11 tests) 8ms
+ ✓ tests/unit/adapters/telegram/botApi.test.ts (28 tests) 10ms
+ ✓ tests/unit/adapters/providerContracts.test.ts (6 tests) 5ms
+ ✓ tests/unit/decision-intelligence/counterThesis.test.ts (5 tests) 3ms
+ ✓ tests/unit/dataquality/summarizeAssessment.test.ts (7 tests) 6ms
+ ✓ tests/unit/signals/evidence.test.ts (6 tests) 7ms
+ ✓ tests/unit/config.test.ts (7 tests) 4ms
+ ✓ tests/unit/shared/retry.test.ts (4 tests) 4ms
+ ✓ tests/unit/shared/crypto.test.ts (7 tests) 6ms
+ ✓ tests/unit/adapters/adapterRegistry.test.ts (4 tests) 4ms
+ ✓ tests/unit/entities/eventClassification.test.ts (6 tests) 8ms
+ ✓ tests/unit/decision-intelligence/sourceReliability.test.ts (2 tests) 3ms
+ ✓ tests/unit/signals/contextWindow.test.ts (2 tests) 6ms
+ ✓ tests/unit/ingestion/telegramRevisions.test.ts (7 tests) 11ms
+ ✓ tests/unit/entities/extractCandidatePhrases.test.ts (4 tests) 5ms
+ ✓ tests/unit/api/webhookAuth.test.ts (9 tests) 185ms
+stdout | tests/unit/worker/jobTimestamp.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/unit/worker/jobTimestamp.test.ts (14 tests) 7ms
+stdout | tests/unit/worker/jobTimestamp.test.ts > parseJobTimestamp (BullMQ JSON boundary) > queue boundary does NOT mark other errors permanent
+[worker][t] telegram job channel=@x msgId=42
+
+stdout | tests/unit/worker/lifecycle.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/unit/worker/lifecycle.test.ts (4 tests) 6ms
+ ✓ tests/unit/adapters/market/yahoo.test.ts (18 tests) 6028ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderRateLimitError on HTTP 429 1506ms
+   ✓ YahooFinanceAdapter – error handling > includes retryAfterMs from Retry-After header 1504ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderUnavailableError on HTTP 500 1505ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderUnavailableError on network error 1503ms
+
+ Test Files  23 passed (23)
+      Tests  209 passed (209)
+   Start at  18:42:50
+   Duration  6.48s (transform 1.28s, setup 0ms, collect 7.12s, tests 6.34s, environment 4ms, prepare 1.81s)
+
+JUNIT report written to $SCRATCH/clean-check/reports/unit-junit.xml

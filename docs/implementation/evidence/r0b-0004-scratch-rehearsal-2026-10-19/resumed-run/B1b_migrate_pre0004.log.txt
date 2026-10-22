@@ -1,0 +1,1 @@
+[rehearsal] migrations from $R/pre0004/packages/database/drizzle applied to /twins_rehearsal_upgrade

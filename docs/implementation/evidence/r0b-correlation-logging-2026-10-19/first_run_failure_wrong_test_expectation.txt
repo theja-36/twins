@@ -1,0 +1,43 @@
+
+ RUN  v2.1.9 <repo>
+
+stdout | tests/integration/runtime/correlation.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ❯ tests/integration/runtime/correlation.test.ts (5 tests | 1 failed) 2040ms
+   × end-to-end correlation logging (real Redis + PostgreSQL) > a retry keeps the job's correlation id and identifies each attempt; the failed attempt carries a safe code only 1164ms
+     → expected { …(17) } to match object { attempt: 1, retryable: true, …(1) }
+(14 matching properties omitted from actual)
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > concurrent requests never leak correlation context into each other's log lines 333ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/runtime/correlation.test.ts > end-to-end correlation logging (real Redis + PostgreSQL) > a retry keeps the job's correlation id and identifies each attempt; the failed attempt carries a safe code only
+AssertionError: expected { …(17) } to match object { attempt: 1, retryable: true, …(1) }
+(14 matching properties omitted from actual)
+
+- Expected
++ Received
+
+  Object {
+    "attempt": 1,
+-   "errorCode": "UNEXPECTED_ERROR",
++   "errorCode": "INGESTION_FAILED",
+    "retryable": true,
+  }
+
+ ❯ tests/integration/runtime/correlation.test.ts:97:23
+     95|     const failed = byEvent(forJob, "worker.job.failed");
+     96|     expect(failed).toHaveLength(1);
+     97|     expect(failed[0]).toMatchObject({ attempt: 1, retryable: true, err…
+       |                       ^
+     98|     expect(JSON.stringify(failed)).not.toContain("injected transient f…
+     99|     expect(byEvent(forJob, "worker.job.completed")[0]).toMatchObject({…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  19:32:24
+   Duration  3.46s (transform 292ms, setup 0ms, collect 1.17s, tests 2.04s, environment 0ms, prepare 60ms)
+

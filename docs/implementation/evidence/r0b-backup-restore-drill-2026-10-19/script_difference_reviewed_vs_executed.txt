@@ -1,0 +1,18 @@
+Only difference between the reviewed plan script and the executed script: original schema dumps are now kept (*_raw) in addition to normalized copies.
+
+70a71,72
+> # original schema-only dumps are kept untouched (*_raw.sql); only the documented nondeterministic
+> # \restrict/\unrestrict token lines are removed for the comparison copies (*_normalized.sql)
+72c74,76
+<   docker exec twins-postgres-test pg_dump -U twins -d $db -s | grep -v -E '^\\(un)?restrict ' > "$L/schema_$db.sql" || fail "schema dump $db"
+---
+>   docker exec twins-postgres-test pg_dump -U twins -d $db -s > "$L/schema_${db}_raw.sql" 2>"$L/schema_${db}.err" || fail "schema dump $db"
+>   grep -v -E '^\\(un)?restrict ' "$L/schema_${db}_raw.sql" > "$L/schema_${db}_normalized.sql"
+>   echo "$db: raw lines=$(wc -l < "$L/schema_${db}_raw.sql" | tr -d ' ') normalized lines=$(wc -l < "$L/schema_${db}_normalized.sql" | tr -d ' ') removed=$(grep -c -E '^\\(un)?restrict ' "$L/schema_${db}_raw.sql")" | tee -a "$L/schema_normalization.txt"
+74,75c78,80
+< diff "$L/schema_$SRC.sql" "$L/schema_$DST.sql" > "$L/schema_diff.txt" || { head -n 40 "$L/schema_diff.txt"; fail "schema-only dumps differ"; }
+< echo "schema-only dumps IDENTICAL"
+---
+> diff "$L/schema_${SRC}_raw.sql" "$L/schema_${DST}_raw.sql" > "$L/schema_diff_raw.txt"   # informational: expected to differ only in restrict tokens
+> diff "$L/schema_${SRC}_normalized.sql" "$L/schema_${DST}_normalized.sql" > "$L/schema_diff_normalized.txt" || { head -n 40 "$L/schema_diff_normalized.txt"; fail "schema-only dumps differ"; }
+> echo "schema-only dumps IDENTICAL after removing only the restrict-token lines"

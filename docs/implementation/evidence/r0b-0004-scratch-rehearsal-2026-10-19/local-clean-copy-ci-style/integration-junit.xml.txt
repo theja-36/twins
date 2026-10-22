@@ -1,0 +1,705 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<testsuites name="vitest tests" tests="124" failures="0" errors="0" time="7.088">
+    <testsuite name="tests/integration/database.schema.test.ts" timestamp="2026-10-19T17:49:03.872Z" hostname="<redacted>" tests="9" failures="0" errors="0" skipped="0" time="0.235789375">
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; connects and can round-trip a row" time="0.016953041">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; enforces unique (exchange, symbol) on instruments" time="0.008073875">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; enforces telegram_messages idempotency on (source, external_message_id)" time="0.019558083">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; enforces market_observations idempotency on (instrument, source, timeframe, observed_at)" time="0.019171292">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; rejects signal_evidence rows with zero evidence references" time="0.01994125">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; rejects signal_evidence rows with more than one evidence reference" time="0.02371275">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; accepts a valid signal_evidence row and enforces evidenceKind match" time="0.046106209">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; pins accounts to a single trading mode and enforces order idempotency keys" time="0.018287292">
+        </testcase>
+        <testcase classname="tests/integration/database.schema.test.ts" name="database schema (integration) &gt; restricts deleting a user that owns an account (no orphaned trading state)" time="0.03639">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/decision-intelligence/engine.test.ts" timestamp="2026-10-19T17:49:03.874Z" hostname="<redacted>" tests="5" failures="0" errors="0" skipped="0" time="1.376949125">
+        <testcase classname="tests/integration/decision-intelligence/engine.test.ts" name="validateSignal (Phase 9 integration) &gt; persists an auditable signal_validations row and marks the signal decided" time="0.23736275">
+        </testcase>
+        <testcase classname="tests/integration/decision-intelligence/engine.test.ts" name="validateSignal (Phase 9 integration) &gt; REJECTs a signal whose instrument cannot be resolved (defensive - should not occur via normal ingestion, but the engine must handle it)" time="0.232203917">
+        </testcase>
+        <testcase classname="tests/integration/decision-intelligence/engine.test.ts" name="validateSignal (Phase 9 integration) &gt; REJECTs when a negative-convention event affecting the resolved company exists before the signal&apos;s timestamp" time="0.335442583">
+        </testcase>
+        <testcase classname="tests/integration/decision-intelligence/engine.test.ts" name="validateSignal (Phase 9 integration) &gt; is auditable: re-running creates a new, independent validation row rather than overwriting the prior verdict" time="0.40665775">
+        </testcase>
+        <testcase classname="tests/integration/decision-intelligence/engine.test.ts" name="validateSignal (Phase 9 integration) &gt; never writes to decisions/risk_decisions - those remain a later phase&apos;s tables" time="0.134730833">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/dataquality/macro.test.ts" timestamp="2026-10-19T17:49:03.874Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="0.142358083">
+        <testcase classname="tests/integration/dataquality/macro.test.ts" name="assessMacroObservation (integration) &gt; assesses a clean, fresh observation as trusted" time="0.054090667">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/macro.test.ts" name="assessMacroObservation (integration) &gt; flags an anomalous value jump vs the prior release" time="0.024616417">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/macro.test.ts" name="assessMacroObservation (integration) &gt; detects cross-source disagreement for the same region/series/period" time="0.0321415">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/dataquality/market.test.ts" timestamp="2026-10-19T17:49:03.875Z" hostname="<redacted>" tests="6" failures="0" errors="0" skipped="0" time="0.416419125">
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; assesses a clean, complete, fresh bar as trusted with score 1" time="0.075742834">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; flags a stale bar (old observedAt, tight freshness threshold)" time="0.041288167">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; flags an incomplete bar (missing open/high/low)" time="0.051239416">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; detects an anomalous price jump vs the prior bar from the same source" time="0.090721666">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; does not flag anomaly when there is no prior history to compare against" time="0.080658042">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/market.test.ts" name="assessMarketObservation (integration) &gt; detects a cross-source conflict without altering either row" time="0.04046825">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/dataquality/news_telegram.test.ts" timestamp="2026-10-19T17:49:03.875Z" hostname="<redacted>" tests="4" failures="0" errors="0" skipped="0" time="0.229530959">
+        <testcase classname="tests/integration/dataquality/news_telegram.test.ts" name="assessNewsEvidence (integration) &gt; assesses a tier-A article as trusted" time="0.059790958">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/news_telegram.test.ts" name="assessNewsEvidence (integration) &gt; flags a tier-D/E article on source reliability without rejecting it" time="0.076027459">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/news_telegram.test.ts" name="assessTelegramMessage (integration) &gt; never comes out fully trusted - Telegram is Tier E by design" time="0.025987833">
+        </testcase>
+        <testcase classname="tests/integration/dataquality/news_telegram.test.ts" name="assessTelegramMessage (integration) &gt; still rejects a structurally invalid message even before considering source reliability" time="0.034760958">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/ingestion/jobs.test.ts" timestamp="2026-10-19T17:49:03.876Z" hostname="<redacted>" tests="5" failures="0" errors="0" skipped="0" time="0.228929125">
+        <testcase classname="tests/integration/ingestion/jobs.test.ts" name="runIngestionJob (integration) &gt; records a succeeded job and a healthy provider_health row" time="0.034432125">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/jobs.test.ts" name="runIngestionJob (integration) &gt; retries a transient provider-timeout error up to maxAttempts, then fails and records provider_health as down" time="0.014830917">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/jobs.test.ts" name="runIngestionJob (integration) &gt; does not retry a non-transient provider data error (fails after a single attempt)" time="0.025662042">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/jobs.test.ts" name="runIngestionJob (integration) &gt; never turns a failed provider request into an empty successful result" time="0.032119209">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/jobs.test.ts" name="runIngestionJob (integration) &gt; is safe to run the same job twice (each run is independently recorded, no shared mutable state)" time="0.089581208">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/ingestion/macro.test.ts" timestamp="2026-10-19T17:49:03.876Z" hostname="<redacted>" tests="4" failures="0" errors="0" skipped="0" time="0.08499675">
+        <testcase classname="tests/integration/ingestion/macro.test.ts" name="macro data ingestion (integration) &gt; ingests a valid macro observation" time="0.017439083">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/macro.test.ts" name="macro data ingestion (integration) &gt; rejects a non-finite value" time="0.000446417">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/macro.test.ts" name="macro data ingestion (integration) &gt; is idempotent on (source, seriesCode, observedAt)" time="0.00804825">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/macro.test.ts" name="macro data ingestion (integration) &gt; flags conflicting revisions from the same source without overwriting" time="0.019558583">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/ingestion/market.test.ts" timestamp="2026-10-19T17:49:03.877Z" hostname="<redacted>" tests="6" failures="0" errors="0" skipped="0" time="0.198780708">
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; ingests a valid bar and marks it ok" time="0.034901792">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; rejects a bar with missing/invalid observedAt (missing timestamp)" time="0.006945042">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; rejects a malformed bar (negative volume, high &lt; low) without persisting it" time="0.0072555">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; marks a bar stale when observedAt exceeds the freshness threshold" time="0.024266125">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; is idempotent: re-ingesting the same bar produces a duplicate, not a new row" time="0.036199375">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/market.test.ts" name="market data ingestion (integration) &gt; flags a same-key differing-value re-ingestion as a conflict and preserves the original row" time="0.050536625">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/ingestion/news.test.ts" timestamp="2026-10-19T17:49:03.877Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="0.050644583">
+        <testcase classname="tests/integration/ingestion/news.test.ts" name="news ingestion (integration) &gt; ingests a valid article" time="0.017743333">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/news.test.ts" name="news ingestion (integration) &gt; rejects an item with an invalid URL or missing headline" time="0.000500625">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/news.test.ts" name="news ingestion (integration) &gt; is idempotent on (source, dedupe hash of URL)" time="0.011407">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/ingestion/telegram.test.ts" timestamp="2026-10-19T17:49:03.878Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="0.092997875">
+        <testcase classname="tests/integration/ingestion/telegram.test.ts" name="telegram ingestion (integration) &gt; ingests a raw message verbatim" time="0.033656833">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/telegram.test.ts" name="telegram ingestion (integration) &gt; rejects a message with no text or missing external id" time="0.00042875">
+        </testcase>
+        <testcase classname="tests/integration/ingestion/telegram.test.ts" name="telegram ingestion (integration) &gt; is idempotent on (channel, external message id)" time="0.018810125">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/entities/crossMarketAndTemporal.test.ts" timestamp="2026-10-19T17:49:03.878Z" hostname="<redacted>" tests="7" failures="0" errors="0" skipped="0" time="0.442350084">
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="cross-market context (integration) &gt; supports a global (US) event linked to a US company and country" time="0.048656333">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="cross-market context (integration) &gt; links a shared macro entity mentioned by both a global and an India source into one event" time="0.085434792">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="cross-market context (integration) &gt; does not present an unmapped cross-asset link as fact - absence of configuration means no relationship, not a guessed one" time="0.036126792">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="temporal safety / no look-ahead (integration) &gt; excludes an event first reported AFTER the signal&apos;s own timestamp" time="0.083929791">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="temporal safety / no look-ahead (integration) &gt; includes an event known at or before the signal&apos;s timestamp" time="0.089872166">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="Telegram -&gt; canonical instrument integration (integration) &gt; resolves a signal to its canonical instrument, company, sector, and market via configured mappings" time="0.048507459">
+        </testcase>
+        <testcase classname="tests/integration/entities/crossMarketAndTemporal.test.ts" name="Telegram -&gt; canonical instrument integration (integration) &gt; leaves an ambiguous/unmapped instrument&apos;s entity context null rather than guessing" time="0.022730791">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/entities/events.test.ts" timestamp="2026-10-19T17:49:03.879Z" hostname="<redacted>" tests="7" failures="0" errors="0" skipped="0" time="0.477321791">
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; creates a new event for the first article and classifies its type" time="0.054574917">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; clusters a second, independent article about the same entity within the time window into the SAME event" time="0.066130042">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; does NOT cluster two articles about the same entity that fall outside the time window" time="0.106729875">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; distinguishes duplicate articles (deduped at ingestion) from independent same-event evidence" time="0.08557">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; links AFFECTS relationships from the founding article&apos;s resolved entities" time="0.050060458">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; preserves event and article timestamps distinctly (event_time/first_seen_at vs source_timestamp/received_at)" time="0.0360945">
+        </testcase>
+        <testcase classname="tests/integration/entities/events.test.ts" name="event clustering (integration) &gt; preserves earlier evidence and logs revisions via audit_events rather than erasing history" time="0.053198375">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/entities/idempotency.test.ts" timestamp="2026-10-19T17:49:03.879Z" hostname="<redacted>" tests="4" failures="0" errors="0" skipped="0" time="0.079594917">
+        <testcase classname="tests/integration/entities/idempotency.test.ts" name="idempotency (integration) &gt; creating the same canonical entity twice does not duplicate the row" time="0.016324125">
+        </testcase>
+        <testcase classname="tests/integration/entities/idempotency.test.ts" name="idempotency (integration) &gt; linking the same instrument-to-company mapping twice does not duplicate the relationship" time="0.01705225">
+        </testcase>
+        <testcase classname="tests/integration/entities/idempotency.test.ts" name="security / untrusted content (integration) &gt; treats embedded prompt-injection text as inert phrases - never executed, never granted special resolution" time="0.013492083">
+        </testcase>
+        <testcase classname="tests/integration/entities/idempotency.test.ts" name="security / untrusted content (integration) &gt; exposes no order-placement, broker, or execution capability from this package" time="0.011799416">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/entities/newsMentions.test.ts" timestamp="2026-10-19T17:49:03.879Z" hostname="<redacted>" tests="7" failures="0" errors="0" skipped="0" time="0.403776708">
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; matches an article to an entity via its exact canonical name" time="0.048808875">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; matches an article via a registered alias" time="0.041252333">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; does not associate an irrelevant article with any entity" time="0.017291167">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; resolves multiple distinct entities mentioned in one article" time="0.06889775">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; leaves an ambiguous alias unlinked to either candidate entity" time="0.048710417">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; records provenance (matchedText + matchMethod) for every resolved relationship" time="0.047774959">
+        </testcase>
+        <testcase classname="tests/integration/entities/newsMentions.test.ts" name="resolveNewsEntityMentions (integration) &gt; is idempotent: processing the same article twice does not duplicate relationships" time="0.093817">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/entities/resolution.test.ts" timestamp="2026-10-19T17:49:03.880Z" hostname="<redacted>" tests="10" failures="0" errors="0" skipped="0" time="0.417090667">
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; resolves an exact canonical name" time="0.029021042">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; resolves a valid alias to its canonical entity" time="0.03050075">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; normalizes case when matching" time="0.027126334">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; leaves an ambiguous alias UNRESOLVED rather than guessing" time="0.031875">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; returns unresolved for a completely unknown term (false-positive prevention)" time="0.004655875">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="entity resolution (integration) &gt; never conflates two distinct entities that happen to share no configured alias" time="0.017622167">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="instrument -&gt; entity mapping (integration) &gt; maps an NSE instrument to company, sector, market, and country" time="0.156398375">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="instrument -&gt; entity mapping (integration) &gt; does not conflate the same ticker on two different exchanges" time="0.081879083">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="instrument -&gt; entity mapping (integration) &gt; returns null rather than guessing for an instrument with no configured mapping" time="0.006386125">
+        </testcase>
+        <testcase classname="tests/integration/entities/resolution.test.ts" name="instrument -&gt; entity mapping (integration) &gt; looks up an instrument by exchange-qualified symbol without creating one that doesn&apos;t exist" time="0.00191925">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/signals/engine.test.ts" timestamp="2026-10-19T17:49:03.881Z" hostname="<redacted>" tests="6" failures="0" errors="0" skipped="0" time="1.352753041">
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; assembles a full report: core + entity context + normalized evidence across all domains" time="0.247011084">
+        </testcase>
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; enforces no-look-ahead: market/macro/news evidence reported AFTER the signal&apos;s timestamp is excluded" time="0.122991667">
+        </testcase>
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; surfaces a cross-source market conflict explicitly in the conflicts list, without altering the underlying rows" time="0.158328625">
+        </testcase>
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; surfaces stale evidence explicitly when a market bar exceeds the freshness threshold" time="0.181237417">
+        </testcase>
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; is idempotent: re-running does not duplicate signal_evidence rows (reuses Phase 6&apos;s linking)" time="0.510223333">
+        </testcase>
+        <testcase classname="tests/integration/signals/engine.test.ts" name="assembleSignalIntelligence (Phase 8 engine, integration) &gt; never emits a trading decision - the report has no BUY/SELL/approve/reject field" time="0.092095208">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/signals/gatherNewsContext.test.ts" timestamp="2026-10-19T17:49:03.881Z" hostname="<redacted>" tests="6" failures="0" errors="0" skipped="0" time="0.28447275">
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; Article A: a headline containing the canonical company name is returned" time="0.051911875">
+        </testcase>
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; Article B: a headline containing only the raw ticker/symbol, with NO entity relationship configured, is NOT returned" time="0.02837425">
+        </testcase>
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; Article C: a headline containing a registered alias of the canonical entity is returned" time="0.073072708">
+        </testcase>
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; Article D: a headline containing an alias shared by two entities (ambiguous) is NOT treated as a confirmed match for either" time="0.055493917">
+        </testcase>
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; returns an empty array, not an error, when the instrument has no configured entity mapping at all" time="0.00788475">
+        </testcase>
+        <testcase classname="tests/integration/signals/gatherNewsContext.test.ts" name="gatherNewsContext production path (integration) &gt; rejects a raw symbol string where instrument.id is required, proving the parameter is genuinely a uuid FK lookup and not a re-labeled symbol match" time="0.041996416">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/signals/ingestSignal.test.ts" timestamp="2026-10-19T17:49:03.882Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="0.083891375">
+        <testcase classname="tests/integration/signals/ingestSignal.test.ts" name="createSignalFromTelegramMessage (integration) &gt; creates a structured signal from a recognizable BUY message" time="0.032361291">
+        </testcase>
+        <testcase classname="tests/integration/signals/ingestSignal.test.ts" name="createSignalFromTelegramMessage (integration) &gt; does not create a signal for a message with no trading directive" time="0.013235417">
+        </testcase>
+        <testcase classname="tests/integration/signals/ingestSignal.test.ts" name="createSignalFromTelegramMessage (integration) &gt; preserves the original telegram message unmodified" time="0.016289542">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/signals/intelligence.test.ts" timestamp="2026-10-19T17:49:03.882Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="0.500365333">
+        <testcase classname="tests/integration/signals/intelligence.test.ts" name="buildSignalIntelligence (integration) &gt; assembles market, news, and macro context and links evidence" time="0.195077625">
+        </testcase>
+        <testcase classname="tests/integration/signals/intelligence.test.ts" name="buildSignalIntelligence (integration) &gt; records explicit completeness notes when no market/news/macro evidence exists" time="0.079281417">
+        </testcase>
+        <testcase classname="tests/integration/signals/intelligence.test.ts" name="buildSignalIntelligence (integration) &gt; is idempotent: re-running does not create duplicate signal_evidence rows" time="0.194944333">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/ciGuard.test.ts" timestamp="2026-10-19T17:49:03.882Z" hostname="<redacted>" tests="4" failures="0" errors="0" skipped="0" time="0.004533417">
+        <testcase classname="tests/integration/runtime/ciGuard.test.ts" name="CI environment guard &gt; DATABASE_URL targets the loopback twins_ci database as user twins_ci" time="0.001669709">
+        </testcase>
+        <testcase classname="tests/integration/runtime/ciGuard.test.ts" name="CI environment guard &gt; REDIS_URL targets loopback and is set explicitly" time="0.000397375">
+        </testcase>
+        <testcase classname="tests/integration/runtime/ciGuard.test.ts" name="CI environment guard &gt; is not pointed at the dev or rehearsal databases" time="0.000368">
+        </testcase>
+        <testcase classname="tests/integration/runtime/ciGuard.test.ts" name="CI environment guard &gt; LIVE_TRADING is false and no live trading mode is configured" time="0.000907166">
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/concurrency.test.ts" timestamp="2026-10-19T17:49:03.883Z" hostname="<redacted>" tests="5" failures="0" errors="0" skipped="0" time="2.460942958">
+        <testcase classname="tests/integration/runtime/concurrency.test.ts" name="R0B idempotency under real DB concurrency &gt; same logical message processed by N concurrent workers -&gt; one canonical signal and validation" time="0.587496958">
+            <system-out>
+[worker][c] telegram job channel=@r0b_conc_same_798246122 msgId=277874608
+[worker][c] telegram job channel=@r0b_conc_same_798246122 msgId=277874608
+[worker][c] telegram job channel=@r0b_conc_same_798246122 msgId=277874608
+[worker][c] telegram job channel=@r0b_conc_same_798246122 msgId=277874608
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+
+[worker][c] signal reused signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+[worker][c] signal reused signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+[worker][c] signal reused signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=dc4a3026-2d8b-4cec-a856-5093fd134988
+
+[worker][c] validation complete signalId=dc4a3026-2d8b-4cec-a856-5093fd134988 validationId=537cbad7-1f61-4543-ab85-604933449cef reused=false outcome=INSUFFICIENT_EVIDENCE
+
+[worker][c] validation complete signalId=dc4a3026-2d8b-4cec-a856-5093fd134988 validationId=537cbad7-1f61-4543-ab85-604933449cef reused=true outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=dc4a3026-2d8b-4cec-a856-5093fd134988 validationId=537cbad7-1f61-4543-ab85-604933449cef reused=true outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=dc4a3026-2d8b-4cec-a856-5093fd134988 validationId=537cbad7-1f61-4543-ab85-604933449cef reused=true outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/concurrency.test.ts" name="R0B idempotency under real DB concurrency &gt; concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history" time="0.705193917">
+            <system-out>
+[worker][c] telegram job channel=@r0b_conc_val_377676291 msgId=216141895
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=88375665-f3b6-45d7-9a1e-d89e352eaa7e
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=88375665-f3b6-45d7-9a1e-d89e352eaa7e
+
+[worker][c] validation complete signalId=88375665-f3b6-45d7-9a1e-d89e352eaa7e validationId=a0192ad0-940c-4cd6-a35d-4c0647d780b7 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/concurrency.test.ts" name="R0B idempotency under real DB concurrency &gt; same external message id in different channels stays separate (no cross-channel collapse)" time="0.293310458">
+            <system-out>
+[worker][c] telegram job channel=@r0b_conc_a_877998078 msgId=701566288
+[worker][c] telegram job channel=@r0b_conc_b_697555008 msgId=701566288
+
+[worker][c] revision state=current (only the original message is known)
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=b1c772b0-89a9-4311-8698-048e19ebb96e
+
+[worker][c] signal created signalId=85f4642e-1103-4e5e-aa13-b7c000ccc088
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=b1c772b0-89a9-4311-8698-048e19ebb96e
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=85f4642e-1103-4e5e-aa13-b7c000ccc088
+
+[worker][c] validation complete signalId=85f4642e-1103-4e5e-aa13-b7c000ccc088 validationId=8f59ad12-0143-4c85-8aed-90a7aa5ddb42 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+[worker][c] validation complete signalId=b1c772b0-89a9-4311-8698-048e19ebb96e validationId=2326dfc9-1620-4892-8bea-e5e9cd6b8977 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/concurrency.test.ts" name="R0B idempotency under real DB concurrency &gt; partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation" time="0.544851833">
+            <system-out>
+[worker][c] telegram job channel=@r0b_conc_partial_525957889 msgId=950947421
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] telegram job channel=@r0b_conc_partial_525957889 msgId=950947421
+[worker][c] telegram job channel=@r0b_conc_partial_525957889 msgId=950947421
+[worker][c] telegram job channel=@r0b_conc_partial_525957889 msgId=950947421
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] signal reused signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3
+
+[worker][c] validation complete signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3 validationId=d7c06cb4-ae98-40a3-8958-91b6e7dc076d reused=false outcome=INSUFFICIENT_EVIDENCE
+
+[worker][c] validation complete signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3 validationId=d7c06cb4-ae98-40a3-8958-91b6e7dc076d reused=true outcome=INSUFFICIENT_EVIDENCE
+
+[worker][c] validation complete signalId=1aee4f89-4fde-456a-b56d-01f5e5d7dfc3 validationId=d7c06cb4-ae98-40a3-8958-91b6e7dc076d reused=true outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/concurrency.test.ts" name="R0B idempotency under real DB concurrency &gt; explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one" time="0.277763375">
+            <system-out>
+[worker][c] telegram job channel=@r0b_conc_ver_632261634 msgId=34286123
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=eba02859-760c-44ec-9858-80a92a40dbc9
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=eba02859-760c-44ec-9858-80a92a40dbc9
+
+[worker][c] validation complete signalId=eba02859-760c-44ec-9858-80a92a40dbc9 validationId=9a7f89a3-2dcc-45ae-b112-d2cfd1a6e6c3 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/e2ePipeline.test.ts" timestamp="2026-10-19T17:49:03.885Z" hostname="<redacted>" tests="1" failures="0" errors="0" skipped="0" time="0.561253667">
+        <testcase classname="tests/integration/runtime/e2ePipeline.test.ts" name="Runtime Pipeline Integration: API -&gt; Redis -&gt; Worker -&gt; PostgreSQL (R0B) &gt; processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows" time="0.448753584">
+            <system-out>
+[worker][r0b-test] telegram job channel=tg_chat_-1000239769442 msgId=696257363
+
+[worker][r0b-test] revision state=current (only the original message is known)
+
+[worker][r0b-test] signal created signalId=45d242a3-82d9-42ca-84fb-bdba7a85a944
+
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=45d242a3-82d9-42ca-84fb-bdba7a85a944
+
+[worker][r0b-test] validation complete signalId=45d242a3-82d9-42ca-84fb-bdba7a85a944 validationId=2c898b65-2104-4c30-8276-9eee63423fd2 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/envGuard.test.ts" timestamp="2026-10-19T17:49:03.885Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="3" time="0">
+        <testcase classname="tests/integration/runtime/envGuard.test.ts" name="rehearsal environment guard &gt; DATABASE_URL targets only the test Postgres and a *_rehearsal_* database" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="tests/integration/runtime/envGuard.test.ts" name="rehearsal environment guard &gt; REDIS_URL targets only the dedicated test Redis (never a default endpoint)" time="0">
+            <skipped/>
+        </testcase>
+        <testcase classname="tests/integration/runtime/envGuard.test.ts" name="rehearsal environment guard &gt; LIVE_TRADING stays false" time="0">
+            <skipped/>
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/failureHandling.test.ts" timestamp="2026-10-19T17:49:03.885Z" hostname="<redacted>" tests="3" failures="0" errors="0" skipped="0" time="2.531113458">
+        <testcase classname="tests/integration/runtime/failureHandling.test.ts" name="R0B failure handling (real Redis + PostgreSQL) &gt; permanent invalid input (malformed timestamp) fails once without retry or DB writes" time="0.743442625">
+        </testcase>
+        <testcase classname="tests/integration/runtime/failureHandling.test.ts" name="R0B failure handling (real Redis + PostgreSQL) &gt; injected transient failure is retried by BullMQ and the final result is not duplicated" time="1.543404125">
+            <system-out>
+[worker][r0b-test] telegram job channel=tg_chat_-1000774627666 msgId=115445640
+
+[worker][r0b-test] telegram job channel=tg_chat_-1000774627666 msgId=115445640
+
+[worker][r0b-test] revision state=current (only the original message is known)
+
+[worker][r0b-test] signal created signalId=89e35475-40d3-46df-8746-b11f38ec35f6
+
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=89e35475-40d3-46df-8746-b11f38ec35f6
+
+[worker][r0b-test] validation complete signalId=89e35475-40d3-46df-8746-b11f38ec35f6 validationId=cc7d0d50-beb3-41c6-9204-b103e4b7f77e reused=false outcome=INSUFFICIENT_EVIDENCE
+
+            </system-out>
+            <system-err>
+[worker][r0b-test] telegram ingestion failed: injected transient failure (test seam)
+
+            </system-err>
+        </testcase>
+        <testcase classname="tests/integration/runtime/failureHandling.test.ts" name="R0B failure handling (real Redis + PostgreSQL) &gt; duplicate delivery of the same Telegram update yields no duplicate business effect" time="0.22183425">
+            <system-out>
+[worker][r0b-test] telegram job channel=tg_chat_-1000628622531 msgId=408788179
+
+[worker][r0b-test] revision state=current (only the original message is known)
+
+[worker][r0b-test] signal created signalId=1649dcc3-a5a9-4866-944a-ea7df25a376c
+
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=1649dcc3-a5a9-4866-944a-ea7df25a376c
+
+[worker][r0b-test] validation complete signalId=1649dcc3-a5a9-4866-944a-ea7df25a376c validationId=5beb611c-781f-47af-b456-869e5f53f2f4 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+[worker][r0b-redelivery] telegram job channel=tg_chat_-1000628622531 msgId=408788179
+
+[worker][r0b-redelivery] revision state=current (only the original message is known)
+[worker][r0b-redelivery] signal reused signalId=1649dcc3-a5a9-4866-944a-ea7df25a376c
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal 1649dcc3-a5a9-4866-944a-ea7df25a376c, nothing to do
+
+            </system-out>
+        </testcase>
+    </testsuite>
+    <testsuite name="tests/integration/runtime/revisions.test.ts" timestamp="2026-10-19T17:49:03.886Z" hostname="<redacted>" tests="7" failures="0" errors="0" skipped="0" time="3.459825042">
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate" time="0.8460325">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000301904070 msgId=609819383
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=5dd0b087-2dcc-439e-84c1-3dfd22293d4f
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=5dd0b087-2dcc-439e-84c1-3dfd22293d4f
+
+[worker][c] validation complete signalId=5dd0b087-2dcc-439e-84c1-3dfd22293d4f validationId=6d87dda2-5d17-4274-85ca-2ab8421ecdfb reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000301904070 msgId=609819383_edit_1700001000_56eed2ed15b8
+
+[worker][c] revision state=current (latest edit_date)
+
+[worker][c] signal created signalId=0ec8739d-f1fa-4943-b6e3-a5588a53cad6
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=0ec8739d-f1fa-4943-b6e3-a5588a53cad6
+
+[worker][c] validation complete signalId=0ec8739d-f1fa-4943-b6e3-a5588a53cad6 validationId=bcc11274-85b5-46e5-88db-14befbd76c91 reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000301904070 msgId=609819383_edit_1700002000_25b7a7862fc0
+
+[worker][c] revision state=current (latest edit_date)
+
+[worker][c] signal created signalId=d8e963e4-77b9-4f0c-ab00-5b407ed9a780
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=d8e963e4-77b9-4f0c-ab00-5b407ed9a780
+
+[worker][c] validation complete signalId=d8e963e4-77b9-4f0c-ab00-5b407ed9a780 validationId=1e2ebf90-42de-4a08-a437-3cf2a78fe037 reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000301904070 msgId=609819383_edit_1700001000_56eed2ed15b8
+
+[worker][c] revision state=superseded (a revision with a later edit_date exists)
+
+[worker][c] signal reused signalId=0ec8739d-f1fa-4943-b6e3-a5588a53cad6
+
+[worker][c] duplicate delivery: ingestion validation already exists for signal 0ec8739d-f1fa-4943-b6e3-a5588a53cad6, nothing to do
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie" time="0.929966417">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000874203330 msgId=183628268_edit_1700002000_25b7a7862fc0
+
+[worker][c] revision state=current (latest edit_date)
+
+[worker][c] signal created signalId=3990252f-12c4-4cc0-b4fb-fcb83c728ab1
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=3990252f-12c4-4cc0-b4fb-fcb83c728ab1
+
+[worker][c] validation complete signalId=3990252f-12c4-4cc0-b4fb-fcb83c728ab1 validationId=6997688d-abce-409e-a0b3-dbc1b85ca07a reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000874203330 msgId=183628268_edit_1700001000_56eed2ed15b8
+
+[worker][c] revision state=superseded (a revision with a later edit_date exists)
+
+[worker][c] signal created signalId=a0823526-5e72-4cba-b3a4-5d0a39b8f9d5
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=a0823526-5e72-4cba-b3a4-5d0a39b8f9d5
+
+[worker][c] validation complete signalId=a0823526-5e72-4cba-b3a4-5d0a39b8f9d5 validationId=8cea7aa0-bf01-447c-ba96-421b3200c779 reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000874203330 msgId=183628268
+
+[worker][c] revision state=superseded (the message has at least one edit)
+
+[worker][c] signal created signalId=219e69e5-44c8-4d7f-a75d-835975c0599b
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=219e69e5-44c8-4d7f-a75d-835975c0599b
+
+[worker][c] validation complete signalId=219e69e5-44c8-4d7f-a75d-835975c0599b validationId=a4bdc43a-2b9b-4f54-b335-fea95251ee6f reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000874203330 msgId=815927464_edit_1700003000_5c9564784f45
+
+[worker][c] revision state=current (latest edit_date)
+
+[worker][c] signal created signalId=8d738bbc-5252-4622-bcfb-3fd6807b24eb
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=8d738bbc-5252-4622-bcfb-3fd6807b24eb
+
+[worker][c] validation complete signalId=8d738bbc-5252-4622-bcfb-3fd6807b24eb validationId=d215b5bd-8ce6-45e7-a081-559b52dd5967 reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000874203330 msgId=815927464_edit_1700003000_2fdb799b9064
+
+[worker][c] revision state=ambiguous (multiple distinct revisions share the latest edit_date: order cannot be established)
+
+[worker][c] signal created signalId=85be7689-a335-4882-812b-f55a2bcb3dd9
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=85be7689-a335-4882-812b-f55a2bcb3dd9
+
+[worker][c] validation complete signalId=85be7689-a335-4882-812b-f55a2bcb3dd9 validationId=450a7194-18f1-460d-9935-77c60c25bbaf reused=false outcome=REJECT
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)" time="0.07508475">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000049780833 msgId=391727506
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] no signal extracted: ambiguous: 2 distinct BUY/SELL directives; multi-signal messages are unsupported by this parser version
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended" time="0.538293042">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000886940263 msgId=468689990
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4
+
+[worker][c] validation complete signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4 validationId=cfe53b07-3e5a-4e2a-98ed-d073fbcc50b0 reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000886940263 msgId=468689990
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4
+
+[worker][c] validation complete signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4 validationId=a94a6868-b865-4016-aa1d-adfb5047a26c reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000886940263 msgId=468689990
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4
+
+[worker][c] duplicate delivery: ingestion validation already exists for signal afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4, nothing to do
+
+            </system-out>
+            <system-err>
+[worker][c] signal afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4 has keyless validation(s) of unknown provenance; preserving them and appending one recomputed snapshot (telegram-ingest-recompute:afa56c3d-cb6b-4c0c-821c-ca89c6c0b1e4)
+
+            </system-err>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal" time="0.408671042">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000112648359 msgId=891526936
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=564e4dd0-ea5d-44c7-ba96-d9ae3f5328b9
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=564e4dd0-ea5d-44c7-ba96-d9ae3f5328b9
+
+[worker][c] validation complete signalId=564e4dd0-ea5d-44c7-ba96-d9ae3f5328b9 validationId=3da58f9f-1d69-4621-8dd2-2786174869a3 reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000112648359 msgId=891526936
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=564e4dd0-ea5d-44c7-ba96-d9ae3f5328b9
+
+[worker][c] duplicate delivery: ingestion validation already exists for signal 564e4dd0-ea5d-44c7-ba96-d9ae3f5328b9, nothing to do
+
+[worker][c] telegram job channel=tg_chat_-1000112648359 msgId=891526936
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal reused signalId=14a01e92-9436-4ece-bd96-d250c9263a53
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=14a01e92-9436-4ece-bd96-d250c9263a53
+
+[worker][c] validation complete signalId=14a01e92-9436-4ece-bd96-d250c9263a53 validationId=af39724c-5bf5-48dc-a6d4-94a2042a254e reused=false outcome=REJECT
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing" time="0.2288815">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000675701488 msgId=879682396
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=a75b9a1c-b0b6-427e-b1cb-12f80075b54e
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=a75b9a1c-b0b6-427e-b1cb-12f80075b54e
+
+[worker][c] validation complete signalId=a75b9a1c-b0b6-427e-b1cb-12f80075b54e validationId=ada527bb-5705-4f76-ae24-81def2455cad reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000675701488 msgId=879682396
+
+[worker][c] revision state=current (only the original message is known)
+
+            </system-out>
+        </testcase>
+        <testcase classname="tests/integration/runtime/revisions.test.ts" name="R0B edit revisions (real adapter -&gt; worker -&gt; PostgreSQL) &gt; channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess" time="0.380672916">
+            <system-out>
+[worker][c] telegram job channel=tg_chat_-1000147582295 msgId=626266925
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=94164f4b-3205-40b4-9ecf-bfa81928496c
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=94164f4b-3205-40b4-9ecf-bfa81928496c
+
+[worker][c] validation complete signalId=94164f4b-3205-40b4-9ecf-bfa81928496c validationId=a19e186d-2000-4992-97d6-b5ff9c42a81c reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000147582295 msgId=958224299
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=d112abec-be10-4b5f-a60a-e7babdcc8e63
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=d112abec-be10-4b5f-a60a-e7babdcc8e63
+
+[worker][c] validation complete signalId=d112abec-be10-4b5f-a60a-e7babdcc8e63 validationId=9dba44b8-2a68-4f69-ae4d-64ddbc59a8af reused=false outcome=REJECT
+
+[worker][c] telegram job channel=tg_chat_-1000161346129 msgId=45078695
+
+[worker][c] revision state=current (only the original message is known)
+
+[worker][c] signal created signalId=03bcfa2d-a7f0-454b-b644-071b2b3b26c4
+
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=03bcfa2d-a7f0-454b-b644-071b2b3b26c4
+
+[worker][c] validation complete signalId=03bcfa2d-a7f0-454b-b644-071b2b3b26c4 validationId=31e38ec2-6483-4291-a4c9-5e08364203f0 reused=false outcome=REJECT
+
+            </system-out>
+        </testcase>
+    </testsuite>
+</testsuites>

@@ -1,0 +1,7 @@
+create_role exit=0
+create_db exit=0
+ci_guard exit=0
+migrate exit=0
+verify_migr exit=0
+integration exit=0
+redis_scan exit=0

@@ -1,0 +1,3 @@
+CREATE UNIQUE INDEX "signal_evidence_signal_market_unique" ON "signal_evidence" USING btree ("signal_id","market_observation_id") WHERE "signal_evidence"."market_observation_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "signal_evidence_signal_macro_unique" ON "signal_evidence" USING btree ("signal_id","macro_observation_id") WHERE "signal_evidence"."macro_observation_id" is not null;--> statement-breakpoint
+CREATE UNIQUE INDEX "signal_evidence_signal_news_unique" ON "signal_evidence" USING btree ("signal_id","news_evidence_id") WHERE "signal_evidence"."news_evidence_id" is not null;

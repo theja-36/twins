@@ -1,0 +1,116 @@
+diff --git a/packages/decision-intelligence/src/engine.ts b/packages/decision-intelligence/src/engine.ts
+index 612a55d..9b11ae3 100644
+--- a/packages/decision-intelligence/src/engine.ts
++++ b/packages/decision-intelligence/src/engine.ts
+@@ -3,17 +3,29 @@ import { schema } from "@twins/database";
+ import { assembleSignalIntelligence, type AssembleSignalIntelligenceOptions } from "@twins/signals";
+ import type { Db } from "./db";
+ import { decide, type DecideOptions } from "./decide";
+-import { persistDecisionIntelligence } from "./persist";
++import { findValidationByKey, persistDecisionIntelligence } from "./persist";
+ import type { DecisionIntelligenceResult } from "./types";
+ 
+ export interface ValidateSignalOptions {
+   intelligence?: AssembleSignalIntelligenceOptions;
+   decide?: DecideOptions;
++  /**
++   * Makes this validation idempotent for a retried/duplicated trigger: at most one
++   * row exists per key. Omit for ordinary re-validation, which appends history.
++   */
++  idempotencyKey?: string;
+ }
+ 
+ export interface ValidateSignalOutcome {
++  /** Canonical stored validation row. */
+   validationId: string;
+-  result: DecisionIntelligenceResult;
++  /**
++   * This call's computed decision. Absent when an existing keyed row was reused
++   * without recomputation. If another concurrent caller won the key, this is
++   * THIS call's computation, not necessarily what was stored - use validationId.
++   */
++  result?: DecisionIntelligenceResult;
++  reused: boolean;
+ }
+ 
+ /**
+@@ -36,6 +48,11 @@ export async function validateSignal(
+   signalId: string,
+   options: ValidateSignalOptions = {},
+ ): Promise<ValidateSignalOutcome> {
++  if (options.idempotencyKey) {
++    const existingId = await findValidationByKey(db, options.idempotencyKey);
++    if (existingId) return { validationId: existingId, reused: true };
++  }
++
+   const [signal] = await db.select().from(schema.signals).where(eq(schema.signals.id, signalId));
+   if (!signal) throw new Error(`signals row not found: ${signalId}`);
+ 
+@@ -47,12 +64,13 @@ export async function validateSignal(
+   const report = await assembleSignalIntelligence(db, signalId, options.intelligence);
+   const result = decide(signal, instrument ?? null, report, options.decide);
+ 
+-  const validationId = await persistDecisionIntelligence(db, result);
++  const persisted = await persistDecisionIntelligence(db, result, options.idempotencyKey);
++  const validationId = persisted.id;
+ 
+   await db
+     .update(schema.signals)
+     .set({ status: "decided", updatedAt: new Date() })
+     .where(eq(schema.signals.id, signalId));
+ 
+-  return { validationId, result };
++  return { validationId, result, reused: persisted.reused };
+ }
+diff --git a/packages/decision-intelligence/src/persist.ts b/packages/decision-intelligence/src/persist.ts
+index ef9eb37..2521027 100644
+--- a/packages/decision-intelligence/src/persist.ts
++++ b/packages/decision-intelligence/src/persist.ts
+@@ -1,8 +1,28 @@
++import { eq } from "drizzle-orm";
+ import { schema } from "@twins/database";
+ import type { Db } from "./db";
+ import type { DecisionIntelligenceResult } from "./types";
+ 
+-export async function persistDecisionIntelligence(db: Db, result: DecisionIntelligenceResult): Promise<string> {
++export interface PersistOutcome {
++  id: string;
++  /** True when an existing row with the same idempotency key was reused (nothing inserted). */
++  reused: boolean;
++}
++
++/** Returns the validation id already stored for an idempotency key, if any. */
++export async function findValidationByKey(db: Db, key: string): Promise<string | undefined> {
++  const [row] = await db
++    .select({ id: schema.signalValidations.id })
++    .from(schema.signalValidations)
++    .where(eq(schema.signalValidations.idempotencyKey, key));
++  return row?.id;
++}
++
++export async function persistDecisionIntelligence(
++  db: Db,
++  result: DecisionIntelligenceResult,
++  idempotencyKey?: string,
++): Promise<PersistOutcome> {
+   const [row] = await db
+     .insert(schema.signalValidations)
+     .values({
+@@ -17,9 +37,15 @@ export async function persistDecisionIntelligence(db: Db, result: DecisionIntell
+       sourceReliability: result.sourceReliability.level,
+       sourceReliabilityReason: result.sourceReliability.reason,
+       rationale: result.rationale,
++      idempotencyKey: idempotencyKey ?? null,
+       validatedAt: result.validatedAt,
+     })
++    .onConflictDoNothing({ target: schema.signalValidations.idempotencyKey })
+     .returning({ id: schema.signalValidations.id });
+-  if (!row) throw new Error("failed to persist signal_validations row");
+-  return row.id;
++  if (row) return { id: row.id, reused: false };
++  if (!idempotencyKey) throw new Error("failed to persist signal_validations row");
++  // Lost a race on the idempotency key: reuse the canonical row.
++  const existing = await findValidationByKey(db, idempotencyKey);
++  if (!existing) throw new Error("signal_validations conflicted but canonical row not found");
++  return { id: existing, reused: true };
+ }

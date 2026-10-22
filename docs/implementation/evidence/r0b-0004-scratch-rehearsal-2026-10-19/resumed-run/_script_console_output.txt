@@ -1,0 +1,212 @@
+== 0. baseline of twins_dev (read-only SELECTs)
+OK   twins_dev signals/validations/parser_version-columns = 198/82/0
+== 1. resume guards
+OK   resume: fresh applied migrations 0000-0004 = 5
+OK   resume: fresh has 0004 schema = 1
+== A3_runtime_tests_fresh
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] validation complete signalId=eedc40d7-c733-4f27-be54-b8f086744a59 validationId=5219bfcc-9bd8-4c32-ade2-ba500d080c32 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] telegram job channel=tg_chat_-1000758213486 msgId=116565053
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] signal reused signalId=eedc40d7-c733-4f27-be54-b8f086744a59
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal eedc40d7-c733-4f27-be54-b8f086744a59, nothing to do
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 2092ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 605ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 1263ms
+
+ Test Files  5 passed (5)
+      Tests  19 passed (19)
+   Start at  18:34:00
+   Duration  3.66s (transform 505ms, setup 0ms, collect 5.22s, tests 3.52s, environment 1ms, prepare 400ms)
+
+== A4_full_integration_fresh
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] signal reused signalId=cf7e5422-92fb-443d-b956-1dd412da46a6
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal cf7e5422-92fb-443d-b956-1dd412da46a6, nothing to do
+
+ ✓ tests/integration/ingestion/news.test.ts (3 tests) 73ms
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] validation complete signalId=164cd1c0-b03b-4df6-b625-0f32bcee6cc0 validationId=adb65ccc-95a7-49fa-8b92-3505f7e6d388 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 4275ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 851ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 2728ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect 631ms
+ ✓ tests/integration/entities/idempotency.test.ts (4 tests) 115ms
+ ✓ tests/integration/runtime/e2ePipeline.test.ts (1 test) 789ms
+   ✓ Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows 590ms
+ ✓ tests/integration/signals/ingestSignal.test.ts (3 tests) 114ms
+
+ Test Files  24 passed (24)
+      Tests  120 passed (120)
+   Start at  18:34:05
+   Duration  9.64s (transform 2.84s, setup 0ms, collect 44.84s, tests 25.74s, environment 7ms, prepare 2.86s)
+
+== B0_create_upgrade
+== B1a_export_pre0004
+== B1b_migrate_pre0004
+[rehearsal] migrations from $R/pre0004/packages/database/drizzle applied to /twins_rehearsal_upgrade
+OK   upgrade: pre-0004 migrations = 4
+== B2_fixtures
+BEGIN
+INSERT 0 6
+INSERT 0 1
+INSERT 0 10
+INSERT 0 5
+INSERT 0 5
+COMMIT
+OK   fixtures signals/validations/sources = 5/5/6
+== B3_preflight
+         telegram_message_id          | n |                                 signal_ids                                  
+--------------------------------------+---+-----------------------------------------------------------------------------
+ 00000000-0000-4000-8000-0000000000c3 | 2 | {00000000-0000-4000-8000-0000000000d3,00000000-0000-4000-8000-0000000000d4}
+(1 row)
+
+         telegram_message_id          |              signal_id               | validations 
+--------------------------------------+--------------------------------------+-------------
+ 00000000-0000-4000-8000-0000000000c3 | 00000000-0000-4000-8000-0000000000d3 |           1
+ 00000000-0000-4000-8000-0000000000c3 | 00000000-0000-4000-8000-0000000000d4 |           1
+(2 rows)
+
+ telegram_source_id | external_message_id | count 
+--------------------+---------------------+-------
+(0 rows)
+
+ signals | validations 
+---------+-------------
+       5 |           5
+(1 row)
+
+== B4. real migration: EXPECTED TO FAIL (duplicate legacy signals)
+    column: undefined,
+    dataType: undefined,
+    constraint: 'signals_telegram_message_parser_unique',
+    file: 'tuplesortvariants.c',
+    line: '1361',
+    routine: 'comparetup_index_btree'
+  }
+}
+npm error Lifecycle script `db:migrate` failed with error:
+npm error code 1
+npm error path <repo>/packages/database
+npm error workspace @twins/database@0.0.1
+npm error location <repo>/packages/database
+npm error command failed
+npm error command sh -c tsx src/migrate.ts
+OK   B4 no 0004 columns remain = 0
+OK   B4 no 0004 indexes remain = 0
+OK   B4 tracking rows unchanged = 4
+OK   B4 data unchanged (signals/validations) = 5/5
+== B5. scratch-only remediation of the ONE fixture duplicate (validation cascades)
+== B5_remediate
+DELETE 1
+OK   B5 signals/validations after remediation = 4/4
+== B6_migrate_upgrade
+
+> @twins/database@0.0.1 db:migrate
+> tsx src/migrate.ts
+
+[database] migrations applied
+OK   B6 applied migrations = 5
+OK   B6 parser_version values = legacy-unversioned
+OK   B6 parser_version default dropped = 
+== B7a_chat_report
+CREATE VIEW
+        classification        | sources 
+------------------------------+---------
+ ambiguous_shared_chat_id     |       2
+ recoverable                  |       2
+ conflicting_payload_chat_ids |       1
+ unrecoverable_no_chat_id     |       1
+(4 rows)
+
+                  id                  | channel_identifier |        classification        | candidate | n_ids | sources_sharing_candidate 
+--------------------------------------+--------------------+------------------------------+-----------+-------+---------------------------
+ 00000000-0000-4000-8000-0000000000a1 | @legacy_dup_a      | ambiguous_shared_chat_id     | -100222   |     1 |                         2
+ 00000000-0000-4000-8000-0000000000a2 | @legacy_dup_b      | ambiguous_shared_chat_id     | -100222   |     1 |                         2
+ 00000000-0000-4000-8000-0000000000a5 | @legacy_conflict   | conflicting_payload_chat_ids |           |     2 |                         0
+ 00000000-0000-4000-8000-0000000000a3 | @legacy_nopayload  | unrecoverable_no_chat_id     |           |     0 |                         0
+(4 rows)
+
+== B7b_chat_apply
+BEGIN
+CREATE VIEW
+UPDATE 2
+     result      | count 
+-----------------+-------
+ sources updated |     2
+(1 row)
+
+COMMIT
+OK   B7 chat_id assigned (a0,a4 only) = 2
+== B8_assertions
+             check             | nulls | total 
+-------------------------------+-------+-------
+ legacy origin_message_id NULL |    10 |    10
+(1 row)
+
+         check         | count 
+-----------------------+-------
+ dup signals remaining |     0
+(1 row)
+
+      check       | channel_identifier | chat_id 
+------------------+--------------------+---------
+ chat_id assigned | @legacy_conflict   | 
+ chat_id assigned | @legacy_dup_a      | 
+ chat_id assigned | @legacy_dup_b      | 
+ chat_id assigned | @legacy_nopayload  | 
+ chat_id assigned | @legacy_rehearsal  | -100111
+ chat_id assigned | tg_chat_-100333    | -100333
+(6 rows)
+
+   check    | signals | validations | sources 
+------------+---------+-------------+---------
+ row counts |       4 |           4 |       6
+(1 row)
+
+== B9_runtime_tests_upgrade
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] validation complete signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d validationId=b3cd6eed-1d03-4e0f-8b05-7de4300d18cd reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] telegram job channel=tg_chat_-1000549693847 msgId=74592473
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] revision state=current (only the original message is known)
+[worker][r0b-redelivery] signal reused signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal fe926692-2ed3-42bc-bc0d-242bb17e626d, nothing to do
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 1983ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 628ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 1230ms
+
+ Test Files  5 passed (5)
+      Tests  19 passed (19)
+   Start at  18:34:20
+   Duration  4.19s (transform 767ms, setup 0ms, collect 6.67s, tests 4.23s, environment 1ms, prepare 622ms)
+
+== 9. post-checks
+OK   twins_dev unchanged = 198/82/0
+== Z_redis_scan
+bull:r0b_test_* keys remaining: 0
+ALL STEPS PASSED. Nothing was cleaned up. Review logs in $R/logs_resume, then run cleanup_rehearsal.sh manually.
+script exit code: 0

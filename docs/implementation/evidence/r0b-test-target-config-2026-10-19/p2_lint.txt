@@ -1,0 +1,61 @@
+
+> twins@0.0.1 lint
+> eslint .
+
+
+/Users/sara/twins/apps/api/src/index.ts
+  500:22  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/packages/entities/src/events.ts
+  112:15  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/packages/entities/src/resolve.ts
+   44:15  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  114:77  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/packages/ingestion/src/dataQuality.ts
+  130:7  warning  Unused eslint-disable directive (no problems were reported from 'no-new')
+
+/Users/sara/twins/packages/signals/src/extract.ts
+   86:21  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   87:18  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  102:42  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/services/worker/src/ingestionDispatch.ts
+  57:42  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  58:29  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  59:29  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  72:54  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  84:62  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  98:61  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/tests/integration/signals/ingestSignal.test.ts
+  48:86  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/tests/unit/adapters/market/yahoo.test.ts
+  123:6  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  123:6  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/tests/unit/adapters/telegram/botApi.test.ts
+   70:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  137:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  157:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  163:12  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  164:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  171:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/tests/unit/decision-intelligence/decide.test.ts
+  152:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  153:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  154:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  155:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  156:5  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+/Users/sara/twins/tests/unit/decision-intelligence/thesis.test.ts
+   51:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+   58:5   warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  113:41  warning  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+✖ 31 problems (0 errors, 31 warnings)
+  0 errors and 1 warning potentially fixable with the `--fix` option.
+

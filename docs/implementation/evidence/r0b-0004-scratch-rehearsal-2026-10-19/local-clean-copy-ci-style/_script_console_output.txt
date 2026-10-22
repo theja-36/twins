@@ -1,0 +1,62 @@
+== preflight
+cwd = clean copy: $CLEAN
+twins_ci role and database absent
+node v26.5.0 / npm 10.9.8
+== baseline BEFORE (read-only)
+twins_dev: 198 signals / 82 validations / 318 messages / 332 sources
+twins_rehearsal_fresh: 102 signals / 94 validations / 99 messages / 81 sources
+twins_rehearsal_upgrade: 30 signals / 33 validations / 34 messages / 24 sources
+== create_role
+create_role exit=0
+CREATE ROLE
+== create_db
+create_db exit=0
+role attributes (superuser/createdb/createrole/inherit/memberships):
+f|f|f|t|0
+twins_ci
+== ci_guard
+ci_guard exit=0
+
+ RUN  v2.1.9 $CLEAN
+
+ ✓ tests/integration/runtime/ciGuard.test.ts (4 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  18:48:54
+   Duration  325ms (transform 35ms, setup 0ms, collect 29ms, tests 2ms, environment 0ms, prepare 77ms)
+
+== migrate
+migrate exit=0
+
+> @twins/database@0.0.1 db:migrate
+> tsx src/migrate.ts
+
+[database] migrations applied
+== verify_migr
+verify_migr exit=0
+[ci] 5 migrations recorded; 0004 structures present; parser_version has no default
+== integration
+integration exit=0
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal 1649dcc3-a5a9-4866-944a-ea7df25a376c, nothing to do
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 2531ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 743ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 1543ms
+
+ Test Files  24 passed | 1 skipped (25)
+      Tests  121 passed | 3 skipped (124)
+   Start at  18:48:56
+   Duration  7.09s (transform 1.66s, setup 0ms, collect 32.80s, tests 16.12s, environment 6ms, prepare 2.97s)
+
+JUNIT report written to $CLEAN/reports/integration-junit.xml
+== redis_scan
+redis_scan exit=0
+bull:r0b_test_* keys remaining: 0
+== baseline AFTER (read-only)
+twins_dev: 198 signals / 82 validations / 318 messages / 332 sources
+twins_rehearsal_fresh: 102 signals / 94 validations / 99 messages / 81 sources
+twins_rehearsal_upgrade: 30 signals / 33 validations / 34 messages / 24 sources
+twins_dev and rehearsal baselines UNCHANGED
+ALL STEPS PASSED (local clean-copy CI-style verification). Nothing cleaned up.
+script exit code: 0

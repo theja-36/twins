@@ -1,0 +1,85 @@
+diff --git a/packages/shared/src/crypto.ts b/packages/shared/src/crypto.ts
+new file mode 100644
+index 0000000..c5be915
+--- /dev/null
++++ b/packages/shared/src/crypto.ts
+@@ -0,0 +1,32 @@
++import { timingSafeEqual } from "node:crypto";
++
++/**
++ * Constant-time string equality comparison using `crypto.timingSafeEqual`.
++ * Protects against timing side-channel attacks on secret tokens (spec/audit SEC-02).
++ *
++ * Rules:
++ * - Safely returns false on undefined, null, non-string, or empty inputs without throwing.
++ * - Safely returns false if byte lengths differ.
++ * - Compares byte contents in constant time when lengths match.
++ */
++export function constantTimeCompare(
++  a: string | undefined | null,
++  b: string | undefined | null,
++): boolean {
++  if (typeof a !== "string" || typeof b !== "string") {
++    return false;
++  }
++  if (a.length === 0 || b.length === 0) {
++    return false;
++  }
++
++  const bufA = Buffer.from(a, "utf-8");
++  const bufB = Buffer.from(b, "utf-8");
++
++  if (bufA.length !== bufB.length) {
++    return false;
++  }
++
++  return timingSafeEqual(bufA, bufB);
++}
++
+diff --git a/tests/unit/shared/crypto.test.ts b/tests/unit/shared/crypto.test.ts
+new file mode 100644
+index 0000000..bdcdff2
+--- /dev/null
++++ b/tests/unit/shared/crypto.test.ts
+@@ -0,0 +1,41 @@
++import { describe, expect, it } from "vitest";
++import { constantTimeCompare } from "../../../packages/shared/src/crypto";
++
++describe("constantTimeCompare (SEC-02)", () => {
++  it("returns true for identical ASCII strings", () => {
++    expect(constantTimeCompare("secret_token_123", "secret_token_123")).toBe(true);
++  });
++
++  it("returns true for identical UTF-8 multi-byte strings", () => {
++    expect(constantTimeCompare("token_₹_lock_🔒", "token_₹_lock_🔒")).toBe(true);
++  });
++
++  it("returns false for different strings of same length", () => {
++    expect(constantTimeCompare("secret_token_123", "secret_token_124")).toBe(false);
++  });
++
++  it("returns false for different strings of different length", () => {
++    expect(constantTimeCompare("short", "longer_secret_token")).toBe(false);
++  });
++
++  it("returns false safely without throwing on null or undefined", () => {
++    expect(constantTimeCompare(undefined, "secret")).toBe(false);
++    expect(constantTimeCompare("secret", undefined)).toBe(false);
++    expect(constantTimeCompare(null, "secret")).toBe(false);
++    expect(constantTimeCompare("secret", null)).toBe(false);
++    expect(constantTimeCompare(undefined, undefined)).toBe(false);
++    expect(constantTimeCompare(null, null)).toBe(false);
++  });
++
++  it("returns false safely on empty strings", () => {
++    expect(constantTimeCompare("", "")).toBe(false);
++    expect(constantTimeCompare("", "secret")).toBe(false);
++    expect(constantTimeCompare("secret", "")).toBe(false);
++  });
++
++  it("returns false safely on non-string types", () => {
++    expect(constantTimeCompare(123 as unknown as string, "123")).toBe(false);
++    expect(constantTimeCompare({} as unknown as string, "{}")).toBe(false);
++  });
++});
++

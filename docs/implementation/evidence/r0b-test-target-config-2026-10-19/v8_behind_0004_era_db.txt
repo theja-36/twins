@@ -1,0 +1,32 @@
+
+ RUN  v2.1.9 /Users/sara/twins
+
+
+ Test Files  no tests
+      Tests  no tests
+   Start at  22:59:47
+   Duration  97ms (transform 41ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+Error: integration test target refused: schema incompatible in rehearsal database 'twins_rehearsal_fresh': target is behind: 5 of 6 migrations applied; missing 0005_r0b_signal_evidence_unique_links. Migrations are not applied automatically.
+ ❯ Object.setup tests/integration/globalSetup.ts:42:25
+     40|     let mismatch: string | null;
+     41|     if (!exists.rows[0]?.ok) {
+     42|       mismatch = `target has no migration history; expected ${expected…
+       |                         ^
+     43|     } else {
+     44|       const { rows } = await client.query("select hash, created_at fro…
+ ❯ process.processTicksAndRejections node:internal/process/task_queues:104:5
+ ❯ WorkspaceProject.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9926:24
+ ❯ Vitest.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10794:7
+ ❯ node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10816:7
+ ❯ Vitest.runFiles node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10840:12
+ ❯ Vitest.start node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10682:7
+ ❯ startVitest node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11848:7
+ ❯ start node_modules/vitest/dist/chunks/cac.CB_9Zo9Q.js:1506:17
+ ❯ CAC.run node_modules/vitest/dist/chunks/cac.CB_9Zo9Q.js:1486:3
+
+
+
+

@@ -1,0 +1,526 @@
+
+ RUN  v2.1.9 <repo>
+
+ ✓ tests/integration/runtime/envGuard.test.ts (3 tests) 6ms
+stdout | tests/integration/runtime/failureHandling.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/revisions.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/concurrency.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] telegram job channel=tg_chat_-1000688959052 msgId=78196717
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] telegram job channel=tg_chat_-1000772918719 msgId=180448762
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] telegram job channel=@r0b_conc_same_33519691 msgId=849145559
+[worker][c] telegram job channel=@r0b_conc_same_33519691 msgId=849145559
+[worker][c] telegram job channel=@r0b_conc_same_33519691 msgId=849145559
+[worker][c] telegram job channel=@r0b_conc_same_33519691 msgId=849145559
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] signal created signalId=f2626db2-131a-4386-be5e-f852d06f6354
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=f2626db2-131a-4386-be5e-f852d06f6354
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] revision state=current (only the original message is known)
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] signal created signalId=5e20f76d-9e54-40e3-8758-fcdbc94046ce
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] signal created signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] signal reused signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+[worker][c] signal reused signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+[worker][c] signal reused signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=5e20f76d-9e54-40e3-8758-fcdbc94046ce
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] validation complete signalId=f2626db2-131a-4386-be5e-f852d06f6354 validationId=e27192d0-b9fe-4fd4-97b3-5fbbdce51821 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] validation complete signalId=5e20f76d-9e54-40e3-8758-fcdbc94046ce validationId=b4237b70-62fe-426b-a8c4-11ec185a3def reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000772918719 msgId=180448762_edit_1700001000_56eed2ed15b8
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] revision state=current (latest edit_date)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] signal created signalId=ebb5508b-8715-46b1-b8b2-9f8655aec0fc
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+[worker][c] validation complete signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2 validationId=20c7924a-ea6c-4702-829c-71d750df0fc7 reused=false outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2 validationId=20c7924a-ea6c-4702-829c-71d750df0fc7 reused=true outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2 validationId=20c7924a-ea6c-4702-829c-71d750df0fc7 reused=true outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=ffcccf6c-a793-4f04-a96a-a0a67d4bbca2 validationId=20c7924a-ea6c-4702-829c-71d750df0fc7 reused=true outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+[worker][c] telegram job channel=@r0b_conc_val_775007606 msgId=884294261
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ebb5508b-8715-46b1-b8b2-9f8655aec0fc
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+[worker][c] revision state=current (only the original message is known)
+
+ ✓ tests/integration/runtime/e2ePipeline.test.ts (1 test) 394ms
+   ✓ Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows 331ms
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+[worker][c] signal created signalId=c89a288c-3a7c-4d9c-96fc-2e1177dc08cc
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] validation complete signalId=ebb5508b-8715-46b1-b8b2-9f8655aec0fc validationId=6dab015f-f1ea-4353-a98f-bfbccc236699 reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000772918719 msgId=180448762_edit_1700002000_25b7a7862fc0
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=c89a288c-3a7c-4d9c-96fc-2e1177dc08cc
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] revision state=current (latest edit_date)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] signal created signalId=bcd794b9-1e92-4dfa-bbe0-f65b67359e44
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=bcd794b9-1e92-4dfa-bbe0-f65b67359e44
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+[worker][c] validation complete signalId=c89a288c-3a7c-4d9c-96fc-2e1177dc08cc validationId=550aa6c2-b639-482f-95e3-e84617929390 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] validation complete signalId=bcd794b9-1e92-4dfa-bbe0-f65b67359e44 validationId=5a0ed3e5-a165-4846-ba5a-acc862eceed0 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] telegram job channel=tg_chat_-1000772918719 msgId=180448762_edit_1700001000_56eed2ed15b8
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] revision state=superseded (a revision with a later edit_date exists)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] signal reused signalId=ebb5508b-8715-46b1-b8b2-9f8655aec0fc
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+[worker][c] duplicate delivery: ingestion validation already exists for signal ebb5508b-8715-46b1-b8b2-9f8655aec0fc, nothing to do
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] telegram job channel=tg_chat_-1000730419465 msgId=26882873_edit_1700002000_25b7a7862fc0
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] revision state=current (latest edit_date)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] signal created signalId=8db5fc4c-9e97-4d78-9880-43c16edd545e
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=8db5fc4c-9e97-4d78-9880-43c16edd545e
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] validation complete signalId=8db5fc4c-9e97-4d78-9880-43c16edd545e validationId=c96ee6a8-8e21-4c83-bee5-2e4b27ddae71 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] telegram job channel=tg_chat_-1000730419465 msgId=26882873_edit_1700001000_56eed2ed15b8
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] telegram job channel=@r0b_conc_a_596987810 msgId=320355149
+[worker][c] telegram job channel=@r0b_conc_b_777488887 msgId=320355149
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] revision state=superseded (a revision with a later edit_date exists)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] signal created signalId=8a42c676-8c96-4f26-afe6-1e3fbeac2819
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] revision state=current (only the original message is known)
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] signal created signalId=a08f82c5-7090-4643-9187-4163bfb85ca1
+[worker][c] signal created signalId=fea74f08-4933-4d36-b82a-854ef6a0f1d6
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=8a42c676-8c96-4f26-afe6-1e3fbeac2819
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=a08f82c5-7090-4643-9187-4163bfb85ca1
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=fea74f08-4933-4d36-b82a-854ef6a0f1d6
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] validation complete signalId=8a42c676-8c96-4f26-afe6-1e3fbeac2819 validationId=a6fbb120-b38c-4e4a-a31d-15034a6eef20 reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000730419465 msgId=26882873
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] revision state=superseded (the message has at least one edit)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] validation complete signalId=a08f82c5-7090-4643-9187-4163bfb85ca1 validationId=706983ac-62c7-426b-8429-55f7e4b2e4e5 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] signal created signalId=7f4ca08a-1829-4c26-a9a0-2030dd68e0ac
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+[worker][c] validation complete signalId=fea74f08-4933-4d36-b82a-854ef6a0f1d6 validationId=42f96dfa-787f-4d10-b652-215df0f4a726 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] telegram job channel=@r0b_conc_partial_80548958 msgId=970842095
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=7f4ca08a-1829-4c26-a9a0-2030dd68e0ac
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] signal created signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] validation complete signalId=7f4ca08a-1829-4c26-a9a0-2030dd68e0ac validationId=33bfc0af-ba59-44f1-ae28-d333886a25d3 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] telegram job channel=tg_chat_-1000730419465 msgId=486643484_edit_1700003000_5c9564784f45
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] revision state=current (latest edit_date)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] signal created signalId=58fe7db7-c73c-4ca7-b34c-6d5f7622ca33
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=58fe7db7-c73c-4ca7-b34c-6d5f7622ca33
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] telegram job channel=@r0b_conc_partial_80548958 msgId=970842095
+[worker][c] telegram job channel=@r0b_conc_partial_80548958 msgId=970842095
+[worker][c] telegram job channel=@r0b_conc_partial_80548958 msgId=970842095
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] telegram job channel=tg_chat_-1000004792522 msgId=378973608
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] revision state=current (only the original message is known)
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] signal reused signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+[worker][c] signal reused signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+[worker][c] signal reused signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] validation complete signalId=58fe7db7-c73c-4ca7-b34c-6d5f7622ca33 validationId=49aeb7bd-4521-418e-a491-5d8c6cfef80f reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000730419465 msgId=486643484_edit_1700003000_2fdb799b9064
+
+stderr | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] telegram ingestion failed: injected transient failure (test seam)
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] revision state=ambiguous (multiple distinct revisions share the latest edit_date: order cannot be established)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] signal created signalId=8c175215-3148-446a-9ec2-35bf992c766b
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=8c175215-3148-446a-9ec2-35bf992c766b
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+[worker][c] validation complete signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174 validationId=4bd72a7b-a6ab-4caa-89ab-a1daa5ff0224 reused=false outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174 validationId=4bd72a7b-a6ab-4caa-89ab-a1daa5ff0224 reused=true outcome=INSUFFICIENT_EVIDENCE
+[worker][c] validation complete signalId=f30b3071-e360-4e7b-a5c8-7bb6412b9174 validationId=4bd72a7b-a6ab-4caa-89ab-a1daa5ff0224 reused=true outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+[worker][c] telegram job channel=@r0b_conc_ver_825946916 msgId=293377226
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+[worker][c] validation complete signalId=8c175215-3148-446a-9ec2-35bf992c766b validationId=4b54afe1-2f59-4e43-8886-dfd2d34f03e1 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+[worker][c] telegram job channel=tg_chat_-1000637848674 msgId=852716418
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+[worker][c] signal created signalId=ca0bcef0-2569-4eab-93b1-689f921c2946
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=ca0bcef0-2569-4eab-93b1-689f921c2946
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+[worker][c] no signal extracted: ambiguous: 2 distinct BUY/SELL directives; multi-signal messages are unsupported by this parser version
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] telegram job channel=tg_chat_-1000597892050 msgId=332326353
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] signal created signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+[worker][c] validation complete signalId=ca0bcef0-2569-4eab-93b1-689f921c2946 validationId=95b3aa1e-b439-4118-96d9-f0a8e5e303bc reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf
+
+ ✓ tests/integration/runtime/concurrency.test.ts (5 tests) 776ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] validation complete signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf validationId=feedeb18-7f3d-4a55-bafb-9542dd40f756 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] telegram job channel=tg_chat_-1000597892050 msgId=332326353
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] revision state=current (only the original message is known)
+[worker][c] signal reused signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf
+
+stderr | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] signal 7d424903-6464-4bdb-b3a4-abb4c337e8cf has keyless validation(s) of unknown provenance; preserving them and appending one recomputed snapshot (telegram-ingest-recompute:7d424903-6464-4bdb-b3a4-abb4c337e8cf)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] validation complete signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf validationId=1270497e-432a-45b6-b63f-34e6ecf54ab3 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] telegram job channel=tg_chat_-1000597892050 msgId=332326353
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+[worker][c] revision state=current (only the original message is known)
+[worker][c] signal reused signalId=7d424903-6464-4bdb-b3a4-abb4c337e8cf
+[worker][c] duplicate delivery: ingestion validation already exists for signal 7d424903-6464-4bdb-b3a4-abb4c337e8cf, nothing to do
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] telegram job channel=tg_chat_-1000850077454 msgId=462195955
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] signal created signalId=8eb54b90-9ded-416a-aacf-5ea9aa251700
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=8eb54b90-9ded-416a-aacf-5ea9aa251700
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] validation complete signalId=8eb54b90-9ded-416a-aacf-5ea9aa251700 validationId=7f78a9ea-2cb1-4ce7-a98c-d2c8501f4f93 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] telegram job channel=tg_chat_-1000850077454 msgId=462195955
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] revision state=current (only the original message is known)
+[worker][c] signal reused signalId=8eb54b90-9ded-416a-aacf-5ea9aa251700
+[worker][c] duplicate delivery: ingestion validation already exists for signal 8eb54b90-9ded-416a-aacf-5ea9aa251700, nothing to do
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] telegram job channel=tg_chat_-1000850077454 msgId=462195955
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] signal reused signalId=23390272-3093-4976-b264-793c0b57ee25
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=23390272-3093-4976-b264-793c0b57ee25
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+[worker][c] validation complete signalId=23390272-3093-4976-b264-793c0b57ee25 validationId=72818674-9a8c-4e5f-9294-cd6dfd033fc7 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] telegram job channel=tg_chat_-1000310001664 msgId=37726255
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] signal created signalId=b0494b44-cea8-4fc6-a893-75be8eeaec70
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=b0494b44-cea8-4fc6-a893-75be8eeaec70
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] validation complete signalId=b0494b44-cea8-4fc6-a893-75be8eeaec70 validationId=de12a4cb-be64-4f16-9c9d-f7700a5a00c2 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] telegram job channel=tg_chat_-1000310001664 msgId=37726255
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] telegram job channel=tg_chat_-1000155320676 msgId=981608533
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] signal created signalId=1c84f36a-0efb-4e7d-a309-fc13544d74a3
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=1c84f36a-0efb-4e7d-a309-fc13544d74a3
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] validation complete signalId=1c84f36a-0efb-4e7d-a309-fc13544d74a3 validationId=c2c40795-3d18-4151-bae4-e1f234b9e33d reused=false outcome=REJECT
+[worker][c] telegram job channel=tg_chat_-1000155320676 msgId=924209875
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] signal created signalId=142e8dd5-09ca-4c4e-8ff7-99da7378b2fc
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=142e8dd5-09ca-4c4e-8ff7-99da7378b2fc
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] validation complete signalId=142e8dd5-09ca-4c4e-8ff7-99da7378b2fc validationId=698a0e88-3c38-42ea-bf39-eb3a878cb516 reused=false outcome=REJECT
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] telegram job channel=tg_chat_-1000293572676 msgId=918023305
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] signal created signalId=00854107-8a57-489d-ba6d-3142412befd3
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] market context refreshed for RELIANCE
+[worker][c] running validateSignal for signalId=00854107-8a57-489d-ba6d-3142412befd3
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+[worker][c] validation complete signalId=00854107-8a57-489d-ba6d-3142412befd3 validationId=09499acc-84ce-49f5-b0f3-5852ca39d96f reused=false outcome=REJECT
+
+ ✓ tests/integration/runtime/revisions.test.ts (7 tests) 1075ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate 340ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie 346ms
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] telegram job channel=tg_chat_-1000004792522 msgId=378973608
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] signal created signalId=c6bdc933-c1d8-4b1e-a8fb-ae9947ab862b
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=c6bdc933-c1d8-4b1e-a8fb-ae9947ab862b
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+[worker][r0b-test] validation complete signalId=c6bdc933-c1d8-4b1e-a8fb-ae9947ab862b validationId=79b18b70-58ea-4ac3-bd70-72fa08ecc12f reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] telegram job channel=tg_chat_-1000549693847 msgId=74592473
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] signal created signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-test] validation complete signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d validationId=b3cd6eed-1d03-4e0f-8b05-7de4300d18cd reused=false outcome=INSUFFICIENT_EVIDENCE
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] telegram job channel=tg_chat_-1000549693847 msgId=74592473
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+[worker][r0b-redelivery] revision state=current (only the original message is known)
+[worker][r0b-redelivery] signal reused signalId=fe926692-2ed3-42bc-bc0d-242bb17e626d
+[worker][r0b-redelivery] duplicate delivery: ingestion validation already exists for signal fe926692-2ed3-42bc-bc0d-242bb17e626d, nothing to do
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 1983ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 628ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 1230ms
+
+ Test Files  5 passed (5)
+      Tests  19 passed (19)
+   Start at  18:34:20
+   Duration  4.19s (transform 767ms, setup 0ms, collect 6.67s, tests 4.23s, environment 1ms, prepare 622ms)
+

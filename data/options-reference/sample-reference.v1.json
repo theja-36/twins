@@ -1,0 +1,13 @@
+{
+  "referenceVersion": "sample-reference-v1",
+  "sourceLabel": "SYNTHETIC SAMPLE - invented for offline preview and tests; NOT exchange data, NOT a real instrument master",
+  "collectedAsOf": "2026-10-20",
+  "synthetic": true,
+  "note": "Every contract, expiry and lot size below is made up. Lot sizes are deliberately implausible placeholders. The two BANKNIFTY entries are an intentional duplicate to exercise the AMBIGUOUS path.",
+  "contracts": [
+    { "entryId": "SYNTH-001", "underlying": "NIFTY", "strike": 24500, "optionType": "CE", "expiryDate": "2026-10-29", "lotSize": 9001 },
+    { "entryId": "SYNTH-002A", "underlying": "BANKNIFTY", "strike": 52000, "optionType": "PE", "expiryDate": "2026-10-29", "lotSize": 9002 },
+    { "entryId": "SYNTH-002B", "underlying": "BANKNIFTY", "strike": 52000, "optionType": "PE", "expiryDate": "2026-10-29", "lotSize": 9002 },
+    { "entryId": "SYNTH-003", "underlying": "SENSEX", "strike": 80000, "optionType": "PE", "expiryDate": "2026-11-26", "lotSize": 9003 }
+  ]
+}
