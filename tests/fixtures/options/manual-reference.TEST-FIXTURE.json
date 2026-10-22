@@ -1,0 +1,15 @@
+{
+  "referenceKind": "manual_verified_reference",
+  "referenceVersion": "TEST-FIXTURE-manual-v1",
+  "sourceLabel": "TEST FIXTURE ONLY - invented entries that exercise the manual-reference code path; NOT a real reference",
+  "manuallyMaintained": true,
+  "autoRefreshed": false,
+  "synthetic": false,
+  "liveMarketData": false,
+  "tradabilityStatement": "A manual local reference is NOT live entitlement and does NOT prove current tradability. (Test fixture: these entries are invented.)",
+  "contracts": [
+    { "entryId": "TESTFX-1", "underlying": "NIFTY", "strike": 24500, "optionType": "CE", "expiryDate": "2026-10-29", "lotSize": 4321, "source": "TEST FIXTURE (invented)", "verifiedAsOf": "2026-10-20", "notes": "invented for tests" },
+    { "entryId": "TESTFX-2A", "underlying": "BANKNIFTY", "strike": 52000, "optionType": "PE", "expiryDate": "2026-10-29", "lotSize": 4322, "source": "TEST FIXTURE (invented)", "verifiedAsOf": "2026-10-20", "notes": "duplicate on purpose" },
+    { "entryId": "TESTFX-2B", "underlying": "BANKNIFTY", "strike": 52000, "optionType": "PE", "expiryDate": "2026-10-29", "lotSize": 4322, "source": "TEST FIXTURE (invented)", "verifiedAsOf": "2026-10-20", "notes": "duplicate on purpose" }
+  ]
+}

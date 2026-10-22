@@ -1,0 +1,11 @@
+{
+  "referenceKind": "manual_verified_reference",
+  "referenceVersion": "TEST-FIXTURE-empty-manual-v1",
+  "sourceLabel": "TEST FIXTURE ONLY - an empty manual reference used to test the MANUAL_REFERENCE_EMPTY path",
+  "manuallyMaintained": true,
+  "autoRefreshed": false,
+  "synthetic": false,
+  "liveMarketData": false,
+  "tradabilityStatement": "A manual local reference is NOT live entitlement and does NOT prove current tradability. (Test fixture: no entries.)",
+  "contracts": []
+}

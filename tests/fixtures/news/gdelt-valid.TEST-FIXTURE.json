@@ -1,0 +1,5 @@
+{"articles":[
+{"url":"https://example.invalid/a1","url_mobile":"","title":"TESTFIXTURE headline one","seendate":"20261020T143000Z","socialimage":"","domain":"example.invalid","language":"English","sourcecountry":"India"},
+{"url":"https://example.invalid/a2/","title":"TESTFIXTURE headline two","seendate":"20261020T150000Z","domain":"example.invalid"},
+{"url":"https://other.invalid/a3","title":"TESTFIXTURE headline three","seendate":"20261019T010203Z"}
+]}
