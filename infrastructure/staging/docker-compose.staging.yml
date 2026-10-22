@@ -89,7 +89,7 @@ services:
     <<: *hardening
     restart: "no"
     profiles: ["migrate"]
-    image: twins-staging:local
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
     command: ["node", "--import", "tsx", "/app/packages/database/src/migrate.ts"]
     environment: *app-env
@@ -101,10 +101,15 @@ services:
 
   api:
     <<: *hardening
-    image: twins-staging:local
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
     build:
-      context: ../..
+      # Resolved against THIS file's directory. On the staging host the compose file lives in
+      # /opt/twins-staging/infrastructure/staging/ and the checked, hash-verified source tree in /opt/twins-staging/src/, so
+      # ../../src is /opt/twins-staging/src (the previous ../.. was /opt/twins-staging, which holds no source). `dockerfile` is
+      # relative to the CONTEXT, i.e. /opt/twins-staging/src/infrastructure/staging/Dockerfile; the context's .dockerignore
+      # is /opt/twins-staging/src/.dockerignore. Builds are done by hand with an explicit unique tag (see the deployment plan).
+      context: ../../src
       dockerfile: infrastructure/staging/Dockerfile
     command: ["node", "--import", "tsx", "/app/apps/api/src/index.ts"]
     environment:
@@ -165,7 +170,7 @@ services:
   # It sits on the INTERNAL network only: it cannot reach the internet, so an accidental provider call fails closed.
   worker:
     <<: *hardening
-    image: twins-staging:local
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
     command: ["node", "--import", "tsx", "/app/services/worker/src/index.ts"]
     environment:
@@ -187,7 +192,7 @@ services:
   scheduler:
     <<: *hardening
     profiles: ["scheduler"]
-    image: twins-staging:local
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
     command: ["node", "--import", "tsx", "/app/services/scheduler/src/index.ts"]
     environment:

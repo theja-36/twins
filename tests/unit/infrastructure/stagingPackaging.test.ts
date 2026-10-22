@@ -1,4 +1,5 @@
 import { readFileSync, existsSync } from "node:fs";
+import { posix } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // Static checks only: no docker, no network. (Compose validation with `docker compose config` was run by hand.)
@@ -128,6 +129,55 @@ describe("staging packaging (static)", () => {
     expect(env).not.toMatch(/^TWINS_TELEGRAM_ALLOWED_CHAT_IDS=.+/m);
     expect(env).toMatch(/separate approval/);
     expect(env).not.toMatch(/TELEGRAM_BOT_TOKEN=/);
+  });
+  it("builds from the staging host's source tree, resolved against the compose file's own location", () => {
+    const m = /build:\n\s+context: (\S+)\n\s+dockerfile: (\S+)/.exec(service("api"));
+    expect(m, "api has a build block").not.toBeNull();
+    const [, context, dockerfile] = m as RegExpExecArray;
+    // Compose resolves a relative context against the directory of the compose file. On the staging host that is:
+    const composeDir = "/opt/twins-staging/infrastructure/staging";
+    expect(posix.resolve(composeDir, context as string)).toBe("/opt/twins-staging/src");
+    // The Dockerfile path is relative to the CONTEXT and must name the Dockerfile that exists at that place in the source tree.
+    expect(dockerfile).toBe("infrastructure/staging/Dockerfile");
+    expect(existsSync(dockerfile as string)).toBe(true);
+    // The old context (../..) is the directory ABOVE the source tree on the host and must not come back.
+    expect(posix.resolve(composeDir, "../..")).toBe("/opt/twins-staging");
+    expect(context).not.toBe("../..");
+    // Only the API declares a build; everything else runs the already-built image and never builds or pulls.
+    expect(compose.match(/^\s+build:/gm)?.length).toBe(1);
+  });
+  it("every path the Dockerfile COPYs exists in the source tree and is not removed by the build context's .dockerignore", () => {
+    const ignore = read(".dockerignore").split("\n").map((l) => l.trim()).filter((l) => l && !l.startsWith("#") && !l.startsWith("!"));
+    const copied = [...dockerfile.matchAll(/^COPY (.+) \.\/?(\S*)$/gm)].flatMap((m) => (m[1] as string).split(/\s+/));
+    expect(copied.length).toBeGreaterThan(6);
+    for (const src of copied) {
+      const path = src.replace(/^\.\//, "");
+      expect(existsSync(path), `${path} exists`).toBe(true);
+      expect(ignore.includes(path), `${path} is not ignored`).toBe(false);
+    }
+    // the Dockerfile itself and the workspace manifests must stay in the context
+    expect(ignore.some((p) => p === "infrastructure" || p === "infrastructure/staging" || p === "infrastructure/staging/Dockerfile")).toBe(false);
+    expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
+    for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
+  });
+  it("a new image gets its own tag and never overwrites the running one: all four app services share one tag variable, default `local`", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(4);
+    expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(4); // an unknown tag fails instead of being pulled
+    expect(env).toMatch(/TWINS_IMAGE_TAG/);
+  });
+  it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
+    const api = service("api");
+    expect(api).not.toMatch(/webhooks/);
+    expect(api).not.toMatch(/PathPrefix|options-claims|signals/);
+    expect(api.match(/Path\(`\/health`\)/g)?.length).toBeGreaterThanOrEqual(1);
+    expect([...api.matchAll(/Path\(`([^`]*)`\)/g)].map((m) => m[1])).toEqual(expect.arrayContaining(["/health"]));
+    expect([...new Set([...api.matchAll(/Path\(`([^`]*)`\)/g)].map((m) => m[1]))]).toEqual(["/health"]);
+    expect(api).toMatch(/@twins-staging-postgres-1:5432/);
+    expect(api).toMatch(/@twins-staging-redis-1:6379/);
+    expect(api).toMatch(/- "127\.0\.0\.1:\$\{TWINS_API_HOST_PORT:-4110\}:4000"/);
+    expect(api).toMatch(/networks: \[twins_data, twins_edge, coolify\]/);
+    for (const name of ["worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/coolify/);
   });
   it("pins PostgreSQL 16 and Redis 7 as the project is tested, and the app image never pulls", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/postgres:16-alpine/);

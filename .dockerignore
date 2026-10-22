@@ -15,6 +15,7 @@ TWINS_Planning_Pack
 .vscode
 .github
 *.log
+**/.DS_Store
 infrastructure/staging/*.env
 # Tests and fixtures are not needed at runtime
 tests

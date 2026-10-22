@@ -39,3 +39,6 @@ Nothing here has been built, pulled, started, deployed or scheduled. `LIVE_TRADI
 ## Open questions (unresolved)
 - **Non-root access:** the `hostinger-agentops` SSH alias was refused (publickey) on 2026-10-21; only the root alias worked. Future actions must not silently fall back to root; a working non-root deploy user (docker group) is needed or root use must be explicitly approved per task.
 - **Ollama exposure:** the host inventory showed a listener on `*:11434`. Whether it is reachable from the internet (UFW default policy was not displayed, and `DOCKER-USER` rules do not cover host services) is unverified and should be checked before relying on host firewall assumptions.
+
+## Telegram intake guards (prepared, not deployed)
+`TWINS_TELEGRAM_ALLOWED_CHAT_IDS` (empty = approve no chat) and `TWINS_TELEGRAM_OPTIONS_ONLY` (literal `true`) are passed to the API and the worker only. The approved numeric test-chat id is added to `staging.env` later, under separate approval. The `api` build context is `../../src` (host layout `/opt/twins-staging/{infrastructure/staging,src}`); app images are selected by `TWINS_IMAGE_TAG` (default `local`). See `docs/implementation/staging/TELEGRAM_INTAKE_DEPLOYMENT_PLAN.md`.
