@@ -1,0 +1,17 @@
+v1_no_context exit=1
+v2_missing_db exit=1
+v3_twins_dev exit=1
+v4_wrong_user exit=1
+v5_wrong_redis exit=1
+v6_missing_redis exit=1
+v7_ci_ctx_rehearsal_db exit=1
+v8_behind_0004_era_db exit=1
+v9_live_trading exit=1
+p1_typecheck exit=0
+p2_lint exit=0
+p3_unit exit=0
+p4_diffcheck exit=0
+p5_build exit=0
+p6_guard_only exit=0
+p7_guard_only_no_env exit=0
+p8_integration exit=0

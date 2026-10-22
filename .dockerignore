@@ -1,0 +1,21 @@
+# Build context for infrastructure/staging/Dockerfile. Anything excluded here can never end up in an image layer.
+.git
+node_modules
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+coverage
+# Local-only data, evidence and secrets
+.env
+.env.*
+!.env.example
+data
+docs
+TWINS_Planning_Pack
+.vscode
+.github
+*.log
+**/.DS_Store
+infrastructure/staging/*.env
+# Tests and fixtures are not needed at runtime
+tests

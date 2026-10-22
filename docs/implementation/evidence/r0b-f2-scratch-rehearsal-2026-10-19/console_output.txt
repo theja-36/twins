@@ -1,0 +1,63 @@
+OK   twins_rehearsal_f2_upgrade and twins_rehearsal_f2_fresh are absent
+OK   source archive sha256 = edc65ec38a4b56e8555b5b74ceeef392f19f61248dd22f04c6545544264b757b
+twins_dev 198/82/1146
+twins_ci 363/296/2289
+twins_rehearsal_fresh 102/94/166
+twins_rehearsal_upgrade 30/33/19
+twins_restore_drill 30/33/19
+OK   patched copy = main tree + exactly {intelligence.ts patch, schema/signals.ts patch, 0005 sql, 0005 snapshot, draft journal, evidenceLinks test}
+OK   migration 0004 and its snapshot are byte-identical in the copy
+== npm_ci
+== tsc
+== unit
+== u1_createdb
+OK   u2 restored migrations (0000-0004) = 5
+OK   u3 preflight: duplicate groups in the archive = 3
+OK   u3 preflight: surplus rows in the archive = 7
+== u4 NEGATIVE CONTROL (patched writer, NO unique index yet): the concurrency test must FAIL with SIGNAL_EVIDENCE_DUPLICATES
+OK   u4 duplicate groups after control (3 archived + 3 new) = 6
+OK   u4 surplus rows after control (7 archived + 9 new) = 16
+OK   u4 preconditions: groups whose copies differ beyond id/created_at = 0
+OK   u4 preconditions: foreign keys referencing signal_evidence = 0
+== u5 apply 0005 with duplicates present: EXPECTED TO FAIL (unique violation) and roll back
+OK   u5 tracking rows unchanged (rollback) = 5
+OK   u5 no 0005 index remains (rollback) = 0
+OK   u5 data unchanged by the failed attempt = 16
+== u6 pre-remediation requirements (every one must hold; nothing is adapted automatically)
+OK   u6 duplicate groups = 6
+OK   u6 surplus rows = 16
+OK   u6 other sessions connected to twins_rehearsal_f2_upgrade (no other writer) = 0
+== u6 export then scratch-only remediation (surplus = every row after the earliest per logical link; exact SQL in R0B_0005_remediation_PROPOSAL.sql)
+OK   u6 exported rows = 16
+OK   u6 CSV first column is the row id = id
+OK   u6 exported ids are 16 distinct uuids = 16
+OK   u6 duplicate groups after remediation = 0
+OK   u6 rows added by the remediation = 0
+OK   u6 rows retained = 15
+OK   the 16 deleted ids are exactly the 16 exported ids (reconciled by id, not just by count)
+== u7_migrate
+OK   u7 tracking rows (0000-0005) = 6
+OK   u7 three partial unique indexes = 3
+== u8 tests on the upgraded database (patched code + index): new evidence-link tests, existing signals tests, runtime tests
+ Test Files  12 passed | 2 skipped (14)
+      Tests  47 passed | 5 skipped (52)
+== f1_createdb
+== f2_migrate
+OK   f2 tracking rows (0000-0005) = 6
+OK   f2 three partial unique indexes = 3
+== f3 NULL-semantics probe (TEMP tables inside a rolled-back transaction): plain composite unique ignores NULL rows, the partial index does not
+OK   NULL semantics confirmed on this server
+== f4 tests on the fresh database
+ Test Files  12 passed | 2 skipped (14)
+      Tests  47 passed | 5 skipped (52)
+OK   source archive sha256 unchanged = edc65ec38a4b56e8555b5b74ceeef392f19f61248dd22f04c6545544264b757b
+-- leftovers (read-only): connections to the scratch databases from sessions other than this query
+-- processes whose command line contains the patched-copy path (vitest workers run from there):
+-- test-owned Redis queues (SCAN only):
+bull:r0b_test_* keys remaining: 0
+-- crash-test child processes: 0
+OK   twins_dev, twins_ci, twins_rehearsal_fresh, twins_rehearsal_upgrade, twins_restore_drill unchanged
+OK   main working tree unchanged (0005 and the product patch are still unpromoted)
+bull:r0b_test_* keys remaining: 0
+ALL STEPS PASSED (rehearsal only). Nothing was cleaned up; cleanup needs separate approval.
+script exit code: 0

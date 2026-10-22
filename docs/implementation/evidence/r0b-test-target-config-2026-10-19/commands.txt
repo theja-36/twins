@@ -1,0 +1,17 @@
+v1_no_context: env -u DATABASE_URL -u REDIS_URL -u TWINS_REHEARSAL -u TWINS_CI npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v2_missing_db: env -u DATABASE_URL TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v3_twins_dev: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_dev npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v4_wrong_user: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://other:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v5_wrong_redis: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:6379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v6_missing_redis: env -u REDIS_URL TWINS_REHEARSAL=1 LIVE_TRADING=false DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v7_ci_ctx_rehearsal_db: env TWINS_CI=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v8_behind_0004_era_db: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+v9_live_trading: env TWINS_REHEARSAL=1 LIVE_TRADING=true REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/ingestion/jobs.test.ts
+p1_typecheck: npm run typecheck
+p2_lint: npm run lint
+p3_unit: npm test
+p4_diffcheck: git diff --check
+p5_build: npm run build --workspaces --if-present
+p6_guard_only: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npx vitest run --config vitest.integration.config.ts tests/integration/runtime/envGuard.test.ts
+p7_guard_only_no_env: env -u DATABASE_URL -u REDIS_URL -u TWINS_REHEARSAL -u TWINS_CI npx vitest run --config vitest.integration.config.ts tests/integration/runtime/envGuard.test.ts tests/integration/runtime/ciGuard.test.ts
+p8_integration: env TWINS_REHEARSAL=1 LIVE_TRADING=false REDIS_URL=redis://127.0.0.1:16379 DATABASE_URL=postgresql://twins:<pw>@127.0.0.1:15432/twins_rehearsal_f2_fresh npm run test:integration -- --reporter=default --reporter=junit --outputFile.junit=docs/implementation/evidence/r0b-test-target-config-2026-10-19/integration-junit.xml

@@ -1,0 +1,450 @@
+diff --git a/packages/decision-intelligence/src/decide.ts b/packages/decision-intelligence/src/decide.ts
+index 9874862..dbc7329 100644
+--- a/packages/decision-intelligence/src/decide.ts
++++ b/packages/decision-intelligence/src/decide.ts
+@@ -4,7 +4,7 @@ import { buildCounterThesis } from "./counterThesis";
+ import { assessSourceReliability } from "./sourceReliability";
+ import { validateSignalStructure, type StructuralValidationOptions } from "./structuralValidation";
+ import { buildBearThesis, buildBullThesis } from "./thesis";
+-import { CONFIDENCE_LABEL, type DecisionIntelligenceResult } from "./types";
++import { CONFIDENCE_LABEL, CONFIDENCE_UNAVAILABLE_NOTE, type DecisionIntelligenceResult } from "./types";
+ 
+ export interface DecideOptions extends StructuralValidationOptions {
+   now?: Date;
+@@ -18,18 +18,24 @@ export interface DecideOptions extends StructuralValidationOptions {
+  * No database access here, deliberately - this is the part unit tests
+  * exercise directly with fixtures, no Postgres required.
+  *
+- * Determination logic:
++ * Determination logic & safety gates (R0A / LOG-01 & LOG-02):
+  * - Any BLOCKING structural issue (unresolvable instrument, invalid
+- *   direction, a signal timestamped in the future) -> REJECT outright;
+- *   evidence quality is irrelevant if the claim itself is invalid.
++ *   direction, stale signal, future signal, invalid timestamp) -> REJECT outright.
+  * - A "high" severity counter-thesis (a real negative-convention event
+- *   opposing the trade) -> REJECT (spec: "exposes a strong invalidating
+- *   condition").
+- * - Materially incomplete evidence (no market data at all, or both
+- *   theses are empty/weak with nothing to reason from) ->
+- *   INSUFFICIENT_EVIDENCE - this is a first-class outcome, never forced
+- *   into a decision it can't support.
+- * - Otherwise -> APPROVE.
++ *   opposing the trade) -> REJECT.
++ * - Materially incomplete evidence -> INSUFFICIENT_EVIDENCE.
++ * - Zero supporting evidence (supportingCount === 0) -> INSUFFICIENT_EVIDENCE
++ *   (approvals are strictly prevented when required supporting evidence is absent).
++ * - Contradicting factors >= supporting factors -> INSUFFICIENT_EVIDENCE.
++ * - Numerical safety: zero denominators yield 0. A non-finite evidence-derived confidence is NEVER turned
++ *   into a high confidence: it is discarded, the placeholder 0 is stored, `confidenceUnavailable` is set and
++ *   the label/rationale say so (the outcome itself is unchanged and stays fail-closed). Confidence is a
++ *   count-based measure of evidence support for the chosen outcome, not a calibrated probability.
++ * - Freshness: `structural.stale_signal` is a HISTORICAL ingestion/analysis bound (see
++ *   validateSignalStructure), not an executable-freshness policy. APPROVE here means "evidence sufficient for
++ *   analysis" and does not authorise execution; executable freshness is undefined and must be decided
++ *   separately before any execution capability consumes this result.
++ * - Otherwise (supportingCount > 0, supportingCount > contradictingCount, no high/medium opposition) -> APPROVE.
+  */
+ export function decide(
+   signal: typeof schema.signals.$inferSelect,
+@@ -48,6 +54,8 @@ export function decide(
+     return {
+       signalId: signal.id,
+       outcome: "REJECT",
++      // Deterministic by rule (a structurally invalid claim is rejected outright); not derived from any
++      // evidence-based or possibly non-finite input.
+       decisionConfidence: 1,
+       confidenceLabel: CONFIDENCE_LABEL,
+       structuralIssues: structural.issues,
+@@ -75,31 +83,58 @@ export function decide(
+ 
+   let outcome: DecisionIntelligenceResult["outcome"];
+   let decisionConfidence: number;
++  let confidenceUnavailable = false;
+   let rationale: string;
+ 
+   if (counterThesis.severity === "high") {
+     outcome = "REJECT";
+-    decisionConfidence = counterThesis.confidence;
+-    rationale = `Rejected: a high-severity invalidating factor was found - ${counterThesis.strongestFactor?.description ?? "unspecified"}.`;
+-  } else if (evidenceDomainsPresent === 0 || (bullThesis.factors.length === 0 && bearThesis.factors.length === 0 && evidenceDomainsPresent < 2)) {
++    const rawConfidence = counterThesis.confidence;
++    if (Number.isFinite(rawConfidence)) {
++      decisionConfidence = Math.min(1, Math.max(0, rawConfidence));
++    } else {
++      // Invalid/unavailable: never promoted to a high confidence. The REJECT outcome (fail-closed) stands.
++      decisionConfidence = 0;
++      confidenceUnavailable = true;
++    }
++    rationale = `Rejected: a high-severity invalidating factor was found - ${counterThesis.strongestFactor?.description ?? "unspecified"}.${confidenceUnavailable ? " (Decision confidence unavailable: the evidence-derived value was invalid.)" : ""}`;
++  } else if (
++    evidenceDomainsPresent === 0 ||
++    (bullThesis.factors.length === 0 && bearThesis.factors.length === 0 && evidenceDomainsPresent < 2)
++  ) {
+     outcome = "INSUFFICIENT_EVIDENCE";
+     decisionConfidence = 0.5;
+-    rationale = "Insufficient evidence: too little corroborating market/macro/news evidence exists to support a reliable decision either way.";
++    rationale =
++      "Insufficient evidence: too little corroborating market/macro/news evidence exists to support a reliable decision either way.";
+   } else if (counterThesis.severity === "medium" && contradictingCount >= supportingCount) {
+     outcome = "INSUFFICIENT_EVIDENCE";
+     decisionConfidence = 0.5;
+     rationale = `Insufficient evidence: a medium-severity contradiction (${counterThesis.strongestFactor?.description ?? "unspecified"}) outweighs the available support for this signal's direction.`;
++  } else if (supportingCount === 0) {
++    // Missing required supporting evidence: cannot approve when supporting evidence is zero (LOG-01)
++    outcome = "INSUFFICIENT_EVIDENCE";
++    decisionConfidence = 0;
++    rationale = "Insufficient evidence: no supporting evidence exists to corroborate this signal's direction.";
++  } else if (contradictingCount >= supportingCount) {
++    outcome = "INSUFFICIENT_EVIDENCE";
++    const totalFactors = supportingCount + contradictingCount;
++    const rawRatio = totalFactors > 0 ? supportingCount / totalFactors : 0;
++    decisionConfidence = Number.isFinite(rawRatio) ? Math.min(1, Math.max(0, rawRatio)) : 0;
++    rationale = "Insufficient evidence: contradicting factors equal or exceed supporting evidence.";
+   } else {
+     outcome = "APPROVE";
+-    decisionConfidence = supportingCount + contradictingCount > 0 ? supportingCount / (supportingCount + contradictingCount) : 0.5;
+-    rationale = "Approved: no blocking or high-severity contradiction was found, and available evidence does not materially oppose the signal's direction.";
++    const totalFactors = supportingCount + contradictingCount;
++    const rawRatio = totalFactors > 0 ? supportingCount / totalFactors : 0;
++    decisionConfidence = Number.isFinite(rawRatio) ? Math.min(1, Math.max(0, rawRatio)) : 0;
++    rationale =
++      "Approved: no blocking or high-severity contradiction was found, and available evidence does not materially oppose the signal's direction.";
+   }
+ 
+   return {
+     signalId: signal.id,
+     outcome,
+     decisionConfidence,
+-    confidenceLabel: CONFIDENCE_LABEL,
++    confidenceLabel: confidenceUnavailable ? `${CONFIDENCE_LABEL} ${CONFIDENCE_UNAVAILABLE_NOTE}` : CONFIDENCE_LABEL,
++    ...(confidenceUnavailable ? { confidenceUnavailable: true } : {}),
+     structuralIssues: structural.issues,
+     bullThesis,
+     bearThesis,
+diff --git a/packages/decision-intelligence/src/structuralValidation.ts b/packages/decision-intelligence/src/structuralValidation.ts
+index a0079fd..85ea0f3 100644
+--- a/packages/decision-intelligence/src/structuralValidation.ts
++++ b/packages/decision-intelligence/src/structuralValidation.ts
+@@ -2,10 +2,17 @@ import type { schema } from "@twins/database";
+ import type { StructuralValidationIssue } from "./types";
+ 
+ export interface StructuralValidationOptions {
+-  /** Signals older than this are considered stale for decision purposes. Default 30 days. */
++  /** Historical ingestion/analysis horizon in ms (default 30 days); NOT an executable-freshness policy. */
+   maxSignalAgeMs?: number;
+ }
+ 
++/**
++ * HISTORICAL ingestion/analysis horizon (30 days): how old a signal may be and still be analysed/validated at
++ * all. It is NOT an executable-freshness policy - whether a signal is still actionable NOW (an intraday
++ * window, session boundaries, market data age) is a separate product decision that has not been made and
++ * must be enforced at approval/execution time. Do not tighten or reuse this value for execution; any
++ * execution capability stays blocked until that policy exists.
++ */
+ const DEFAULT_MAX_SIGNAL_AGE_MS = 1000 * 60 * 60 * 24 * 30;
+ 
+ export interface StructuralValidationResult {
+@@ -20,6 +27,11 @@ export interface StructuralValidationResult {
+  * even considered - malformed/stale/unresolvable claims are rejected
+  * outright, exactly as a human analyst would discard an unusable tip
+  * before spending time researching it.
++ *
++ * Safety enforcement (R0A / LOG-02):
++ * - Signals beyond configured maxSignalAgeMs are blocking = true.
++ * - Future timestamps (ageMs < 0) are blocking = true.
++ * - Invalid or NaN timestamps are blocking = true.
+  */
+ export function validateSignalStructure(
+   signal: typeof schema.signals.$inferSelect,
+@@ -32,32 +44,53 @@ export function validateSignalStructure(
+   let blocking = false;
+ 
+   if (!instrument) {
+-    issues.push({ ruleId: "structural.instrument_unresolved", description: "the signal's instrument could not be resolved" });
++    issues.push({
++      ruleId: "structural.instrument_unresolved",
++      description: "the signal's instrument could not be resolved",
++    });
+     blocking = true;
+   }
+ 
+   if (signal.direction !== "buy" && signal.direction !== "sell") {
+-    issues.push({ ruleId: "structural.invalid_direction", description: "signal direction is neither buy nor sell" });
++    issues.push({
++      ruleId: "structural.invalid_direction",
++      description: "signal direction is neither buy nor sell",
++    });
+     blocking = true;
+   }
+ 
+-  const ageMs = now.getTime() - signal.signalTimestamp.getTime();
+-  if (ageMs > maxSignalAgeMs) {
++  if (!signal.signalTimestamp || Number.isNaN(signal.signalTimestamp.getTime())) {
+     issues.push({
+-      ruleId: "structural.stale_signal",
+-      description: `signal is ${Math.round(ageMs / 86_400_000)} days old, exceeding the ${Math.round(maxSignalAgeMs / 86_400_000)}-day freshness threshold`,
++      ruleId: "structural.invalid_timestamp",
++      description: "signal timestamp is not a valid date",
+     });
+-  }
+-  if (ageMs < 0) {
+-    issues.push({ ruleId: "structural.future_signal", description: "signal timestamp is in the future" });
+     blocking = true;
++  } else {
++    const ageMs = now.getTime() - signal.signalTimestamp.getTime();
++    if (ageMs > maxSignalAgeMs) {
++      issues.push({
++        ruleId: "structural.stale_signal",
++        description: `signal is ${Math.round(ageMs / 86_400_000)} days old, exceeding the ${Math.round(maxSignalAgeMs / 86_400_000)}-day freshness threshold`,
++      });
++      blocking = true;
++    } else if (ageMs < 0) {
++      issues.push({
++        ruleId: "structural.future_signal",
++        description: "signal timestamp is in the future",
++      });
++      blocking = true;
++    }
+   }
+ 
+-  const isBare = signal.entryPrice === null && signal.stopLoss === null && (!Array.isArray(signal.targets) || signal.targets.length === 0);
++  const isBare =
++    signal.entryPrice === null &&
++    signal.stopLoss === null &&
++    (!Array.isArray(signal.targets) || signal.targets.length === 0);
+   if (isBare) {
+     issues.push({
+       ruleId: "structural.bare_signal",
+-      description: "signal carries no entry price, stop loss, or targets - only a bare direction claim",
++      description:
++        "signal carries no entry price, stop loss, or targets - only a bare direction claim",
+     });
+   }
+ 
+diff --git a/packages/decision-intelligence/src/types.ts b/packages/decision-intelligence/src/types.ts
+index 83289b0..1c5b688 100644
+--- a/packages/decision-intelligence/src/types.ts
++++ b/packages/decision-intelligence/src/types.ts
+@@ -71,6 +71,12 @@ export interface DecisionIntelligenceResult {
+   /** Confidence that the evidence supports the CHOSEN outcome - explicitly NOT a probability of profit. */
+   decisionConfidence: number;
+   confidenceLabel: string;
++  /**
++   * True only when an evidence-derived confidence was not a finite number and was discarded: then
++   * `decisionConfidence` is the placeholder 0 (NOT a measurement), `confidenceLabel` says so explicitly and
++   * the outcome is unaffected. Absent in every normal result.
++   */
++  confidenceUnavailable?: boolean;
+   structuralIssues: StructuralValidationIssue[];
+   bullThesis: Thesis;
+   bearThesis: Thesis;
+@@ -82,3 +88,7 @@ export interface DecisionIntelligenceResult {
+ 
+ export const CONFIDENCE_LABEL =
+   "Confidence that available evidence supports this outcome, not a probability of profit.";
++
++/** Appended to the label when a confidence value had to be discarded (see DecisionIntelligenceResult.confidenceUnavailable). */
++export const CONFIDENCE_UNAVAILABLE_NOTE =
++  "Confidence UNAVAILABLE for this decision: the evidence-derived value was invalid and was discarded; the stored 0 is a placeholder, not a measurement.";
+diff --git a/tests/unit/decision-intelligence/decide.test.ts b/tests/unit/decision-intelligence/decide.test.ts
+index 25256cc..60c9f40 100644
+--- a/tests/unit/decision-intelligence/decide.test.ts
++++ b/tests/unit/decision-intelligence/decide.test.ts
+@@ -18,7 +18,7 @@ const instrument = {
+   updatedAt: new Date(),
+ };
+ 
+-function cleanReport() {
++function cleanReportWithSupportingEvidence() {
+   return fixtureReport({
+     core: {
+       telegramMessageQuality: fixtureQuality({ entityType: "telegram_messages", overallStatus: "trusted" }),
+@@ -29,29 +29,89 @@ function cleanReport() {
+         { id: "n1", newsSourceId: "s1", newsEventId: null, sourceUrl: "https://x.invalid", headline: "headline", bodyExcerpt: null, sourceTimestamp: new Date(), receivedAt: new Date(), dedupeHash: "h", rawPayload: null, createdAt: new Date() },
+       ],
+     } as never,
++    entityContext: {
++      company: { entityId: "ent-1", entityType: "company", canonicalName: "Test Co", strength: "structural", matchMethod: "deterministic_rule" },
++      sector: null,
++      market: null,
++      country: null,
++      relevantEvents: [
++        { id: "evt-div", title: "Dividend declared", eventType: "dividend", firstSeenAt: new Date() },
++      ],
++    },
+   });
+ }
+ 
+-describe("decide", () => {
+-  it("APPROVEs when structure is valid, no high/medium contradiction exists, and evidence is reasonably complete", () => {
+-    const report = cleanReport();
++describe("decide (R0A / LOG-01 / LOG-02)", () => {
++  it("APPROVEs when structure is valid, supporting evidence exists, and no high/medium contradiction exists", () => {
++    const report = cleanReportWithSupportingEvidence();
+     const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+     expect(result.outcome).toBe("APPROVE");
++    expect(result.decisionConfidence).toBeGreaterThan(0);
+     expect(result.confidenceLabel).toMatch(/not a probability of profit/i);
+     expect(result.structuralIssues).toHaveLength(0);
+   });
+ 
++  it("prevents approval and returns INSUFFICIENT_EVIDENCE when supporting evidence is completely absent (LOG-01)", () => {
++    const report = cleanReportWithSupportingEvidence();
++    // Remove all positive events so supportingCount is 0
++    report.entityContext.relevantEvents = [];
++    const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
++    expect(result.outcome).toBe("INSUFFICIENT_EVIDENCE");
++    expect(result.decisionConfidence).toBe(0);
++    expect(result.rationale).toMatch(/no supporting evidence/i);
++  });
++
++  it("prevents approval when contradicting factors equal or exceed supporting evidence", () => {
++    const report = cleanReportWithSupportingEvidence();
++    // 1 supporting factor (dividend)
++    // Add untrusted telegram source (+1 contradiction) so contradictingCount >= supportingCount
++    report.core.telegramMessageQuality = fixtureQuality({ entityType: "telegram_messages", overallStatus: "flagged" });
++    const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
++    expect(result.outcome).toBe("INSUFFICIENT_EVIDENCE");
++  });
++
++  it("handles zero denominator and non-finite values safely without crashing", () => {
++    const report = fixtureReport({
++      core: {
++        marketContext: null,
++        macroContext: [],
++        newsContext: [],
++        telegramMessageQuality: fixtureQuality({ entityType: "telegram_messages", overallStatus: "trusted" }),
++      } as never,
++      entityContext: {
++        company: { entityId: "ent-1", entityType: "company", canonicalName: "Test Co", strength: "structural", matchMethod: "deterministic_rule" },
++        sector: null,
++        market: null,
++        country: null,
++        relevantEvents: [],
++      },
++    });
++    const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
++    expect(Number.isFinite(result.decisionConfidence)).toBe(true);
++    expect(result.outcome).toBe("INSUFFICIENT_EVIDENCE");
++  });
++
+   it("REJECTs outright on a blocking structural issue, before any evidence is considered", () => {
+-    const report = cleanReport();
++    const report = cleanReportWithSupportingEvidence();
+     const result = decide(report.core.signal, null, report, { now: report.core.signal.signalTimestamp });
+     expect(result.outcome).toBe("REJECT");
+     expect(result.decisionConfidence).toBe(1);
+     expect(result.rationale).toMatch(/structurally invalid/i);
+   });
+ 
++  it("REJECTs when a signal is stale beyond the configured freshness threshold (LOG-02)", () => {
++    const report = cleanReportWithSupportingEvidence();
++    const maxSignalAgeMs = 1000 * 60 * 60 * 24 * 30; // 30 days
++    const staleNow = new Date(report.core.signal.signalTimestamp.getTime() + maxSignalAgeMs + 1000);
++    const result = decide(report.core.signal, instrument, report, { now: staleNow, maxSignalAgeMs });
++    expect(result.outcome).toBe("REJECT");
++    expect(result.rationale).toMatch(/structurally invalid/i);
++    expect(result.structuralIssues.some((i) => i.ruleId === "structural.stale_signal")).toBe(true);
++  });
++
+   it("REJECTs when a high-severity counter-thesis exists (a real negative-convention event opposing the trade)", () => {
+-    const report = cleanReport();
+-    report.entityContext.relevantEvents = [{ id: "evt-1", title: "Company files for bankruptcy", eventType: "bankruptcy", firstSeenAt: new Date() }];
++    const report = cleanReportWithSupportingEvidence();
++    report.entityContext.relevantEvents.push({ id: "evt-1", title: "Company files for bankruptcy", eventType: "bankruptcy", firstSeenAt: new Date() });
+     const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+     expect(result.outcome).toBe("REJECT");
+     expect(result.counterThesis.severity).toBe("high");
+@@ -74,21 +134,21 @@ describe("decide", () => {
+   });
+ 
+   it("never claims a chance of making/earning money anywhere in the result, and states the confidence caveat explicitly", () => {
+-    const report = cleanReport();
++    const report = cleanReportWithSupportingEvidence();
+     const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+     expect(JSON.stringify(result)).not.toMatch(/chance of (making|earning) money/i);
+     expect(result.confidenceLabel).toContain("not a probability of profit");
+   });
+ 
+   it("always includes source reliability as UNKNOWN with a reason, never a fabricated score", () => {
+-    const report = cleanReport();
++    const report = cleanReportWithSupportingEvidence();
+     const result = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+     expect(result.sourceReliability.level).toBe("UNKNOWN");
+     expect(result.sourceReliability.reason.length).toBeGreaterThan(0);
+   });
+ 
+   it("bounds decisionConfidence within [0, 1] across every outcome branch", () => {
+-    const reports = [cleanReport(), cleanReport(), cleanReport()];
++    const reports = [cleanReportWithSupportingEvidence(), cleanReportWithSupportingEvidence(), cleanReportWithSupportingEvidence()];
+     reports[1]!.entityContext.relevantEvents = [{ id: "e1", title: "bankruptcy", eventType: "bankruptcy", firstSeenAt: new Date() }];
+     reports[2]!.core.marketContext = null;
+     reports[2]!.core.macroContext = [];
+diff --git a/tests/unit/decision-intelligence/structuralValidation.test.ts b/tests/unit/decision-intelligence/structuralValidation.test.ts
+index 6d1ac42..25df44d 100644
+--- a/tests/unit/decision-intelligence/structuralValidation.test.ts
++++ b/tests/unit/decision-intelligence/structuralValidation.test.ts
+@@ -35,7 +35,7 @@ const instrument = {
+   updatedAt: new Date(),
+ };
+ 
+-describe("validateSignalStructure", () => {
++describe("validateSignalStructure (R0A / LOG-02)", () => {
+   it("passes a well-formed, fresh, resolved signal with no issues", () => {
+     const now = new Date("2026-01-01T01:00:00Z");
+     const result = validateSignalStructure(baseSignal, instrument, now);
+@@ -50,6 +50,14 @@ describe("validateSignalStructure", () => {
+     expect(result.issues.some((i) => i.ruleId === "structural.instrument_unresolved")).toBe(true);
+   });
+ 
++  it("blocks an invalid direction", () => {
++    const now = new Date("2026-01-01T01:00:00Z");
++    const invalidDirectionSignal = { ...baseSignal, direction: "hold" as never };
++    const result = validateSignalStructure(invalidDirectionSignal, instrument, now);
++    expect(result.blocking).toBe(true);
++    expect(result.issues.some((i) => i.ruleId === "structural.invalid_direction")).toBe(true);
++  });
++
+   it("blocks a signal timestamped in the future", () => {
+     const now = new Date("2020-01-01T00:00:00Z"); // before the signal's own timestamp
+     const result = validateSignalStructure(baseSignal, instrument, now);
+@@ -57,13 +65,35 @@ describe("validateSignalStructure", () => {
+     expect(result.issues.some((i) => i.ruleId === "structural.future_signal")).toBe(true);
+   });
+ 
+-  it("flags (non-blocking) a stale signal beyond the freshness threshold", () => {
+-    const now = new Date(baseSignal.signalTimestamp.getTime() + 1000 * 60 * 60 * 24 * 60); // 60 days later
+-    const result = validateSignalStructure(baseSignal, instrument, now, { maxSignalAgeMs: 1000 * 60 * 60 * 24 * 30 });
+-    expect(result.blocking).toBe(false);
++  it("blocks a signal with an invalid (NaN) timestamp", () => {
++    const now = new Date("2026-01-01T01:00:00Z");
++    const invalidTimeSignal = { ...baseSignal, signalTimestamp: new Date("invalid") };
++    const result = validateSignalStructure(invalidTimeSignal, instrument, now);
++    expect(result.blocking).toBe(true);
++    expect(result.issues.some((i) => i.ruleId === "structural.invalid_timestamp")).toBe(true);
++  });
++
++  it("blocks a stale signal beyond the freshness threshold (LOG-02)", () => {
++    const maxSignalAgeMs = 1000 * 60 * 60 * 24 * 30; // 30 days
++    const now = new Date(baseSignal.signalTimestamp.getTime() + maxSignalAgeMs + 1000); // 30 days + 1s
++    const result = validateSignalStructure(baseSignal, instrument, now, { maxSignalAgeMs });
++    expect(result.blocking).toBe(true);
+     expect(result.issues.some((i) => i.ruleId === "structural.stale_signal")).toBe(true);
+   });
+ 
++  it("respects exact staleness boundary: exactly at threshold is not stale, 1ms beyond is blocking", () => {
++    const maxSignalAgeMs = 1000 * 60 * 60; // 1 hour
++    const exactBoundaryNow = new Date(baseSignal.signalTimestamp.getTime() + maxSignalAgeMs);
++    const exactResult = validateSignalStructure(baseSignal, instrument, exactBoundaryNow, { maxSignalAgeMs });
++    expect(exactResult.blocking).toBe(false);
++    expect(exactResult.issues.some((i) => i.ruleId === "structural.stale_signal")).toBe(false);
++
++    const beyondBoundaryNow = new Date(baseSignal.signalTimestamp.getTime() + maxSignalAgeMs + 1);
++    const beyondResult = validateSignalStructure(baseSignal, instrument, beyondBoundaryNow, { maxSignalAgeMs });
++    expect(beyondResult.blocking).toBe(true);
++    expect(beyondResult.issues.some((i) => i.ruleId === "structural.stale_signal")).toBe(true);
++  });
++
+   it("flags (non-blocking) a bare signal with no entry/stop/targets", () => {
+     const bare = { ...baseSignal, entryPrice: null, stopLoss: null, targets: [] };
+     const now = new Date(baseSignal.signalTimestamp.getTime() + 1000 * 60);

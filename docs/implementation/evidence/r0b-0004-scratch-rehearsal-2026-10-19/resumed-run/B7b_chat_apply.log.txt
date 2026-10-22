@@ -1,0 +1,9 @@
+BEGIN
+CREATE VIEW
+UPDATE 2
+     result      | count 
+-----------------+-------
+ sources updated |     2
+(1 row)
+
+COMMIT

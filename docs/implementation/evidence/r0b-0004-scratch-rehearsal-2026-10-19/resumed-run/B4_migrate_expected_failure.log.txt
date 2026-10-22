@@ -1,0 +1,51 @@
+
+> @twins/database@0.0.1 db:migrate
+> tsx src/migrate.ts
+
+[database] migration failed DrizzleQueryError: Failed query: 
+CREATE UNIQUE INDEX "signals_telegram_message_parser_unique" ON "signals" USING btree ("telegram_message_id","parser_version");
+params: 
+    at NodePgPreparedQuery.queryWithCache (<repo>/node_modules/src/pg-core/session.ts:73:11)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async <anonymous> (<repo>/node_modules/src/pg-core/dialect.ts:102:7)
+    ... 3 lines matching cause stack trace ...
+    at async main (<repo>/packages/database/src/migrate.ts:8:3) {
+  query: '\n' +
+    'CREATE UNIQUE INDEX "signals_telegram_message_parser_unique" ON "signals" USING btree ("telegram_message_id","parser_version");',
+  params: [],
+  cause: error: could not create unique index "signals_telegram_message_parser_unique"
+      at <repo>/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (<repo>/node_modules/src/node-postgres/session.ts:149:14)
+      at async NodePgPreparedQuery.queryWithCache (<repo>/node_modules/src/pg-core/session.ts:71:12)
+      at async <anonymous> (<repo>/node_modules/src/pg-core/dialect.ts:102:7)
+      at async NodePgSession.transaction (<repo>/node_modules/src/node-postgres/session.ts:259:19)
+      at async PgDialect.migrate (<repo>/node_modules/src/pg-core/dialect.ts:95:3)
+      at async migrate (<repo>/node_modules/src/node-postgres/migrator.ts:10:2)
+      at async main (<repo>/packages/database/src/migrate.ts:8:3) {
+    length: 323,
+    severity: 'ERROR',
+    code: '23505',
+    detail: 'Key (telegram_message_id, parser_version)=(00000000-0000-4000-8000-0000000000c3, legacy-unversioned) is duplicated.',
+    hint: undefined,
+    position: undefined,
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: 'public',
+    table: 'signals',
+    column: undefined,
+    dataType: undefined,
+    constraint: 'signals_telegram_message_parser_unique',
+    file: 'tuplesortvariants.c',
+    line: '1361',
+    routine: 'comparetup_index_btree'
+  }
+}
+npm error Lifecycle script `db:migrate` failed with error:
+npm error code 1
+npm error path <repo>/packages/database
+npm error workspace @twins/database@0.0.1
+npm error location <repo>/packages/database
+npm error command failed
+npm error command sh -c tsx src/migrate.ts

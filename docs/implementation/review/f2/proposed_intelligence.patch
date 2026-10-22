@@ -1,0 +1,26 @@
+--- a/packages/signals/src/intelligence.ts	2026-10-19 20:19:16
++++ b/packages/signals/src/intelligence.ts	2026-10-19 20:19:16
+@@ -39,11 +39,18 @@
+     );
+   if (existing.length > 0) return;
+ 
+-  await db.insert(schema.signalEvidence).values({
+-    signalId,
+-    evidenceKind,
+-    [column]: columnValue,
+-  });
++  // Fast path above avoids needless conflicts and preserves behaviour on databases without
++  // migration 0005. The partial unique indexes of 0005 are the correctness boundary: when two
++  // callers pass the check concurrently, the loser's insert hits ON CONFLICT DO NOTHING and the
++  // link (identical by definition: same signal, same evidence row) simply already exists.
++  await db
++    .insert(schema.signalEvidence)
++    .values({
++      signalId,
++      evidenceKind,
++      [column]: columnValue,
++    })
++    .onConflictDoNothing();
+ }
+ 
+ /**

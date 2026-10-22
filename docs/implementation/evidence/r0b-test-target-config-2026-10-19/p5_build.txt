@@ -1,0 +1,12 @@
+
+> @twins/api@0.0.1 build
+> tsc -p .
+
+
+> @twins/scheduler@0.0.1 build
+> tsc -p .
+
+
+> @twins/worker@0.0.1 build
+> tsc -p .
+

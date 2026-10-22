@@ -1,0 +1,11 @@
+
+ RUN  v2.1.9 /Users/sara/twins
+
+ ↓ tests/integration/runtime/ciGuard.test.ts (4 tests | 4 skipped)
+ ↓ tests/integration/runtime/envGuard.test.ts (3 tests | 3 skipped)
+
+ Test Files  2 skipped (2)
+      Tests  7 skipped (7)
+   Start at  23:00:04
+   Duration  347ms (transform 49ms, setup 0ms, collect 20ms, tests 0ms, environment 0ms, prepare 103ms)
+

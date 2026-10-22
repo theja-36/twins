@@ -1,0 +1,286 @@
+{
+  "queueName": "r0b_test_crash_795af186aa754d48a4005cd662adad6d",
+  "targets": {
+    "db": "twins_ci",
+    "redis": "127.0.0.1:16379"
+  },
+  "recoveryMsAfterKill": 3585,
+  "records": {
+    "messageId": "bf5c7a6f-1f50-42a6-ac3c-b28545dbfa51",
+    "signalId": "6a4e3122-1910-46c3-95bd-6f642358303f",
+    "validationId": "4cf50a89-fca7-49bd-9ccd-05b82c989b26",
+    "messages": 1,
+    "signals": 1,
+    "validations": 1
+  },
+  "job": {
+    "id": "tg-tg_chat_-1000087669546-454747967",
+    "state": "completed",
+    "attemptsStarted": 2,
+    "attemptsMade": 1,
+    "stalledCounter": 1,
+    "finishedOn": 1792435963894,
+    "processedOn": 1792435963718
+  },
+  "stalledEvents": [
+    {
+      "jobId": "tg-tg_chat_-1000087669546-454747967"
+    }
+  ],
+  "apiLogs": [
+    {
+      "service": "api",
+      "requestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+      "correlationId": "crash-test-corr-0001",
+      "correlationSource": "client-supplied",
+      "jobId": "tg-tg_chat_-1000087669546-454747967",
+      "updateId": 839713979,
+      "channelIdentifier": "tg_chat_-1000087669546",
+      "externalMessageId": "454747967",
+      "originMessageId": "454747967",
+      "ts": "2026-10-19T18:52:40.209Z",
+      "level": "info",
+      "event": "webhook.intake.accepted"
+    },
+    {
+      "service": "api",
+      "requestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+      "correlationId": "crash-test-corr-0001",
+      "correlationSource": "client-supplied",
+      "jobId": "tg-tg_chat_-1000087669546-454747967",
+      "statusCode": 202,
+      "ts": "2026-10-19T18:52:40.218Z",
+      "level": "info",
+      "event": "webhook.enqueue.succeeded"
+    }
+  ],
+  "children": [
+    {
+      "label": "worker-1 (crash mode)",
+      "pid": 59649,
+      "exitCode": null,
+      "signalCode": "SIGKILL",
+      "ipc": [
+        {
+          "type": "ready",
+          "pid": 59649,
+          "mode": "crash"
+        },
+        {
+          "type": "checkpoint",
+          "name": "message_committed_before_signal_insert",
+          "pid": 59649
+        }
+      ],
+      "logs": [
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "ts": "2026-10-19T18:52:40.219Z",
+          "level": "info",
+          "event": "worker.job.started",
+          "childMode": "crash",
+          "childPid": 59649
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "inserted": 1,
+          "duplicates": 0,
+          "rejectedInvalid": 0,
+          "ts": "2026-10-19T18:52:40.263Z",
+          "level": "info",
+          "event": "worker.message.ingested",
+          "childMode": "crash",
+          "childPid": 59649
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 1,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "state": "current",
+          "reason": "only the original message is known",
+          "ts": "2026-10-19T18:52:40.268Z",
+          "level": "info",
+          "event": "worker.revision.state",
+          "childMode": "crash",
+          "childPid": 59649
+        }
+      ]
+    },
+    {
+      "label": "worker-2 (replacement)",
+      "pid": 59677,
+      "exitCode": null,
+      "signalCode": null,
+      "ipc": [
+        {
+          "type": "ready",
+          "pid": 59677,
+          "mode": "recover"
+        }
+      ],
+      "logs": [
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "ts": "2026-10-19T18:52:43.721Z",
+          "level": "info",
+          "event": "worker.job.started",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "inserted": 0,
+          "duplicates": 1,
+          "rejectedInvalid": 0,
+          "ts": "2026-10-19T18:52:43.760Z",
+          "level": "info",
+          "event": "worker.message.ingested",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "state": "current",
+          "reason": "only the original message is known",
+          "ts": "2026-10-19T18:52:43.770Z",
+          "level": "info",
+          "event": "worker.revision.state",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "signalId": "6a4e3122-1910-46c3-95bd-6f642358303f",
+          "signalCreated": true,
+          "parserVersion": "telegram-regex-v1",
+          "ts": "2026-10-19T18:52:43.779Z",
+          "level": "info",
+          "event": "worker.signal.resolved",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "symbol": "RELIANCE",
+          "ts": "2026-10-19T18:52:43.795Z",
+          "level": "info",
+          "event": "worker.market_context.refreshed",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "signalId": "6a4e3122-1910-46c3-95bd-6f642358303f",
+          "validationId": "4cf50a89-fca7-49bd-9ccd-05b82c989b26",
+          "validationReused": false,
+          "decision": "INSUFFICIENT_EVIDENCE",
+          "ts": "2026-10-19T18:52:43.894Z",
+          "level": "info",
+          "event": "worker.validation.recorded",
+          "childMode": "recover",
+          "childPid": 59677
+        },
+        {
+          "correlationId": "crash-test-corr-0001",
+          "correlationOrigin": "job",
+          "intakeRequestId": "req_b0e09694-be10-4859-b827-a1ae1c9acf6f",
+          "intakeReceivedAt": "2026-10-19T18:52:40.209Z",
+          "jobId": "tg-tg_chat_-1000087669546-454747967",
+          "attempt": 2,
+          "maxAttempts": 3,
+          "channelIdentifier": "tg_chat_-1000087669546",
+          "externalMessageId": "454747967",
+          "originMessageId": "454747967",
+          "outcome": "validation_created",
+          "signalId": "6a4e3122-1910-46c3-95bd-6f642358303f",
+          "validationId": "4cf50a89-fca7-49bd-9ccd-05b82c989b26",
+          "durationMs": 173,
+          "ts": "2026-10-19T18:52:43.894Z",
+          "level": "info",
+          "event": "worker.job.completed",
+          "childMode": "recover",
+          "childPid": 59677
+        }
+      ]
+    }
+  ]
+}

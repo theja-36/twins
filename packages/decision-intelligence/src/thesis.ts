@@ -85,7 +85,7 @@ export function buildBearThesis(report: SignalIntelligenceReport): Thesis {
   }
 
   if (!report.core.marketContext) {
-    factors.push({ ruleId: "bear.no_market_data", description: "no market observation is available for this instrument" });
+    factors.push({ ruleId: "bear.no_market_data", description: `no eligible market input is available for this instrument${report.core.marketInputReason ? ` (${report.core.marketInputReason})` : ""}` });
   } else {
     if (dimensionFailed(report.core.marketContext.quality, "freshness")) {
       factors.push({

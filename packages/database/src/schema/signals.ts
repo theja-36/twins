@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
@@ -35,6 +36,15 @@ export const signals = pgTable(
     instrumentId: uuid("instrument_id")
       .notNull()
       .references(() => instruments.id, { onDelete: "restrict" }),
+    /**
+     * Version of the deterministic parser that produced this row. Historical rows
+     * created before versions were recorded carry the explicit label
+     * "legacy-unversioned" (provenance unknown, not inferred). Together
+     * with `telegramMessageId` it identifies the canonical parse of a raw
+     * message: re-parsing with a NEW parser version is a legitimate new row,
+     * re-running the SAME version must reuse the existing row.
+     */
+    parserVersion: text("parser_version").notNull(), // no default: callers must state it explicitly
     direction: signalDirectionEnum("direction").notNull(),
     entryPrice: numeric("entry_price"),
     stopLoss: numeric("stop_loss"),
@@ -58,6 +68,11 @@ export const signals = pgTable(
     ),
     telegramMessageIdx: index("signals_telegram_message_idx").on(
       table.telegramMessageId,
+    ),
+    // NULL telegram_message_id (non-Telegram signals) never collides: NULLs are distinct.
+    telegramMessageParserUnique: uniqueIndex("signals_telegram_message_parser_unique").on(
+      table.telegramMessageId,
+      table.parserVersion,
     ),
   }),
 );
@@ -108,5 +123,17 @@ export const signalEvidence = pgTable(
       )`,
     ),
     signalIdx: index("signal_evidence_signal_idx").on(table.signalId),
+    // One link per (signal, referenced evidence row). evidence_kind is implied by which
+    // reference column is set (enforced by the two check constraints above), so three
+    // PARTIAL unique indexes express the identity without relying on NULL semantics.
+    marketLinkUnique: uniqueIndex("signal_evidence_signal_market_unique")
+      .on(table.signalId, table.marketObservationId)
+      .where(sql`${table.marketObservationId} is not null`),
+    macroLinkUnique: uniqueIndex("signal_evidence_signal_macro_unique")
+      .on(table.signalId, table.macroObservationId)
+      .where(sql`${table.macroObservationId} is not null`),
+    newsLinkUnique: uniqueIndex("signal_evidence_signal_news_unique")
+      .on(table.signalId, table.newsEvidenceId)
+      .where(sql`${table.newsEvidenceId} is not null`),
   }),
 );

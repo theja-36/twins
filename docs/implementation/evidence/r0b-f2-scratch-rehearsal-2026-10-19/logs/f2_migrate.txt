@@ -1,0 +1,1 @@
+[rehearsal] migrations from $F2/tree/packages/database/drizzle applied to /twins_rehearsal_f2_fresh

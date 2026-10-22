@@ -1,0 +1,35 @@
+         check         |        value         
+-----------------------+----------------------
+ parser_version values | {legacy-unversioned}
+(1 row)
+
+         check         | nulls | total 
+-----------------------+-------+-------
+ null idempotency keys |     4 |     4
+(1 row)
+
+             check             | nulls | total 
+-------------------------------+-------+-------
+ legacy origin_message_id NULL |    10 |    10
+(1 row)
+
+         check         | count 
+-----------------------+-------
+ dup signals remaining |     0
+(1 row)
+
+      check       | channel_identifier | chat_id 
+------------------+--------------------+---------
+ chat_id assigned | @legacy_conflict   | 
+ chat_id assigned | @legacy_dup_a      | 
+ chat_id assigned | @legacy_dup_b      | 
+ chat_id assigned | @legacy_nopayload  | 
+ chat_id assigned | @legacy_rehearsal  | -100111
+ chat_id assigned | tg_chat_-100333    | -100333
+(6 rows)
+
+   check    | signals | validations | sources 
+------------+---------+-------------+---------
+ row counts |       4 |           4 |       6
+(1 row)
+

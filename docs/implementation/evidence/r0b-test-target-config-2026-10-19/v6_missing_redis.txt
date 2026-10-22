@@ -1,0 +1,32 @@
+
+ RUN  v2.1.9 /Users/sara/twins
+
+
+ Test Files  no tests
+      Tests  no tests
+   Start at  22:59:46
+   Duration  104ms (transform 51ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+TestTargetError: integration test target refused: REDIS_URL is not set (there is no default target; set it explicitly)
+ ❯ parseUrl tests/integration/targetConfig.ts:12:21
+     11|  * Diagnostics name the failed rule only; they never print the connect…
+     12|  */
+     13| import { isApprovedRehearsalDatabase } from "./runtime/rehearsalTarget…
+       |                 ^
+     14| 
+     15| export type TestContext = "rehearsal" | "ci";
+ ❯ Module.resolveTestTarget tests/integration/targetConfig.ts:31:17
+ ❯ Object.setup tests/integration/globalSetup.ts:25:55
+ ❯ WorkspaceProject.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9926:53
+ ❯ Vitest.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10794:7
+ ❯ node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10816:7
+ ❯ Vitest.runFiles node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10840:12
+ ❯ Vitest.start node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10682:7
+ ❯ startVitest node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11848:7
+ ❯ start node_modules/vitest/dist/chunks/cac.CB_9Zo9Q.js:1506:17
+
+
+
+

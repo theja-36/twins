@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789254468458,
+      "tag": "0000_late_the_leader",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789258048085,
+      "tag": "0001_cheerful_lady_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789259970376,
+      "tag": "0002_curly_rage",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789277980566,
+      "tag": "0003_colorful_sheva_callister",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792430115643,
+      "tag": "0004_r0b_idempotency_revisions_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792437534137,
+      "tag": "0005_r0b_signal_evidence_unique_links",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+typecheck | npm run typecheck | exit=0
+lint | npm run lint | exit=0
+unit | npm test | exit=0
+builds | npm run build --workspaces --if-present | exit=0
+diffcheck | git diff --check | exit=0
+migration-hash check exit=0
+guard | npx vitest run --config vitest.integration.config.ts tests/integration/runtime/envGuard.test.ts | exit=0
+evidence_links | npx vitest run --config vitest.integration.config.ts tests/integration/runtime/evidenceLinks.test.ts | exit=0
+integration_full | npm run test:integration (+junit) | exit=0

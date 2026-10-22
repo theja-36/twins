@@ -1,3 +1,4 @@
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, schema } from "../../../packages/database/src/index";
@@ -5,8 +6,7 @@ import { runIngestionJob } from "../../../packages/ingestion/src/jobs";
 import { ProviderDataError, ProviderUnavailableError } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 const noSleep = async () => {};

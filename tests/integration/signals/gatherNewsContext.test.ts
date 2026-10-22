@@ -1,3 +1,5 @@
+import { randomLetters } from "../../support/randomLetters";
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -9,8 +11,7 @@ import { resolveNewsEntityMentions } from "../../../packages/entities/src/newsMe
 import { resolveInstrument } from "../../../packages/ingestion/src/instruments";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 beforeAll(async () => {
@@ -49,7 +50,7 @@ async function makeArticle(headline: string): Promise<string> {
  */
 describe("gatherNewsContext production path (integration)", () => {
   it("Article A: a headline containing the canonical company name is returned", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const companyName = `Canonical Co ${randomUUID().slice(0, 8)}`;
     const companyId = await createEntityWithCanonicalAlias(db, { entityType: "company", canonicalName: companyName });
@@ -63,7 +64,7 @@ describe("gatherNewsContext production path (integration)", () => {
   });
 
   it("Article B: a headline containing only the raw ticker/symbol, with NO entity relationship configured, is NOT returned", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const companyName = `TickerOnlyCo ${randomUUID().slice(0, 8)}`;
     const companyId = await createEntityWithCanonicalAlias(db, { entityType: "company", canonicalName: companyName });
@@ -79,12 +80,12 @@ describe("gatherNewsContext production path (integration)", () => {
   });
 
   it("Article C: a headline containing a registered alias of the canonical entity is returned", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const companyName = `Alias Co ${randomUUID().slice(0, 8)}`;
     const companyId = await createEntityWithCanonicalAlias(db, { entityType: "company", canonicalName: companyName });
     await linkInstrumentToCompany(db, instrumentId, companyId);
-    const alias = `ALIASCO-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const alias = `ALIASCO-${randomLetters(6)}`;
     await addAlias(db, { entityId: companyId, alias, aliasType: "ticker" });
 
     const articleId = await makeArticle(`${alias} shares climb after upgrade`);
@@ -95,13 +96,13 @@ describe("gatherNewsContext production path (integration)", () => {
   });
 
   it("Article D: a headline containing an alias shared by two entities (ambiguous) is NOT treated as a confirmed match for either", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const companyName = `AmbiguousCo ${randomUUID().slice(0, 8)}`;
     const companyId = await createEntityWithCanonicalAlias(db, { entityType: "company", canonicalName: companyName });
     await linkInstrumentToCompany(db, instrumentId, companyId);
 
-    const sharedAlias = `SHARED-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const sharedAlias = `SHARED-${randomLetters(6)}`;
     const otherCompanyId = await createEntity(db, { entityType: "company", canonicalName: `OtherCo ${randomUUID()}` });
     await addAlias(db, { entityId: companyId, alias: sharedAlias, aliasType: "ticker" });
     await addAlias(db, { entityId: otherCompanyId, alias: sharedAlias, aliasType: "ticker" });
@@ -116,14 +117,14 @@ describe("gatherNewsContext production path (integration)", () => {
   });
 
   it("returns an empty array, not an error, when the instrument has no configured entity mapping at all", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const result = await gatherNewsContext(db, instrumentId);
     expect(result).toEqual([]);
   });
 
   it("rejects a raw symbol string where instrument.id is required, proving the parameter is genuinely a uuid FK lookup and not a re-labeled symbol match", async () => {
-    const symbol = `NEWS-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `NEWS-${randomLetters(6)}`;
     const instrumentId = await resolveInstrument(db, { symbol, exchange: "NSE" }, "equity");
     const [instrument] = await db.select().from(schema.instruments).where(eq(schema.instruments.id, instrumentId));
     if (!instrument) throw new Error("instrument not found");

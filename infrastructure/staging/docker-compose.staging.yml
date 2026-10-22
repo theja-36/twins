@@ -1,0 +1,217 @@
+# TWINS STAGING (local packaging only; nothing here has been started or deployed).
+# Separate compose project: dedicated PostgreSQL + Redis, private networks, named volumes. Nothing is shared with any
+# other stack on the host. No database or Redis port is published. The API is published on 127.0.0.1 only.
+#
+#   cp infrastructure/staging/staging.env.example infrastructure/staging/staging.env   # then fill NEW secrets
+#   docker compose -f infrastructure/staging/docker-compose.staging.yml --env-file infrastructure/staging/staging.env config -q
+#
+# Versions: PostgreSQL 16 and Redis 7 are what the project is tested against (CI service containers and
+# infrastructure/docker/docker-compose.test.yml use postgres:16-alpine and redis:7-alpine). PostgreSQL and Redis are pinned
+# by digest below; the app image is the locally built twins-staging:local (digest-pinned Node base, see Dockerfile).
+name: twins-staging
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-hardening: &hardening
+  restart: unless-stopped
+  init: true
+  logging: *logging
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  read_only: true
+  tmpfs: ["/tmp:size=64m,mode=1777"]
+  pids_limit: 256
+
+x-app-env: &app-env
+  # Fixed safety posture. These are literals on purpose: the env file cannot change them.
+  APP_ENV: staging
+  TRADING_MODE: paper
+  LIVE_TRADING: "false"
+  NODE_ENV: production
+  DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
+
+services:
+  postgres:
+    <<: *hardening
+    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea   # PostgreSQL 16.15, resolved 2026-10-21
+    read_only: false            # the postgres image writes to its data dir and /var/run/postgresql
+    cap_drop: ["ALL"]
+    cap_add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    command: ["postgres", "-c", "max_connections=50", "-c", "shared_buffers=256MB", "-c", "log_min_duration_statement=1000"]
+    volumes:
+      - twins_pgdata:/var/lib/postgresql/data
+    networks: [twins_data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    stop_signal: SIGINT          # fast shutdown: connections are closed, WAL is flushed
+    stop_grace_period: 60s
+    mem_limit: 768m
+    cpus: 1.0
+    shm_size: 128m
+
+  redis:
+    <<: *hardening
+    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499   # Redis 7.4.11, resolved 2026-10-21
+    user: redis                 # run unprivileged from the start; /data in the image is owned by this user
+    # BullMQ requires noeviction. Redis is queue transport only; authoritative state lives in PostgreSQL.
+    # The password goes into a 0600 file on the tmpfs, NOT into the process arguments (argv is visible to host users).
+    command: ["sh", "-c", "umask 077 && printf 'requirepass %s\\n' \"$$REDIS_PASSWORD\" > /tmp/redis-auth.conf && exec redis-server /tmp/redis-auth.conf --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?set REDIS_PASSWORD}
+    volumes:
+      - twins_redisdata:/data
+    networks: [twins_data]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    stop_grace_period: 30s
+    mem_limit: 192m
+    cpus: 0.5
+
+  # EXPLICIT one-shot migration. Not part of the default `up`; run only by an operator action, after a backup:
+  #   docker compose ... --profile migrate run --rm migrate
+  migrate:
+    <<: *hardening
+    restart: "no"
+    profiles: ["migrate"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/packages/database/src/migrate.ts"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
+    mem_limit: 384m
+    cpus: 0.5
+
+  api:
+    <<: *hardening
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    build:
+      # Resolved against THIS file's directory. On the staging host the compose file lives in
+      # /opt/twins-staging/infrastructure/staging/ and the checked, hash-verified source tree in /opt/twins-staging/src/, so
+      # ../../src is /opt/twins-staging/src (the previous ../.. was /opt/twins-staging, which holds no source). `dockerfile` is
+      # relative to the CONTEXT, i.e. /opt/twins-staging/src/infrastructure/staging/Dockerfile; the context's .dockerignore
+      # is /opt/twins-staging/src/.dockerignore. Builds are done by hand with an explicit unique tag (see the deployment plan).
+      context: ../../src
+      dockerfile: infrastructure/staging/Dockerfile
+    command: ["node", "--import", "tsx", "/app/apps/api/src/index.ts"]
+    environment:
+      <<: *app-env
+      # The API also joins the shared `coolify` network, where Coolify's own containers carry the bare aliases `postgres`
+      # and `redis`. Bare names would therefore resolve to Coolify's services (and send them TWINS credentials), so the
+      # API uses the unique container names, which resolve only to the TWINS containers on twins_data. Only the API
+      # overrides these; the shared anchor (worker, migrate, scheduler: single private network) is unchanged.
+      DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@twins-staging-postgres-1:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@twins-staging-redis-1:6379
+      HOST: 0.0.0.0              # inside the container only; the host publish below is loopback-only
+      PORT: "4000"
+      TWINS_API_KEY: ${TWINS_API_KEY:?set TWINS_API_KEY}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET}
+      TELEGRAM_SIGNAL_EXCHANGE: NSE
+      # Telegram intake guards (deny by default). Empty/unset approves NO chat; the approved numeric test-chat id is added to
+      # staging.env under a SEPARATE approval. Options-only is a literal here, so the env file cannot switch it off.
+      TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TWINS_TELEGRAM_OPTIONS_ONLY: "true"
+    ports:
+      - "127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    # `coolify` is the existing external network the shared Traefik (coolify-proxy) is attached to.
+    networks: [twins_data, twins_edge, coolify]
+    # Public HTTPS routing through the EXISTING Traefik (docker provider; exposedbydefault=false). Step 1 exposes ONLY
+    # GET /health on twins.theja.tech. The webhook and bearer-protected routes are deliberately NOT routed.
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.docker.network=coolify'
+      - 'traefik.http.services.twins-staging-api.loadbalancer.server.port=4000'
+      - 'traefik.http.middlewares.twins-staging-redirect.redirectscheme.scheme=https'
+      - 'traefik.http.middlewares.twins-staging-redirect.redirectscheme.permanent=true'
+      - 'traefik.http.middlewares.twins-staging-ratelimit.ratelimit.average=10'
+      - 'traefik.http.middlewares.twins-staging-ratelimit.ratelimit.burst=20'
+      - 'traefik.http.routers.twins-staging-http.entrypoints=http'
+      - 'traefik.http.routers.twins-staging-http.rule=Host(`twins.theja.tech`) && Path(`/health`)'
+      - 'traefik.http.routers.twins-staging-http.middlewares=twins-staging-redirect'
+      - 'traefik.http.routers.twins-staging-http.service=twins-staging-api'
+      - 'traefik.http.routers.twins-staging-https.entrypoints=https'
+      - 'traefik.http.routers.twins-staging-https.rule=Host(`twins.theja.tech`) && Path(`/health`)'
+      - 'traefik.http.routers.twins-staging-https.tls=true'
+      - 'traefik.http.routers.twins-staging-https.tls.certresolver=letsencrypt'
+      - 'traefik.http.routers.twins-staging-https.middlewares=twins-staging-ratelimit'
+      - 'traefik.http.routers.twins-staging-https.service=twins-staging-api'
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 30s
+    stop_grace_period: 30s
+    mem_limit: 384m
+    cpus: 0.75
+
+  # No HTTP surface, so no HTTP health check exists for the worker (restart policy + logs only; see README gaps).
+  # It sits on the INTERNAL network only: it cannot reach the internet, so an accidental provider call fails closed.
+  worker:
+    <<: *hardening
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/services/worker/src/index.ts"]
+    environment:
+      <<: *app-env
+      # Same intake guards as the API; the worker enforces them again on every queued job (a job queued earlier or by
+      # another producer is still checked). Empty = no chat approved. Options-only is a literal.
+      TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TWINS_TELEGRAM_OPTIONS_ONLY: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    networks: [twins_data]
+    stop_grace_period: 30s
+    mem_limit: 512m
+    cpus: 1.0
+
+  # OFF by default (profile). MARKET_WATCHLIST is forced empty: with it unset the scheduler would default to a Yahoo
+  # watchlist. Even so, enabling a watchlist needs external egress that this stack does not provide.
+  scheduler:
+    <<: *hardening
+    profiles: ["scheduler"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/services/scheduler/src/index.ts"]
+    environment:
+      <<: *app-env
+      MARKET_WATCHLIST: ""
+    depends_on:
+      redis: { condition: service_healthy }
+    networks: [twins_data]
+    stop_grace_period: 15s
+    mem_limit: 192m
+    cpus: 0.25
+
+networks:
+  twins_data:
+    internal: true               # no route to the internet or to other stacks
+  twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
+  coolify:                       # existing external network of the shared Traefik; only the API joins it
+    external: true
+
+volumes:
+  twins_pgdata:
+  twins_redisdata:

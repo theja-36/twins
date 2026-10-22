@@ -1,0 +1,98 @@
+
+ RUN  v2.1.9 $F2/tree
+
+ ✓ tests/unit/decision-intelligence/decide.test.ts (11 tests) 16ms
+ ✓ tests/unit/adapters/telegram/botApi.test.ts (28 tests) 17ms
+ ✓ tests/unit/adapters/providerContracts.test.ts (6 tests) 5ms
+ ✓ tests/unit/signals/extract.test.ts (19 tests) 55ms
+ ✓ tests/unit/ingestion/dataQuality.test.ts (19 tests) 59ms
+ ✓ tests/unit/decision-intelligence/thesis.test.ts (12 tests) 12ms
+ ✓ tests/unit/signals/evidence.test.ts (6 tests) 20ms
+ ✓ tests/unit/decision-intelligence/structuralValidation.test.ts (8 tests) 8ms
+ ✓ tests/unit/database/poolErrorHandler.test.ts (7 tests) 53ms
+ ✓ tests/unit/observability/structuredLog.test.ts (7 tests) 199ms
+stderr | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > rejects webhook request with missing secret header (403 Forbidden) and does NOT enqueue
+{"service":"api","requestId":"req_b702e479-7ca1-4b51-bdcd-22f22a33778a","correlationId":"corr_d5e60740-2ff6-4e76-97f3-87b9d3e0f571","reason":"invalid_secret","statusCode":403,"ts":"2026-10-19T21:39:01.905Z","level":"warn","event":"webhook.intake.rejected"}
+
+stderr | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > rejects webhook request with incorrect secret header (403 Forbidden) and does NOT enqueue
+{"service":"api","requestId":"req_c5eac716-d3d4-46c2-9cd1-7506fd1b4043","correlationId":"corr_e86a4537-6501-45b1-9069-4903c867b4eb","reason":"invalid_secret","statusCode":403,"ts":"2026-10-19T21:39:01.929Z","level":"warn","event":"webhook.intake.rejected"}
+
+stdout | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > accepts webhook request with valid secret header (202 Accepted) and enqueues job
+{"service":"api","requestId":"req_2f3d3871-907a-48d4-8034-c14e4c23307f","correlationId":"corr_44591253-dd1a-4788-add2-b053fecbac8e","correlationSource":"generated","jobId":"tg-tg_chat_-1001234567890-42","updateId":101,"channelIdentifier":"tg_chat_-1001234567890","externalMessageId":"42","originMessageId":"42","ts":"2026-10-19T21:39:01.951Z","level":"info","event":"webhook.intake.accepted"}
+{"service":"api","requestId":"req_2f3d3871-907a-48d4-8034-c14e4c23307f","correlationId":"corr_44591253-dd1a-4788-add2-b053fecbac8e","correlationSource":"generated","jobId":"tg-tg_chat_-1001234567890-42","statusCode":202,"ts":"2026-10-19T21:39:01.952Z","level":"info","event":"webhook.enqueue.succeeded"}
+
+stdout | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > handles non-text updates cleanly with 200 ignored without enqueuing
+{"service":"api","requestId":"req_d7baa94a-8248-483b-b0c8-420ba8840cb4","correlationId":"corr_df68291e-b460-4635-bd8c-46b693de3170","correlationSource":"generated","reason":"no_text_content","statusCode":200,"ts":"2026-10-19T21:39:02.066Z","level":"info","event":"webhook.intake.ignored"}
+
+stdout | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > fails with 500 when queue enqueue fails and does not acknowledge acceptance
+{"service":"api","requestId":"req_58b7ce75-5bae-4850-aa2a-0c1287631d83","correlationId":"corr_20875a28-5c85-4b35-88c1-e6a438d13243","correlationSource":"generated","jobId":"tg-tg_chat_-1001234567890-44","updateId":103,"channelIdentifier":"tg_chat_-1001234567890","externalMessageId":"44","originMessageId":"44","ts":"2026-10-19T21:39:02.078Z","level":"info","event":"webhook.intake.accepted"}
+
+stderr | tests/unit/api/webhookAuth.test.ts > API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03) > fails with 500 when queue enqueue fails and does not acknowledge acceptance
+{"service":"api","requestId":"req_58b7ce75-5bae-4850-aa2a-0c1287631d83","correlationId":"corr_20875a28-5c85-4b35-88c1-e6a438d13243","correlationSource":"generated","jobId":"tg-tg_chat_-1001234567890-44","errorCode":"UNEXPECTED_ERROR","errorName":"Error","statusCode":500,"ts":"2026-10-19T21:39:02.079Z","level":"error","event":"webhook.enqueue.failed"}
+
+ ✓ tests/unit/api/webhookAuth.test.ts (9 tests) 487ms
+ ✓ tests/unit/api/webhookCorrelation.test.ts (7 tests) 664ms
+stdout | tests/unit/api/webhookBoundary.test.ts > queue selection is explicit (no NODE_ENV stub) > NODE_ENV=test without an injected queue does NOT acknowledge-and-discard: with an unreachable real Redis a valid request gets a generic 503, never 202
+{"service":"api","requestId":"req_7b1721bf-8f48-4b68-a1c8-79d349c49aa4","correlationId":"corr_ede58d16-5d73-420a-8a5c-c778daea51c9","correlationSource":"generated","jobId":"tg-tg_chat_-100123-3","updateId":7,"channelIdentifier":"tg_chat_-100123","externalMessageId":"3","originMessageId":"3","ts":"2026-10-19T21:39:02.433Z","level":"info","event":"webhook.intake.accepted"}
+
+stderr | tests/unit/api/webhookBoundary.test.ts > queue selection is explicit (no NODE_ENV stub) > NODE_ENV=test without an injected queue does NOT acknowledge-and-discard: with an unreachable real Redis a valid request gets a generic 503, never 202
+{"service":"api","errorCode":"ECONNREFUSED","errorName":"Error","suppressedSinceLast":0,"ts":"2026-10-19T21:39:02.432Z","level":"warn","event":"api.redis.error"}
+
+ ✓ tests/unit/dataquality/summarizeAssessment.test.ts (7 tests) 13ms
+stderr | tests/unit/api/webhookBoundary.test.ts > queue selection is explicit (no NODE_ENV stub) > NODE_ENV=test without an injected queue does NOT acknowledge-and-discard: with an unreachable real Redis a valid request gets a generic 503, never 202
+{"service":"api","requestId":"req_7b1721bf-8f48-4b68-a1c8-79d349c49aa4","correlationId":"corr_ede58d16-5d73-420a-8a5c-c778daea51c9","correlationSource":"generated","jobId":"tg-tg_chat_-100123-3","submission":"not_attempted","boundMs":400,"statusCode":503,"ts":"2026-10-19T21:39:02.836Z","level":"warn","event":"webhook.enqueue.unavailable"}
+
+ ✓ tests/unit/api/webhookBoundary.test.ts (10 tests) 1179ms
+   ✓ queue selection is explicit (no NODE_ENV stub) > NODE_ENV=test without an injected queue does NOT acknowledge-and-discard: with an unreachable real Redis a valid request gets a generic 503, never 202 436ms
+ ✓ tests/unit/decision-intelligence/counterThesis.test.ts (5 tests) 10ms
+ ✓ tests/unit/decision-intelligence/decideConfidenceSafety.test.ts (4 tests) 7ms
+ ✓ tests/unit/config.test.ts (7 tests) 10ms
+ ✓ tests/unit/shared/retry.test.ts (4 tests) 7ms
+ ✓ tests/unit/shared/crypto.test.ts (7 tests) 6ms
+ ✓ tests/unit/rehearsal/guardAllowlist.test.ts (15 tests) 33ms
+ ✓ tests/unit/api/webhookEnqueueBound.test.ts (21 tests) 2669ms
+   ✓ Redis never becomes ready (real client + BullMQ queue against a closed local port) > every valid webhook gets a prompt generic 503 (nothing submitted), never 202 and never a hang; shutdown is bounded 661ms
+   ✓ Redis unavailable after a previously healthy connection (controlled queue behaviour) > a hung submission is bounded: generic 503 within the bound, outcome recorded as UNKNOWN, late completion logged (the call is not cancelled) 360ms
+   ✓ healthy path > the best-effort duplicate lookup cannot turn a confirmed submission into a hang or a failure 613ms
+   ✓ ambiguous submission outcome: retry is safe because the job id is deterministic > timed-out first request (job created LATER) + client retry -> exactly one job; the retry gets 202 931ms
+ ✓ tests/unit/adapters/adapterRegistry.test.ts (4 tests) 7ms
+ ✓ tests/unit/adapters/market/yahoo.test.ts (18 tests) 6054ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderRateLimitError on HTTP 429 1510ms
+   ✓ YahooFinanceAdapter – error handling > includes retryAfterMs from Retry-After header 1511ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderUnavailableError on HTTP 500 1504ms
+   ✓ YahooFinanceAdapter – error handling > throws ProviderUnavailableError on network error 1513ms
+ ✓ tests/unit/entities/eventClassification.test.ts (6 tests) 4ms
+ ✓ tests/unit/ingestion/telegramRevisions.test.ts (7 tests) 23ms
+ ✓ tests/unit/signals/contextWindow.test.ts (2 tests) 4ms
+stdout | tests/unit/worker/jobTimestamp.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/unit/worker/correlationLogging.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/unit/worker/jobTimestamp.test.ts > parseJobTimestamp (BullMQ JSON boundary) > queue boundary maps permanent invalid input to UnrecoverableError with safe identifiers only
+{"service":"worker","correlationId":"t","correlationOrigin":"worker-generated","jobId":"job-1","attempt":1,"channelIdentifier":"@x","externalMessageId":"42","ts":"2026-10-19T21:39:05.419Z","level":"info","event":"worker.job.started"}
+
+stderr | tests/unit/worker/jobTimestamp.test.ts > parseJobTimestamp (BullMQ JSON boundary) > queue boundary maps permanent invalid input to UnrecoverableError with safe identifiers only
+{"service":"worker","correlationId":"t","correlationOrigin":"worker-generated","jobId":"job-1","attempt":1,"channelIdentifier":"@x","externalMessageId":"42","errorCode":"INVALID_JOB_INPUT","errorName":"InvalidJobInputError","retryable":false,"durationMs":1,"ts":"2026-10-19T21:39:05.420Z","level":"error","event":"worker.job.failed"}
+
+stdout | tests/unit/worker/jobTimestamp.test.ts > parseJobTimestamp (BullMQ JSON boundary) > queue boundary does NOT mark other errors permanent
+{"service":"worker","correlationId":"t","correlationOrigin":"worker-generated","jobId":"job-1","attempt":1,"channelIdentifier":"@x","externalMessageId":"42","ts":"2026-10-19T21:39:05.421Z","level":"info","event":"worker.job.started"}
+
+stderr | tests/unit/worker/jobTimestamp.test.ts > parseJobTimestamp (BullMQ JSON boundary) > queue boundary does NOT mark other errors permanent
+{"service":"worker","correlationId":"t","correlationOrigin":"worker-generated","jobId":"job-1","attempt":1,"channelIdentifier":"@x","externalMessageId":"42","errorCode":"UNEXPECTED_ERROR","errorName":"Error","retryable":true,"durationMs":0,"ts":"2026-10-19T21:39:05.421Z","level":"error","event":"worker.job.failed"}
+
+ ✓ tests/unit/worker/jobTimestamp.test.ts (14 tests) 24ms
+ ✓ tests/unit/worker/correlationLogging.test.ts (7 tests) 24ms
+ ✓ tests/unit/decision-intelligence/sourceReliability.test.ts (2 tests) 3ms
+ ✓ tests/unit/entities/extractCandidatePhrases.test.ts (4 tests) 6ms
+stdout | tests/unit/worker/lifecycle.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/unit/worker/lifecycle.test.ts (4 tests) 5ms
+
+ Test Files  31 passed (31)
+      Tests  287 passed (287)
+   Start at  22:38:57
+   Duration  8.97s (transform 4.07s, setup 0ms, collect 34.44s, tests 11.68s, environment 33ms, prepare 6.97s)
+

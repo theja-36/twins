@@ -31,7 +31,7 @@ export async function findEntityForInstrument(db: Db, instrumentId: string): Pro
 export async function findNewsEvidenceMentioningEntity(
   db: Db,
   entityId: string,
-  options: { limit?: number | undefined; asOf?: Date | undefined } = {},
+  options: { limit?: number | undefined; asOf?: Date | undefined; receivedBy?: Date | undefined } = {},
 ) {
   const limit = options.limit ?? 5;
   const conditions = [
@@ -57,7 +57,13 @@ export async function findNewsEvidenceMentioningEntity(
     })
     .from(schema.newsEvidence)
     .innerJoin(schema.entityRelationships, and(...conditions))
-    .where(options.asOf ? lte(schema.newsEvidence.sourceTimestamp, options.asOf) : undefined)
+    .where(
+      and(
+        options.asOf ? lte(schema.newsEvidence.sourceTimestamp, options.asOf) : undefined,
+        // Information cutoff for replay: evidence RECEIVED after this instant was not known then, whatever its source timestamp says.
+        options.receivedBy ? lte(schema.newsEvidence.receivedAt, options.receivedBy) : undefined,
+      ),
+    )
     .orderBy(desc(schema.newsEvidence.sourceTimestamp))
     .limit(limit);
 }

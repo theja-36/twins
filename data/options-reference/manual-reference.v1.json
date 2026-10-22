@@ -1,0 +1,24 @@
+{
+  "referenceKind": "manual_verified_reference",
+  "referenceVersion": "manual-reference-v1",
+  "sourceLabel": "MANUAL VERIFIED REFERENCE - maintained by hand by the owner from sources the owner has checked",
+  "manuallyMaintained": true,
+  "autoRefreshed": false,
+  "synthetic": false,
+  "liveMarketData": false,
+  "tradabilityStatement": "A manual local reference is NOT live entitlement, is NOT automatically refreshed, and does NOT prove current tradability. It only records that the owner checked an entry against a named source on a stated date.",
+  "howToAddAnEntry": "Append an object to \"contracts\" with: entryId (unique), underlying (NIFTY|BANKNIFTY|SENSEX), strike (integer), optionType (CE|PE), expiryDate (YYYY-MM-DD), lotSize (integer), source (what you checked), verifiedAsOf (YYYY-MM-DD you checked it), notes (evidence reference, e.g. a circular number or file name). tickSize is optional; omit it unless the source states it. Never copy values you have not checked.",
+  "contracts": [
+    {
+      "entryId": "MANUAL-001",
+      "underlying": "NIFTY",
+      "strike": 24500,
+      "optionType": "CE",
+      "expiryDate": "2026-10-26",
+      "lotSize": 65,
+      "source": "Dhan public NIFTY option-chain page, supplied screenshot",
+      "verifiedAsOf": "2026-10-20",
+      "notes": "Screenshot 2026-10-20 at 10.27.06.jpg shows selected expiry 26 Oct 2026, strike 24,500 with a Calls column, and market lot 65. Manually transcribed from screenshot only; not independently exchange-verified. Screenshot date is not a quote timestamp."
+    }
+  ]
+}

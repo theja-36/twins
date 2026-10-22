@@ -1,0 +1,4 @@
+c5f10370473ea938fbc9ee9c67c169a93d63b9d285bb6e510442fb05a5504b0b  -
+27c3dd2319b71b25c29e9e8607d14c8202643bc4ffa1652564a2c767baf39cdd  packages/signals/src/intelligence.ts
+044aa43199e25a84e5a992aad0cdc3224d24cff923673a14b903a4d2c60d01b5  packages/database/src/schema/signals.ts
+9579650fa1f15b5bc6d798dd83f69bacf2b2e3b219cee81eebfc767321d5d9a3  packages/database/drizzle/meta/_journal.json

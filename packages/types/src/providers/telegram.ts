@@ -18,6 +18,26 @@ export interface NormalizedTelegramMessage {
   messageTimestamp: Date;
   rawText: string;
   rawPayload?: unknown;
+  /**
+   * Telegram's own message_id of the ORIGINAL message (same chat). Equals
+   * externalMessageId for originals; shared by every revision of the message.
+   */
+  originMessageId?: string;
+  /** Telegram `edit_date` for a revision (its effective time); absent for originals. */
+  editDate?: Date;
+  /**
+   * Telegram chat.id (stringified): the canonical, stable channel identity for new
+   * events. `channelIdentifier` is derived from it (`tg_chat_<id>`); @username/title
+   * are mutable display metadata only.
+   */
+  chatId?: string;
+  /** Mutable display metadata (e.g. "@username" or the chat title); never an identity. */
+  channelDisplayName?: string;
+  /**
+   * Telegram update_id: identifies an UPDATE (a repeat delivery of the same update
+   * carries the same id). Kept for audit; it is not the content-revision identity.
+   */
+  updateId?: number;
 }
 
 /** TelegramProvider (spec section 43). */

@@ -1,0 +1,5 @@
+-- leftovers (read-only): connections to the scratch databases from sessions other than this query
+-- processes whose command line contains the patched-copy path (vitest workers run from there):
+-- test-owned Redis queues (SCAN only):
+bull:r0b_test_* keys remaining: 0
+-- crash-test child processes: 0

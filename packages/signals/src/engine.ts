@@ -18,6 +18,10 @@ export interface AssembleSignalIntelligenceOptions {
   newsLimit?: number;
   /** How far back evidence is still considered part of this signal's context window. Omit for no lower bound. */
   lookbackMs?: number;
+  /** Explicit market selection (source, interval, context). */
+  market?: BuildSignalIntelligenceOptions["market"];
+  /** Explicit analysis as-of time: evidence received after it is excluded. */
+  asOf?: Date | undefined;
 }
 
 /**
@@ -76,6 +80,8 @@ export async function assembleSignalIntelligence(
     macro: options.macro,
     newsLimit: options.newsLimit,
     enforceNoLookahead: true,
+    market: options.market,
+    asOf: options.asOf,
   });
 
   const contextWindow = resolveContextWindow(core.signal.signalTimestamp, { lookbackMs: options.lookbackMs });

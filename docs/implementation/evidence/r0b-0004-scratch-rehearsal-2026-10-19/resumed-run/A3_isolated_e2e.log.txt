@@ -1,0 +1,30 @@
+
+ RUN  v2.1.9 <repo>
+
+ ✓ tests/integration/runtime/envGuard.test.ts (3 tests) 2ms
+stdout | tests/integration/runtime/e2ePipeline.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] telegram job channel=tg_chat_-1000969963742 msgId=816339770
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] revision state=current (only the original message is known)
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] signal created signalId=f4d5dcc0-a201-4def-87d1-1e69faa95c75
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] market context refreshed for RELIANCE
+[worker][r0b-test] running validateSignal for signalId=f4d5dcc0-a201-4def-87d1-1e69faa95c75
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+[worker][r0b-test] validation complete signalId=f4d5dcc0-a201-4def-87d1-1e69faa95c75 validationId=9b8de386-f063-4744-8231-c990cffdf8f3 reused=false outcome=INSUFFICIENT_EVIDENCE
+
+ ✓ tests/integration/runtime/e2ePipeline.test.ts (1 test) 253ms
+
+ Test Files  2 passed (2)
+      Tests  4 passed (4)
+   Start at  18:33:45
+   Duration  1.86s (transform 331ms, setup 0ms, collect 1.34s, tests 255ms, environment 0ms, prepare 143ms)
+

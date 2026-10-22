@@ -1,0 +1,708 @@
+
+> twins@0.0.1 test:integration
+> vitest run --config vitest.integration.config.ts --reporter=default --reporter=junit --outputFile.junit=$SCRATCH/f2-promotion-logs/integration-junit.xml
+
+
+ RUN  v2.1.9 <repo>
+
+stdout | tests/integration/runtime/revisions.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/concurrency.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/integration/entities/crossMarketAndTemporal.test.ts (7 tests) 476ms
+stdout | tests/integration/runtime/correlation.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/crashRecovery.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ↓ tests/integration/runtime/crashRecovery.test.ts (1 test | 1 skipped)
+stdout | tests/integration/runtime/evidenceLinks.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/integration/signals/intelligence.test.ts (3 tests) 653ms
+   ✓ buildSignalIntelligence (integration) > is idempotent: re-running does not create duplicate signal_evidence rows 363ms
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-979892582","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.689Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-209704029","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290","originMessageId":"158622290","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.693Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-556511918","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.698Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-564255460","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.701Z","level":"info","event":"worker.message.ingested"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-114087141","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.702Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-979892582","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:41.706Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-209704029","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290","originMessageId":"158622290","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:41.708Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-556511918","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:41.711Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-114087141","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:41.712Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-564255460","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:41.716Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-209704029","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290","originMessageId":"158622290","signalId":"2a4cb0cc-b589-4c83-bae0-790b196aacb0","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.722Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-556511918","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.728Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-979892582","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.729Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-564255460","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.733Z","level":"info","event":"worker.signal.resolved"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-114087141","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.734Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-209704029","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290","originMessageId":"158622290","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.777Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-979892582","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.781Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-556511918","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.783Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-114087141","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.787Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-564255460","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.789Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-209704029","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290","originMessageId":"158622290","signalId":"2a4cb0cc-b589-4c83-bae0-790b196aacb0","validationId":"b7a44d7a-e749-489a-91a7-8d57b3eb41ed","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:41.887Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-793839546","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:41.924Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-793839546","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","state":"current","reason":"latest edit_date","ts":"2026-10-19T21:51:41.933Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-793839546","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","signalId":"671f415c-6a8c-49e4-9c9c-fe1a8591ab82","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:41.950Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-793839546","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","symbol":"RELIANCE","ts":"2026-10-19T21:51:41.985Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-793839546","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","signalId":"671f415c-6a8c-49e4-9c9c-fe1a8591ab82","validationId":"f3151ad6-50a0-499f-9405-d21ccef871d9","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:42.123Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-11538767","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700002000_25b7a7862fc0","originMessageId":"158622290","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:42.218Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-11538767","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700002000_25b7a7862fc0","originMessageId":"158622290","state":"current","reason":"latest edit_date","ts":"2026-10-19T21:51:42.241Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-11538767","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700002000_25b7a7862fc0","originMessageId":"158622290","signalId":"51449a1a-1ae5-4299-8e2b-bcfca6148239","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:42.276Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-11538767","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700002000_25b7a7862fc0","originMessageId":"158622290","symbol":"RELIANCE","ts":"2026-10-19T21:51:42.389Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-979892582","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","validationId":"d1d0bb07-6d71-4be8-bd0c-455375c2b464","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:42.427Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-556511918","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","validationId":"d1d0bb07-6d71-4be8-bd0c-455375c2b464","validationReused":true,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:42.429Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-564255460","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","validationId":"d1d0bb07-6d71-4be8-bd0c-455375c2b464","validationReused":true,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:42.436Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_same_809114854-540406128-114087141","attempt":1,"channelIdentifier":"@r0b_conc_same_809114854","externalMessageId":"540406128","signalId":"c1ccf034-e051-416e-852a-a596dfef7eff","validationId":"d1d0bb07-6d71-4be8-bd0c-455375c2b464","validationReused":true,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:42.439Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-11538767","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700002000_25b7a7862fc0","originMessageId":"158622290","signalId":"51449a1a-1ae5-4299-8e2b-bcfca6148239","validationId":"14f2fb6a-5ab2-4d30-b8d3-3fe68d044145","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:42.592Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_val_18125294-266331916-218047615","attempt":1,"channelIdentifier":"@r0b_conc_val_18125294","externalMessageId":"266331916","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:42.613Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_val_18125294-266331916-218047615","attempt":1,"channelIdentifier":"@r0b_conc_val_18125294","externalMessageId":"266331916","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:42.646Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_val_18125294-266331916-218047615","attempt":1,"channelIdentifier":"@r0b_conc_val_18125294","externalMessageId":"266331916","signalId":"831c8316-4d87-4a60-a7d0-a793b3b4f90e","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:42.712Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-10688434","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:42.727Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-10688434","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","state":"superseded","reason":"a revision with a later edit_date exists","ts":"2026-10-19T21:51:42.741Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-10688434","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","signalId":"671f415c-6a8c-49e4-9c9c-fe1a8591ab82","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:42.755Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-10688434","attempt":1,"channelIdentifier":"tg_chat_-1000205381992","externalMessageId":"158622290_edit_1700001000_56eed2ed15b8","originMessageId":"158622290","signalId":"671f415c-6a8c-49e4-9c9c-fe1a8591ab82","ts":"2026-10-19T21:51:42.766Z","level":"info","event":"worker.validation.skipped_existing"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_val_18125294-266331916-218047615","attempt":1,"channelIdentifier":"@r0b_conc_val_18125294","externalMessageId":"266331916","symbol":"RELIANCE","ts":"2026-10-19T21:51:42.820Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-317374500","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700002000_25b7a7862fc0","originMessageId":"587915162","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:42.867Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-317374500","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700002000_25b7a7862fc0","originMessageId":"587915162","state":"current","reason":"latest edit_date","ts":"2026-10-19T21:51:42.892Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-317374500","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700002000_25b7a7862fc0","originMessageId":"587915162","signalId":"1e237a28-eba5-4aab-93a0-c8286f7c4470","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:42.911Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-317374500","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700002000_25b7a7862fc0","originMessageId":"587915162","symbol":"RELIANCE","ts":"2026-10-19T21:51:42.948Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/runtime/evidenceLinks.test.ts (4 tests) 1400ms
+   ✓ signal_evidence link identity (migration 0005 + conflict-safe writer) > concurrent writers (N=4, held at a barrier per link) produce exactly one link per gathered evidence row 430ms
+   ✓ signal_evidence link identity (migration 0005 + conflict-safe writer) > partial failure then retry converges: the first link survives unchanged, the missing links are added, nothing is duplicated 582ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-317374500","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700002000_25b7a7862fc0","originMessageId":"587915162","signalId":"1e237a28-eba5-4aab-93a0-c8286f7c4470","validationId":"910ac473-9011-4e93-90ff-12d3ffcb432e","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:43.123Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-206255223","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700001000_56eed2ed15b8","originMessageId":"587915162","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.171Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_val_18125294-266331916-218047615","attempt":1,"channelIdentifier":"@r0b_conc_val_18125294","externalMessageId":"266331916","signalId":"831c8316-4d87-4a60-a7d0-a793b3b4f90e","validationId":"fcd05349-0d4a-4ac3-b2c5-dc63ff114cc5","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:43.177Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-206255223","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700001000_56eed2ed15b8","originMessageId":"587915162","state":"superseded","reason":"a revision with a later edit_date exists","ts":"2026-10-19T21:51:43.185Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-206255223","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700001000_56eed2ed15b8","originMessageId":"587915162","signalId":"1825b32c-3d98-4ebf-a7e9-f5040b731f90","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.203Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-206255223","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700001000_56eed2ed15b8","originMessageId":"587915162","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.246Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-206255223","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162_edit_1700001000_56eed2ed15b8","originMessageId":"587915162","signalId":"1825b32c-3d98-4ebf-a7e9-f5040b731f90","validationId":"a2001e52-dd9a-4be1-8e29-f1367a5e6549","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:43.335Z","level":"info","event":"worker.validation.recorded"}
+
+ ✓ tests/integration/signals/engine.test.ts (6 tests) 2366ms
+   ✓ assembleSignalIntelligence (Phase 8 engine, integration) > assembles a full report: core + entity context + normalized evidence across all domains 302ms
+   ✓ assembleSignalIntelligence (Phase 8 engine, integration) > surfaces stale evidence explicitly when a market bar exceeds the freshness threshold 363ms
+   ✓ assembleSignalIntelligence (Phase 8 engine, integration) > is idempotent: re-running does not duplicate signal_evidence rows (reuses Phase 6's linking) 967ms
+ ✓ tests/integration/decision-intelligence/engine.test.ts (5 tests) 2274ms
+   ✓ validateSignal (Phase 9 integration) > persists an auditable signal_validations row and marks the signal decided 313ms
+   ✓ validateSignal (Phase 9 integration) > REJECTs when a negative-convention event affecting the resolved company exists before the signal's timestamp 433ms
+   ✓ validateSignal (Phase 9 integration) > is auditable: re-running creates a new, independent validation row rather than overwriting the prior verdict 919ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-665207546","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162","originMessageId":"587915162","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.370Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-665207546","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162","originMessageId":"587915162","state":"superseded","reason":"the message has at least one edit","ts":"2026-10-19T21:51:43.379Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-665207546","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162","originMessageId":"587915162","signalId":"ba674439-f790-4be9-a6c6-2c2aaf9ff45b","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.393Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-665207546","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162","originMessageId":"587915162","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.478Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-665207546","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"587915162","originMessageId":"587915162","signalId":"ba674439-f790-4be9-a6c6-2c2aaf9ff45b","validationId":"514788a3-c5b5-436b-a21c-50c66ea59b37","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:43.516Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-48846638","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_5c9564784f45","originMessageId":"248600470","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.540Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-48846638","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_5c9564784f45","originMessageId":"248600470","state":"current","reason":"latest edit_date","ts":"2026-10-19T21:51:43.546Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-48846638","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_5c9564784f45","originMessageId":"248600470","signalId":"2a192740-9768-4e91-b206-91196a897e88","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.554Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-48846638","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_5c9564784f45","originMessageId":"248600470","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.590Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/database.schema.test.ts (9 tests) 423ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-48846638","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_5c9564784f45","originMessageId":"248600470","signalId":"2a192740-9768-4e91-b206-91196a897e88","validationId":"1ad3b209-1b4b-4ed5-a2ce-54ea9add59f5","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:43.636Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-722457916","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_2fdb799b9064","originMessageId":"248600470","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.662Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-722457916","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_2fdb799b9064","originMessageId":"248600470","state":"ambiguous","reason":"multiple distinct revisions share the latest edit_date: order cannot be established","ts":"2026-10-19T21:51:43.674Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-722457916","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_2fdb799b9064","originMessageId":"248600470","signalId":"acdbb9e3-9c2b-472f-8313-5bb4b649f342","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.686Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-722457916","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_2fdb799b9064","originMessageId":"248600470","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.748Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/signals/gatherNewsContext.test.ts (6 tests) 374ms
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_a_895211734-382238457-725068261","attempt":1,"channelIdentifier":"@r0b_conc_a_895211734","externalMessageId":"382238457","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.789Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_b_924416849-382238457-372929687","attempt":1,"channelIdentifier":"@r0b_conc_b_924416849","externalMessageId":"382238457","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.793Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_a_895211734-382238457-725068261","attempt":1,"channelIdentifier":"@r0b_conc_a_895211734","externalMessageId":"382238457","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:43.799Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_b_924416849-382238457-372929687","attempt":1,"channelIdentifier":"@r0b_conc_b_924416849","externalMessageId":"382238457","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:43.802Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-722457916","attempt":1,"channelIdentifier":"tg_chat_-1000336724825","externalMessageId":"248600470_edit_1700003000_2fdb799b9064","originMessageId":"248600470","signalId":"acdbb9e3-9c2b-472f-8313-5bb4b649f342","validationId":"2da0df74-b08e-47c3-b4fa-e6b6d302f95c","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:43.805Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_b_924416849-382238457-372929687","attempt":1,"channelIdentifier":"@r0b_conc_b_924416849","externalMessageId":"382238457","signalId":"bf3c9c68-1dab-479f-aca6-0d61c0fc274f","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.825Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_a_895211734-382238457-725068261","attempt":1,"channelIdentifier":"@r0b_conc_a_895211734","externalMessageId":"382238457","signalId":"5cfb35e3-cfe2-4b6d-a818-24434e8e2bcb","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.827Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-197009935","attempt":1,"channelIdentifier":"tg_chat_-1000482949214","externalMessageId":"518070022","originMessageId":"518070022","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.853Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-197009935","attempt":1,"channelIdentifier":"tg_chat_-1000482949214","externalMessageId":"518070022","originMessageId":"518070022","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:43.862Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_b_924416849-382238457-372929687","attempt":1,"channelIdentifier":"@r0b_conc_b_924416849","externalMessageId":"382238457","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.864Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > a multi-directive message is stored raw but yields no signal (ambiguous, unsupported)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-197009935","attempt":1,"channelIdentifier":"tg_chat_-1000482949214","externalMessageId":"518070022","originMessageId":"518070022","reason":"ambiguous_message","ts":"2026-10-19T21:51:43.866Z","level":"info","event":"worker.signal.none"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_a_895211734-382238457-725068261","attempt":1,"channelIdentifier":"@r0b_conc_a_895211734","externalMessageId":"382238457","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.868Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-105264380","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:43.915Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-105264380","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:43.929Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-105264380","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:43.937Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-105264380","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","symbol":"RELIANCE","ts":"2026-10-19T21:51:43.978Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/entities/events.test.ts (7 tests) 718ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-105264380","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","validationId":"4837b50d-bf6c-4bb3-9316-90b0ab01e12e","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:44.061Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.128Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_b_924416849-382238457-372929687","attempt":1,"channelIdentifier":"@r0b_conc_b_924416849","externalMessageId":"382238457","signalId":"bf3c9c68-1dab-479f-aca6-0d61c0fc274f","validationId":"c085bad7-70bd-4325-bc5a-7fbc92a2d70b","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:44.131Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse)
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_a_895211734-382238457-725068261","attempt":1,"channelIdentifier":"@r0b_conc_a_895211734","externalMessageId":"382238457","signalId":"5cfb35e3-cfe2-4b6d-a818-24434e8e2bcb","validationId":"2512356c-5c69-45c3-88c2-0cd45f4bd703","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:44.133Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.134Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.145Z","level":"info","event":"worker.signal.resolved"}
+
+stderr | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","resumePolicy":"append_one_recompute_snapshot","ts":"2026-10-19T21:51:44.154Z","level":"warn","event":"worker.validation.unknown_provenance"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.177Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-192557537","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.191Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-192557537","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.218Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-192557537","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.252Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-964711282","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","validationId":"5995ed21-3e83-4f0b-9305-414322b07c84","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:44.310Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-192557537","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.345Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-977647898","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.383Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-977647898","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.423Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-977647898","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.436Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-977647898","attempt":1,"channelIdentifier":"tg_chat_-1000064586177","externalMessageId":"204275952","originMessageId":"204275952","signalId":"ea998536-030e-4f87-b1a8-e007df1c83c9","ts":"2026-10-19T21:51:44.464Z","level":"info","event":"worker.validation.skipped_existing"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-183779899","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.808Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-183779899","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.830Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-183779899","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"dd9150c2-6919-45d0-9ce8-0ff2aa08855d","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.855Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-183779899","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.885Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-585802024","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.898Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-971537774","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.900Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-65250498","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.901Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-585802024","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.908Z","level":"info","event":"worker.revision.state"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-971537774","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.908Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-65250498","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.910Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-585802024","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.913Z","level":"info","event":"worker.signal.resolved"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-971537774","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.914Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-65250498","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:44.916Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-183779899","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"dd9150c2-6919-45d0-9ce8-0ff2aa08855d","validationId":"40086483-bfe7-44c2-b090-39baf9a46aee","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:44.944Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-585802024","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.964Z","level":"info","event":"worker.market_context.refreshed"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-65250498","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.964Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-971537774","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","symbol":"RELIANCE","ts":"2026-10-19T21:51:44.966Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-418483748","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:44.985Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-418483748","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:44.997Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-418483748","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"dd9150c2-6919-45d0-9ce8-0ff2aa08855d","signalCreated":false,"parserVersion":"legacy-unversioned","ts":"2026-10-19T21:51:45.003Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-418483748","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"dd9150c2-6919-45d0-9ce8-0ff2aa08855d","ts":"2026-10-19T21:51:45.011Z","level":"info","event":"worker.validation.skipped_existing"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-263764587","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.078Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-263764587","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.086Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-263764587","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"50da6155-4f44-4a74-bb71-cc198e734602","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.096Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-263764587","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.144Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-585802024","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","validationId":"e64c3663-8689-481f-abcb-2f7bf7530de3","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:45.146Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-65250498","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","validationId":"e64c3663-8689-481f-abcb-2f7bf7530de3","validationReused":true,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:45.148Z","level":"info","event":"worker.validation.recorded"}
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_partial_397262251-388674319-971537774","attempt":1,"channelIdentifier":"@r0b_conc_partial_397262251","externalMessageId":"388674319","signalId":"62a4836f-7e94-4519-bbdb-043f105cc50c","validationId":"e64c3663-8689-481f-abcb-2f7bf7530de3","validationReused":true,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:45.149Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_ver_577671471-694562173-128541589","attempt":1,"channelIdentifier":"@r0b_conc_ver_577671471","externalMessageId":"694562173","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.181Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_ver_577671471-694562173-128541589","attempt":1,"channelIdentifier":"@r0b_conc_ver_577671471","externalMessageId":"694562173","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.191Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-263764587","attempt":1,"channelIdentifier":"tg_chat_-1000930634457","externalMessageId":"393424694","originMessageId":"393424694","signalId":"50da6155-4f44-4a74-bb71-cc198e734602","validationId":"4d4578ce-5156-4fd0-a296-426f66c22dba","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:45.198Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_ver_577671471-694562173-128541589","attempt":1,"channelIdentifier":"@r0b_conc_ver_577671471","externalMessageId":"694562173","signalId":"eee99f3e-f7da-46e9-bf99-369f8c5679ae","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.200Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_ver_577671471-694562173-128541589","attempt":1,"channelIdentifier":"@r0b_conc_ver_577671471","externalMessageId":"694562173","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.223Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-293147374","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.224Z","level":"info","event":"worker.message.ingested"}
+
+ ✓ tests/integration/ingestion/market.test.ts (6 tests) 238ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-293147374","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.236Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-293147374","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","signalId":"c0f0f2cc-1ad2-4dc3-a4c5-ea5d10fce251","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.254Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-293147374","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.278Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-293147374","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","signalId":"c0f0f2cc-1ad2-4dc3-a4c5-ea5d10fce251","validationId":"6a74c7d2-38b3-41d1-8f84-f7868f47083a","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:45.327Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-992870696","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","ts":"2026-10-19T21:51:45.360Z","level":"info","event":"worker.job.started"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-992870696","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.375Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/concurrency.test.ts > R0B idempotency under real DB concurrency > explicit reparse under another parser version is a legitimate second signal; concurrent same-version reparses collapse to one
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"direct-@r0b_conc_ver_577671471-694562173-128541589","attempt":1,"channelIdentifier":"@r0b_conc_ver_577671471","externalMessageId":"694562173","signalId":"eee99f3e-f7da-46e9-bf99-369f8c5679ae","validationId":"b9194723-d4c9-4365-845e-5741d0113497","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:45.381Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-992870696","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.382Z","level":"info","event":"worker.revision.state"}
+
+stderr | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > several existing signals with no current-version canonical record block with a permanent reconciliation error and change nothing
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-992870696","attempt":1,"channelIdentifier":"tg_chat_-1000361471294","externalMessageId":"888124450","originMessageId":"888124450","errorCode":"RECONCILIATION_REQUIRED","errorName":"ReconciliationRequiredError","retryable":false,"durationMs":27,"ts":"2026-10-19T21:51:45.387Z","level":"error","event":"worker.job.failed"}
+
+ ✓ tests/integration/dataquality/market.test.ts (6 tests) 321ms
+ ✓ tests/integration/runtime/concurrency.test.ts (5 tests) 3851ms
+   ✓ R0B idempotency under real DB concurrency > same logical message processed by N concurrent workers -> one canonical signal and validation 922ms
+   ✓ R0B idempotency under real DB concurrency > concurrent validations for the same ingestion key collapse to one row; keyless re-validation keeps history 1242ms
+   ✓ R0B idempotency under real DB concurrency > same external message id in different channels stays separate (no cross-channel collapse) 400ms
+   ✓ R0B idempotency under real DB concurrency > partial failure (signal created, validation failed) followed by concurrent retries resumes to one validation 997ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-850550140","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"29763307","originMessageId":"29763307","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.430Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-850550140","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"29763307","originMessageId":"29763307","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.449Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-850550140","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"29763307","originMessageId":"29763307","signalId":"7999b2e3-3c2a-43c7-b5d0-ac9e70472a8f","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.458Z","level":"info","event":"worker.signal.resolved"}
+
+ ✓ tests/integration/entities/resolution.test.ts (10 tests) 317ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-850550140","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"29763307","originMessageId":"29763307","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.498Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-850550140","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"29763307","originMessageId":"29763307","signalId":"7999b2e3-3c2a-43c7-b5d0-ac9e70472a8f","validationId":"97a4f6fc-6e47-4f14-97f1-02dc3cf0b0b3","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:45.592Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-621806259","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"780146613","originMessageId":"780146613","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.641Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-621806259","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"780146613","originMessageId":"780146613","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.656Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-621806259","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"780146613","originMessageId":"780146613","signalId":"e462a206-23b3-47c4-8025-4232ec31fd52","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.678Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-621806259","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"780146613","originMessageId":"780146613","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.713Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-621806259","attempt":1,"channelIdentifier":"tg_chat_-1000114028743","externalMessageId":"780146613","originMessageId":"780146613","signalId":"e462a206-23b3-47c4-8025-4232ec31fd52","validationId":"e10cbae5-4a26-47e5-8745-5429a8ec420d","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:45.769Z","level":"info","event":"worker.validation.recorded"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-160879066","attempt":1,"channelIdentifier":"tg_chat_-1000129392975","externalMessageId":"7369654","originMessageId":"7369654","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:45.816Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-160879066","attempt":1,"channelIdentifier":"tg_chat_-1000129392975","externalMessageId":"7369654","originMessageId":"7369654","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:45.830Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-160879066","attempt":1,"channelIdentifier":"tg_chat_-1000129392975","externalMessageId":"7369654","originMessageId":"7369654","signalId":"5c6346fd-7f9f-4e26-8416-8f0e4c72d3be","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:45.840Z","level":"info","event":"worker.signal.resolved"}
+
+ ✓ tests/integration/entities/newsMentions.test.ts (7 tests) 445ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-160879066","attempt":1,"channelIdentifier":"tg_chat_-1000129392975","externalMessageId":"7369654","originMessageId":"7369654","symbol":"RELIANCE","ts":"2026-10-19T21:51:45.887Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/dataquality/news_telegram.test.ts (4 tests) 190ms
+stdout | tests/integration/runtime/revisions.test.ts > R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess
+{"service":"worker","correlationId":"c","correlationOrigin":"worker-generated","jobId":"rev-160879066","attempt":1,"channelIdentifier":"tg_chat_-1000129392975","externalMessageId":"7369654","originMessageId":"7369654","signalId":"5c6346fd-7f9f-4e26-8416-8f0e4c72d3be","validationId":"18673978-2415-4b0a-904f-4506f1a07c1f","validationReused":false,"decision":"REJECT","ts":"2026-10-19T21:51:45.960Z","level":"info","event":"worker.validation.recorded"}
+
+ ✓ tests/integration/runtime/revisions.test.ts (7 tests) 4413ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > preserves original + every distinct edit, collapses a repeat delivery, keeps timing fields separate 1208ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > currentness comes from edit_date, not processing order: edit-before-original, late older edit, same-second tie 1007ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > validation provenance: keyless (legacy/manual) validation is preserved and not treated as proof; exactly one recomputed snapshot is appended 810ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > legacy-unversioned signal: retry resumes it; an explicit reparse is the only way to add a current-parser signal 519ms
+   ✓ R0B edit revisions (real adapter -> worker -> PostgreSQL) > channel identity is chat.id: a rename keeps one source (display metadata updates); a username-only legacy source is never merged by guess 572ms
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes
+{"service":"worker","correlationId":"corr_6714faae-5cf4-4289-8275-94f32c38486c","correlationOrigin":"worker-generated","jobId":"perm-31061293","attempt":1,"maxAttempts":3,"channelIdentifier":"@r0b_perm_349249853","externalMessageId":"31061293","ts":"2026-10-19T21:51:45.976Z","level":"info","event":"worker.job.started"}
+
+stderr | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes
+{"service":"worker","correlationId":"corr_6714faae-5cf4-4289-8275-94f32c38486c","correlationOrigin":"worker-generated","jobId":"perm-31061293","attempt":1,"maxAttempts":3,"channelIdentifier":"@r0b_perm_349249853","externalMessageId":"31061293","errorCode":"INVALID_JOB_INPUT","errorName":"InvalidJobInputError","retryable":false,"durationMs":7,"ts":"2026-10-19T21:51:45.983Z","level":"error","event":"worker.job.failed"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"api","requestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationSource":"generated","jobId":"tg-tg_chat_-1000682956094-774683110","updateId":230869223,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","ts":"2026-10-19T21:51:46.843Z","level":"info","event":"webhook.intake.accepted"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","ts":"2026-10-19T21:51:46.864Z","level":"info","event":"worker.job.started"}
+{"service":"api","requestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationSource":"generated","jobId":"tg-tg_chat_-1000682956094-774683110","statusCode":202,"ts":"2026-10-19T21:51:46.869Z","level":"info","event":"webhook.enqueue.succeeded"}
+
+stderr | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","errorCode":"INGESTION_FAILED","errorName":"Error","retryable":true,"durationMs":37,"ts":"2026-10-19T21:51:46.901Z","level":"error","event":"worker.job.failed"}
+
+ ✓ tests/integration/ingestion/macro.test.ts (4 tests) 108ms
+ ✓ tests/integration/ingestion/jobs.test.ts (5 tests) 192ms
+ ✓ tests/integration/ingestion/telegram.test.ts (3 tests) 107ms
+ ✓ tests/integration/entities/idempotency.test.ts (4 tests) 159ms
+ ✓ tests/integration/dataquality/macro.test.ts (3 tests) 163ms
+stdout | tests/integration/runtime/enqueueBounded.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","ts":"2026-10-19T21:51:47.923Z","level":"info","event":"worker.job.started"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:47.965Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:47.981Z","level":"info","event":"worker.revision.state"}
+
+stderr | tests/integration/runtime/enqueueBounded.test.ts > HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job
+Error: read ECONNRESET
+    at TCP.onStreamRead (node:internal/stream_base_commons:216:20) {
+  errno: -54,
+  code: 'ECONNRESET',
+  syscall: 'read'
+}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","signalId":"e7a6ef0a-e72b-46df-83ce-faf11d5d82f1","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:48.011Z","level":"info","event":"worker.signal.resolved"}
+
+ ↓ tests/integration/runtime/ciGuard.test.ts (4 tests | 4 skipped)
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","symbol":"RELIANCE","ts":"2026-10-19T21:51:48.038Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/runtime/envGuard.test.ts (3 tests) 3ms
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"api","requestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationSource":"generated","jobId":"tg-tg_chat_-1000020261449-702133857","updateId":19964290,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","ts":"2026-10-19T21:51:48.051Z","level":"info","event":"webhook.intake.accepted"}
+
+stderr | tests/integration/runtime/enqueueBounded.test.ts > HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job
+Error: connect ECONNREFUSED 127.0.0.1:52301
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 52301
+}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","ts":"2026-10-19T21:51:48.066Z","level":"info","event":"worker.job.started"}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"api","requestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationSource":"generated","jobId":"tg-tg_chat_-1000020261449-702133857","statusCode":202,"ts":"2026-10-19T21:51:48.072Z","level":"info","event":"webhook.enqueue.succeeded"}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:48.111Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:48.118Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","signalId":"330f1dde-1080-4e9b-a473-8d2ba7579804","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:48.128Z","level":"info","event":"worker.signal.resolved"}
+
+stderr | tests/integration/runtime/enqueueBounded.test.ts > HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job
+Error: connect ECONNREFUSED 127.0.0.1:52301
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 52301
+}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","symbol":"RELIANCE","ts":"2026-10-19T21:51:48.165Z","level":"info","event":"worker.market_context.refreshed"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","signalId":"e7a6ef0a-e72b-46df-83ce-faf11d5d82f1","validationId":"d2693783-ab76-4144-9c65-3eecb5801a86","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:48.271Z","level":"info","event":"worker.validation.recorded"}
+{"service":"worker","correlationId":"corr_7211939e-87c1-4c6d-8a25-891b5bdd7bfe","correlationOrigin":"job","intakeRequestId":"req_72d0232e-0743-4c35-8382-b1f2dc8b9a5e","intakeReceivedAt":"2026-10-19T21:51:46.843Z","jobId":"tg-tg_chat_-1000682956094-774683110","attempt":2,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000682956094","externalMessageId":"774683110","originMessageId":"774683110","outcome":"validation_created","signalId":"e7a6ef0a-e72b-46df-83ce-faf11d5d82f1","validationId":"d2693783-ab76-4144-9c65-3eecb5801a86","durationMs":348,"ts":"2026-10-19T21:51:48.272Z","level":"info","event":"worker.job.completed"}
+
+stdout | tests/integration/runtime/enqueueBounded.test.ts > HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job
+{"observedWhilePathDown":{"event":"webhook.enqueue.unavailable","submission":"failed_unconfirmed","ms":316}}
+
+stderr | tests/integration/runtime/enqueueBounded.test.ts > HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job
+Error: connect ECONNREFUSED 127.0.0.1:52301
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1864:16) {
+  errno: -61,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '127.0.0.1',
+  port: 52301
+}
+
+ ✓ tests/integration/runtime/correlation.test.ts (5 tests) 6842ms
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > one request is followed through intake -> queue -> worker -> outcome with the same correlation id; record ids match the database; no sensitive data is logged 1225ms
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > a retry keeps the job's correlation id and identifies each attempt; the failed attempt carries a safe code only 1913ms
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > a duplicate webhook that deduplicates onto the existing job is linked to it and does not become the job's context 607ms
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > a legacy job queued without correlation metadata is processed normally with a worker-generated, flagged id 464ms
+   ✓ end-to-end correlation logging (real Redis + PostgreSQL) > concurrent requests never leak correlation context into each other's log lines 2477ms
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"api","requestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationSource":"generated","jobId":"tg-tg_chat_-1000051521375-902402957","updateId":513449819,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","ts":"2026-10-19T21:51:48.354Z","level":"info","event":"webhook.intake.accepted"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"api","requestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationSource":"generated","jobId":"tg-tg_chat_-1000051521375-902402957","statusCode":202,"ts":"2026-10-19T21:51:48.358Z","level":"info","event":"webhook.enqueue.succeeded"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","ts":"2026-10-19T21:51:48.360Z","level":"info","event":"worker.job.started"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","inserted":1,"duplicates":0,"rejectedInvalid":0,"ts":"2026-10-19T21:51:48.384Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/e2ePipeline.test.ts > Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","signalId":"330f1dde-1080-4e9b-a473-8d2ba7579804","validationId":"125b7910-15cf-4b63-abbb-f434676fb863","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:48.388Z","level":"info","event":"worker.validation.recorded"}
+{"service":"worker","correlationId":"corr_5e352bf2-fb51-4965-9358-d599111f1d43","correlationOrigin":"job","intakeRequestId":"req_55c37625-1f0e-44a3-8607-cfda4ec1c039","intakeReceivedAt":"2026-10-19T21:51:48.051Z","jobId":"tg-tg_chat_-1000020261449-702133857","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000020261449","externalMessageId":"702133857","originMessageId":"702133857","outcome":"validation_created","signalId":"330f1dde-1080-4e9b-a473-8d2ba7579804","validationId":"125b7910-15cf-4b63-abbb-f434676fb863","durationMs":323,"ts":"2026-10-19T21:51:48.389Z","level":"info","event":"worker.job.completed"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:48.392Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","signalCreated":true,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:48.405Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","symbol":"RELIANCE","ts":"2026-10-19T21:51:48.426Z","level":"info","event":"worker.market_context.refreshed"}
+
+ ✓ tests/integration/runtime/e2ePipeline.test.ts (1 test) 678ms
+   ✓ Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0B) > processes synthetic Telegram webhook through Redis queue into PostgreSQL validation rows 464ms
+ ✓ tests/integration/ingestion/news.test.ts (3 tests) 93ms
+ ✓ tests/integration/runtime/enqueueBounded.test.ts (1 test) 972ms
+   ✓ HTTP producer against real ioredis/BullMQ, with a cut-and-restore network path (controlled; not an outage drill) > 202 when healthy; prompt generic 503 while the path is down (no hang, no 202); same update succeeds once the path returns, with exactly one job 929ms
+ ✓ tests/integration/signals/ingestSignal.test.ts (3 tests) 300ms
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","validationId":"07b5dd99-621d-49dd-91ef-2c5f55e5ddb3","validationReused":false,"decision":"INSUFFICIENT_EVIDENCE","ts":"2026-10-19T21:51:48.823Z","level":"info","event":"worker.validation.recorded"}
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","outcome":"validation_created","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","validationId":"07b5dd99-621d-49dd-91ef-2c5f55e5ddb3","durationMs":464,"ts":"2026-10-19T21:51:48.824Z","level":"info","event":"worker.job.completed"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"api","requestId":"req_14b055f2-009e-4baa-be57-3defd2bdd522","correlationId":"corr_263a0c99-2739-4d89-9d1b-160f25b44ea7","correlationSource":"generated","jobId":"tg-tg_chat_-1000051521375-902402957","updateId":513449819,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","ts":"2026-10-19T21:51:48.889Z","level":"info","event":"webhook.intake.accepted"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"api","requestId":"req_14b055f2-009e-4baa-be57-3defd2bdd522","correlationId":"corr_263a0c99-2739-4d89-9d1b-160f25b44ea7","correlationSource":"generated","jobId":"tg-tg_chat_-1000051521375-902402957","existingJobCorrelationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","existingJobRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","statusCode":202,"ts":"2026-10-19T21:51:48.896Z","level":"info","event":"webhook.enqueue.deduplicated"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","ts":"2026-10-19T21:51:48.903Z","level":"info","event":"worker.job.started"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","inserted":0,"duplicates":1,"rejectedInvalid":0,"ts":"2026-10-19T21:51:48.916Z","level":"info","event":"worker.message.ingested"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","state":"current","reason":"only the original message is known","ts":"2026-10-19T21:51:48.925Z","level":"info","event":"worker.revision.state"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","signalCreated":false,"parserVersion":"telegram-regex-v1","ts":"2026-10-19T21:51:48.929Z","level":"info","event":"worker.signal.resolved"}
+
+stdout | tests/integration/runtime/failureHandling.test.ts > R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","ts":"2026-10-19T21:51:48.930Z","level":"info","event":"worker.validation.skipped_existing"}
+{"service":"worker","correlationId":"corr_0416ffe1-8534-4cc5-90bc-6e9c538f26bd","correlationOrigin":"job","intakeRequestId":"req_fcc53978-2e08-4198-92ea-35ba07a3230d","intakeReceivedAt":"2026-10-19T21:51:48.354Z","jobId":"tg-tg_chat_-1000051521375-902402957","attempt":1,"maxAttempts":3,"channelIdentifier":"tg_chat_-1000051521375","externalMessageId":"902402957","originMessageId":"902402957","outcome":"validation_already_existed","signalId":"244f3bf8-f7db-4ee1-acf9-c1ab5ab22c22","durationMs":27,"ts":"2026-10-19T21:51:48.930Z","level":"info","event":"worker.job.completed"}
+
+ ✓ tests/integration/runtime/failureHandling.test.ts (3 tests) 3144ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > permanent invalid input (malformed timestamp) fails once without retry or DB writes 748ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > injected transient failure is retried by BullMQ and the final result is not duplicated 1727ms
+   ✓ R0B failure handling (real Redis + PostgreSQL) > duplicate delivery of the same Telegram update yields no duplicate business effect 623ms
+
+ Test Files  27 passed | 2 skipped (29)
+      Tests  130 passed | 5 skipped (135)
+   Start at  22:51:36
+   Duration  12.05s (transform 2.58s, setup 0ms, collect 58.98s, tests 31.22s, environment 9ms, prepare 3.70s)
+
+JUNIT report written to $SCRATCH/f2-promotion-logs/integration-junit.xml

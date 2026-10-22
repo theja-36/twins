@@ -1,0 +1,1 @@
+bull:r0b_test_* keys remaining: 0

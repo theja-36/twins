@@ -1,3 +1,4 @@
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -6,8 +7,7 @@ import { ingestTelegramMessages } from "../../../packages/ingestion/src/telegram
 import type { NormalizedTelegramMessage, TelegramProvider } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 class FixtureTelegramProvider implements TelegramProvider {

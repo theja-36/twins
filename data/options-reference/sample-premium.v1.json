@@ -1,0 +1,14 @@
+{
+  "premiumVersion": "sample-premium-v1",
+  "sourceLabel": "SYNTHETIC SAMPLE - invented for offline preview and tests; NOT exchange data, NOT a market-data feed",
+  "collectedAsOf": "2026-10-20",
+  "synthetic": true,
+  "liveMarketData": false,
+  "notLiveStatement": "This is NOT live market data. These quotes are invented sample numbers with no relation to any real price; they say nothing about value, direction or tradability.",
+  "note": "NIFTY 24500 CE has a quote. SENSEX 80000 PE (in the reference) deliberately has none. The BANKNIFTY quote belongs to a contract that is AMBIGUOUS in the reference, and the NIFTY 24600 CE quote to a contract that is NOT in it: both exist to prove that premium data is never looked up unless the contract is FOUND.",
+  "quotes": [
+    { "underlying": "NIFTY", "strike": 24500, "optionType": "CE", "expiryDate": "2026-10-29", "bid": 11.1, "ask": 11.9, "last": 11.5 },
+    { "underlying": "BANKNIFTY", "strike": 52000, "optionType": "PE", "expiryDate": "2026-10-29", "bid": 21.0, "ask": 22.0, "last": 21.5 },
+    { "underlying": "NIFTY", "strike": 24600, "optionType": "CE", "expiryDate": "2026-10-29", "last": 7.7 }
+  ]
+}

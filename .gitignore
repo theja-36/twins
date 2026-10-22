@@ -18,3 +18,10 @@ coverage/
 
 .turbo/
 *.tsbuildinfo
+
+# Locally imported provider instrument snapshots (derived from a provider file; never commit)
+data/options-snapshots/
+
+# Filled staging environment file (real secrets) - never commit
+infrastructure/staging/staging.env
+infrastructure/staging/backups/

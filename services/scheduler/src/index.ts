@@ -25,6 +25,7 @@
 
 import cron from "node-cron";
 import { Queue } from "bullmq";
+import { Redis } from "ioredis";
 import { loadConfig } from "@twins/config";
 import { YAHOO_PROVIDER_NAME } from "@twins/adapter-market";
 
@@ -85,9 +86,9 @@ console.log(`[scheduler] schedule: "${cronExpression}" (provider: ${providerName
 
 // ─── Queue ──────────────────────────────────────────────────────────────────
 
-const marketQueue = new Queue("market_queue", {
-  connection: { url: config.redisUrl },
-});
+// Explicit ioredis client: BullMQ cannot lazily load ioredis under native ESM.
+const redis = new Redis(config.redisUrl, { maxRetriesPerRequest: 3 });
+const marketQueue = new Queue("market_queue", { connection: redis });
 
 // ─── Enqueue helpers ────────────────────────────────────────────────────────
 
@@ -142,7 +143,12 @@ cron.schedule(cronExpression, () => {
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`[scheduler] received ${signal}, shutting down gracefully`);
-  await marketQueue.close();
+  try {
+    await marketQueue.close();
+  } catch (err) {
+    console.error(`[scheduler] queue close failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  await redis.quit().catch(() => redis.disconnect());
   process.exit(0);
 }
 

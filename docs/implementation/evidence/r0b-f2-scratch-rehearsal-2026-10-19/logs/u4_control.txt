@@ -1,0 +1,40 @@
+
+ RUN  v2.1.9 $F2/tree
+
+stdout | tests/integration/runtime/evidenceLinks.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ❯ tests/integration/runtime/evidenceLinks.test.ts (4 tests | 1 failed | 3 skipped) 183ms
+   × signal_evidence link identity (migration 0005 + conflict-safe writer) > concurrent writers (N=4, held at a barrier per link) produce exactly one link per gathered evidence row 151ms
+     → SIGNAL_EVIDENCE_DUPLICATES: expected [ …(3) ] to deeply equal []
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/integration/runtime/evidenceLinks.test.ts > signal_evidence link identity (migration 0005 + conflict-safe writer) > concurrent writers (N=4, held at a barrier per link) produce exactly one link per gathered evidence row
+AssertionError: SIGNAL_EVIDENCE_DUPLICATES: expected [ …(3) ] to deeply equal []
+
+- Expected
++ Received
+
+- Array []
++ Array [
++   "market_observation:8b44d01a-4609-4238-b7ba-7fd17c92966b x4",
++   "macro_observation:394c414f-abb9-4c62-ac13-535f38bf6304 x4",
++   "macro_observation:2612a281-e564-4ba5-bf38-adfc0b7191ef x4",
++ ]
+
+ ❯ tests/integration/runtime/evidenceLinks.test.ts:147:66
+    145|     expect(results.filter((r) => r.status === "rejected").map((r) => S…
+    146|     const links = await linksOf(signalId);
+    147|     expect(duplicateGroups(links), "SIGNAL_EVIDENCE_DUPLICATES").toEqu…
+       |                                                                  ^
+    148|     expect(links.map(refOf).sort()).toEqual([`market_observation:${f.m…
+    149|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  22:39:11
+   Duration  3.60s (transform 808ms, setup 0ms, collect 2.63s, tests 183ms, environment 0ms, prepare 232ms)
+

@@ -1,0 +1,40 @@
+== 0. baseline of twins_dev (read-only SELECTs)
+OK   twins_dev signals/validations/parser_version-columns = 198/82/0
+== 1. scratch names must not exist
+== A1_create_fresh
+== A2_migrate_fresh
+
+> @twins/database@0.0.1 db:migrate
+> tsx src/migrate.ts
+
+[database] migrations applied
+OK   fresh: applied migrations = 5
+== A3_runtime_tests_fresh
+
+- Expected
++ Received
+
+  Array [
++   "bear.no_corroborating_context",
+    "bear.unresolved_entity",
+    "bear.untrusted_source",
+  ]
+
+ ❯ tests/integration/runtime/e2ePipeline.test.ts:101:23
+     99|     const bull = persistedValidation?.bullThesis as { factors: unknown…
+    100|     const bearRules = bear.factors.map((f) => f.ruleId).sort();
+    101|     expect(bearRules).toEqual(["bear.unresolved_entity", "bear.untrust…
+       |                       ^
+    102|     expect(bull.factors).toEqual([]);
+    103|     expect(persistedValidation?.sourceReliability).toBe("UNKNOWN");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  1 failed | 18 passed (19)
+   Start at  18:31:33
+   Duration  3.39s (transform 510ms, setup 0ms, collect 5.02s, tests 3.38s, environment 1ms, prepare 465ms)
+
+STOP: A3_runtime_tests_fresh exited 1
+Rehearsal databases and logs preserved. Nothing was cleaned up. Logs: $R/logs
+script exit code: 1

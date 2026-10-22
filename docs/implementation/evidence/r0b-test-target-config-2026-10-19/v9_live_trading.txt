@@ -1,0 +1,32 @@
+
+ RUN  v2.1.9 /Users/sara/twins
+
+
+ Test Files  no tests
+      Tests  no tests
+   Start at  22:59:48
+   Duration  69ms (transform 40ms, setup 0ms, collect 0ms, tests 0ms, environment 0ms, prepare 0ms)
+
+
+⎯⎯⎯⎯⎯⎯ Unhandled Error ⎯⎯⎯⎯⎯⎯⎯
+TestTargetError: integration test target refused: LIVE_TRADING must be exactly 'false'
+ ❯ Module.resolveTestTarget tests/integration/targetConfig.ts:28:43
+     28|   let url: URL;
+     29|   try {
+     30|     url = new URL(value);
+       |                   ^
+     31|   } catch {
+     32|     throw new TestTargetError(`${name} is not a valid URL`);
+ ❯ Object.setup tests/integration/globalSetup.ts:25:55
+ ❯ WorkspaceProject.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:9926:53
+ ❯ Vitest.initializeGlobalSetup node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10794:7
+ ❯ node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10816:7
+ ❯ Vitest.runFiles node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10840:12
+ ❯ Vitest.start node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:10682:7
+ ❯ startVitest node_modules/vitest/dist/chunks/cli-api.DqsSTaIi.js:11848:7
+ ❯ start node_modules/vitest/dist/chunks/cac.CB_9Zo9Q.js:1506:17
+ ❯ CAC.run node_modules/vitest/dist/chunks/cac.CB_9Zo9Q.js:1486:3
+
+
+
+

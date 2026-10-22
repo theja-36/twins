@@ -7,6 +7,8 @@ export interface SignalIntelligence {
   originalTelegramMessage?: typeof schema.telegramMessages.$inferSelect | undefined;
   telegramMessageQuality?: QualityAssessmentResult | undefined;
   marketContext: MarketContext | null;
+  /** Why no market input was selected (only set when marketContext is null). */
+  marketInputReason?: string | undefined;
   macroContext: Array<typeof schema.macroObservations.$inferSelect>;
   newsContext: Array<typeof schema.newsEvidence.$inferSelect>;
   priorSignalStats: { totalPriorSignalsForInstrument: number };

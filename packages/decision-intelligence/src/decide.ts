@@ -4,7 +4,7 @@ import { buildCounterThesis } from "./counterThesis";
 import { assessSourceReliability } from "./sourceReliability";
 import { validateSignalStructure, type StructuralValidationOptions } from "./structuralValidation";
 import { buildBearThesis, buildBullThesis } from "./thesis";
-import { CONFIDENCE_LABEL, type DecisionIntelligenceResult } from "./types";
+import { CONFIDENCE_LABEL, CONFIDENCE_UNAVAILABLE_NOTE, type DecisionIntelligenceResult } from "./types";
 
 export interface DecideOptions extends StructuralValidationOptions {
   now?: Date;
@@ -18,18 +18,24 @@ export interface DecideOptions extends StructuralValidationOptions {
  * No database access here, deliberately - this is the part unit tests
  * exercise directly with fixtures, no Postgres required.
  *
- * Determination logic:
+ * Determination logic & safety gates (R0A / LOG-01 & LOG-02):
  * - Any BLOCKING structural issue (unresolvable instrument, invalid
- *   direction, a signal timestamped in the future) -> REJECT outright;
- *   evidence quality is irrelevant if the claim itself is invalid.
+ *   direction, stale signal, future signal, invalid timestamp) -> REJECT outright.
  * - A "high" severity counter-thesis (a real negative-convention event
- *   opposing the trade) -> REJECT (spec: "exposes a strong invalidating
- *   condition").
- * - Materially incomplete evidence (no market data at all, or both
- *   theses are empty/weak with nothing to reason from) ->
- *   INSUFFICIENT_EVIDENCE - this is a first-class outcome, never forced
- *   into a decision it can't support.
- * - Otherwise -> APPROVE.
+ *   opposing the trade) -> REJECT.
+ * - Materially incomplete evidence -> INSUFFICIENT_EVIDENCE.
+ * - Zero supporting evidence (supportingCount === 0) -> INSUFFICIENT_EVIDENCE
+ *   (approvals are strictly prevented when required supporting evidence is absent).
+ * - Contradicting factors >= supporting factors -> INSUFFICIENT_EVIDENCE.
+ * - Numerical safety: zero denominators yield 0. A non-finite evidence-derived confidence is NEVER turned
+ *   into a high confidence: it is discarded, the placeholder 0 is stored, `confidenceUnavailable` is set and
+ *   the label/rationale say so (the outcome itself is unchanged and stays fail-closed). Confidence is a
+ *   count-based measure of evidence support for the chosen outcome, not a calibrated probability.
+ * - Freshness: `structural.stale_signal` is a HISTORICAL ingestion/analysis bound (see
+ *   validateSignalStructure), not an executable-freshness policy. APPROVE here means "evidence sufficient for
+ *   analysis" and does not authorise execution; executable freshness is undefined and must be decided
+ *   separately before any execution capability consumes this result.
+ * - Otherwise (supportingCount > 0, supportingCount > contradictingCount, no high/medium opposition) -> APPROVE.
  */
 export function decide(
   signal: typeof schema.signals.$inferSelect,
@@ -48,6 +54,8 @@ export function decide(
     return {
       signalId: signal.id,
       outcome: "REJECT",
+      // Deterministic by rule (a structurally invalid claim is rejected outright); not derived from any
+      // evidence-based or possibly non-finite input.
       decisionConfidence: 1,
       confidenceLabel: CONFIDENCE_LABEL,
       structuralIssues: structural.issues,
@@ -75,31 +83,58 @@ export function decide(
 
   let outcome: DecisionIntelligenceResult["outcome"];
   let decisionConfidence: number;
+  let confidenceUnavailable = false;
   let rationale: string;
 
   if (counterThesis.severity === "high") {
     outcome = "REJECT";
-    decisionConfidence = counterThesis.confidence;
-    rationale = `Rejected: a high-severity invalidating factor was found - ${counterThesis.strongestFactor?.description ?? "unspecified"}.`;
-  } else if (evidenceDomainsPresent === 0 || (bullThesis.factors.length === 0 && bearThesis.factors.length === 0 && evidenceDomainsPresent < 2)) {
+    const rawConfidence = counterThesis.confidence;
+    if (Number.isFinite(rawConfidence)) {
+      decisionConfidence = Math.min(1, Math.max(0, rawConfidence));
+    } else {
+      // Invalid/unavailable: never promoted to a high confidence. The REJECT outcome (fail-closed) stands.
+      decisionConfidence = 0;
+      confidenceUnavailable = true;
+    }
+    rationale = `Rejected: a high-severity invalidating factor was found - ${counterThesis.strongestFactor?.description ?? "unspecified"}.${confidenceUnavailable ? " (Decision confidence unavailable: the evidence-derived value was invalid.)" : ""}`;
+  } else if (
+    evidenceDomainsPresent === 0 ||
+    (bullThesis.factors.length === 0 && bearThesis.factors.length === 0 && evidenceDomainsPresent < 2)
+  ) {
     outcome = "INSUFFICIENT_EVIDENCE";
     decisionConfidence = 0.5;
-    rationale = "Insufficient evidence: too little corroborating market/macro/news evidence exists to support a reliable decision either way.";
+    rationale =
+      "Insufficient evidence: too little corroborating market/macro/news evidence exists to support a reliable decision either way.";
   } else if (counterThesis.severity === "medium" && contradictingCount >= supportingCount) {
     outcome = "INSUFFICIENT_EVIDENCE";
     decisionConfidence = 0.5;
     rationale = `Insufficient evidence: a medium-severity contradiction (${counterThesis.strongestFactor?.description ?? "unspecified"}) outweighs the available support for this signal's direction.`;
+  } else if (supportingCount === 0) {
+    // Missing required supporting evidence: cannot approve when supporting evidence is zero (LOG-01)
+    outcome = "INSUFFICIENT_EVIDENCE";
+    decisionConfidence = 0;
+    rationale = "Insufficient evidence: no supporting evidence exists to corroborate this signal's direction.";
+  } else if (contradictingCount >= supportingCount) {
+    outcome = "INSUFFICIENT_EVIDENCE";
+    const totalFactors = supportingCount + contradictingCount;
+    const rawRatio = totalFactors > 0 ? supportingCount / totalFactors : 0;
+    decisionConfidence = Number.isFinite(rawRatio) ? Math.min(1, Math.max(0, rawRatio)) : 0;
+    rationale = "Insufficient evidence: contradicting factors equal or exceed supporting evidence.";
   } else {
     outcome = "APPROVE";
-    decisionConfidence = supportingCount + contradictingCount > 0 ? supportingCount / (supportingCount + contradictingCount) : 0.5;
-    rationale = "Approved: no blocking or high-severity contradiction was found, and available evidence does not materially oppose the signal's direction.";
+    const totalFactors = supportingCount + contradictingCount;
+    const rawRatio = totalFactors > 0 ? supportingCount / totalFactors : 0;
+    decisionConfidence = Number.isFinite(rawRatio) ? Math.min(1, Math.max(0, rawRatio)) : 0;
+    rationale =
+      "Approved: no blocking or high-severity contradiction was found, and available evidence does not materially oppose the signal's direction.";
   }
 
   return {
     signalId: signal.id,
     outcome,
     decisionConfidence,
-    confidenceLabel: CONFIDENCE_LABEL,
+    confidenceLabel: confidenceUnavailable ? `${CONFIDENCE_LABEL} ${CONFIDENCE_UNAVAILABLE_NOTE}` : CONFIDENCE_LABEL,
+    ...(confidenceUnavailable ? { confidenceUnavailable: true } : {}),
     structuralIssues: structural.issues,
     bullThesis,
     bearThesis,

@@ -8,3 +8,5 @@ export * from "./macro";
 export * from "./news";
 export * from "./telegram";
 export type { Db } from "./db";
+export * from "./telegramRevisions";
+export * from "./history";

@@ -1,4 +1,4 @@
-import { index, jsonb, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn } from "./_columns";
 import { counterThesisSeverityEnum, signalValidationOutcomeEnum, sourceReliabilityEnum } from "./enums";
 import { signals } from "./signals";
@@ -42,10 +42,19 @@ export const signalValidations = pgTable(
     sourceReliability: sourceReliabilityEnum("source_reliability").notNull(),
     sourceReliabilityReason: text("source_reliability_reason").notNull(),
     rationale: text("rationale").notNull(),
+    /**
+     * Optional idempotency key for validations triggered by a retried/duplicated
+     * trigger (e.g. `telegram-ingest:<signalId>`). NULL for ordinary,
+     * historical re-validations - NULLs are distinct, so those remain unlimited.
+     */
+    idempotencyKey: text("idempotency_key"),
     validatedAt: timestamp("validated_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: createdAtColumn(),
   },
   (table) => ({
     signalIdx: index("signal_validations_signal_idx").on(table.signalId),
+    idempotencyKeyUnique: uniqueIndex("signal_validations_idempotency_key_unique").on(
+      table.idempotencyKey,
+    ),
   }),
 );

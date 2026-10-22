@@ -1,0 +1,33 @@
+== 0. preflight (read-only)
+OK   source owner = twins
+OK   active connections to source = 0
+twins_dev 198/82/318
+twins_ci 49/35/50
+twins_rehearsal_fresh 102/94/99
+twins_rehearsal_upgrade 30/33/34
+== 1. source fingerprint BEFORE dump
+== 2. dump (custom format, compressed, consistent snapshot)
+pg_dump exit=0
+dump_seconds=0.210
+dump_bytes=95113
+edc65ec38a4b56e8555b5b74ceeef392f19f61248dd22f04c6545544264b757b  twins_rehearsal_upgrade.dump
+OK   TOC TABLE DATA entries = 32
+TOC contains the four 0004 indexes
+== 3. source unchanged during dump window?
+source fingerprint identical before/after dump
+== 4. create target and restore (no --clean, no --create; single transaction; stop on first error)
+createdb exit=0
+pg_restore exit=0
+restore_seconds=0.500 (includes createdb)
+== 5. verify restored contents (read-only; NO application writes yet)
+fingerprint (settings, columns, indexes, constraints, owners, ACLs, sequence, migration tracking, 0004 structures, business facts, per-table counts + content hashes) IDENTICAL
+twins_rehearsal_upgrade: raw lines=1808 normalized lines=1806 removed=2
+twins_restore_drill: raw lines=1808 normalized lines=1806 removed=2
+schema-only dumps IDENTICAL after removing only the restrict-token lines
+revision currentness classification IDENTICAL (34 message rows)
+OK   restore owner = twins
+OK   table count in restore = 32
+== 6. other databases unchanged
+twins_dev, twins_ci and both rehearsal databases unchanged
+ALL STEPS PASSED (local logical backup/restore drill). Nothing cleaned up.
+script exit code: 0

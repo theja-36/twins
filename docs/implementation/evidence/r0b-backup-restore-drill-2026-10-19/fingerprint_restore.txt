@@ -1,0 +1,579 @@
+SET
+Output format is unaligned.
+## settings
+encoding=UTF8 collate=en_US.utf8 ctype=en_US.utf8
+## schemas / extensions / enum labels
+schema drizzle
+schema public
+extension plpgsql
+enum actor_type = user,system,ai
+enum backtest_status = queued,running,completed,failed
+enum counter_thesis_severity = low,medium,high
+enum data_quality_status = ok,stale,incomplete,conflicting,invalid
+enum decision_outcome = BUY,SELL,WAIT,REJECT
+enum entity_type = company,sector,market,country,macro
+enum evidence_kind = market_observation,macro_observation,news_evidence
+enum job_status = queued,running,succeeded,failed
+enum match_method = exact_canonical,exact_alias,ticker_exchange,structured_provider_id,deterministic_rule
+enum news_event_status = reported,corrected,confirmed,developing
+enum news_event_type = earnings,merger_acquisition,management_change,dividend,buyback,bankruptcy,regulatory_action,exchange_halt,index_rebalance,major_price_event,liquidity_event,interest_rate_decision,inflation_release,employment_report,gdp_release,central_bank_statement,sanctions,conflict_escalation,election,trade_restriction,tariff,oil_supply_disruption,commodity_move,currency_event
+enum order_side = buy,sell
+enum order_status = pending,submitted,partially_filled,filled,cancelled,rejected
+enum provider_health_status = healthy,degraded,down
+enum provider_type = market,broker,news,macro,telegram,ai
+enum quality_overall_status = trusted,flagged,rejected
+enum relationship_strength = direct,structural,potential
+enum relationship_type = ISSUED_BY,BELONGS_TO,TRADED_ON,LOCATED_IN,AFFECTS,MENTIONS
+enum signal_direction = buy,sell
+enum signal_status = pending,analyzed,decided,expired,invalid
+enum signal_validation_outcome = APPROVE,REJECT,INSUFFICIENT_EVIDENCE
+enum source_reliability = UNKNOWN,LOW,MODERATE,HIGH
+enum source_tier = A,B,C,D,E
+enum trading_mode = paper,shadow,live
+## columns (name, type, nullability, default)
+drizzle.__drizzle_migrations.id integer null=NO default=nextval('drizzle.__drizzle_migrations_id_seq'::regclass)
+drizzle.__drizzle_migrations.hash text null=NO default=-
+drizzle.__drizzle_migrations.created_at bigint null=YES default=-
+public.accounts.id uuid null=NO default=-
+public.accounts.user_id uuid null=NO default=-
+public.accounts.name text null=NO default=-
+public.accounts.trading_mode USER-DEFINED null=NO default=-
+public.accounts.broker_connection_id uuid null=YES default=-
+public.accounts.base_currency text null=NO default='INR'::text
+public.accounts.is_active boolean null=NO default=true
+public.accounts.created_at timestamp with time zone null=NO default=now()
+public.accounts.updated_at timestamp with time zone null=NO default=now()
+public.analyses.id uuid null=NO default=-
+public.analyses.signal_id uuid null=NO default=-
+public.analyses.ai_provider text null=NO default=-
+public.analyses.ai_model text null=NO default=-
+public.analyses.bull_thesis text null=YES default=-
+public.analyses.bear_thesis text null=YES default=-
+public.analyses.supporting_evidence_ids jsonb null=YES default=-
+public.analyses.contradicting_evidence_ids jsonb null=YES default=-
+public.analyses.market_regime text null=YES default=-
+public.analyses.macro_context text null=YES default=-
+public.analyses.risk_context text null=YES default=-
+public.analyses.confidence numeric null=YES default=-
+public.analyses.confidence_label text null=YES default=-
+public.analyses.raw_ai_response jsonb null=YES default=-
+public.analyses.created_at timestamp with time zone null=NO default=now()
+public.audit_events.id uuid null=NO default=-
+public.audit_events.event_type text null=NO default=-
+public.audit_events.entity_type text null=NO default=-
+public.audit_events.entity_id uuid null=YES default=-
+public.audit_events.actor_type USER-DEFINED null=NO default=-
+public.audit_events.actor_id text null=YES default=-
+public.audit_events.before_state jsonb null=YES default=-
+public.audit_events.after_state jsonb null=YES default=-
+public.audit_events.metadata jsonb null=YES default=-
+public.audit_events.created_at timestamp with time zone null=NO default=now()
+public.backtest_results.id uuid null=NO default=-
+public.backtest_results.backtest_id uuid null=NO default=-
+public.backtest_results.metric_set jsonb null=NO default=-
+public.backtest_results.equity_curve jsonb null=YES default=-
+public.backtest_results.trades_count integer null=NO default=0
+public.backtest_results.created_at timestamp with time zone null=NO default=now()
+public.backtests.id uuid null=NO default=-
+public.backtests.name text null=NO default=-
+public.backtests.description text null=YES default=-
+public.backtests.strategy_config jsonb null=NO default=-
+public.backtests.start_date timestamp with time zone null=NO default=-
+public.backtests.end_date timestamp with time zone null=NO default=-
+public.backtests.status USER-DEFINED null=NO default='queued'::backtest_status
+public.backtests.created_by uuid null=YES default=-
+public.backtests.created_at timestamp with time zone null=NO default=now()
+public.backtests.updated_at timestamp with time zone null=NO default=now()
+public.backtests.completed_at timestamp with time zone null=YES default=-
+public.broker_connections.id uuid null=NO default=-
+public.broker_connections.user_id uuid null=NO default=-
+public.broker_connections.provider text null=NO default=-
+public.broker_connections.provider_account_id text null=YES default=-
+public.broker_connections.status USER-DEFINED null=NO default='down'::provider_health_status
+public.broker_connections.last_health_check_at timestamp with time zone null=YES default=-
+public.broker_connections.created_at timestamp with time zone null=NO default=now()
+public.broker_connections.updated_at timestamp with time zone null=NO default=now()
+public.decisions.id uuid null=NO default=-
+public.decisions.signal_id uuid null=NO default=-
+public.decisions.analysis_id uuid null=YES default=-
+public.decisions.outcome USER-DEFINED null=NO default=-
+public.decisions.rationale text null=YES default=-
+public.decisions.decided_at timestamp with time zone null=NO default=now()
+public.decisions.created_at timestamp with time zone null=NO default=now()
+public.entities.id uuid null=NO default=-
+public.entities.entity_type USER-DEFINED null=NO default=-
+public.entities.canonical_name text null=NO default=-
+public.entities.description text null=YES default=-
+public.entities.created_at timestamp with time zone null=NO default=now()
+public.entities.updated_at timestamp with time zone null=NO default=now()
+public.entity_aliases.id uuid null=NO default=-
+public.entity_aliases.entity_id uuid null=NO default=-
+public.entity_aliases.alias text null=NO default=-
+public.entity_aliases.normalized_alias text null=NO default=-
+public.entity_aliases.alias_type text null=NO default=-
+public.entity_aliases.created_at timestamp with time zone null=NO default=now()
+public.entity_relationships.id uuid null=NO default=-
+public.entity_relationships.subject_type text null=NO default=-
+public.entity_relationships.subject_id uuid null=NO default=-
+public.entity_relationships.relationship_type USER-DEFINED null=NO default=-
+public.entity_relationships.object_id uuid null=NO default=-
+public.entity_relationships.strength USER-DEFINED null=NO default=-
+public.entity_relationships.match_method USER-DEFINED null=NO default=-
+public.entity_relationships.matched_text text null=YES default=-
+public.entity_relationships.created_at timestamp with time zone null=NO default=now()
+public.fills.id uuid null=NO default=-
+public.fills.order_id uuid null=NO default=-
+public.fills.broker_fill_id text null=YES default=-
+public.fills.fill_price numeric null=NO default=-
+public.fills.fill_quantity numeric null=NO default=-
+public.fills.fill_time timestamp with time zone null=NO default=-
+public.fills.received_at timestamp with time zone null=NO default=now()
+public.fills.created_at timestamp with time zone null=NO default=now()
+public.instruments.id uuid null=NO default=-
+public.instruments.symbol text null=NO default=-
+public.instruments.exchange text null=NO default=-
+public.instruments.instrument_type text null=NO default=-
+public.instruments.name text null=YES default=-
+public.instruments.isin text null=YES default=-
+public.instruments.currency text null=NO default='INR'::text
+public.instruments.lot_size numeric null=YES default=-
+public.instruments.tick_size numeric null=YES default=-
+public.instruments.is_active boolean null=NO default=true
+public.instruments.metadata jsonb null=YES default=-
+public.instruments.created_at timestamp with time zone null=NO default=now()
+public.instruments.updated_at timestamp with time zone null=NO default=now()
+public.jobs.id uuid null=NO default=-
+public.jobs.job_type text null=NO default=-
+public.jobs.queue_name text null=NO default=-
+public.jobs.status USER-DEFINED null=NO default='queued'::job_status
+public.jobs.payload jsonb null=YES default=-
+public.jobs.result jsonb null=YES default=-
+public.jobs.error text null=YES default=-
+public.jobs.attempts integer null=NO default=0
+public.jobs.scheduled_at timestamp with time zone null=NO default=now()
+public.jobs.started_at timestamp with time zone null=YES default=-
+public.jobs.finished_at timestamp with time zone null=YES default=-
+public.jobs.created_at timestamp with time zone null=NO default=now()
+public.jobs.updated_at timestamp with time zone null=NO default=now()
+public.macro_observations.id uuid null=NO default=-
+public.macro_observations.source text null=NO default=-
+public.macro_observations.region text null=NO default=-
+public.macro_observations.series_code text null=NO default=-
+public.macro_observations.observed_at timestamp with time zone null=NO default=-
+public.macro_observations.received_at timestamp with time zone null=NO default=now()
+public.macro_observations.value numeric null=NO default=-
+public.macro_observations.unit text null=YES default=-
+public.macro_observations.data_quality_status USER-DEFINED null=NO default='ok'::data_quality_status
+public.macro_observations.raw_payload jsonb null=YES default=-
+public.macro_observations.created_at timestamp with time zone null=NO default=now()
+public.market_observations.id uuid null=NO default=-
+public.market_observations.instrument_id uuid null=NO default=-
+public.market_observations.source text null=NO default=-
+public.market_observations.timeframe text null=NO default=-
+public.market_observations.observed_at timestamp with time zone null=NO default=-
+public.market_observations.received_at timestamp with time zone null=NO default=now()
+public.market_observations.open numeric null=YES default=-
+public.market_observations.high numeric null=YES default=-
+public.market_observations.low numeric null=YES default=-
+public.market_observations.close numeric null=YES default=-
+public.market_observations.volume numeric null=YES default=-
+public.market_observations.open_interest numeric null=YES default=-
+public.market_observations.data_quality_status USER-DEFINED null=NO default='ok'::data_quality_status
+public.market_observations.raw_payload jsonb null=YES default=-
+public.market_observations.created_at timestamp with time zone null=NO default=now()
+public.news_event_instruments.news_event_id uuid null=NO default=-
+public.news_event_instruments.instrument_id uuid null=NO default=-
+public.news_events.id uuid null=NO default=-
+public.news_events.title text null=NO default=-
+public.news_events.summary text null=YES default=-
+public.news_events.event_time timestamp with time zone null=YES default=-
+public.news_events.first_seen_at timestamp with time zone null=NO default=now()
+public.news_events.relevance_score numeric null=YES default=-
+public.news_events.created_at timestamp with time zone null=NO default=now()
+public.news_events.updated_at timestamp with time zone null=NO default=now()
+public.news_events.event_type USER-DEFINED null=YES default=-
+public.news_events.status USER-DEFINED null=NO default='reported'::news_event_status
+public.news_evidence.id uuid null=NO default=-
+public.news_evidence.news_source_id uuid null=NO default=-
+public.news_evidence.news_event_id uuid null=YES default=-
+public.news_evidence.source_url text null=NO default=-
+public.news_evidence.headline text null=NO default=-
+public.news_evidence.body_excerpt text null=YES default=-
+public.news_evidence.source_timestamp timestamp with time zone null=NO default=-
+public.news_evidence.received_at timestamp with time zone null=NO default=now()
+public.news_evidence.dedupe_hash text null=NO default=-
+public.news_evidence.raw_payload jsonb null=YES default=-
+public.news_evidence.created_at timestamp with time zone null=NO default=now()
+public.news_sources.id uuid null=NO default=-
+public.news_sources.name text null=NO default=-
+public.news_sources.tier USER-DEFINED null=NO default=-
+public.news_sources.homepage_url text null=YES default=-
+public.news_sources.created_at timestamp with time zone null=NO default=now()
+public.orders.id uuid null=NO default=-
+public.orders.account_id uuid null=NO default=-
+public.orders.instrument_id uuid null=NO default=-
+public.orders.risk_decision_id uuid null=YES default=-
+public.orders.trading_mode USER-DEFINED null=NO default=-
+public.orders.side USER-DEFINED null=NO default=-
+public.orders.order_type text null=NO default=-
+public.orders.quantity numeric null=NO default=-
+public.orders.price numeric null=YES default=-
+public.orders.status USER-DEFINED null=NO default='pending'::order_status
+public.orders.broker_order_id text null=YES default=-
+public.orders.idempotency_key text null=NO default=-
+public.orders.created_at timestamp with time zone null=NO default=now()
+public.orders.updated_at timestamp with time zone null=NO default=now()
+public.portfolio_snapshots.id uuid null=NO default=-
+public.portfolio_snapshots.account_id uuid null=NO default=-
+public.portfolio_snapshots.snapshot_at timestamp with time zone null=NO default=-
+public.portfolio_snapshots.equity numeric null=NO default=-
+public.portfolio_snapshots.cash numeric null=YES default=-
+public.portfolio_snapshots.positions_value numeric null=YES default=-
+public.portfolio_snapshots.realized_pnl numeric null=YES default=-
+public.portfolio_snapshots.unrealized_pnl numeric null=YES default=-
+public.portfolio_snapshots.drawdown numeric null=YES default=-
+public.portfolio_snapshots.created_at timestamp with time zone null=NO default=now()
+public.positions.id uuid null=NO default=-
+public.positions.account_id uuid null=NO default=-
+public.positions.instrument_id uuid null=NO default=-
+public.positions.trading_mode USER-DEFINED null=NO default=-
+public.positions.quantity numeric null=NO default='0'::numeric
+public.positions.average_price numeric null=YES default=-
+public.positions.opened_at timestamp with time zone null=YES default=-
+public.positions.closed_at timestamp with time zone null=YES default=-
+public.positions.updated_at timestamp with time zone null=NO default=now()
+public.positions.created_at timestamp with time zone null=NO default=now()
+public.provider_health.id uuid null=NO default=-
+public.provider_health.provider_name text null=NO default=-
+public.provider_health.provider_type USER-DEFINED null=NO default=-
+public.provider_health.status USER-DEFINED null=NO default=-
+public.provider_health.latency_ms numeric null=YES default=-
+public.provider_health.error_rate numeric null=YES default=-
+public.provider_health.last_success_at timestamp with time zone null=YES default=-
+public.provider_health.last_error_at timestamp with time zone null=YES default=-
+public.provider_health.last_error_message text null=YES default=-
+public.provider_health.checked_at timestamp with time zone null=NO default=now()
+public.provider_health.created_at timestamp with time zone null=NO default=now()
+public.quality_assessments.id uuid null=NO default=-
+public.quality_assessments.entity_type text null=NO default=-
+public.quality_assessments.entity_id uuid null=NO default=-
+public.quality_assessments.source text null=NO default=-
+public.quality_assessments.overall_status USER-DEFINED null=NO default=-
+public.quality_assessments.quality_score numeric null=NO default=-
+public.quality_assessments.dimensions jsonb null=NO default=-
+public.quality_assessments.reasons jsonb null=NO default=-
+public.quality_assessments.evaluated_at timestamp with time zone null=NO default=now()
+public.quality_assessments.created_at timestamp with time zone null=NO default=now()
+public.risk_decisions.id uuid null=NO default=-
+public.risk_decisions.decision_id uuid null=NO default=-
+public.risk_decisions.approved boolean null=NO default=-
+public.risk_decisions.reasons jsonb null=YES default=-
+public.risk_decisions.max_position_size numeric null=YES default=-
+public.risk_decisions.risk_per_trade numeric null=YES default=-
+public.risk_decisions.created_at timestamp with time zone null=NO default=now()
+public.signal_evidence.id uuid null=NO default=-
+public.signal_evidence.signal_id uuid null=NO default=-
+public.signal_evidence.evidence_kind USER-DEFINED null=NO default=-
+public.signal_evidence.market_observation_id uuid null=YES default=-
+public.signal_evidence.macro_observation_id uuid null=YES default=-
+public.signal_evidence.news_evidence_id uuid null=YES default=-
+public.signal_evidence.created_at timestamp with time zone null=NO default=now()
+public.signal_validations.id uuid null=NO default=-
+public.signal_validations.signal_id uuid null=NO default=-
+public.signal_validations.outcome USER-DEFINED null=NO default=-
+public.signal_validations.decision_confidence numeric null=NO default=-
+public.signal_validations.confidence_label text null=NO default=-
+public.signal_validations.bull_thesis jsonb null=NO default=-
+public.signal_validations.bear_thesis jsonb null=NO default=-
+public.signal_validations.counter_thesis jsonb null=NO default=-
+public.signal_validations.counter_thesis_severity USER-DEFINED null=NO default=-
+public.signal_validations.source_reliability USER-DEFINED null=NO default=-
+public.signal_validations.source_reliability_reason text null=NO default=-
+public.signal_validations.rationale text null=NO default=-
+public.signal_validations.validated_at timestamp with time zone null=NO default=now()
+public.signal_validations.created_at timestamp with time zone null=NO default=now()
+public.signal_validations.idempotency_key text null=YES default=-
+public.signals.id uuid null=NO default=-
+public.signals.source_type text null=NO default=-
+public.signals.telegram_message_id uuid null=YES default=-
+public.signals.instrument_id uuid null=NO default=-
+public.signals.direction USER-DEFINED null=NO default=-
+public.signals.entry_price numeric null=YES default=-
+public.signals.stop_loss numeric null=YES default=-
+public.signals.targets jsonb null=YES default=-
+public.signals.timeframe text null=YES default=-
+public.signals.extracted_confidence numeric null=YES default=-
+public.signals.status USER-DEFINED null=NO default='pending'::signal_status
+public.signals.signal_timestamp timestamp with time zone null=NO default=-
+public.signals.received_at timestamp with time zone null=NO default=now()
+public.signals.created_at timestamp with time zone null=NO default=now()
+public.signals.updated_at timestamp with time zone null=NO default=now()
+public.signals.parser_version text null=NO default=-
+public.telegram_messages.id uuid null=NO default=-
+public.telegram_messages.telegram_source_id uuid null=NO default=-
+public.telegram_messages.external_message_id text null=NO default=-
+public.telegram_messages.message_timestamp timestamp with time zone null=NO default=-
+public.telegram_messages.received_at timestamp with time zone null=NO default=now()
+public.telegram_messages.raw_text text null=NO default=-
+public.telegram_messages.raw_payload jsonb null=YES default=-
+public.telegram_messages.created_at timestamp with time zone null=NO default=now()
+public.telegram_messages.origin_message_id text null=YES default=-
+public.telegram_messages.edit_date timestamp with time zone null=YES default=-
+public.telegram_sources.id uuid null=NO default=-
+public.telegram_sources.channel_identifier text null=NO default=-
+public.telegram_sources.display_name text null=YES default=-
+public.telegram_sources.trust_notes text null=YES default=-
+public.telegram_sources.created_at timestamp with time zone null=NO default=now()
+public.telegram_sources.updated_at timestamp with time zone null=NO default=now()
+public.telegram_sources.chat_id text null=YES default=-
+public.users.id uuid null=NO default=-
+public.users.email text null=NO default=-
+public.users.password_hash text null=NO default=-
+public.users.display_name text null=YES default=-
+public.users.is_active boolean null=NO default=true
+public.users.created_at timestamp with time zone null=NO default=now()
+public.users.updated_at timestamp with time zone null=NO default=now()
+## indexes
+drizzle.__drizzle_migrations __drizzle_migrations_pkey :: CREATE UNIQUE INDEX __drizzle_migrations_pkey ON drizzle.__drizzle_migrations USING btree (id)
+public.accounts accounts_pkey :: CREATE UNIQUE INDEX accounts_pkey ON public.accounts USING btree (id)
+public.analyses analyses_pkey :: CREATE UNIQUE INDEX analyses_pkey ON public.analyses USING btree (id)
+public.audit_events audit_events_created_at_idx :: CREATE INDEX audit_events_created_at_idx ON public.audit_events USING btree (created_at)
+public.audit_events audit_events_entity_idx :: CREATE INDEX audit_events_entity_idx ON public.audit_events USING btree (entity_type, entity_id)
+public.audit_events audit_events_pkey :: CREATE UNIQUE INDEX audit_events_pkey ON public.audit_events USING btree (id)
+public.backtest_results backtest_results_pkey :: CREATE UNIQUE INDEX backtest_results_pkey ON public.backtest_results USING btree (id)
+public.backtests backtests_pkey :: CREATE UNIQUE INDEX backtests_pkey ON public.backtests USING btree (id)
+public.broker_connections broker_connections_pkey :: CREATE UNIQUE INDEX broker_connections_pkey ON public.broker_connections USING btree (id)
+public.decisions decisions_pkey :: CREATE UNIQUE INDEX decisions_pkey ON public.decisions USING btree (id)
+public.entities entities_pkey :: CREATE UNIQUE INDEX entities_pkey ON public.entities USING btree (id)
+public.entities entities_type_canonical_name_unique :: CREATE UNIQUE INDEX entities_type_canonical_name_unique ON public.entities USING btree (entity_type, canonical_name)
+public.entity_aliases entity_aliases_entity_alias_unique :: CREATE UNIQUE INDEX entity_aliases_entity_alias_unique ON public.entity_aliases USING btree (entity_id, normalized_alias)
+public.entity_aliases entity_aliases_normalized_alias_idx :: CREATE INDEX entity_aliases_normalized_alias_idx ON public.entity_aliases USING btree (normalized_alias)
+public.entity_aliases entity_aliases_pkey :: CREATE UNIQUE INDEX entity_aliases_pkey ON public.entity_aliases USING btree (id)
+public.entity_relationships entity_relationships_dedupe_unique :: CREATE UNIQUE INDEX entity_relationships_dedupe_unique ON public.entity_relationships USING btree (subject_type, subject_id, relationship_type, object_id)
+public.entity_relationships entity_relationships_object_idx :: CREATE INDEX entity_relationships_object_idx ON public.entity_relationships USING btree (object_id)
+public.entity_relationships entity_relationships_pkey :: CREATE UNIQUE INDEX entity_relationships_pkey ON public.entity_relationships USING btree (id)
+public.entity_relationships entity_relationships_subject_idx :: CREATE INDEX entity_relationships_subject_idx ON public.entity_relationships USING btree (subject_type, subject_id)
+public.fills fills_order_broker_fill_unique :: CREATE UNIQUE INDEX fills_order_broker_fill_unique ON public.fills USING btree (order_id, broker_fill_id)
+public.fills fills_pkey :: CREATE UNIQUE INDEX fills_pkey ON public.fills USING btree (id)
+public.instruments instruments_exchange_symbol_unique :: CREATE UNIQUE INDEX instruments_exchange_symbol_unique ON public.instruments USING btree (exchange, symbol)
+public.instruments instruments_pkey :: CREATE UNIQUE INDEX instruments_pkey ON public.instruments USING btree (id)
+public.jobs jobs_pkey :: CREATE UNIQUE INDEX jobs_pkey ON public.jobs USING btree (id)
+public.jobs jobs_queue_status_idx :: CREATE INDEX jobs_queue_status_idx ON public.jobs USING btree (queue_name, status)
+public.macro_observations macro_observations_dedupe_unique :: CREATE UNIQUE INDEX macro_observations_dedupe_unique ON public.macro_observations USING btree (source, series_code, observed_at)
+public.macro_observations macro_observations_pkey :: CREATE UNIQUE INDEX macro_observations_pkey ON public.macro_observations USING btree (id)
+public.macro_observations macro_observations_region_series_idx :: CREATE INDEX macro_observations_region_series_idx ON public.macro_observations USING btree (region, series_code)
+public.market_observations market_observations_dedupe_unique :: CREATE UNIQUE INDEX market_observations_dedupe_unique ON public.market_observations USING btree (instrument_id, source, timeframe, observed_at)
+public.market_observations market_observations_instrument_observed_idx :: CREATE INDEX market_observations_instrument_observed_idx ON public.market_observations USING btree (instrument_id, observed_at)
+public.market_observations market_observations_pkey :: CREATE UNIQUE INDEX market_observations_pkey ON public.market_observations USING btree (id)
+public.news_event_instruments news_event_instruments_news_event_id_instrument_id_pk :: CREATE UNIQUE INDEX news_event_instruments_news_event_id_instrument_id_pk ON public.news_event_instruments USING btree (news_event_id, instrument_id)
+public.news_events news_events_pkey :: CREATE UNIQUE INDEX news_events_pkey ON public.news_events USING btree (id)
+public.news_evidence news_evidence_pkey :: CREATE UNIQUE INDEX news_evidence_pkey ON public.news_evidence USING btree (id)
+public.news_evidence news_evidence_source_dedupe_unique :: CREATE UNIQUE INDEX news_evidence_source_dedupe_unique ON public.news_evidence USING btree (news_source_id, dedupe_hash)
+public.news_sources news_sources_name_unique :: CREATE UNIQUE INDEX news_sources_name_unique ON public.news_sources USING btree (name)
+public.news_sources news_sources_pkey :: CREATE UNIQUE INDEX news_sources_pkey ON public.news_sources USING btree (id)
+public.orders orders_account_status_idx :: CREATE INDEX orders_account_status_idx ON public.orders USING btree (account_id, status)
+public.orders orders_idempotency_key_unique :: CREATE UNIQUE INDEX orders_idempotency_key_unique ON public.orders USING btree (idempotency_key)
+public.orders orders_pkey :: CREATE UNIQUE INDEX orders_pkey ON public.orders USING btree (id)
+public.portfolio_snapshots portfolio_snapshots_account_time_unique :: CREATE UNIQUE INDEX portfolio_snapshots_account_time_unique ON public.portfolio_snapshots USING btree (account_id, snapshot_at)
+public.portfolio_snapshots portfolio_snapshots_pkey :: CREATE UNIQUE INDEX portfolio_snapshots_pkey ON public.portfolio_snapshots USING btree (id)
+public.positions positions_account_instrument_mode_unique :: CREATE UNIQUE INDEX positions_account_instrument_mode_unique ON public.positions USING btree (account_id, instrument_id, trading_mode)
+public.positions positions_pkey :: CREATE UNIQUE INDEX positions_pkey ON public.positions USING btree (id)
+public.provider_health provider_health_pkey :: CREATE UNIQUE INDEX provider_health_pkey ON public.provider_health USING btree (id)
+public.provider_health provider_health_provider_idx :: CREATE INDEX provider_health_provider_idx ON public.provider_health USING btree (provider_name, checked_at)
+public.quality_assessments quality_assessments_entity_idx :: CREATE INDEX quality_assessments_entity_idx ON public.quality_assessments USING btree (entity_type, entity_id)
+public.quality_assessments quality_assessments_evaluated_at_idx :: CREATE INDEX quality_assessments_evaluated_at_idx ON public.quality_assessments USING btree (evaluated_at)
+public.quality_assessments quality_assessments_pkey :: CREATE UNIQUE INDEX quality_assessments_pkey ON public.quality_assessments USING btree (id)
+public.risk_decisions risk_decisions_pkey :: CREATE UNIQUE INDEX risk_decisions_pkey ON public.risk_decisions USING btree (id)
+public.signal_evidence signal_evidence_pkey :: CREATE UNIQUE INDEX signal_evidence_pkey ON public.signal_evidence USING btree (id)
+public.signal_evidence signal_evidence_signal_idx :: CREATE INDEX signal_evidence_signal_idx ON public.signal_evidence USING btree (signal_id)
+public.signal_validations signal_validations_idempotency_key_unique :: CREATE UNIQUE INDEX signal_validations_idempotency_key_unique ON public.signal_validations USING btree (idempotency_key)
+public.signal_validations signal_validations_pkey :: CREATE UNIQUE INDEX signal_validations_pkey ON public.signal_validations USING btree (id)
+public.signal_validations signal_validations_signal_idx :: CREATE INDEX signal_validations_signal_idx ON public.signal_validations USING btree (signal_id)
+public.signals signals_instrument_status_idx :: CREATE INDEX signals_instrument_status_idx ON public.signals USING btree (instrument_id, status)
+public.signals signals_pkey :: CREATE UNIQUE INDEX signals_pkey ON public.signals USING btree (id)
+public.signals signals_telegram_message_idx :: CREATE INDEX signals_telegram_message_idx ON public.signals USING btree (telegram_message_id)
+public.signals signals_telegram_message_parser_unique :: CREATE UNIQUE INDEX signals_telegram_message_parser_unique ON public.signals USING btree (telegram_message_id, parser_version)
+public.telegram_messages telegram_messages_origin_idx :: CREATE INDEX telegram_messages_origin_idx ON public.telegram_messages USING btree (telegram_source_id, origin_message_id)
+public.telegram_messages telegram_messages_pkey :: CREATE UNIQUE INDEX telegram_messages_pkey ON public.telegram_messages USING btree (id)
+public.telegram_messages telegram_messages_source_external_id_unique :: CREATE UNIQUE INDEX telegram_messages_source_external_id_unique ON public.telegram_messages USING btree (telegram_source_id, external_message_id)
+public.telegram_sources telegram_sources_channel_unique :: CREATE UNIQUE INDEX telegram_sources_channel_unique ON public.telegram_sources USING btree (channel_identifier)
+public.telegram_sources telegram_sources_chat_id_unique :: CREATE UNIQUE INDEX telegram_sources_chat_id_unique ON public.telegram_sources USING btree (chat_id)
+public.telegram_sources telegram_sources_pkey :: CREATE UNIQUE INDEX telegram_sources_pkey ON public.telegram_sources USING btree (id)
+public.users users_email_unique :: CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email)
+public.users users_pkey :: CREATE UNIQUE INDEX users_pkey ON public.users USING btree (id)
+## constraints
+accounts accounts_broker_connection_id_broker_connections_id_fk :: FOREIGN KEY (broker_connection_id) REFERENCES broker_connections(id) ON DELETE SET NULL
+accounts accounts_pkey :: PRIMARY KEY (id)
+accounts accounts_user_id_users_id_fk :: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+analyses analyses_pkey :: PRIMARY KEY (id)
+analyses analyses_signal_id_signals_id_fk :: FOREIGN KEY (signal_id) REFERENCES signals(id) ON DELETE CASCADE
+audit_events audit_events_pkey :: PRIMARY KEY (id)
+backtest_results backtest_results_backtest_id_backtests_id_fk :: FOREIGN KEY (backtest_id) REFERENCES backtests(id) ON DELETE CASCADE
+backtest_results backtest_results_pkey :: PRIMARY KEY (id)
+backtests backtests_created_by_users_id_fk :: FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+backtests backtests_pkey :: PRIMARY KEY (id)
+broker_connections broker_connections_pkey :: PRIMARY KEY (id)
+broker_connections broker_connections_user_id_users_id_fk :: FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE RESTRICT
+decisions decisions_analysis_id_analyses_id_fk :: FOREIGN KEY (analysis_id) REFERENCES analyses(id) ON DELETE SET NULL
+decisions decisions_pkey :: PRIMARY KEY (id)
+decisions decisions_signal_id_signals_id_fk :: FOREIGN KEY (signal_id) REFERENCES signals(id) ON DELETE CASCADE
+drizzle.__drizzle_migrations __drizzle_migrations_pkey :: PRIMARY KEY (id)
+entities entities_pkey :: PRIMARY KEY (id)
+entity_aliases entity_aliases_entity_id_entities_id_fk :: FOREIGN KEY (entity_id) REFERENCES entities(id) ON DELETE CASCADE
+entity_aliases entity_aliases_pkey :: PRIMARY KEY (id)
+entity_relationships entity_relationships_object_id_entities_id_fk :: FOREIGN KEY (object_id) REFERENCES entities(id) ON DELETE CASCADE
+entity_relationships entity_relationships_pkey :: PRIMARY KEY (id)
+fills fills_order_id_orders_id_fk :: FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+fills fills_pkey :: PRIMARY KEY (id)
+instruments instruments_pkey :: PRIMARY KEY (id)
+jobs jobs_pkey :: PRIMARY KEY (id)
+macro_observations macro_observations_pkey :: PRIMARY KEY (id)
+market_observations market_observations_instrument_id_instruments_id_fk :: FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE RESTRICT
+market_observations market_observations_pkey :: PRIMARY KEY (id)
+news_event_instruments news_event_instruments_instrument_id_instruments_id_fk :: FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE CASCADE
+news_event_instruments news_event_instruments_news_event_id_instrument_id_pk :: PRIMARY KEY (news_event_id, instrument_id)
+news_event_instruments news_event_instruments_news_event_id_news_events_id_fk :: FOREIGN KEY (news_event_id) REFERENCES news_events(id) ON DELETE CASCADE
+news_events news_events_pkey :: PRIMARY KEY (id)
+news_evidence news_evidence_news_event_id_news_events_id_fk :: FOREIGN KEY (news_event_id) REFERENCES news_events(id) ON DELETE SET NULL
+news_evidence news_evidence_news_source_id_news_sources_id_fk :: FOREIGN KEY (news_source_id) REFERENCES news_sources(id) ON DELETE RESTRICT
+news_evidence news_evidence_pkey :: PRIMARY KEY (id)
+news_sources news_sources_pkey :: PRIMARY KEY (id)
+orders orders_account_id_accounts_id_fk :: FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT
+orders orders_instrument_id_instruments_id_fk :: FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE RESTRICT
+orders orders_pkey :: PRIMARY KEY (id)
+orders orders_risk_decision_id_risk_decisions_id_fk :: FOREIGN KEY (risk_decision_id) REFERENCES risk_decisions(id) ON DELETE RESTRICT
+portfolio_snapshots portfolio_snapshots_account_id_accounts_id_fk :: FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE
+portfolio_snapshots portfolio_snapshots_pkey :: PRIMARY KEY (id)
+positions positions_account_id_accounts_id_fk :: FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT
+positions positions_instrument_id_instruments_id_fk :: FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE RESTRICT
+positions positions_pkey :: PRIMARY KEY (id)
+provider_health provider_health_pkey :: PRIMARY KEY (id)
+quality_assessments quality_assessments_pkey :: PRIMARY KEY (id)
+risk_decisions risk_decisions_decision_id_decisions_id_fk :: FOREIGN KEY (decision_id) REFERENCES decisions(id) ON DELETE CASCADE
+risk_decisions risk_decisions_pkey :: PRIMARY KEY (id)
+signal_evidence signal_evidence_exactly_one_reference :: CHECK ((((
+CASE
+    WHEN (market_observation_id IS NOT NULL) THEN 1
+    ELSE 0
+END +
+CASE
+    WHEN (macro_observation_id IS NOT NULL) THEN 1
+    ELSE 0
+END) +
+CASE
+    WHEN (news_evidence_id IS NOT NULL) THEN 1
+    ELSE 0
+END) = 1))
+signal_evidence signal_evidence_kind_matches_reference :: CHECK ((((evidence_kind = 'market_observation'::evidence_kind) AND (market_observation_id IS NOT NULL)) OR ((evidence_kind = 'macro_observation'::evidence_kind) AND (macro_observation_id IS NOT NULL)) OR ((evidence_kind = 'news_evidence'::evidence_kind) AND (news_evidence_id IS NOT NULL))))
+signal_evidence signal_evidence_macro_observation_id_macro_observations_id_fk :: FOREIGN KEY (macro_observation_id) REFERENCES macro_observations(id) ON DELETE RESTRICT
+signal_evidence signal_evidence_market_observation_id_market_observations_id_fk :: FOREIGN KEY (market_observation_id) REFERENCES market_observations(id) ON DELETE RESTRICT
+signal_evidence signal_evidence_news_evidence_id_news_evidence_id_fk :: FOREIGN KEY (news_evidence_id) REFERENCES news_evidence(id) ON DELETE RESTRICT
+signal_evidence signal_evidence_pkey :: PRIMARY KEY (id)
+signal_evidence signal_evidence_signal_id_signals_id_fk :: FOREIGN KEY (signal_id) REFERENCES signals(id) ON DELETE CASCADE
+signal_validations signal_validations_pkey :: PRIMARY KEY (id)
+signal_validations signal_validations_signal_id_signals_id_fk :: FOREIGN KEY (signal_id) REFERENCES signals(id) ON DELETE CASCADE
+signals signals_instrument_id_instruments_id_fk :: FOREIGN KEY (instrument_id) REFERENCES instruments(id) ON DELETE RESTRICT
+signals signals_pkey :: PRIMARY KEY (id)
+signals signals_telegram_message_id_telegram_messages_id_fk :: FOREIGN KEY (telegram_message_id) REFERENCES telegram_messages(id) ON DELETE RESTRICT
+telegram_messages telegram_messages_pkey :: PRIMARY KEY (id)
+telegram_messages telegram_messages_telegram_source_id_telegram_sources_id_fk :: FOREIGN KEY (telegram_source_id) REFERENCES telegram_sources(id) ON DELETE RESTRICT
+telegram_sources telegram_sources_pkey :: PRIMARY KEY (id)
+users users_pkey :: PRIMARY KEY (id)
+## ownership and privileges
+table-owner drizzle.__drizzle_migrations twins
+table-owner public.accounts twins
+table-owner public.analyses twins
+table-owner public.audit_events twins
+table-owner public.backtest_results twins
+table-owner public.backtests twins
+table-owner public.broker_connections twins
+table-owner public.decisions twins
+table-owner public.entities twins
+table-owner public.entity_aliases twins
+table-owner public.entity_relationships twins
+table-owner public.fills twins
+table-owner public.instruments twins
+table-owner public.jobs twins
+table-owner public.macro_observations twins
+table-owner public.market_observations twins
+table-owner public.news_event_instruments twins
+table-owner public.news_events twins
+table-owner public.news_evidence twins
+table-owner public.news_sources twins
+table-owner public.orders twins
+table-owner public.portfolio_snapshots twins
+table-owner public.positions twins
+table-owner public.provider_health twins
+table-owner public.quality_assessments twins
+table-owner public.risk_decisions twins
+table-owner public.signal_evidence twins
+table-owner public.signal_validations twins
+table-owner public.signals twins
+table-owner public.telegram_messages twins
+table-owner public.telegram_sources twins
+table-owner public.users twins
+relations-with-acl 0
+## sequences (last_value, is_called)
+seq drizzle.__drizzle_migrations_id_seq 5 called=true
+## migration tracking (id, hash, created_at)
+1 ffbe6261bb29ba09b5530c1b9a13447043850050a9dd8b9b0e2bf13f8bd1a8f9 1789254468458
+2 0cefd901ae7a75e94a919fa4b5a1f60c8d7bdc3b1c99ea17e906e3c600eceb36 1789258048085
+3 55436a1edca0b9fcd6662156a00d944a2ac7b06eb3713baec5fae5ee65036852 1789259970376
+4 02d1ad856241adb489e213dd521d74164569ae35a5ef893a1239f91afcb654e6 1789277980566
+5 1a413d934f3fa68a04e257adef8afcda08593fcf7bb79622c94f31c592f46c2e 1792430115643
+## 0004 structures
+col signal_validations.idempotency_key
+col signals.parser_version
+col telegram_messages.edit_date
+col telegram_messages.origin_message_id
+col telegram_sources.chat_id
+index signal_validations_idempotency_key_unique
+index signals_telegram_message_parser_unique
+index telegram_messages_origin_idx
+index telegram_sources_chat_id_unique
+## business facts (legacy / revision / validation provenance)
+signals parser_version=legacy-unversioned n=6
+signals parser_version=telegram-regex-v1 n=22
+signals parser_version=test-parser-v2 n=2
+validations key_kind=ingest n=23
+validations key_kind=keyless n=8
+validations key_kind=other n=1
+validations key_kind=recompute n=1
+messages kind=legacy-edit n=1
+messages kind=legacy-original n=15
+messages kind=original-with-origin n=12
+messages kind=revision n=6
+sources with chat_id=13 without=11
+## per-table row count and content hash (md5 over rows ordered by their text form)
+drizzle.__drizzle_migrations|5|14be663cd8cb5d0937b1bb24f8dc3e96
+public.accounts|0|-
+public.analyses|0|-
+public.audit_events|0|-
+public.backtest_results|0|-
+public.backtests|0|-
+public.broker_connections|0|-
+public.decisions|0|-
+public.entities|0|-
+public.entity_aliases|0|-
+public.entity_relationships|0|-
+public.fills|0|-
+public.instruments|2|a03820ddd7818f8bc3ea5953e7cc907c
+public.jobs|69|155dc3e53b94d27507f61487be9053bd
+public.macro_observations|0|-
+public.market_observations|28|6bb2dcbdab3389fc8d66e43d0e98cb3d
+public.news_event_instruments|0|-
+public.news_events|0|-
+public.news_evidence|0|-
+public.news_sources|0|-
+public.orders|0|-
+public.portfolio_snapshots|0|-
+public.positions|0|-
+public.provider_health|69|b7abce569edeb18031f3268a77ff814a
+public.quality_assessments|0|-
+public.risk_decisions|0|-
+public.signal_evidence|19|2568a428160921af99af71f1ab44c3ff
+public.signal_validations|33|c39c8b6f88309d47f946f7b7b0f2bdbf
+public.signals|30|b317ff0dcba32b197d38784358ca99a3
+public.telegram_messages|34|3054292ed0cfa5209f85a540e8de2d88
+public.telegram_sources|24|eba4d170895bef129ebd90150ff629b0
+public.users|0|-

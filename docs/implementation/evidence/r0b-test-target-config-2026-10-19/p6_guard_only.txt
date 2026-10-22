@@ -1,0 +1,10 @@
+
+ RUN  v2.1.9 /Users/sara/twins
+
+ ✓ tests/integration/runtime/envGuard.test.ts (3 tests) 2ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  23:00:03
+   Duration  312ms (transform 47ms, setup 0ms, collect 9ms, tests 2ms, environment 0ms, prepare 56ms)
+

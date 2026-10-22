@@ -1,0 +1,4 @@
+Separate cleanup action (NOT crash-test evidence): accidental idle-worker queue created during preparation.
+Command: REDIS_URL=redis://127.0.0.1:16379 node docs/implementation/rehearsal/cleanup_refusal_check_queue.mjs   (exit 0)
+Pre-check output: {"target":"127.0.0.1:16379","queue":"r0b_test_refusal_check","counts":{"active":0,"waiting":0,"delayed":0,"paused":0,"prioritized":0,"waiting-children":0,"completed":0,"failed":0},"workers":0,"keys":["bull:r0b_test_refusal_check:meta"]}
+Result: {"removed":true,"keysAfter":[]}   (Queue.obliterate without force)

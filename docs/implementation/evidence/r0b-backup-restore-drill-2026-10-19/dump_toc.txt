@@ -1,0 +1,206 @@
+;
+; Archive created at 2026-10-19 18:11:52 UTC
+;     dbname: twins_rehearsal_upgrade
+;     TOC Entries: 195
+;     Compression: gzip
+;     Dump Version: 1.15-0
+;     Format: CUSTOM
+;     Integer: 4 bytes
+;     Offset: 8 bytes
+;     Dumped from database version: 16.15
+;     Dumped by pg_dump version: 16.15
+;
+;
+; Selected TOC Entries:
+;
+6; 2615 17970 SCHEMA - drizzle twins
+878; 1247 17981 TYPE public actor_type twins
+881; 1247 17988 TYPE public backtest_status twins
+1031; 1247 18686 TYPE public counter_thesis_severity twins
+884; 1247 17998 TYPE public data_quality_status twins
+887; 1247 18010 TYPE public decision_outcome twins
+1004; 1247 18539 TYPE public entity_type twins
+890; 1247 18020 TYPE public evidence_kind twins
+893; 1247 18028 TYPE public job_status twins
+1007; 1247 18550 TYPE public match_method twins
+1010; 1247 18562 TYPE public news_event_status twins
+1013; 1247 18572 TYPE public news_event_type twins
+896; 1247 18038 TYPE public order_side twins
+899; 1247 18044 TYPE public order_status twins
+902; 1247 18058 TYPE public provider_health_status twins
+905; 1247 18066 TYPE public provider_type twins
+998; 1247 18521 TYPE public quality_overall_status twins
+1016; 1247 18622 TYPE public relationship_strength twins
+1019; 1247 18630 TYPE public relationship_type twins
+908; 1247 18080 TYPE public signal_direction twins
+911; 1247 18086 TYPE public signal_status twins
+1034; 1247 18694 TYPE public signal_validation_outcome twins
+1037; 1247 18702 TYPE public source_reliability twins
+914; 1247 18098 TYPE public source_tier twins
+917; 1247 18110 TYPE public trading_mode twins
+219; 1259 17972 TABLE drizzle __drizzle_migrations twins
+218; 1259 17971 SEQUENCE drizzle __drizzle_migrations_id_seq twins
+3885; 0 0 SEQUENCE OWNED BY drizzle __drizzle_migrations_id_seq twins
+222; 1259 18137 TABLE public accounts twins
+234; 1259 18248 TABLE public analyses twins
+241; 1259 18310 TABLE public audit_events twins
+244; 1259 18339 TABLE public backtest_results twins
+245; 1259 18348 TABLE public backtests twins
+221; 1259 18127 TABLE public broker_connections twins
+235; 1259 18256 TABLE public decisions twins
+247; 1259 18643 TABLE public entities twins
+248; 1259 18652 TABLE public entity_aliases twins
+249; 1259 18660 TABLE public entity_relationships twins
+237; 1259 18273 TABLE public fills twins
+223; 1259 18148 TABLE public instruments twins
+242; 1259 18318 TABLE public jobs twins
+225; 1259 18169 TABLE public macro_observations twins
+224; 1259 18159 TABLE public market_observations twins
+226; 1259 18179 TABLE public news_event_instruments twins
+227; 1259 18184 TABLE public news_events twins
+228; 1259 18194 TABLE public news_evidence twins
+229; 1259 18203 TABLE public news_sources twins
+238; 1259 18282 TABLE public orders twins
+239; 1259 18292 TABLE public portfolio_snapshots twins
+240; 1259 18300 TABLE public positions twins
+243; 1259 18330 TABLE public provider_health twins
+246; 1259 18527 TABLE public quality_assessments twins
+236; 1259 18265 TABLE public risk_decisions twins
+232; 1259 18229 TABLE public signal_evidence twins
+250; 1259 18711 TABLE public signal_validations twins
+233; 1259 18237 TABLE public signals twins
+230; 1259 18211 TABLE public telegram_messages twins
+231; 1259 18220 TABLE public telegram_sources twins
+220; 1259 18117 TABLE public users twins
+3500; 2604 17975 DEFAULT drizzle __drizzle_migrations id twins
+3847; 0 17972 TABLE DATA drizzle __drizzle_migrations twins
+3850; 0 18137 TABLE DATA public accounts twins
+3862; 0 18248 TABLE DATA public analyses twins
+3869; 0 18310 TABLE DATA public audit_events twins
+3872; 0 18339 TABLE DATA public backtest_results twins
+3873; 0 18348 TABLE DATA public backtests twins
+3849; 0 18127 TABLE DATA public broker_connections twins
+3863; 0 18256 TABLE DATA public decisions twins
+3875; 0 18643 TABLE DATA public entities twins
+3876; 0 18652 TABLE DATA public entity_aliases twins
+3877; 0 18660 TABLE DATA public entity_relationships twins
+3865; 0 18273 TABLE DATA public fills twins
+3851; 0 18148 TABLE DATA public instruments twins
+3870; 0 18318 TABLE DATA public jobs twins
+3853; 0 18169 TABLE DATA public macro_observations twins
+3852; 0 18159 TABLE DATA public market_observations twins
+3854; 0 18179 TABLE DATA public news_event_instruments twins
+3855; 0 18184 TABLE DATA public news_events twins
+3856; 0 18194 TABLE DATA public news_evidence twins
+3857; 0 18203 TABLE DATA public news_sources twins
+3866; 0 18282 TABLE DATA public orders twins
+3867; 0 18292 TABLE DATA public portfolio_snapshots twins
+3868; 0 18300 TABLE DATA public positions twins
+3871; 0 18330 TABLE DATA public provider_health twins
+3874; 0 18527 TABLE DATA public quality_assessments twins
+3864; 0 18265 TABLE DATA public risk_decisions twins
+3860; 0 18229 TABLE DATA public signal_evidence twins
+3878; 0 18711 TABLE DATA public signal_validations twins
+3861; 0 18237 TABLE DATA public signals twins
+3858; 0 18211 TABLE DATA public telegram_messages twins
+3859; 0 18220 TABLE DATA public telegram_sources twins
+3848; 0 18117 TABLE DATA public users twins
+3886; 0 0 SEQUENCE SET drizzle __drizzle_migrations_id_seq twins
+3574; 2606 17979 CONSTRAINT drizzle __drizzle_migrations __drizzle_migrations_pkey twins
+3581; 2606 18147 CONSTRAINT public accounts accounts_pkey twins
+3620; 2606 18255 CONSTRAINT public analyses analyses_pkey twins
+3641; 2606 18317 CONSTRAINT public audit_events audit_events_pkey twins
+3649; 2606 18347 CONSTRAINT public backtest_results backtest_results_pkey twins
+3651; 2606 18357 CONSTRAINT public backtests backtests_pkey twins
+3579; 2606 18136 CONSTRAINT public broker_connections broker_connections_pkey twins
+3622; 2606 18264 CONSTRAINT public decisions decisions_pkey twins
+3657; 2606 18651 CONSTRAINT public entities entities_pkey twins
+3662; 2606 18659 CONSTRAINT public entity_aliases entity_aliases_pkey twins
+3666; 2606 18667 CONSTRAINT public entity_relationships entity_relationships_pkey twins
+3627; 2606 18281 CONSTRAINT public fills fills_pkey twins
+3584; 2606 18158 CONSTRAINT public instruments instruments_pkey twins
+3643; 2606 18329 CONSTRAINT public jobs jobs_pkey twins
+3591; 2606 18178 CONSTRAINT public macro_observations macro_observations_pkey twins
+3588; 2606 18168 CONSTRAINT public market_observations market_observations_pkey twins
+3594; 2606 18183 CONSTRAINT public news_event_instruments news_event_instruments_news_event_id_instrument_id_pk twins
+3596; 2606 18193 CONSTRAINT public news_events news_events_pkey twins
+3598; 2606 18202 CONSTRAINT public news_evidence news_evidence_pkey twins
+3602; 2606 18210 CONSTRAINT public news_sources news_sources_pkey twins
+3631; 2606 18291 CONSTRAINT public orders orders_pkey twins
+3634; 2606 18299 CONSTRAINT public portfolio_snapshots portfolio_snapshots_pkey twins
+3637; 2606 18309 CONSTRAINT public positions positions_pkey twins
+3646; 2606 18338 CONSTRAINT public provider_health provider_health_pkey twins
+3655; 2606 18535 CONSTRAINT public quality_assessments quality_assessments_pkey twins
+3624; 2606 18272 CONSTRAINT public risk_decisions risk_decisions_pkey twins
+3612; 2606 18236 CONSTRAINT public signal_evidence signal_evidence_pkey twins
+3670; 2606 18719 CONSTRAINT public signal_validations signal_validations_pkey twins
+3616; 2606 18247 CONSTRAINT public signals signals_pkey twins
+3605; 2606 18219 CONSTRAINT public telegram_messages telegram_messages_pkey twins
+3610; 2606 18228 CONSTRAINT public telegram_sources telegram_sources_pkey twins
+3577; 2606 18126 CONSTRAINT public users users_pkey twins
+3638; 1259 18517 INDEX public audit_events_created_at_idx twins
+3639; 1259 18516 INDEX public audit_events_entity_idx twins
+3658; 1259 18679 INDEX public entities_type_canonical_name_unique twins
+3659; 1259 18680 INDEX public entity_aliases_entity_alias_unique twins
+3660; 1259 18681 INDEX public entity_aliases_normalized_alias_idx twins
+3663; 1259 18682 INDEX public entity_relationships_dedupe_unique twins
+3664; 1259 18684 INDEX public entity_relationships_object_idx twins
+3667; 1259 18683 INDEX public entity_relationships_subject_idx twins
+3625; 1259 18511 INDEX public fills_order_broker_fill_unique twins
+3582; 1259 18499 INDEX public instruments_exchange_symbol_unique twins
+3644; 1259 18518 INDEX public jobs_queue_status_idx twins
+3589; 1259 18502 INDEX public macro_observations_dedupe_unique twins
+3592; 1259 18503 INDEX public macro_observations_region_series_idx twins
+3585; 1259 18500 INDEX public market_observations_dedupe_unique twins
+3586; 1259 18501 INDEX public market_observations_instrument_observed_idx twins
+3599; 1259 18504 INDEX public news_evidence_source_dedupe_unique twins
+3600; 1259 18505 INDEX public news_sources_name_unique twins
+3628; 1259 18513 INDEX public orders_account_status_idx twins
+3629; 1259 18512 INDEX public orders_idempotency_key_unique twins
+3632; 1259 18514 INDEX public portfolio_snapshots_account_time_unique twins
+3635; 1259 18515 INDEX public positions_account_instrument_mode_unique twins
+3647; 1259 18519 INDEX public provider_health_provider_idx twins
+3652; 1259 18536 INDEX public quality_assessments_entity_idx twins
+3653; 1259 18537 INDEX public quality_assessments_evaluated_at_idx twins
+3613; 1259 18508 INDEX public signal_evidence_signal_idx twins
+3668; 1259 18734 INDEX public signal_validations_idempotency_key_unique twins
+3671; 1259 18725 INDEX public signal_validations_signal_idx twins
+3614; 1259 18509 INDEX public signals_instrument_status_idx twins
+3617; 1259 18510 INDEX public signals_telegram_message_idx twins
+3618; 1259 18733 INDEX public signals_telegram_message_parser_unique twins
+3603; 1259 18731 INDEX public telegram_messages_origin_idx twins
+3606; 1259 18506 INDEX public telegram_messages_source_external_id_unique twins
+3607; 1259 18507 INDEX public telegram_sources_channel_unique twins
+3608; 1259 18732 INDEX public telegram_sources_chat_id_unique twins
+3575; 1259 18498 INDEX public users_email_unique twins
+3673; 2606 18368 FK CONSTRAINT public accounts accounts_broker_connection_id_broker_connections_id_fk twins
+3674; 2606 18363 FK CONSTRAINT public accounts accounts_user_id_users_id_fk twins
+3687; 2606 18433 FK CONSTRAINT public analyses analyses_signal_id_signals_id_fk twins
+3698; 2606 18488 FK CONSTRAINT public backtest_results backtest_results_backtest_id_backtests_id_fk twins
+3699; 2606 18493 FK CONSTRAINT public backtests backtests_created_by_users_id_fk twins
+3672; 2606 18358 FK CONSTRAINT public broker_connections broker_connections_user_id_users_id_fk twins
+3688; 2606 18443 FK CONSTRAINT public decisions decisions_analysis_id_analyses_id_fk twins
+3689; 2606 18438 FK CONSTRAINT public decisions decisions_signal_id_signals_id_fk twins
+3700; 2606 18669 FK CONSTRAINT public entity_aliases entity_aliases_entity_id_entities_id_fk twins
+3701; 2606 18674 FK CONSTRAINT public entity_relationships entity_relationships_object_id_entities_id_fk twins
+3691; 2606 18453 FK CONSTRAINT public fills fills_order_id_orders_id_fk twins
+3675; 2606 18373 FK CONSTRAINT public market_observations market_observations_instrument_id_instruments_id_fk twins
+3676; 2606 18383 FK CONSTRAINT public news_event_instruments news_event_instruments_instrument_id_instruments_id_fk twins
+3677; 2606 18378 FK CONSTRAINT public news_event_instruments news_event_instruments_news_event_id_news_events_id_fk twins
+3678; 2606 18393 FK CONSTRAINT public news_evidence news_evidence_news_event_id_news_events_id_fk twins
+3679; 2606 18388 FK CONSTRAINT public news_evidence news_evidence_news_source_id_news_sources_id_fk twins
+3692; 2606 18458 FK CONSTRAINT public orders orders_account_id_accounts_id_fk twins
+3693; 2606 18463 FK CONSTRAINT public orders orders_instrument_id_instruments_id_fk twins
+3694; 2606 18468 FK CONSTRAINT public orders orders_risk_decision_id_risk_decisions_id_fk twins
+3695; 2606 18473 FK CONSTRAINT public portfolio_snapshots portfolio_snapshots_account_id_accounts_id_fk twins
+3696; 2606 18478 FK CONSTRAINT public positions positions_account_id_accounts_id_fk twins
+3697; 2606 18483 FK CONSTRAINT public positions positions_instrument_id_instruments_id_fk twins
+3690; 2606 18448 FK CONSTRAINT public risk_decisions risk_decisions_decision_id_decisions_id_fk twins
+3681; 2606 18413 FK CONSTRAINT public signal_evidence signal_evidence_macro_observation_id_macro_observations_id_fk twins
+3682; 2606 18408 FK CONSTRAINT public signal_evidence signal_evidence_market_observation_id_market_observations_id_fk twins
+3683; 2606 18418 FK CONSTRAINT public signal_evidence signal_evidence_news_evidence_id_news_evidence_id_fk twins
+3684; 2606 18403 FK CONSTRAINT public signal_evidence signal_evidence_signal_id_signals_id_fk twins
+3702; 2606 18720 FK CONSTRAINT public signal_validations signal_validations_signal_id_signals_id_fk twins
+3685; 2606 18428 FK CONSTRAINT public signals signals_instrument_id_instruments_id_fk twins
+3686; 2606 18423 FK CONSTRAINT public signals signals_telegram_message_id_telegram_messages_id_fk twins
+3680; 2606 18398 FK CONSTRAINT public telegram_messages telegram_messages_telegram_source_id_telegram_sources_id_fk twins

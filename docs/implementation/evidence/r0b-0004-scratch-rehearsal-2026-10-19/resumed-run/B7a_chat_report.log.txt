@@ -1,0 +1,17 @@
+CREATE VIEW
+        classification        | sources 
+------------------------------+---------
+ ambiguous_shared_chat_id     |       2
+ recoverable                  |       2
+ conflicting_payload_chat_ids |       1
+ unrecoverable_no_chat_id     |       1
+(4 rows)
+
+                  id                  | channel_identifier |        classification        | candidate | n_ids | sources_sharing_candidate 
+--------------------------------------+--------------------+------------------------------+-----------+-------+---------------------------
+ 00000000-0000-4000-8000-0000000000a1 | @legacy_dup_a      | ambiguous_shared_chat_id     | -100222   |     1 |                         2
+ 00000000-0000-4000-8000-0000000000a2 | @legacy_dup_b      | ambiguous_shared_chat_id     | -100222   |     1 |                         2
+ 00000000-0000-4000-8000-0000000000a5 | @legacy_conflict   | conflicting_payload_chat_ids |           |     2 |                         0
+ 00000000-0000-4000-8000-0000000000a3 | @legacy_nopayload  | unrecoverable_no_chat_id     |           |     0 |                         0
+(4 rows)
+

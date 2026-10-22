@@ -1,3 +1,4 @@
+import { requireTestDatabaseUrl } from "./targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -11,8 +12,7 @@ import { createDb, schema } from "../../packages/database/src/index";
  * already applied.
  */
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 
 const db = createDb(DATABASE_URL);
 
@@ -127,6 +127,7 @@ describe("database schema (integration)", () => {
     const [signal] = await db
       .insert(schema.signals)
       .values({
+        parserVersion: "test-fixture",
         sourceType: "manual",
         instrumentId: instrument.id,
         direction: "buy",
@@ -149,6 +150,7 @@ describe("database schema (integration)", () => {
     const [signal] = await db
       .insert(schema.signals)
       .values({
+        parserVersion: "test-fixture",
         sourceType: "manual",
         instrumentId: instrument.id,
         direction: "sell",
@@ -193,6 +195,7 @@ describe("database schema (integration)", () => {
     const [signal] = await db
       .insert(schema.signals)
       .values({
+        parserVersion: "test-fixture",
         sourceType: "manual",
         instrumentId: instrument.id,
         direction: "buy",

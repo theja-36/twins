@@ -1,3 +1,4 @@
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
@@ -9,8 +10,7 @@ import { extractCandidatePhrases } from "../../../packages/entities/src/newsMent
 import { resolveInstrument } from "../../../packages/ingestion/src/instruments";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 beforeAll(async () => {

@@ -1,0 +1,3 @@
+dump_seconds=0.210
+dump_bytes=95113
+restore_seconds=0.500 (includes createdb)

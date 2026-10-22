@@ -1,0 +1,15 @@
+BEGIN
+CREATE TABLE
+INSERT 0 1
+INSERT 0 1
+                               ?column?                                
+-----------------------------------------------------------------------
+ plain composite unique accepted 2 identical rows (NULLs are distinct)
+(1 row)
+
+CREATE TABLE
+CREATE INDEX
+INSERT 0 1
+ERROR:  duplicate key value violates unique constraint "probe_partial_a"
+DETAIL:  Key (s, a)=(00000000-0000-4000-8000-0000000000f1, 00000000-0000-4000-8000-0000000000f2) already exists.
+ROLLBACK

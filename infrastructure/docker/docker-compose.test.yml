@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+  twins-postgres-test:
+    image: postgres:16-alpine
+    container_name: twins-postgres-test
+    environment:
+      POSTGRES_USER: twins
+      POSTGRES_PASSWORD: twins_dev_password
+      POSTGRES_DB: twins_dev
+    ports:
+      - "127.0.0.1:15432:5432"
+    volumes:
+      - twins_postgres_test_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U twins -d twins_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  twins-redis-test:
+    image: redis:7-alpine
+    container_name: twins-redis-test
+    ports:
+      - "127.0.0.1:16379:6379"
+    volumes:
+      - twins_redis_test_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+volumes:
+  twins_postgres_test_data:
+  twins_redis_test_data:
+

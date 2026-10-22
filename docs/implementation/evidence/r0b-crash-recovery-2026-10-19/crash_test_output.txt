@@ -1,0 +1,14 @@
+
+ RUN  v2.1.9 <repo>
+
+stdout | tests/integration/runtime/crashRecovery.test.ts
+[worker] starting appEnv=development tradingMode=paper liveTradingEnabled=false
+
+ ✓ tests/integration/runtime/crashRecovery.test.ts (1 test) 5111ms
+   ✓ worker process crash and recovery (real SIGKILL, guarded twins_ci) > SIGKILL after the message commit, before the signal insert -> replacement worker recovers the same job without duplicates 5081ms
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  19:52:37
+   Duration  6.92s (transform 328ms, setup 0ms, collect 1.24s, tests 5.11s, environment 0ms, prepare 129ms)
+

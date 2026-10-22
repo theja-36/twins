@@ -3,32 +3,37 @@ import { schema } from "@twins/database";
 import type { Db } from "../db";
 
 export interface MacroContextOptions {
-  /** Restrict to specific series (e.g. ["REPO_RATE", "CPI"]); omit for a general snapshot. */
+  /** The relevance rule: only these series are used. Without it NO macro observation is used (the newest rows are not evidence). */
   seriesCodes?: string[];
+  /** Optional additional relevance restriction by region (e.g. ["IN"]). */
+  regions?: string[];
   limit?: number;
-  /** No-look-ahead bound: only observations at or before this timestamp. Omit for unbounded (Phase 6 default behavior). */
+  /** No-look-ahead bound: only observations at or before this timestamp. Omit for unbounded. */
   asOf?: Date | undefined;
+  /** Information cutoff: only rows RECEIVED at or before this instant. */
+  receivedBy?: Date | undefined;
 }
 
 /**
- * A general macro snapshot - not instrument-specific (macro data has no
- * FK to instruments), just "what does TWINS currently know about
- * macro conditions" (spec: macro context is part of signal intelligence,
- * independent of any single instrument).
+ * Macro observations that an EXPLICIT relevance rule selects (series codes, optionally regions). Macro data has no
+ * instrument link, so "the newest rows" say nothing about a given signal; without a relevance rule this returns an
+ * empty list rather than arbitrary rows that would count as corroboration.
  */
 export async function gatherMacroContext(
   db: Db,
   options: MacroContextOptions = {},
 ): Promise<Array<typeof schema.macroObservations.$inferSelect>> {
+  if (!options.seriesCodes?.length) return [];
   const limit = options.limit ?? 10;
-  const conditions = [];
-  if (options.seriesCodes?.length) conditions.push(inArray(schema.macroObservations.seriesCode, options.seriesCodes));
+  const conditions = [inArray(schema.macroObservations.seriesCode, options.seriesCodes)];
+  if (options.regions?.length) conditions.push(inArray(schema.macroObservations.region, options.regions));
   if (options.asOf) conditions.push(lte(schema.macroObservations.observedAt, options.asOf));
+  if (options.receivedBy) conditions.push(lte(schema.macroObservations.receivedAt, options.receivedBy));
 
   return db
     .select()
     .from(schema.macroObservations)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .where(and(...conditions))
     .orderBy(desc(schema.macroObservations.observedAt))
     .limit(limit);
 }

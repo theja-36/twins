@@ -1,3 +1,4 @@
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -6,8 +7,7 @@ import { ingestMarketBars } from "../../../packages/ingestion/src/market";
 import type { MarketBarRequest, MarketDataProvider, NormalizedMarketBar } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 class FixtureMarketDataProvider implements MarketDataProvider {

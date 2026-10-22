@@ -1,0 +1,1808 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict Qd3PQxMak7UeCpGQ8f6xABBUrL0dyJP4lXJKsxiNv9v7ZgaBiFwY0MhCYZ1uDOj
+
+-- Dumped from database version 16.15
+-- Dumped by pg_dump version 16.15
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+--
+-- Name: drizzle; Type: SCHEMA; Schema: -; Owner: twins
+--
+
+CREATE SCHEMA drizzle;
+
+
+ALTER SCHEMA drizzle OWNER TO twins;
+
+--
+-- Name: actor_type; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.actor_type AS ENUM (
+    'user',
+    'system',
+    'ai'
+);
+
+
+ALTER TYPE public.actor_type OWNER TO twins;
+
+--
+-- Name: backtest_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.backtest_status AS ENUM (
+    'queued',
+    'running',
+    'completed',
+    'failed'
+);
+
+
+ALTER TYPE public.backtest_status OWNER TO twins;
+
+--
+-- Name: counter_thesis_severity; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.counter_thesis_severity AS ENUM (
+    'low',
+    'medium',
+    'high'
+);
+
+
+ALTER TYPE public.counter_thesis_severity OWNER TO twins;
+
+--
+-- Name: data_quality_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.data_quality_status AS ENUM (
+    'ok',
+    'stale',
+    'incomplete',
+    'conflicting',
+    'invalid'
+);
+
+
+ALTER TYPE public.data_quality_status OWNER TO twins;
+
+--
+-- Name: decision_outcome; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.decision_outcome AS ENUM (
+    'BUY',
+    'SELL',
+    'WAIT',
+    'REJECT'
+);
+
+
+ALTER TYPE public.decision_outcome OWNER TO twins;
+
+--
+-- Name: entity_type; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.entity_type AS ENUM (
+    'company',
+    'sector',
+    'market',
+    'country',
+    'macro'
+);
+
+
+ALTER TYPE public.entity_type OWNER TO twins;
+
+--
+-- Name: evidence_kind; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.evidence_kind AS ENUM (
+    'market_observation',
+    'macro_observation',
+    'news_evidence'
+);
+
+
+ALTER TYPE public.evidence_kind OWNER TO twins;
+
+--
+-- Name: job_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.job_status AS ENUM (
+    'queued',
+    'running',
+    'succeeded',
+    'failed'
+);
+
+
+ALTER TYPE public.job_status OWNER TO twins;
+
+--
+-- Name: match_method; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.match_method AS ENUM (
+    'exact_canonical',
+    'exact_alias',
+    'ticker_exchange',
+    'structured_provider_id',
+    'deterministic_rule'
+);
+
+
+ALTER TYPE public.match_method OWNER TO twins;
+
+--
+-- Name: news_event_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.news_event_status AS ENUM (
+    'reported',
+    'corrected',
+    'confirmed',
+    'developing'
+);
+
+
+ALTER TYPE public.news_event_status OWNER TO twins;
+
+--
+-- Name: news_event_type; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.news_event_type AS ENUM (
+    'earnings',
+    'merger_acquisition',
+    'management_change',
+    'dividend',
+    'buyback',
+    'bankruptcy',
+    'regulatory_action',
+    'exchange_halt',
+    'index_rebalance',
+    'major_price_event',
+    'liquidity_event',
+    'interest_rate_decision',
+    'inflation_release',
+    'employment_report',
+    'gdp_release',
+    'central_bank_statement',
+    'sanctions',
+    'conflict_escalation',
+    'election',
+    'trade_restriction',
+    'tariff',
+    'oil_supply_disruption',
+    'commodity_move',
+    'currency_event'
+);
+
+
+ALTER TYPE public.news_event_type OWNER TO twins;
+
+--
+-- Name: order_side; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.order_side AS ENUM (
+    'buy',
+    'sell'
+);
+
+
+ALTER TYPE public.order_side OWNER TO twins;
+
+--
+-- Name: order_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.order_status AS ENUM (
+    'pending',
+    'submitted',
+    'partially_filled',
+    'filled',
+    'cancelled',
+    'rejected'
+);
+
+
+ALTER TYPE public.order_status OWNER TO twins;
+
+--
+-- Name: provider_health_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.provider_health_status AS ENUM (
+    'healthy',
+    'degraded',
+    'down'
+);
+
+
+ALTER TYPE public.provider_health_status OWNER TO twins;
+
+--
+-- Name: provider_type; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.provider_type AS ENUM (
+    'market',
+    'broker',
+    'news',
+    'macro',
+    'telegram',
+    'ai'
+);
+
+
+ALTER TYPE public.provider_type OWNER TO twins;
+
+--
+-- Name: quality_overall_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.quality_overall_status AS ENUM (
+    'trusted',
+    'flagged',
+    'rejected'
+);
+
+
+ALTER TYPE public.quality_overall_status OWNER TO twins;
+
+--
+-- Name: relationship_strength; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.relationship_strength AS ENUM (
+    'direct',
+    'structural',
+    'potential'
+);
+
+
+ALTER TYPE public.relationship_strength OWNER TO twins;
+
+--
+-- Name: relationship_type; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.relationship_type AS ENUM (
+    'ISSUED_BY',
+    'BELONGS_TO',
+    'TRADED_ON',
+    'LOCATED_IN',
+    'AFFECTS',
+    'MENTIONS'
+);
+
+
+ALTER TYPE public.relationship_type OWNER TO twins;
+
+--
+-- Name: signal_direction; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.signal_direction AS ENUM (
+    'buy',
+    'sell'
+);
+
+
+ALTER TYPE public.signal_direction OWNER TO twins;
+
+--
+-- Name: signal_status; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.signal_status AS ENUM (
+    'pending',
+    'analyzed',
+    'decided',
+    'expired',
+    'invalid'
+);
+
+
+ALTER TYPE public.signal_status OWNER TO twins;
+
+--
+-- Name: signal_validation_outcome; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.signal_validation_outcome AS ENUM (
+    'APPROVE',
+    'REJECT',
+    'INSUFFICIENT_EVIDENCE'
+);
+
+
+ALTER TYPE public.signal_validation_outcome OWNER TO twins;
+
+--
+-- Name: source_reliability; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.source_reliability AS ENUM (
+    'UNKNOWN',
+    'LOW',
+    'MODERATE',
+    'HIGH'
+);
+
+
+ALTER TYPE public.source_reliability OWNER TO twins;
+
+--
+-- Name: source_tier; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.source_tier AS ENUM (
+    'A',
+    'B',
+    'C',
+    'D',
+    'E'
+);
+
+
+ALTER TYPE public.source_tier OWNER TO twins;
+
+--
+-- Name: trading_mode; Type: TYPE; Schema: public; Owner: twins
+--
+
+CREATE TYPE public.trading_mode AS ENUM (
+    'paper',
+    'shadow',
+    'live'
+);
+
+
+ALTER TYPE public.trading_mode OWNER TO twins;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: __drizzle_migrations; Type: TABLE; Schema: drizzle; Owner: twins
+--
+
+CREATE TABLE drizzle.__drizzle_migrations (
+    id integer NOT NULL,
+    hash text NOT NULL,
+    created_at bigint
+);
+
+
+ALTER TABLE drizzle.__drizzle_migrations OWNER TO twins;
+
+--
+-- Name: __drizzle_migrations_id_seq; Type: SEQUENCE; Schema: drizzle; Owner: twins
+--
+
+CREATE SEQUENCE drizzle.__drizzle_migrations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE drizzle.__drizzle_migrations_id_seq OWNER TO twins;
+
+--
+-- Name: __drizzle_migrations_id_seq; Type: SEQUENCE OWNED BY; Schema: drizzle; Owner: twins
+--
+
+ALTER SEQUENCE drizzle.__drizzle_migrations_id_seq OWNED BY drizzle.__drizzle_migrations.id;
+
+
+--
+-- Name: accounts; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.accounts (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    name text NOT NULL,
+    trading_mode public.trading_mode NOT NULL,
+    broker_connection_id uuid,
+    base_currency text DEFAULT 'INR'::text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.accounts OWNER TO twins;
+
+--
+-- Name: analyses; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.analyses (
+    id uuid NOT NULL,
+    signal_id uuid NOT NULL,
+    ai_provider text NOT NULL,
+    ai_model text NOT NULL,
+    bull_thesis text,
+    bear_thesis text,
+    supporting_evidence_ids jsonb,
+    contradicting_evidence_ids jsonb,
+    market_regime text,
+    macro_context text,
+    risk_context text,
+    confidence numeric,
+    confidence_label text,
+    raw_ai_response jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.analyses OWNER TO twins;
+
+--
+-- Name: audit_events; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.audit_events (
+    id uuid NOT NULL,
+    event_type text NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid,
+    actor_type public.actor_type NOT NULL,
+    actor_id text,
+    before_state jsonb,
+    after_state jsonb,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.audit_events OWNER TO twins;
+
+--
+-- Name: backtest_results; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.backtest_results (
+    id uuid NOT NULL,
+    backtest_id uuid NOT NULL,
+    metric_set jsonb NOT NULL,
+    equity_curve jsonb,
+    trades_count integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.backtest_results OWNER TO twins;
+
+--
+-- Name: backtests; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.backtests (
+    id uuid NOT NULL,
+    name text NOT NULL,
+    description text,
+    strategy_config jsonb NOT NULL,
+    start_date timestamp with time zone NOT NULL,
+    end_date timestamp with time zone NOT NULL,
+    status public.backtest_status DEFAULT 'queued'::public.backtest_status NOT NULL,
+    created_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    completed_at timestamp with time zone
+);
+
+
+ALTER TABLE public.backtests OWNER TO twins;
+
+--
+-- Name: broker_connections; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.broker_connections (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    provider text NOT NULL,
+    provider_account_id text,
+    status public.provider_health_status DEFAULT 'down'::public.provider_health_status NOT NULL,
+    last_health_check_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.broker_connections OWNER TO twins;
+
+--
+-- Name: decisions; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.decisions (
+    id uuid NOT NULL,
+    signal_id uuid NOT NULL,
+    analysis_id uuid,
+    outcome public.decision_outcome NOT NULL,
+    rationale text,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.decisions OWNER TO twins;
+
+--
+-- Name: entities; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.entities (
+    id uuid NOT NULL,
+    entity_type public.entity_type NOT NULL,
+    canonical_name text NOT NULL,
+    description text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.entities OWNER TO twins;
+
+--
+-- Name: entity_aliases; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.entity_aliases (
+    id uuid NOT NULL,
+    entity_id uuid NOT NULL,
+    alias text NOT NULL,
+    normalized_alias text NOT NULL,
+    alias_type text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.entity_aliases OWNER TO twins;
+
+--
+-- Name: entity_relationships; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.entity_relationships (
+    id uuid NOT NULL,
+    subject_type text NOT NULL,
+    subject_id uuid NOT NULL,
+    relationship_type public.relationship_type NOT NULL,
+    object_id uuid NOT NULL,
+    strength public.relationship_strength NOT NULL,
+    match_method public.match_method NOT NULL,
+    matched_text text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.entity_relationships OWNER TO twins;
+
+--
+-- Name: fills; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.fills (
+    id uuid NOT NULL,
+    order_id uuid NOT NULL,
+    broker_fill_id text,
+    fill_price numeric NOT NULL,
+    fill_quantity numeric NOT NULL,
+    fill_time timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.fills OWNER TO twins;
+
+--
+-- Name: instruments; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.instruments (
+    id uuid NOT NULL,
+    symbol text NOT NULL,
+    exchange text NOT NULL,
+    instrument_type text NOT NULL,
+    name text,
+    isin text,
+    currency text DEFAULT 'INR'::text NOT NULL,
+    lot_size numeric,
+    tick_size numeric,
+    is_active boolean DEFAULT true NOT NULL,
+    metadata jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.instruments OWNER TO twins;
+
+--
+-- Name: jobs; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.jobs (
+    id uuid NOT NULL,
+    job_type text NOT NULL,
+    queue_name text NOT NULL,
+    status public.job_status DEFAULT 'queued'::public.job_status NOT NULL,
+    payload jsonb,
+    result jsonb,
+    error text,
+    attempts integer DEFAULT 0 NOT NULL,
+    scheduled_at timestamp with time zone DEFAULT now() NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.jobs OWNER TO twins;
+
+--
+-- Name: macro_observations; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.macro_observations (
+    id uuid NOT NULL,
+    source text NOT NULL,
+    region text NOT NULL,
+    series_code text NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    value numeric NOT NULL,
+    unit text,
+    data_quality_status public.data_quality_status DEFAULT 'ok'::public.data_quality_status NOT NULL,
+    raw_payload jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.macro_observations OWNER TO twins;
+
+--
+-- Name: market_observations; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.market_observations (
+    id uuid NOT NULL,
+    instrument_id uuid NOT NULL,
+    source text NOT NULL,
+    timeframe text NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    open numeric,
+    high numeric,
+    low numeric,
+    close numeric,
+    volume numeric,
+    open_interest numeric,
+    data_quality_status public.data_quality_status DEFAULT 'ok'::public.data_quality_status NOT NULL,
+    raw_payload jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.market_observations OWNER TO twins;
+
+--
+-- Name: news_event_instruments; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.news_event_instruments (
+    news_event_id uuid NOT NULL,
+    instrument_id uuid NOT NULL
+);
+
+
+ALTER TABLE public.news_event_instruments OWNER TO twins;
+
+--
+-- Name: news_events; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.news_events (
+    id uuid NOT NULL,
+    title text NOT NULL,
+    summary text,
+    event_time timestamp with time zone,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    relevance_score numeric,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    event_type public.news_event_type,
+    status public.news_event_status DEFAULT 'reported'::public.news_event_status NOT NULL
+);
+
+
+ALTER TABLE public.news_events OWNER TO twins;
+
+--
+-- Name: news_evidence; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.news_evidence (
+    id uuid NOT NULL,
+    news_source_id uuid NOT NULL,
+    news_event_id uuid,
+    source_url text NOT NULL,
+    headline text NOT NULL,
+    body_excerpt text,
+    source_timestamp timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    dedupe_hash text NOT NULL,
+    raw_payload jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.news_evidence OWNER TO twins;
+
+--
+-- Name: news_sources; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.news_sources (
+    id uuid NOT NULL,
+    name text NOT NULL,
+    tier public.source_tier NOT NULL,
+    homepage_url text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.news_sources OWNER TO twins;
+
+--
+-- Name: orders; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.orders (
+    id uuid NOT NULL,
+    account_id uuid NOT NULL,
+    instrument_id uuid NOT NULL,
+    risk_decision_id uuid,
+    trading_mode public.trading_mode NOT NULL,
+    side public.order_side NOT NULL,
+    order_type text NOT NULL,
+    quantity numeric NOT NULL,
+    price numeric,
+    status public.order_status DEFAULT 'pending'::public.order_status NOT NULL,
+    broker_order_id text,
+    idempotency_key text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.orders OWNER TO twins;
+
+--
+-- Name: portfolio_snapshots; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.portfolio_snapshots (
+    id uuid NOT NULL,
+    account_id uuid NOT NULL,
+    snapshot_at timestamp with time zone NOT NULL,
+    equity numeric NOT NULL,
+    cash numeric,
+    positions_value numeric,
+    realized_pnl numeric,
+    unrealized_pnl numeric,
+    drawdown numeric,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.portfolio_snapshots OWNER TO twins;
+
+--
+-- Name: positions; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.positions (
+    id uuid NOT NULL,
+    account_id uuid NOT NULL,
+    instrument_id uuid NOT NULL,
+    trading_mode public.trading_mode NOT NULL,
+    quantity numeric DEFAULT '0'::numeric NOT NULL,
+    average_price numeric,
+    opened_at timestamp with time zone,
+    closed_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.positions OWNER TO twins;
+
+--
+-- Name: provider_health; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.provider_health (
+    id uuid NOT NULL,
+    provider_name text NOT NULL,
+    provider_type public.provider_type NOT NULL,
+    status public.provider_health_status NOT NULL,
+    latency_ms numeric,
+    error_rate numeric,
+    last_success_at timestamp with time zone,
+    last_error_at timestamp with time zone,
+    last_error_message text,
+    checked_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.provider_health OWNER TO twins;
+
+--
+-- Name: quality_assessments; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.quality_assessments (
+    id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    source text NOT NULL,
+    overall_status public.quality_overall_status NOT NULL,
+    quality_score numeric NOT NULL,
+    dimensions jsonb NOT NULL,
+    reasons jsonb NOT NULL,
+    evaluated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.quality_assessments OWNER TO twins;
+
+--
+-- Name: risk_decisions; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.risk_decisions (
+    id uuid NOT NULL,
+    decision_id uuid NOT NULL,
+    approved boolean NOT NULL,
+    reasons jsonb,
+    max_position_size numeric,
+    risk_per_trade numeric,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.risk_decisions OWNER TO twins;
+
+--
+-- Name: signal_evidence; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.signal_evidence (
+    id uuid NOT NULL,
+    signal_id uuid NOT NULL,
+    evidence_kind public.evidence_kind NOT NULL,
+    market_observation_id uuid,
+    macro_observation_id uuid,
+    news_evidence_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT signal_evidence_exactly_one_reference CHECK ((((
+CASE
+    WHEN (market_observation_id IS NOT NULL) THEN 1
+    ELSE 0
+END +
+CASE
+    WHEN (macro_observation_id IS NOT NULL) THEN 1
+    ELSE 0
+END) +
+CASE
+    WHEN (news_evidence_id IS NOT NULL) THEN 1
+    ELSE 0
+END) = 1)),
+    CONSTRAINT signal_evidence_kind_matches_reference CHECK ((((evidence_kind = 'market_observation'::public.evidence_kind) AND (market_observation_id IS NOT NULL)) OR ((evidence_kind = 'macro_observation'::public.evidence_kind) AND (macro_observation_id IS NOT NULL)) OR ((evidence_kind = 'news_evidence'::public.evidence_kind) AND (news_evidence_id IS NOT NULL))))
+);
+
+
+ALTER TABLE public.signal_evidence OWNER TO twins;
+
+--
+-- Name: signal_validations; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.signal_validations (
+    id uuid NOT NULL,
+    signal_id uuid NOT NULL,
+    outcome public.signal_validation_outcome NOT NULL,
+    decision_confidence numeric NOT NULL,
+    confidence_label text NOT NULL,
+    bull_thesis jsonb NOT NULL,
+    bear_thesis jsonb NOT NULL,
+    counter_thesis jsonb NOT NULL,
+    counter_thesis_severity public.counter_thesis_severity NOT NULL,
+    source_reliability public.source_reliability NOT NULL,
+    source_reliability_reason text NOT NULL,
+    rationale text NOT NULL,
+    validated_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    idempotency_key text
+);
+
+
+ALTER TABLE public.signal_validations OWNER TO twins;
+
+--
+-- Name: signals; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.signals (
+    id uuid NOT NULL,
+    source_type text NOT NULL,
+    telegram_message_id uuid,
+    instrument_id uuid NOT NULL,
+    direction public.signal_direction NOT NULL,
+    entry_price numeric,
+    stop_loss numeric,
+    targets jsonb,
+    timeframe text,
+    extracted_confidence numeric,
+    status public.signal_status DEFAULT 'pending'::public.signal_status NOT NULL,
+    signal_timestamp timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    parser_version text NOT NULL
+);
+
+
+ALTER TABLE public.signals OWNER TO twins;
+
+--
+-- Name: telegram_messages; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.telegram_messages (
+    id uuid NOT NULL,
+    telegram_source_id uuid NOT NULL,
+    external_message_id text NOT NULL,
+    message_timestamp timestamp with time zone NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    raw_text text NOT NULL,
+    raw_payload jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    origin_message_id text,
+    edit_date timestamp with time zone
+);
+
+
+ALTER TABLE public.telegram_messages OWNER TO twins;
+
+--
+-- Name: telegram_sources; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.telegram_sources (
+    id uuid NOT NULL,
+    channel_identifier text NOT NULL,
+    display_name text,
+    trust_notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    chat_id text
+);
+
+
+ALTER TABLE public.telegram_sources OWNER TO twins;
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: twins
+--
+
+CREATE TABLE public.users (
+    id uuid NOT NULL,
+    email text NOT NULL,
+    password_hash text NOT NULL,
+    display_name text,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.users OWNER TO twins;
+
+--
+-- Name: __drizzle_migrations id; Type: DEFAULT; Schema: drizzle; Owner: twins
+--
+
+ALTER TABLE ONLY drizzle.__drizzle_migrations ALTER COLUMN id SET DEFAULT nextval('drizzle.__drizzle_migrations_id_seq'::regclass);
+
+
+--
+-- Name: __drizzle_migrations __drizzle_migrations_pkey; Type: CONSTRAINT; Schema: drizzle; Owner: twins
+--
+
+ALTER TABLE ONLY drizzle.__drizzle_migrations
+    ADD CONSTRAINT __drizzle_migrations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accounts accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: analyses analyses_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.analyses
+    ADD CONSTRAINT analyses_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: audit_events audit_events_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.audit_events
+    ADD CONSTRAINT audit_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: backtest_results backtest_results_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.backtest_results
+    ADD CONSTRAINT backtest_results_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: backtests backtests_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.backtests
+    ADD CONSTRAINT backtests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: broker_connections broker_connections_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.broker_connections
+    ADD CONSTRAINT broker_connections_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: decisions decisions_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entities entities_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.entities
+    ADD CONSTRAINT entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entity_aliases entity_aliases_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.entity_aliases
+    ADD CONSTRAINT entity_aliases_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entity_relationships entity_relationships_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fills fills_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.fills
+    ADD CONSTRAINT fills_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: instruments instruments_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.instruments
+    ADD CONSTRAINT instruments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: jobs jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.jobs
+    ADD CONSTRAINT jobs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: macro_observations macro_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.macro_observations
+    ADD CONSTRAINT macro_observations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: market_observations market_observations_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.market_observations
+    ADD CONSTRAINT market_observations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_event_instruments news_event_instruments_news_event_id_instrument_id_pk; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_event_instruments
+    ADD CONSTRAINT news_event_instruments_news_event_id_instrument_id_pk PRIMARY KEY (news_event_id, instrument_id);
+
+
+--
+-- Name: news_events news_events_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_events
+    ADD CONSTRAINT news_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_evidence news_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_evidence
+    ADD CONSTRAINT news_evidence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_sources news_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_sources
+    ADD CONSTRAINT news_sources_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: orders orders_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: portfolio_snapshots portfolio_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.portfolio_snapshots
+    ADD CONSTRAINT portfolio_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: provider_health provider_health_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.provider_health
+    ADD CONSTRAINT provider_health_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: quality_assessments quality_assessments_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.quality_assessments
+    ADD CONSTRAINT quality_assessments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: risk_decisions risk_decisions_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.risk_decisions
+    ADD CONSTRAINT risk_decisions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: signal_evidence signal_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_evidence
+    ADD CONSTRAINT signal_evidence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: signal_validations signal_validations_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_validations
+    ADD CONSTRAINT signal_validations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: signals signals_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signals
+    ADD CONSTRAINT signals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: telegram_messages telegram_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.telegram_messages
+    ADD CONSTRAINT telegram_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: telegram_sources telegram_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.telegram_sources
+    ADD CONSTRAINT telegram_sources_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: audit_events_created_at_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX audit_events_created_at_idx ON public.audit_events USING btree (created_at);
+
+
+--
+-- Name: audit_events_entity_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX audit_events_entity_idx ON public.audit_events USING btree (entity_type, entity_id);
+
+
+--
+-- Name: entities_type_canonical_name_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX entities_type_canonical_name_unique ON public.entities USING btree (entity_type, canonical_name);
+
+
+--
+-- Name: entity_aliases_entity_alias_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX entity_aliases_entity_alias_unique ON public.entity_aliases USING btree (entity_id, normalized_alias);
+
+
+--
+-- Name: entity_aliases_normalized_alias_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX entity_aliases_normalized_alias_idx ON public.entity_aliases USING btree (normalized_alias);
+
+
+--
+-- Name: entity_relationships_dedupe_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX entity_relationships_dedupe_unique ON public.entity_relationships USING btree (subject_type, subject_id, relationship_type, object_id);
+
+
+--
+-- Name: entity_relationships_object_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX entity_relationships_object_idx ON public.entity_relationships USING btree (object_id);
+
+
+--
+-- Name: entity_relationships_subject_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX entity_relationships_subject_idx ON public.entity_relationships USING btree (subject_type, subject_id);
+
+
+--
+-- Name: fills_order_broker_fill_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX fills_order_broker_fill_unique ON public.fills USING btree (order_id, broker_fill_id);
+
+
+--
+-- Name: instruments_exchange_symbol_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX instruments_exchange_symbol_unique ON public.instruments USING btree (exchange, symbol);
+
+
+--
+-- Name: jobs_queue_status_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX jobs_queue_status_idx ON public.jobs USING btree (queue_name, status);
+
+
+--
+-- Name: macro_observations_dedupe_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX macro_observations_dedupe_unique ON public.macro_observations USING btree (source, series_code, observed_at);
+
+
+--
+-- Name: macro_observations_region_series_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX macro_observations_region_series_idx ON public.macro_observations USING btree (region, series_code);
+
+
+--
+-- Name: market_observations_dedupe_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX market_observations_dedupe_unique ON public.market_observations USING btree (instrument_id, source, timeframe, observed_at);
+
+
+--
+-- Name: market_observations_instrument_observed_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX market_observations_instrument_observed_idx ON public.market_observations USING btree (instrument_id, observed_at);
+
+
+--
+-- Name: news_evidence_source_dedupe_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX news_evidence_source_dedupe_unique ON public.news_evidence USING btree (news_source_id, dedupe_hash);
+
+
+--
+-- Name: news_sources_name_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX news_sources_name_unique ON public.news_sources USING btree (name);
+
+
+--
+-- Name: orders_account_status_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX orders_account_status_idx ON public.orders USING btree (account_id, status);
+
+
+--
+-- Name: orders_idempotency_key_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX orders_idempotency_key_unique ON public.orders USING btree (idempotency_key);
+
+
+--
+-- Name: portfolio_snapshots_account_time_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX portfolio_snapshots_account_time_unique ON public.portfolio_snapshots USING btree (account_id, snapshot_at);
+
+
+--
+-- Name: positions_account_instrument_mode_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX positions_account_instrument_mode_unique ON public.positions USING btree (account_id, instrument_id, trading_mode);
+
+
+--
+-- Name: provider_health_provider_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX provider_health_provider_idx ON public.provider_health USING btree (provider_name, checked_at);
+
+
+--
+-- Name: quality_assessments_entity_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX quality_assessments_entity_idx ON public.quality_assessments USING btree (entity_type, entity_id);
+
+
+--
+-- Name: quality_assessments_evaluated_at_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX quality_assessments_evaluated_at_idx ON public.quality_assessments USING btree (evaluated_at);
+
+
+--
+-- Name: signal_evidence_signal_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX signal_evidence_signal_idx ON public.signal_evidence USING btree (signal_id);
+
+
+--
+-- Name: signal_validations_idempotency_key_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX signal_validations_idempotency_key_unique ON public.signal_validations USING btree (idempotency_key);
+
+
+--
+-- Name: signal_validations_signal_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX signal_validations_signal_idx ON public.signal_validations USING btree (signal_id);
+
+
+--
+-- Name: signals_instrument_status_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX signals_instrument_status_idx ON public.signals USING btree (instrument_id, status);
+
+
+--
+-- Name: signals_telegram_message_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX signals_telegram_message_idx ON public.signals USING btree (telegram_message_id);
+
+
+--
+-- Name: signals_telegram_message_parser_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX signals_telegram_message_parser_unique ON public.signals USING btree (telegram_message_id, parser_version);
+
+
+--
+-- Name: telegram_messages_origin_idx; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE INDEX telegram_messages_origin_idx ON public.telegram_messages USING btree (telegram_source_id, origin_message_id);
+
+
+--
+-- Name: telegram_messages_source_external_id_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX telegram_messages_source_external_id_unique ON public.telegram_messages USING btree (telegram_source_id, external_message_id);
+
+
+--
+-- Name: telegram_sources_channel_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX telegram_sources_channel_unique ON public.telegram_sources USING btree (channel_identifier);
+
+
+--
+-- Name: telegram_sources_chat_id_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX telegram_sources_chat_id_unique ON public.telegram_sources USING btree (chat_id);
+
+
+--
+-- Name: users_email_unique; Type: INDEX; Schema: public; Owner: twins
+--
+
+CREATE UNIQUE INDEX users_email_unique ON public.users USING btree (email);
+
+
+--
+-- Name: accounts accounts_broker_connection_id_broker_connections_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_broker_connection_id_broker_connections_id_fk FOREIGN KEY (broker_connection_id) REFERENCES public.broker_connections(id) ON DELETE SET NULL;
+
+
+--
+-- Name: accounts accounts_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.accounts
+    ADD CONSTRAINT accounts_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: analyses analyses_signal_id_signals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.analyses
+    ADD CONSTRAINT analyses_signal_id_signals_id_fk FOREIGN KEY (signal_id) REFERENCES public.signals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: backtest_results backtest_results_backtest_id_backtests_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.backtest_results
+    ADD CONSTRAINT backtest_results_backtest_id_backtests_id_fk FOREIGN KEY (backtest_id) REFERENCES public.backtests(id) ON DELETE CASCADE;
+
+
+--
+-- Name: backtests backtests_created_by_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.backtests
+    ADD CONSTRAINT backtests_created_by_users_id_fk FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: broker_connections broker_connections_user_id_users_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.broker_connections
+    ADD CONSTRAINT broker_connections_user_id_users_id_fk FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: decisions decisions_analysis_id_analyses_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_analysis_id_analyses_id_fk FOREIGN KEY (analysis_id) REFERENCES public.analyses(id) ON DELETE SET NULL;
+
+
+--
+-- Name: decisions decisions_signal_id_signals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.decisions
+    ADD CONSTRAINT decisions_signal_id_signals_id_fk FOREIGN KEY (signal_id) REFERENCES public.signals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_aliases entity_aliases_entity_id_entities_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.entity_aliases
+    ADD CONSTRAINT entity_aliases_entity_id_entities_id_fk FOREIGN KEY (entity_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: entity_relationships entity_relationships_object_id_entities_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.entity_relationships
+    ADD CONSTRAINT entity_relationships_object_id_entities_id_fk FOREIGN KEY (object_id) REFERENCES public.entities(id) ON DELETE CASCADE;
+
+
+--
+-- Name: fills fills_order_id_orders_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.fills
+    ADD CONSTRAINT fills_order_id_orders_id_fk FOREIGN KEY (order_id) REFERENCES public.orders(id) ON DELETE CASCADE;
+
+
+--
+-- Name: market_observations market_observations_instrument_id_instruments_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.market_observations
+    ADD CONSTRAINT market_observations_instrument_id_instruments_id_fk FOREIGN KEY (instrument_id) REFERENCES public.instruments(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: news_event_instruments news_event_instruments_instrument_id_instruments_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_event_instruments
+    ADD CONSTRAINT news_event_instruments_instrument_id_instruments_id_fk FOREIGN KEY (instrument_id) REFERENCES public.instruments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: news_event_instruments news_event_instruments_news_event_id_news_events_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_event_instruments
+    ADD CONSTRAINT news_event_instruments_news_event_id_news_events_id_fk FOREIGN KEY (news_event_id) REFERENCES public.news_events(id) ON DELETE CASCADE;
+
+
+--
+-- Name: news_evidence news_evidence_news_event_id_news_events_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_evidence
+    ADD CONSTRAINT news_evidence_news_event_id_news_events_id_fk FOREIGN KEY (news_event_id) REFERENCES public.news_events(id) ON DELETE SET NULL;
+
+
+--
+-- Name: news_evidence news_evidence_news_source_id_news_sources_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.news_evidence
+    ADD CONSTRAINT news_evidence_news_source_id_news_sources_id_fk FOREIGN KEY (news_source_id) REFERENCES public.news_sources(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: orders orders_account_id_accounts_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_account_id_accounts_id_fk FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: orders orders_instrument_id_instruments_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_instrument_id_instruments_id_fk FOREIGN KEY (instrument_id) REFERENCES public.instruments(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: orders orders_risk_decision_id_risk_decisions_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.orders
+    ADD CONSTRAINT orders_risk_decision_id_risk_decisions_id_fk FOREIGN KEY (risk_decision_id) REFERENCES public.risk_decisions(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: portfolio_snapshots portfolio_snapshots_account_id_accounts_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.portfolio_snapshots
+    ADD CONSTRAINT portfolio_snapshots_account_id_accounts_id_fk FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE CASCADE;
+
+
+--
+-- Name: positions positions_account_id_accounts_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_account_id_accounts_id_fk FOREIGN KEY (account_id) REFERENCES public.accounts(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: positions positions_instrument_id_instruments_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.positions
+    ADD CONSTRAINT positions_instrument_id_instruments_id_fk FOREIGN KEY (instrument_id) REFERENCES public.instruments(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: risk_decisions risk_decisions_decision_id_decisions_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.risk_decisions
+    ADD CONSTRAINT risk_decisions_decision_id_decisions_id_fk FOREIGN KEY (decision_id) REFERENCES public.decisions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: signal_evidence signal_evidence_macro_observation_id_macro_observations_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_evidence
+    ADD CONSTRAINT signal_evidence_macro_observation_id_macro_observations_id_fk FOREIGN KEY (macro_observation_id) REFERENCES public.macro_observations(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: signal_evidence signal_evidence_market_observation_id_market_observations_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_evidence
+    ADD CONSTRAINT signal_evidence_market_observation_id_market_observations_id_fk FOREIGN KEY (market_observation_id) REFERENCES public.market_observations(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: signal_evidence signal_evidence_news_evidence_id_news_evidence_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_evidence
+    ADD CONSTRAINT signal_evidence_news_evidence_id_news_evidence_id_fk FOREIGN KEY (news_evidence_id) REFERENCES public.news_evidence(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: signal_evidence signal_evidence_signal_id_signals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_evidence
+    ADD CONSTRAINT signal_evidence_signal_id_signals_id_fk FOREIGN KEY (signal_id) REFERENCES public.signals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: signal_validations signal_validations_signal_id_signals_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signal_validations
+    ADD CONSTRAINT signal_validations_signal_id_signals_id_fk FOREIGN KEY (signal_id) REFERENCES public.signals(id) ON DELETE CASCADE;
+
+
+--
+-- Name: signals signals_instrument_id_instruments_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signals
+    ADD CONSTRAINT signals_instrument_id_instruments_id_fk FOREIGN KEY (instrument_id) REFERENCES public.instruments(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: signals signals_telegram_message_id_telegram_messages_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.signals
+    ADD CONSTRAINT signals_telegram_message_id_telegram_messages_id_fk FOREIGN KEY (telegram_message_id) REFERENCES public.telegram_messages(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: telegram_messages telegram_messages_telegram_source_id_telegram_sources_id_fk; Type: FK CONSTRAINT; Schema: public; Owner: twins
+--
+
+ALTER TABLE ONLY public.telegram_messages
+    ADD CONSTRAINT telegram_messages_telegram_source_id_telegram_sources_id_fk FOREIGN KEY (telegram_source_id) REFERENCES public.telegram_sources(id) ON DELETE RESTRICT;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict Qd3PQxMak7UeCpGQ8f6xABBUrL0dyJP4lXJKsxiNv9v7ZgaBiFwY0MhCYZ1uDOj
+

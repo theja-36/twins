@@ -71,6 +71,12 @@ export interface DecisionIntelligenceResult {
   /** Confidence that the evidence supports the CHOSEN outcome - explicitly NOT a probability of profit. */
   decisionConfidence: number;
   confidenceLabel: string;
+  /**
+   * True only when an evidence-derived confidence was not a finite number and was discarded: then
+   * `decisionConfidence` is the placeholder 0 (NOT a measurement), `confidenceLabel` says so explicitly and
+   * the outcome is unaffected. Absent in every normal result.
+   */
+  confidenceUnavailable?: boolean;
   structuralIssues: StructuralValidationIssue[];
   bullThesis: Thesis;
   bearThesis: Thesis;
@@ -82,3 +88,7 @@ export interface DecisionIntelligenceResult {
 
 export const CONFIDENCE_LABEL =
   "Confidence that available evidence supports this outcome, not a probability of profit.";
+
+/** Appended to the label when a confidence value had to be discarded (see DecisionIntelligenceResult.confidenceUnavailable). */
+export const CONFIDENCE_UNAVAILABLE_NOTE =
+  "Confidence UNAVAILABLE for this decision: the evidence-derived value was invalid and was discarded; the stored 0 is a placeholder, not a measurement.";

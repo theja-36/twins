@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { schema } from "@twins/database";
 import { assessTelegramMessage } from "@twins/dataquality";
 import type { Db } from "./db";
-import { gatherMarketContext } from "./context/market";
+import { selectMarketContext, type MarketContextOptions } from "./context/market";
 import { gatherMacroContext, type MacroContextOptions } from "./context/macro";
 import { gatherNewsContext } from "./context/news";
 import { gatherPriorSignalStats } from "./context/priorSignals";
@@ -19,6 +19,14 @@ export interface BuildSignalIntelligenceOptions {
    * assembleSignalIntelligence() opts into this explicitly.
    */
   enforceNoLookahead?: boolean;
+  /** Explicit market selection (source, interval, context). See selectMarketContext. */
+  market?: Pick<MarketContextOptions, "source" | "timeframe" | "context" | "requiredPrices"> | undefined;
+  /**
+   * Explicit analysis as-of time. Evidence RECEIVED after it is excluded (historical replay sees only what was
+   * known then), and observation time is bounded by it as well. Omit for "everything received so far" (no
+   * received-by bound - intentional for this lower-level entry point; validateSignal always establishes one).
+   */
+  asOf?: Date | undefined;
 }
 
 async function linkEvidenceOnce(
@@ -39,11 +47,18 @@ async function linkEvidenceOnce(
     );
   if (existing.length > 0) return;
 
-  await db.insert(schema.signalEvidence).values({
-    signalId,
-    evidenceKind,
-    [column]: columnValue,
-  });
+  // Fast path above avoids needless conflicts and preserves behaviour on databases without
+  // migration 0005. The partial unique indexes of 0005 are the correctness boundary: when two
+  // callers pass the check concurrently, the loser's insert hits ON CONFLICT DO NOTHING and the
+  // link (identical by definition: same signal, same evidence row) simply already exists.
+  await db
+    .insert(schema.signalEvidence)
+    .values({
+      signalId,
+      evidenceKind,
+      [column]: columnValue,
+    })
+    .onConflictDoNothing();
 }
 
 /**
@@ -87,19 +102,28 @@ export async function buildSignalIntelligence(
     }
   }
 
-  const asOf = options.enforceNoLookahead ? signal.signalTimestamp : undefined;
+  const signalBound = options.enforceNoLookahead ? signal.signalTimestamp : undefined;
+  const analysisAsOf = options.asOf;
+  const asOf =
+    signalBound && analysisAsOf ? new Date(Math.min(signalBound.getTime(), analysisAsOf.getTime())) : (signalBound ?? analysisAsOf);
+  const receivedBy = analysisAsOf;
 
-  const marketContext = await gatherMarketContext(db, signal.instrumentId, { asOf });
-  if (!marketContext) notes.push(`no market_observations found for instrument ${instrument.symbol}`);
+  const marketSelection = await selectMarketContext(db, signal.instrumentId, { ...options.market, asOf, receivedBy });
+  const marketContext = marketSelection.context;
+  const marketInputReason = marketSelection.reason;
+  if (!marketContext) notes.push(`no eligible market input for instrument ${instrument.symbol}: ${marketInputReason}`);
   else await linkEvidenceOnce(db, signalId, "market_observation", marketContext.observation.id, "marketObservationId");
 
-  const macroContext = await gatherMacroContext(db, { ...options.macro, asOf });
-  if (macroContext.length === 0) notes.push("no macro_observations available");
+  if (!options.macro?.seriesCodes?.length) {
+    notes.push("macro observations not used: no relevance rule (series codes) was provided, so no macro row counts as evidence");
+  }
+  const macroContext = await gatherMacroContext(db, { ...options.macro, asOf, receivedBy });
+  if (options.macro?.seriesCodes?.length && macroContext.length === 0) notes.push("no macro_observations matched the relevance rule");
   for (const observation of macroContext) {
     await linkEvidenceOnce(db, signalId, "macro_observation", observation.id, "macroObservationId");
   }
 
-  const newsContext = await gatherNewsContext(db, instrument.id, { limit: options.newsLimit, asOf });
+  const newsContext = await gatherNewsContext(db, instrument.id, { limit: options.newsLimit, asOf, receivedBy });
   if (newsContext.length === 0) {
     notes.push(`no news_evidence found mentioning "${instrument.symbol}"`);
   }
@@ -121,6 +145,7 @@ export async function buildSignalIntelligence(
     originalTelegramMessage,
     telegramMessageQuality,
     marketContext,
+    marketInputReason,
     macroContext,
     newsContext,
     priorSignalStats,

@@ -1,0 +1,167 @@
+#!/usr/bin/env bash
+# F2 SCRATCH REHEARSAL - PLAN ONLY, NOT EXECUTED. Needs explicit owner approval of exactly this block.
+# Demonstrates migration 0005 (3 partial unique indexes on signal_evidence) + the conflict-safe writer, on two NEW scratch databases,
+# from a PATCHED COPY of the current tree. The main working tree, twins_dev, twins_ci, twins_rehearsal_fresh,
+# twins_rehearsal_upgrade and twins_restore_drill are never written. No cleanup is performed by this script.
+set -u -o pipefail
+
+# ---------------- constants ----------------
+MAIN=<repo>
+S=$SCRATCH
+F2=$S/f2-rehearsal; L=$F2/logs; TREE=$F2/tree; REV=$MAIN/docs/implementation/review/f2
+UP=twins_rehearsal_f2_upgrade; FR=twins_rehearsal_f2_fresh                       # the ONLY two databases that will be created
+DUMP=$S/backup-drill/twins_rehearsal_upgrade.dump                                 # source archive (retained from the backup drill)
+DUMP_SHA=edc65ec38a4b56e8555b5b74ceeef392f19f61248dd22f04c6545544264b757b
+PG='postgresql://twins:<test-only-password>@127.0.0.1:15432'                        # test-only credentials; never printed
+export REDIS_URL='redis://127.0.0.1:16379' LIVE_TRADING=false TWINS_REHEARSAL=1   # rehearsal guard ACTIVE for every vitest run below
+
+leftovers(){ # READ-ONLY report of resources a test run could have left behind. Nothing is killed or cleaned here.
+  echo "-- leftovers (read-only): connections to the scratch databases from sessions other than this query"
+  docker exec twins-postgres-test psql -U twins -d postgres -Atc "select coalesce(datname,'?')||' pid='||pid||' state='||coalesce(state,'?')||' app='||coalesce(application_name,'') from pg_stat_activity where datname in ('$UP','$FR') and pid <> pg_backend_pid()" || true
+  echo "-- processes whose command line contains the patched-copy path (vitest workers run from there):"
+  ps -eo pid,etime,command | grep -F "$TREE" | grep -v grep | cut -c1-150 || true
+  echo "-- test-owned Redis queues (SCAN only):"; REDIS_URL=$REDIS_URL node "$MAIN/docs/implementation/rehearsal/redis_scan_test_keys.mjs" || true
+  echo "-- crash-test child processes: $(ps -eo comm,command | awk '$1 ~ /node/ && /workerChild/' | wc -l | tr -d ' ')"; }
+fail(){ echo "STOP: $1"; leftovers
+  echo "Preserved: $UP / $FR (if created), $TREE, the CSV export and logs in $L. Nothing was cleaned up."; exit 1; }
+val(){ docker exec twins-postgres-test psql -U twins -d "$1" -Atc "$2"; }
+ro(){ docker exec -i -e "PGOPTIONS=-c default_transaction_read_only=on" twins-postgres-test psql -U twins -v ON_ERROR_STOP=1 -d "$1" "${@:2}"; }
+rw(){ docker exec -i twins-postgres-test psql -U twins -v ON_ERROR_STOP=1 -d "$1" "${@:2}"; }
+check(){ [ "$2" = "$3" ] && echo "OK   $1 = $3" || fail "$1: expected [$2] got [$3]"; }
+step(){ local n=$1; shift; echo "== $n"; "$@" >"$L/$n.txt" 2>&1 || { tail -n 15 "$L/$n.txt"; fail "$n failed"; }; }
+tests(){ # tests <db> <label> [extra vitest args]; runs from the PATCHED COPY with the rehearsal guard first
+  local db=$1 label=$2; shift 2
+  ( cd "$TREE" && DATABASE_URL="$PG/$db" npx vitest run --config vitest.integration.config.ts tests/integration/runtime/envGuard.test.ts ) >"$L/${label}_guard.txt" 2>&1 || fail "${label}: rehearsal env guard rejected the target"
+  grep -q "3 passed" "$L/${label}_guard.txt" || fail "${label}: env guard did not run its 3 checks (was it skipped?)"
+  ( cd "$TREE" && DATABASE_URL="$PG/$db" npx vitest run --config vitest.integration.config.ts "$@" ) >"$L/${label}.txt" 2>&1
+}
+baseline(){ for db in twins_dev twins_ci twins_rehearsal_fresh twins_rehearsal_upgrade twins_restore_drill; do
+  echo "$db $(val $db "select (select count(*) from signals)||'/'||(select count(*) from signal_validations)||'/'||(select count(*) from signal_evidence)")"; done; }
+
+# ---------------- 0. preflight (read-only) ----------------
+[ "${LIVE_TRADING:-}" = "false" ] || fail "LIVE_TRADING must be exactly false"
+[ "${TWINS_REHEARSAL:-}" = "1" ] || fail "TWINS_REHEARSAL must be 1 (rehearsal guard active)"
+[ "$REDIS_URL" = "redis://127.0.0.1:16379" ] || fail "REDIS_URL must be the test Redis"
+[ ! -e "$F2" ] || fail "$F2 already exists; refusing to reuse it"
+mkdir -p "$L"
+for db in $UP $FR; do [ -z "$(val postgres "select 1 from pg_database where datname='$db'")" ] || fail "$db already exists; refusing to touch it"; done
+echo "OK   $UP and $FR are absent"
+check "source archive sha256" "$DUMP_SHA" "$(shasum -a 256 "$DUMP" | cut -d' ' -f1)"
+baseline > "$L/baseline_before.txt"; cat "$L/baseline_before.txt"
+( cd "$MAIN" && git status --short | shasum -a 256; shasum -a 256 packages/signals/src/intelligence.ts packages/database/src/schema/signals.ts packages/database/drizzle/meta/_journal.json ) > "$L/main_tree_before.txt"
+
+# ---------------- 1. PATCHED COPY (exact path: $TREE) ----------------
+[ ! -e "$TREE" ] || fail "$TREE already exists; refusing to reuse or delete it"
+mkdir -p "$TREE"    # a fresh directory under the scratchpad; nothing is deleted by this script
+rsync -a --exclude node_modules --exclude .git --exclude dist --exclude '*.tsbuildinfo' --exclude .DS_Store --exclude reports --exclude 'docs/implementation/evidence' "$MAIN/" "$TREE/"
+( cd "$TREE" && patch -p1 --no-backup-if-mismatch < "$REV/proposed_intelligence.patch" && patch -p1 --no-backup-if-mismatch < "$REV/proposed_schema_signals.patch" ) >"$L/patch.txt" 2>&1 || fail "patching the copy"
+cp "$REV/drizzle-0005-draft/0005_r0b_signal_evidence_unique_links.sql" "$TREE/packages/database/drizzle/"
+cp "$REV/drizzle-0005-draft/meta/0005_snapshot.json" "$TREE/packages/database/drizzle/meta/"
+cp "$REV/drizzle-0005-draft/meta/_journal.draft.json" "$TREE/packages/database/drizzle/meta/_journal.json"
+cp "$REV/evidenceLinks.test.ts.txt" "$TREE/tests/integration/runtime/evidenceLinks.test.ts"   # stored as .txt so lint/tsc ignore it until promoted
+# the copy must differ from the main tree in EXACTLY these six files
+( cd "$F2" && diff -rq "$MAIN" "$TREE" --exclude node_modules --exclude .git --exclude dist --exclude '*.tsbuildinfo' --exclude .DS_Store --exclude reports --exclude evidence --exclude '*.orig' || true ) | sed "s#$MAIN/##; s#$TREE/##" | sort > "$L/copy_vs_main.txt"
+cat > "$L/copy_vs_main.expected" <<X
+Files $MAIN/packages/database/drizzle/meta/_journal.json and $TREE/packages/database/drizzle/meta/_journal.json differ
+Files $MAIN/packages/database/src/schema/signals.ts and $TREE/packages/database/src/schema/signals.ts differ
+Files $MAIN/packages/signals/src/intelligence.ts and $TREE/packages/signals/src/intelligence.ts differ
+Only in $TREE/packages/database/drizzle: 0005_r0b_signal_evidence_unique_links.sql
+Only in $TREE/packages/database/drizzle/meta: 0005_snapshot.json
+Only in $TREE/tests/integration/runtime: evidenceLinks.test.ts
+X
+sed -i.bak "s#$MAIN/##g; s#$TREE/##g" "$L/copy_vs_main.expected"; rm -f "$L/copy_vs_main.expected.bak"; sort -o "$L/copy_vs_main.expected" "$L/copy_vs_main.expected"
+diff "$L/copy_vs_main.expected" "$L/copy_vs_main.txt" >"$L/copy_vs_main.diff" || { cat "$L/copy_vs_main.diff"; fail "patched copy differs from the main tree in unexpected files"; }
+echo "OK   patched copy = main tree + exactly {intelligence.ts patch, schema/signals.ts patch, 0005 sql, 0005 snapshot, draft journal, evidenceLinks test}"
+cmp -s "$MAIN/packages/database/drizzle/0004_r0b_idempotency_revisions_identity.sql" "$TREE/packages/database/drizzle/0004_r0b_idempotency_revisions_identity.sql" && cmp -s "$MAIN/packages/database/drizzle/meta/0004_snapshot.json" "$TREE/packages/database/drizzle/meta/0004_snapshot.json" || fail "0004 files differ"
+echo "OK   migration 0004 and its snapshot are byte-identical in the copy"
+step npm_ci bash -c "cd '$TREE' && npm ci --no-audit --no-fund"
+step tsc bash -c "cd '$TREE' && npx tsc -b"
+step unit bash -c "cd '$TREE' && npx vitest run"
+MIG="$TREE/packages/database/drizzle"; MIGRATE="node $MAIN/docs/implementation/rehearsal/migrate-folder.mjs"
+
+# ---------------- 2. UPGRADE rehearsal: $UP ----------------
+step u1_createdb docker exec twins-postgres-test createdb -U twins -T template0 $UP
+docker exec -i twins-postgres-test pg_restore -U twins -d $UP --exit-on-error --single-transaction < "$DUMP" >"$L/u2_restore.txt" 2>&1 || fail "restore into $UP"
+check "u2 restored migrations (0000-0004)" "5" "$(val $UP 'select count(*) from drizzle.__drizzle_migrations')"
+GROUPS_SQL="select count(*) from (select 1 from signal_evidence group by signal_id,evidence_kind,market_observation_id,macro_observation_id,news_evidence_id having count(*)>1) x"
+SURPLUS_SQL="select count(*) from (select row_number() over (partition by signal_id,evidence_kind,market_observation_id,macro_observation_id,news_evidence_id order by created_at,id) rn from signal_evidence) t where rn>1"
+check "u3 preflight: duplicate groups in the archive" "3" "$(ro $UP -Atc "$GROUPS_SQL")"
+check "u3 preflight: surplus rows in the archive" "7" "$(ro $UP -Atc "$SURPLUS_SQL")"
+ro $UP < "$REV/R0B_0005_preflight.sql" >"$L/u3_preflight.txt" 2>&1 || fail "preflight sql"
+echo "== u4 NEGATIVE CONTROL (patched writer, NO unique index yet): the concurrency test must FAIL with SIGNAL_EVIDENCE_DUPLICATES"
+tests $UP u4_control tests/integration/runtime/evidenceLinks.test.ts -t "concurrent writers" && fail "u4 control unexpectedly passed without the index"
+grep -q "SIGNAL_EVIDENCE_DUPLICATES" "$L/u4_control.txt" || fail "u4 control failed for a reason other than duplicate links"
+check "u4 duplicate groups after control (3 archived + 3 new)" "6" "$(ro $UP -Atc "$GROUPS_SQL")"
+check "u4 surplus rows after control (7 archived + 9 new)" "16" "$(ro $UP -Atc "$SURPLUS_SQL")"
+check "u4 preconditions: groups whose copies differ beyond id/created_at" "0" "$(ro $UP -Atc "select count(*) from (select 1 from signal_evidence group by signal_id,evidence_kind,coalesce(market_observation_id,macro_observation_id,news_evidence_id) having count(*)>1 and count(distinct (market_observation_id,macro_observation_id,news_evidence_id))>1) x")"
+check "u4 preconditions: foreign keys referencing signal_evidence" "0" "$(ro $UP -Atc "select count(*) from pg_constraint where contype='f' and confrelid='signal_evidence'::regclass")"
+echo "== u5 apply 0005 with duplicates present: EXPECTED TO FAIL (unique violation) and roll back"
+DATABASE_URL="$PG/$UP" $MIGRATE "$MIG" >"$L/u5_expected_failure.txt" 2>&1 && fail "u5 migration unexpectedly succeeded"
+grep -q 'could not create unique index "signal_evidence_signal_market_unique"' "$L/u5_expected_failure.txt" || fail "u5 failed for a reason other than the expected unique index"
+check "u5 tracking rows unchanged (rollback)" "5" "$(val $UP 'select count(*) from drizzle.__drizzle_migrations')"
+check "u5 no 0005 index remains (rollback)" "0" "$(val $UP "select count(*) from pg_indexes where indexname like 'signal_evidence_signal_%_unique'")"
+check "u5 data unchanged by the failed attempt" "16" "$(ro $UP -Atc "$SURPLUS_SQL")"
+echo "== u6 pre-remediation requirements (every one must hold; nothing is adapted automatically)"
+check "u6 duplicate groups" "6" "$(ro $UP -Atc "$GROUPS_SQL")"
+check "u6 surplus rows" "16" "$(ro $UP -Atc "$SURPLUS_SQL")"
+check "u6 other sessions connected to $UP (no other writer)" "0" "$(val postgres "select count(*) from pg_stat_activity where datname='$UP' and pid <> pg_backend_pid()")"
+echo "== u6 export then scratch-only remediation (surplus = every row after the earliest per logical link; exact SQL in R0B_0005_remediation_PROPOSAL.sql)"
+ro $UP -c "COPY (SELECT * FROM (SELECT *, row_number() OVER (PARTITION BY signal_id, evidence_kind, market_observation_id, macro_observation_id, news_evidence_id ORDER BY created_at, id) rn FROM signal_evidence) t WHERE rn > 1 ORDER BY signal_id, created_at, id) TO STDOUT WITH CSV HEADER" > "$F2/removed_signal_evidence_rows.csv" || fail "export"
+check "u6 exported rows" "16" "$(( $(wc -l < "$F2/removed_signal_evidence_rows.csv") - 1 ))"
+check "u6 CSV first column is the row id" "id" "$(head -1 "$F2/removed_signal_evidence_rows.csv" | cut -d, -f1)"
+export LC_ALL=C
+tail -n +2 "$F2/removed_signal_evidence_rows.csv" | cut -d, -f1 | sort > "$F2/ids_exported.txt"
+check "u6 exported ids are 16 distinct uuids" "16" "$(sort -u "$F2/ids_exported.txt" | grep -cE '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')"
+ro $UP -Atc "select id from signal_evidence order by id" | sort > "$F2/ids_before_remediation.txt"
+rw $UP < "$REV/R0B_0005_remediation_PROPOSAL.sql" >"$L/u6_remediation.txt" 2>&1 || fail "remediation"
+grep -q "^DELETE 16" "$L/u6_remediation.txt" || fail "remediation did not delete exactly 16 rows"
+check "u6 duplicate groups after remediation" "0" "$(ro $UP -Atc "$GROUPS_SQL")"
+ro $UP -Atc "select id from signal_evidence order by id" | sort > "$F2/ids_after_remediation.txt"
+comm -23 "$F2/ids_before_remediation.txt" "$F2/ids_after_remediation.txt" > "$F2/ids_deleted.txt"   # in before, not after = deleted
+comm -13 "$F2/ids_before_remediation.txt" "$F2/ids_after_remediation.txt" > "$F2/ids_added.txt"     # in after, not before = new
+cmp -s "$F2/ids_deleted.txt" "$F2/ids_exported.txt" || fail "the deleted row ids are NOT exactly the exported ids"
+check "u6 rows added by the remediation" "0" "$(wc -l < "$F2/ids_added.txt" | tr -d ' ')"
+check "u6 rows retained" "$(( $(wc -l < "$F2/ids_before_remediation.txt") - 16 ))" "$(wc -l < "$F2/ids_after_remediation.txt" | tr -d ' ')"
+echo "OK   the 16 deleted ids are exactly the 16 exported ids (reconciled by id, not just by count)"
+step u7_migrate env DATABASE_URL="$PG/$UP" $MIGRATE "$MIG"
+check "u7 tracking rows (0000-0005)" "6" "$(val $UP 'select count(*) from drizzle.__drizzle_migrations')"
+check "u7 three partial unique indexes" "3" "$(val $UP "select count(*) from pg_indexes where indexname in ('signal_evidence_signal_market_unique','signal_evidence_signal_macro_unique','signal_evidence_signal_news_unique') and indexdef like '% WHERE %'")"
+echo "== u8 tests on the upgraded database (patched code + index): new evidence-link tests, existing signals tests, runtime tests"
+tests $UP u8_tests tests/integration/runtime/evidenceLinks.test.ts tests/integration/signals tests/integration/runtime || { tail -n 30 "$L/u8_tests.txt"; fail "u8 tests failed"; }
+grep -E "Test Files|Tests " "$L/u8_tests.txt"
+
+# ---------------- 3. FRESH rehearsal: $FR ----------------
+step f1_createdb docker exec twins-postgres-test createdb -U twins -T template0 $FR
+step f2_migrate env DATABASE_URL="$PG/$FR" $MIGRATE "$MIG"
+check "f2 tracking rows (0000-0005)" "6" "$(val $FR 'select count(*) from drizzle.__drizzle_migrations')"
+check "f2 three partial unique indexes" "3" "$(val $FR "select count(*) from pg_indexes where indexname like 'signal_evidence_signal_%_unique' and indexdef like '% WHERE %'")"
+echo "== f3 NULL-semantics probe (TEMP tables inside a rolled-back transaction): plain composite unique ignores NULL rows, the partial index does not"
+docker exec -i twins-postgres-test psql -U twins -d $FR >"$L/f3_null_probe.txt" 2>&1 <<'SQL'
+BEGIN;
+CREATE TEMP TABLE probe_plain (s uuid, a uuid, b uuid, c uuid, UNIQUE (s, a, b, c));
+INSERT INTO probe_plain VALUES ('00000000-0000-4000-8000-0000000000f1','00000000-0000-4000-8000-0000000000f2',NULL,NULL);
+INSERT INTO probe_plain VALUES ('00000000-0000-4000-8000-0000000000f1','00000000-0000-4000-8000-0000000000f2',NULL,NULL);
+SELECT 'plain composite unique accepted ' || count(*) || ' identical rows (NULLs are distinct)' FROM probe_plain;
+CREATE TEMP TABLE probe_partial (s uuid, a uuid, b uuid, c uuid);
+CREATE UNIQUE INDEX probe_partial_a ON probe_partial (s, a) WHERE a IS NOT NULL;
+INSERT INTO probe_partial VALUES ('00000000-0000-4000-8000-0000000000f1','00000000-0000-4000-8000-0000000000f2',NULL,NULL);
+INSERT INTO probe_partial VALUES ('00000000-0000-4000-8000-0000000000f1','00000000-0000-4000-8000-0000000000f2',NULL,NULL);
+ROLLBACK;
+SQL
+grep -q "accepted 2 identical rows" "$L/f3_null_probe.txt" && grep -q "duplicate key value violates unique constraint \"probe_partial_a\"" "$L/f3_null_probe.txt" || { cat "$L/f3_null_probe.txt"; fail "NULL-semantics probe did not show the expected behaviour"; }
+echo "OK   NULL semantics confirmed on this server"
+echo "== f4 tests on the fresh database"
+tests $FR f4_tests tests/integration/runtime/evidenceLinks.test.ts tests/integration/signals tests/integration/runtime || { tail -n 30 "$L/f4_tests.txt"; fail "f4 tests failed"; }
+grep -E "Test Files|Tests " "$L/f4_tests.txt"
+
+# ---------------- 4. post-checks ----------------
+check "source archive sha256 unchanged" "$DUMP_SHA" "$(shasum -a 256 "$DUMP" | cut -d' ' -f1)"
+leftovers | tee "$L/leftovers_final.txt"
+baseline > "$L/baseline_after.txt"
+diff <(grep -v -E "^$UP|^$FR" "$L/baseline_before.txt") <(grep -v -E "^$UP|^$FR" "$L/baseline_after.txt") >/dev/null || fail "an existing database changed"
+echo "OK   twins_dev, twins_ci, twins_rehearsal_fresh, twins_rehearsal_upgrade, twins_restore_drill unchanged"
+( cd "$MAIN" && git status --short | shasum -a 256; shasum -a 256 packages/signals/src/intelligence.ts packages/database/src/schema/signals.ts packages/database/drizzle/meta/_journal.json ) > "$L/main_tree_after.txt"
+cmp -s "$L/main_tree_before.txt" "$L/main_tree_after.txt" || fail "the main working tree changed"
+echo "OK   main working tree unchanged (0005 and the product patch are still unpromoted)"
+REDIS_URL=$REDIS_URL node "$MAIN/docs/implementation/rehearsal/redis_scan_test_keys.mjs" | tee "$L/redis_scan.txt"
+echo "ALL STEPS PASSED (rehearsal only). Nothing was cleaned up; cleanup needs separate approval."
