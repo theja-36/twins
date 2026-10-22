@@ -1,3 +1,5 @@
+import { randomLetters } from "../../support/randomLetters";
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -16,8 +18,7 @@ import { ingestNewsItems } from "../../../packages/ingestion/src/news";
 import type { MarketDataProvider, NewsProvider, NormalizedMarketBar, NormalizedNewsItem } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 class FixtureMarketDataProvider implements MarketDataProvider {
@@ -68,7 +69,7 @@ describe("validateSignal (Phase 9 integration)", () => {
   });
 
   it("persists an auditable signal_validations row and marks the signal decided", async () => {
-    const symbol = `DI-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `DI-${randomLetters(6)}`;
     const signalTime = new Date();
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -94,7 +95,7 @@ describe("validateSignal (Phase 9 integration)", () => {
   });
 
   it("REJECTs a signal whose instrument cannot be resolved (defensive - should not occur via normal ingestion, but the engine must handle it)", async () => {
-    const symbol = `DI-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `DI-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, new Date());
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
     if (!signalId) throw new Error("signal not created");
@@ -111,7 +112,7 @@ describe("validateSignal (Phase 9 integration)", () => {
   });
 
   it("REJECTs when a negative-convention event affecting the resolved company exists before the signal's timestamp", async () => {
-    const symbol = `DI-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `DI-${randomLetters(6)}`;
     const signalTime = new Date();
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -140,7 +141,7 @@ describe("validateSignal (Phase 9 integration)", () => {
   });
 
   it("is auditable: re-running creates a new, independent validation row rather than overwriting the prior verdict", async () => {
-    const symbol = `DI-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `DI-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, new Date());
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
     if (!signalId) throw new Error("signal not created");
@@ -154,7 +155,7 @@ describe("validateSignal (Phase 9 integration)", () => {
   });
 
   it("never writes to decisions/risk_decisions - those remain a later phase's tables", async () => {
-    const symbol = `DI-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `DI-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, new Date());
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
     if (!signalId) throw new Error("signal not created");

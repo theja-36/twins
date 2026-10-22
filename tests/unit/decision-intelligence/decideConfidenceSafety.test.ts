@@ -1,0 +1,48 @@
+import { describe, expect, it, vi } from "vitest";
+import { decide } from "../../../packages/decision-intelligence/src/decide";
+import { CONFIDENCE_LABEL } from "../../../packages/decision-intelligence/src/types";
+import { fixtureReport } from "./fixtures";
+
+// Force the (normally unreachable) invalid-input path: a high-severity counter-thesis whose confidence is not finite.
+let injected = Number.NaN;
+vi.mock("../../../packages/decision-intelligence/src/counterThesis", () => ({
+  buildCounterThesis: () => ({
+    opposingDirection: "sell",
+    strongestFactor: { ruleId: "bear.negative_convention_event", description: "negative event" },
+    invalidationFactors: [],
+    evidenceIds: [],
+    severity: "high",
+    confidence: injected,
+  }),
+}));
+
+const instrument = { id: "i", symbol: "T", exchange: "NSE", instrumentType: "equity", name: null, isin: null, currency: "INR", lotSize: null, tickSize: null, isActive: true, metadata: null, createdAt: new Date(), updatedAt: new Date() };
+
+describe("decide: non-finite confidence is never promoted to a high confidence", () => {
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "a high-severity REJECT with confidence %s keeps the REJECT, stores the placeholder 0 (not 1) and says confidence is unavailable",
+    (bad) => {
+      injected = bad;
+      const report = fixtureReport({});
+      const r = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+      expect(r.outcome).toBe("REJECT"); // fail-closed outcome unchanged
+      expect(r.decisionConfidence).toBe(0);
+      expect(r.decisionConfidence).not.toBe(1);
+      expect(r.confidenceUnavailable).toBe(true);
+      expect(r.confidenceLabel).toContain(CONFIDENCE_LABEL); // the original caveat is kept
+      expect(r.confidenceLabel).toMatch(/UNAVAILABLE/);
+      expect(r.rationale).toMatch(/confidence unavailable/i);
+      expect(Number.isFinite(r.decisionConfidence)).toBe(true); // always storable in the numeric column
+    },
+  );
+
+  it("a finite confidence is unchanged (clamped to [0,1]) and carries no unavailability marker", () => {
+    injected = 5;
+    const report = fixtureReport({});
+    const r = decide(report.core.signal, instrument, report, { now: report.core.signal.signalTimestamp });
+    expect(r.outcome).toBe("REJECT");
+    expect(r.decisionConfidence).toBe(1);
+    expect(r.confidenceUnavailable).toBeUndefined();
+    expect(r.confidenceLabel).toBe(CONFIDENCE_LABEL);
+  });
+});

@@ -1,3 +1,5 @@
+import { randomLetters } from "../../support/randomLetters";
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { and, eq } from "drizzle-orm";
@@ -23,8 +25,7 @@ import type {
 } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 class FixtureMarketDataProvider implements MarketDataProvider {
@@ -86,7 +87,7 @@ describe("buildSignalIntelligence (integration)", () => {
   });
 
   it("assembles market, news, and macro context and links evidence", async () => {
-    const symbol = `INT-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `INT-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, {
       exchange: "NSE",
@@ -198,7 +199,7 @@ describe("buildSignalIntelligence (integration)", () => {
   });
 
   it("is idempotent: re-running does not create duplicate signal_evidence rows", async () => {
-    const symbol = `INT-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `INT-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, {
       exchange: "NSE",

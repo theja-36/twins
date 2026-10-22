@@ -6,6 +6,8 @@ export interface NewsContextOptions {
   limit?: number | undefined;
   /** No-look-ahead bound: only articles at or before this timestamp. Omit for unbounded (Phase 6 default behavior). */
   asOf?: Date | undefined;
+  /** Information cutoff: only evidence RECEIVED at or before this instant (replay must not see later arrivals). Omit for unbounded. */
+  receivedBy?: Date | undefined;
 }
 
 /**
@@ -26,5 +28,5 @@ export async function gatherNewsContext(
 ): Promise<Array<typeof schema.newsEvidence.$inferSelect>> {
   const entityId = await findEntityForInstrument(db, instrumentId);
   if (!entityId) return [];
-  return findNewsEvidenceMentioningEntity(db, entityId, { limit: options.limit, asOf: options.asOf });
+  return findNewsEvidenceMentioningEntity(db, entityId, { limit: options.limit, asOf: options.asOf, receivedBy: options.receivedBy });
 }

@@ -1,3 +1,5 @@
+import { randomLetters } from "../../support/randomLetters";
+import { requireTestDatabaseUrl } from "../targetConfig";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
@@ -24,8 +26,7 @@ import type {
 } from "../../../packages/types/src/index";
 
 const DATABASE_URL =
-  process.env.DATABASE_URL ??
-  "postgresql://twins:twins_dev_password@localhost:15432/twins_dev";
+  requireTestDatabaseUrl();
 const db = createDb(DATABASE_URL);
 
 class FixtureMarketDataProvider implements MarketDataProvider {
@@ -89,7 +90,7 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
   });
 
   it("assembles a full report: core + entity context + normalized evidence across all domains", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const signalTime = new Date("2026-02-01T00:00:00Z");
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -150,7 +151,7 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
   });
 
   it("enforces no-look-ahead: market/macro/news evidence reported AFTER the signal's timestamp is excluded", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const signalTime = new Date("2026-03-01T00:00:00Z");
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -201,7 +202,7 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
   });
 
   it("surfaces a cross-source market conflict explicitly in the conflicts list, without altering the underlying rows", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const signalTime = new Date("2026-04-01T00:00:00Z");
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -221,13 +222,15 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
       { instrumentType: "equity" },
     );
 
-    const report = await assembleSignalIntelligence(db, signalId);
+    // Two eligible sources exist, so the analysis input must be selected explicitly (no guessing); the cross-source
+    // conflict is then still detected by the quality assessment against the other source.
+    const report = await assembleSignalIntelligence(db, signalId, { market: { source: "provider-b" } });
     expect(report.conflicts.length).toBeGreaterThan(0);
     expect(report.conflicts[0]?.kind).toBe("market_observation");
   });
 
   it("surfaces stale evidence explicitly when a market bar exceeds the freshness threshold", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const signalTime = new Date(); // "now", so a very old bar is unambiguously stale under the default threshold
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -246,7 +249,7 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
   });
 
   it("is idempotent: re-running does not duplicate signal_evidence rows (reuses Phase 6's linking)", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const signalTime = new Date();
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, signalTime);
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
@@ -268,7 +271,7 @@ describe("assembleSignalIntelligence (Phase 8 engine, integration)", () => {
   });
 
   it("never emits a trading decision - the report has no BUY/SELL/approve/reject field", async () => {
-    const symbol = `ENG-${randomUUID().slice(0, 6).toUpperCase()}`;
+    const symbol = `ENG-${randomLetters(6)}`;
     const messageId = await makeTelegramMessage(`BUY ${symbol} @ 100 SL 95 TGT 110`, new Date());
     const { signalId } = await createSignalFromTelegramMessage(db, messageId, { exchange: "NSE", instrumentType: "equity" });
     if (!signalId) throw new Error("signal not created");
