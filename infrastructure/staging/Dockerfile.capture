@@ -1,0 +1,68 @@
+# TWINS staging image WITH the pinned TDLib JSON library (for the Telegram user-capture service, T2b).
+# Same application layers as infrastructure/staging/Dockerfile, plus /opt/tdlib/libtdjson.so built from the pinned upstream commit.
+# TDLib pin and rationale: docs/implementation/phase1/TDLIB_PINNED_BUILD.md. Build (one command, run only with approval):
+#   docker build -f infrastructure/staging/Dockerfile.capture -t twins-staging:capture-<short-commit> .
+#
+# Reproducibility: base image by digest; every Debian package comes from ONE fixed snapshot date (the same date the base image
+# was built from); TDLib is fetched BY COMMIT and the build FAILS unless the commit and the tree hash equal the pin.
+ARG NODE_IMAGE=node:22-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+
+# ---------- stage 1: build libtdjson only (compiler and sources never reach the runtime image) ----------
+FROM ${NODE_IMAGE} AS tdlib
+ARG DEBIAN_SNAPSHOT=20261005T000000Z
+ARG TD_COMMIT=c15d3f5a5de6e3ba5839822c451152e5e18bb700
+ARG TD_TREE=badabfdb445a403b8438dcff90a72d78825acadb
+ARG TD_JOBS=2
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+ && printf 'deb http://snapshot.debian.org/archive/debian/%s bookworm main\ndeb http://snapshot.debian.org/archive/debian-security/%s bookworm-security main\n' "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" > /etc/apt/sources.list \
+ && printf 'Acquire::Check-Valid-Until "false";\nAcquire::Retries "3";\n' > /etc/apt/apt.conf.d/99snapshot \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates git cmake make g++ gperf libssl-dev zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/*
+WORKDIR /src
+RUN git init -q . \
+ && git remote add origin https://github.com/tdlib/td.git \
+ && git fetch -q --depth 1 origin "$TD_COMMIT" \
+ && git checkout -q --detach FETCH_HEAD \
+ && test "$(git rev-parse HEAD)" = "$TD_COMMIT" \
+ && test "$(git rev-parse 'HEAD^{tree}')" = "$TD_TREE" \
+ && echo "TDLib source verified: commit=$TD_COMMIT tree=$TD_TREE"
+RUN cmake -S . -B /build -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build /build --target tdjson --parallel "$TD_JOBS" \
+ && mkdir -p /out \
+ && cp -L /build/libtdjson.so /out/libtdjson.so \
+ && strip --strip-unneeded /out/libtdjson.so \
+ && sha256sum /out/libtdjson.so | tee /out/libtdjson.so.sha256
+
+# ---------- stage 2: runtime (application + libtdjson + OpenSSL/zlib runtime; non-root) ----------
+FROM ${NODE_IMAGE}
+ARG DEBIAN_SNAPSHOT=20261005T000000Z
+ENV NODE_ENV=production \
+    NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false \
+    TWINS_TDJSON=/opt/tdlib/libtdjson.so
+# Runtime libraries only: OpenSSL (zlib1g is already in the base). python3 is the language of the capture client (ctypes) and of the image smoke test.
+RUN rm -f /etc/apt/sources.list.d/debian.sources \
+ && printf 'deb http://snapshot.debian.org/archive/debian/%s bookworm main\ndeb http://snapshot.debian.org/archive/debian-security/%s bookworm-security main\n' "$DEBIAN_SNAPSHOT" "$DEBIAN_SNAPSHOT" > /etc/apt/sources.list \
+ && printf 'Acquire::Check-Valid-Until "false";\nAcquire::Retries "3";\n' > /etc/apt/apt.conf.d/99snapshot \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends libssl3 zlib1g python3 \
+ && rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/99snapshot
+COPY --from=tdlib /out/libtdjson.so /opt/tdlib/libtdjson.so
+COPY --from=tdlib /out/libtdjson.so.sha256 /opt/tdlib/libtdjson.so.sha256
+
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY apps ./apps
+COPY services ./services
+COPY packages ./packages
+COPY adapters ./adapters
+COPY scripts ./scripts
+COPY tsconfig.base.json tsconfig.json ./
+RUN npm ci --include=dev
+
+# Non-root runtime; code and the library are read-only to the service user.
+RUN chown -R root:root /app /opt/tdlib && chmod -R a-w /app /opt/tdlib
+USER node
+# No CMD: compose supplies the command per service, so the image cannot start a service by accident.
