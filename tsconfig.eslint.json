@@ -13,6 +13,7 @@
     "apps/*/src/**/*.ts",
     "services/*/src/**/*.ts",
     "tests/**/*.ts",
+    "scripts/**/*.ts",
     "packages/database/drizzle.config.ts"
   ]
 }
