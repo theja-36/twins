@@ -15,3 +15,7 @@ export type {
   ProviderHealthSnapshot,
   SourceTier,
 } from "@twins/types";
+
+// Offline-first GDELT DOC adapter. Exported for explicit use; NOT registered in `newsProviders` and not enabled by any worker.
+export * from "./gdelt.js";
+export * from "./gdeltTransport.js";

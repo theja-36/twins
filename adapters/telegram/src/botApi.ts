@@ -11,10 +11,19 @@
  * - `rawText` is stored verbatim and is NEVER interpreted as a system
  *   instruction, a configuration key, or anything other than untrusted user
  *   content from a Tier E source.
- * - Edited messages (`edited_message`) are tracked under the same
- *   `externalMessageId` as their original, appended with `_edit` so the
- *   ingestion layer treats them as distinct messages and never silently
- *   overwrites the original append-only record (spec section 18/33).
+ * - Edited messages are distinct append-only revisions (spec section 18/33).
+ *   Identity layers (all deterministic from the payload; never processing
+ *   time or random ids):
+ *     original message  = (chat, message_id)                    -> "<message_id>"
+ *     content revision  = (chat, message_id, edit_date, sha256(text))
+ *                         -> "<message_id>_edit_<edit_date>_<hash12>"
+ *     update            = update_id (identifies an UPDATE; a repeat delivery of the
+ *                         same update carries the same update_id). Retained in the
+ *                         raw payload and as `updateId`; it is NOT the revision
+ *                         identity. Deduplication happens on the revision identity,
+ *                         so a repeat delivery collapses while a later, different
+ *                         edit is preserved.
+ *     channel           = chat.id (stable); @username/title are mutable metadata
  * - Non-text updates (photos, stickers, service messages without text) are
  *   explicitly returned as an empty array — there is no "interpretation" of
  *   non-text content.
@@ -30,6 +39,7 @@
  * by whether webhook updates keep arriving.
  */
 
+import { createHash } from "node:crypto";
 import {
   ProviderDataError,
   type NormalizedTelegramMessage,
@@ -55,7 +65,8 @@ export interface TelegramBotUpdate {
 
 export interface TelegramBotMessage {
   message_id: number;
-  date: number; // Unix timestamp (seconds)
+  date: number; // Unix timestamp (seconds) of the ORIGINAL message, also on edits
+  edit_date?: number; // Unix timestamp (seconds) of the last edit; present on edited_* updates
   chat: TelegramBotChat;
   text?: string;
   caption?: string; // Text attached to media; treated as rawText for signal extraction purposes.
@@ -70,13 +81,20 @@ export interface TelegramBotChat {
 }
 
 /**
- * Derives the canonical channel identifier from a Telegram chat object.
- * Prefers the public username when present (stable across renames for
- * public channels); falls back to the numeric chat ID stringified.
+ * Canonical channel identity is Telegram's numeric chat.id, which survives
+ * renames. `@username`/title are mutable display metadata only.
  */
-function deriveChannelIdentifier(chat: TelegramBotChat): string {
-  if (chat.username) return `@${chat.username}`;
-  return `tg_chat_${chat.id}`;
+function channelIdentity(chat: TelegramBotChat): {
+  channelIdentifier: string;
+  chatId: string;
+  channelDisplayName?: string;
+} {
+  const display = chat.username ? `@${chat.username}` : chat.title;
+  return {
+    channelIdentifier: `tg_chat_${chat.id}`,
+    chatId: String(chat.id),
+    ...(display ? { channelDisplayName: display } : {}),
+  };
 }
 
 /**
@@ -147,14 +165,37 @@ export function normalizeUpdate(
     update.edited_message !== undefined ||
     update.edited_channel_post !== undefined;
 
-  const channelIdentifier = deriveChannelIdentifier(message.chat);
-  const externalMessageId = isEdit
-    ? `${message.message_id}_edit`
-    : String(message.message_id);
+  const channel = channelIdentity(message.chat);
+  const originMessageId = String(message.message_id);
+
+  if (!isEdit) {
+    return {
+      ...channel,
+      updateId: update.update_id,
+      externalMessageId: originMessageId,
+      originMessageId,
+      messageTimestamp: new Date(message.date * 1000),
+      rawText,
+      rawPayload: update,
+    };
+  }
+
+  // An edit without a usable edit_date has no deterministic revision identity;
+  // reject it explicitly instead of inventing one.
+  if (typeof message.edit_date !== "number" || !Number.isFinite(message.edit_date)) {
+    throw new ProviderDataError(
+      TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+      "Edited message is missing numeric edit_date; cannot derive a revision identity",
+    );
+  }
+  const textHash = createHash("sha256").update(rawText, "utf8").digest("hex").slice(0, 12);
 
   return {
-    channelIdentifier,
-    externalMessageId,
+    ...channel,
+    updateId: update.update_id,
+    externalMessageId: `${originMessageId}_edit_${message.edit_date}_${textHash}`,
+    originMessageId,
+    editDate: new Date(message.edit_date * 1000),
     messageTimestamp: new Date(message.date * 1000),
     rawText,
     rawPayload: update,

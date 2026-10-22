@@ -13,6 +13,11 @@ import {
 } from "../../../../adapters/telegram/src/botApi";
 import { ProviderDataError } from "../../../../packages/types/src/providers/common";
 
+function req<T>(v: T | null | undefined): T {
+  if (v === null || v === undefined) throw new Error("expected a value");
+  return v;
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function makeUpdate(overrides: Partial<TelegramBotUpdate> = {}): TelegramBotUpdate {
@@ -31,16 +36,27 @@ function makeUpdate(overrides: Partial<TelegramBotUpdate> = {}): TelegramBotUpda
 // ─── normalizeUpdate ─────────────────────────────────────────────────────────
 
 describe("normalizeUpdate – normal text messages", () => {
-  it("extracts channelIdentifier from chat.username (@-prefixed)", () => {
+  it("uses chat.id as the canonical channel identity; @username is mutable display metadata", () => {
     const msg = normalizeUpdate(makeUpdate());
-    expect(msg?.channelIdentifier).toBe("@trading_signals");
+    expect(msg?.channelIdentifier).toBe("tg_chat_-1001234567890");
+    expect(msg?.chatId).toBe("-1001234567890");
+    expect(msg?.channelDisplayName).toBe("@trading_signals");
   });
 
-  it("falls back to numeric chat ID when username is absent", () => {
-    const update = makeUpdate();
-    delete update.message!.chat.username;
-    const msg = normalizeUpdate(update);
-    expect(msg?.channelIdentifier).toBe("tg_chat_-1001234567890");
+  it("keeps the same identity when the username changes or is absent", () => {
+    const renamed = makeUpdate();
+    req(renamed.message).chat.username = "renamed_channel";
+    const noName = makeUpdate();
+    delete req(noName.message).chat.username;
+    expect(normalizeUpdate(renamed)?.channelIdentifier).toBe("tg_chat_-1001234567890");
+    expect(normalizeUpdate(noName)?.channelIdentifier).toBe("tg_chat_-1001234567890");
+    expect(normalizeUpdate(noName)?.channelDisplayName).toBeUndefined();
+  });
+
+  it("retains update_id for audit without using it as the message identity", () => {
+    const msg = normalizeUpdate(makeUpdate());
+    expect(msg?.updateId).toBe(100);
+    expect(msg?.externalMessageId).toBe("42");
   });
 
   it("uses message_id as externalMessageId (not update_id)", () => {
@@ -68,33 +84,65 @@ describe("normalizeUpdate – normal text messages", () => {
   });
 });
 
-describe("normalizeUpdate – edited messages", () => {
-  it("appends _edit to externalMessageId for edited_message", () => {
-    const update: TelegramBotUpdate = {
-      update_id: 101,
-      edited_message: {
-        message_id: 42,
-        date: 1700001000,
-        chat: { id: -1001234567890, type: "channel", username: "trading_signals" },
-        text: "BUY RELIANCE @ 2810 SL 2760 TGT 2910 (edited)",
-      },
-    };
-    const msg = normalizeUpdate(update);
-    expect(msg?.externalMessageId).toBe("42_edit");
+describe("normalizeUpdate – edited messages (deterministic revision identity)", () => {
+  const edit = (over: Record<string, unknown> = {}, text = "BUY RELIANCE @ 2810 SL 2760 TGT 2910", updateId = 101): TelegramBotUpdate => ({
+    update_id: updateId,
+    edited_message: {
+      message_id: 42,
+      date: 1700000000,
+      edit_date: 1700001000,
+      chat: { id: -1001234567890, type: "channel", username: "trading_signals" },
+      text,
+      ...over,
+    },
   });
 
-  it("appends _edit to externalMessageId for edited_channel_post", () => {
-    const update: TelegramBotUpdate = {
+  it("derives original/revision identity from message_id, edit_date and content hash", () => {
+    const msg = req(normalizeUpdate(edit()));
+    expect(msg.externalMessageId).toMatch(/^42_edit_1700001000_[0-9a-f]{12}$/);
+    expect(msg.originMessageId).toBe("42");
+    expect(msg.editDate?.getTime()).toBe(1700001000 * 1000);
+    expect(msg.messageTimestamp.getTime()).toBe(1700000000 * 1000); // original send time
+  });
+
+  it("repeat delivery of the same update (same update_id) and an identical revision map to one identity", () => {
+    expect(req(normalizeUpdate(edit({}, undefined, 101))).externalMessageId).toBe(
+      req(normalizeUpdate(edit({}, undefined, 999))).externalMessageId,
+    );
+  });
+
+  it("keeps a second, genuinely different edit distinct (later edit_date)", () => {
+    const first = req(normalizeUpdate(edit()));
+    const second = req(normalizeUpdate(edit({ edit_date: 1700002000 }, "BUY RELIANCE @ 2820 SL 2770 TGT 2920")));
+    expect(second.externalMessageId).not.toBe(first.externalMessageId);
+    expect(second.originMessageId).toBe(first.originMessageId);
+  });
+
+  it("keeps same-second edits with different text distinct (content hash)", () => {
+    const a = req(normalizeUpdate(edit()));
+    const b = req(normalizeUpdate(edit({}, "BUY RELIANCE @ 2999 SL 2760 TGT 2910")));
+    expect(a.externalMessageId).not.toBe(b.externalMessageId);
+  });
+
+  it("works for edited_channel_post", () => {
+    const msg = req(normalizeUpdate({
       update_id: 102,
-      edited_channel_post: {
-        message_id: 55,
-        date: 1700002000,
-        chat: { id: -1001234567890, type: "channel" },
-        text: "SELL INFY @ 1500 SL 1520 TGT 1450",
-      },
-    };
-    const msg = normalizeUpdate(update);
-    expect(msg?.externalMessageId).toBe("55_edit");
+      edited_channel_post: { message_id: 55, date: 1, edit_date: 2, chat: { id: -1001234567890, type: "channel" }, text: "SELL INFY @ 1500" },
+    }));
+    expect(msg.externalMessageId).toMatch(/^55_edit_2_[0-9a-f]{12}$/);
+  });
+
+  it("rejects an edit without edit_date instead of inventing an identity", () => {
+    const upd = edit();
+    delete upd.edited_message!.edit_date;
+    expect(() => normalizeUpdate(upd)).toThrow(ProviderDataError);
+  });
+
+  it("originals carry originMessageId equal to their external id and no editDate", () => {
+    const msg = req(normalizeUpdate(makeUpdate()));
+    expect(msg.externalMessageId).toBe("42");
+    expect(msg.originMessageId).toBe("42");
+    expect(msg.editDate).toBeUndefined();
   });
 });
 
@@ -137,7 +185,7 @@ describe("normalizeUpdate – channel_post", () => {
       },
     };
     const msg = normalizeUpdate(update);
-    expect(msg?.channelIdentifier).toBe("@nse_signals");
+    expect(msg?.channelIdentifier).toBe("tg_chat_-1001111111111");
     expect(msg?.externalMessageId).toBe("77");
     expect(msg?.rawText).toContain("SELL WIPRO");
   });
