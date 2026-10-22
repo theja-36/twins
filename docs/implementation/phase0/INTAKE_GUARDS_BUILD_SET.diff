@@ -1,0 +1,449 @@
+diff --git a/.dockerignore b/.dockerignore
+index 7d657ac..2653070 100644
+--- a/.dockerignore
++++ b/.dockerignore
+@@ -15,6 +15,7 @@ TWINS_Planning_Pack
+ .vscode
+ .github
+ *.log
++**/.DS_Store
+ infrastructure/staging/*.env
+ # Tests and fixtures are not needed at runtime
+ tests
+diff --git a/adapters/telegram/src/botApi.ts b/adapters/telegram/src/botApi.ts
+index 7c05e65..f911eee 100644
+--- a/adapters/telegram/src/botApi.ts
++++ b/adapters/telegram/src/botApi.ts
+@@ -134,6 +134,42 @@ function parseUpdate(raw: unknown): TelegramBotUpdate {
+   return obj as unknown as TelegramBotUpdate;
+ }
+ 
++/** The four update types that carry a message this system ingests. */
++export type TelegramUpdateKind = "message" | "channel_post" | "edited_message" | "edited_channel_post";
++
++/**
++ * The single place that decides WHICH message of an update is ingested: the first present of message, channel_post,
++ * edited_message, edited_channel_post (in that order). Both normalization and the approved-chat check use it.
++ * A field that is present but not an object is treated as absent (it can never be ingested).
++ */
++export function selectUpdateMessage(update: TelegramBotUpdate): { kind: TelegramUpdateKind; message: TelegramBotMessage } | null {
++  const kinds: TelegramUpdateKind[] = ["message", "channel_post", "edited_message", "edited_channel_post"];
++  for (const kind of kinds) {
++    const candidate = update[kind];
++    if (candidate !== undefined && candidate !== null) return { kind, message: candidate };
++  }
++  return null;
++}
++
++/**
++ * Minimal, secret-free description of the chat an update would be ingested from, for the approved-chat check and for
++ * rejection logging. `chatId` is the canonical decimal string of chat.id when it is a safe integer, otherwise null
++ * (an unusable id is never approved). Returns null when the update has no ingestible message at all.
++ */
++export function describeUpdateChat(rawPayload: unknown): { kind: TelegramUpdateKind; chatId: string | null; chatType: string | null } | null {
++  if (typeof rawPayload !== "object" || rawPayload === null) return null;
++  const selected = selectUpdateMessage(rawPayload as TelegramBotUpdate);
++  if (!selected) return null;
++  const chat = (selected.message as { chat?: unknown }).chat as { id?: unknown; type?: unknown } | undefined;
++  const id = chat && typeof chat === "object" ? chat.id : undefined;
++  const type = chat && typeof chat === "object" ? chat.type : undefined;
++  return {
++    kind: selected.kind,
++    chatId: typeof id === "number" && Number.isSafeInteger(id) && id !== 0 ? String(id) : null,
++    chatType: typeof type === "string" && ["private", "group", "supergroup", "channel"].includes(type) ? type : null,
++  };
++}
++
+ /**
+  * Translates a single parsed TelegramBotUpdate into zero or one
+  * NormalizedTelegramMessage. Returns null when the update contains no
+@@ -150,20 +186,17 @@ function parseUpdate(raw: unknown): TelegramBotUpdate {
+ export function normalizeUpdate(
+   update: TelegramBotUpdate,
+ ): NormalizedTelegramMessage | null {
+-  const message =
+-    update.message ??
+-    update.channel_post ??
+-    update.edited_message ??
+-    update.edited_channel_post;
+-
+-  if (!message) return null;
++  // The SAME selection the intake allowlist uses (selectUpdateMessage), so the chat that is approved is always the
++  // chat that is ingested.
++  const selected = selectUpdateMessage(update);
++  if (!selected) return null;
++  const { message } = selected;
+ 
+   const rawText = extractText(message);
+   if (rawText === null) return null;
+ 
+-  const isEdit =
+-    update.edited_message !== undefined ||
+-    update.edited_channel_post !== undefined;
++  // Edit-ness follows the SELECTED message, not the mere presence of an edited_* field elsewhere in the update.
++  const isEdit = selected.kind === "edited_message" || selected.kind === "edited_channel_post";
+ 
+   const channel = channelIdentity(message.chat);
+   const originMessageId = String(message.message_id);
+diff --git a/adapters/telegram/src/index.ts b/adapters/telegram/src/index.ts
+index a23f025..dc7321b 100644
+--- a/adapters/telegram/src/index.ts
++++ b/adapters/telegram/src/index.ts
+@@ -16,8 +16,21 @@ export {
+   TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+   normalizeRawUpdate,
+   normalizeUpdate,
++  selectUpdateMessage,
++  describeUpdateChat,
+ } from "./botApi.js";
++export {
++  TelegramPolicyConfigError,
++  MAX_ALLOWED_CHAT_IDS,
++  parseAllowedChatIds,
++  parseOptionsOnly,
++  createTelegramIntakePolicy,
++  loadTelegramIntakePolicy,
++  chatIdOfQueuedMessage,
++} from "./intakePolicy.js";
++export type { TelegramIntakePolicy } from "./intakePolicy.js";
+ export type {
++  TelegramUpdateKind,
+   TelegramBotUpdate,
+   TelegramBotMessage,
+   TelegramBotChat,
+diff --git a/adapters/telegram/src/intakePolicy.ts b/adapters/telegram/src/intakePolicy.ts
+new file mode 100644
+index 0000000..bb1437c
+--- /dev/null
++++ b/adapters/telegram/src/intakePolicy.ts
+@@ -0,0 +1,99 @@
++/**
++ * Telegram intake policy: WHICH chats may be ingested, and whether only options messages may proceed.
++ *
++ * Fail-closed by design:
++ *  - TWINS_TELEGRAM_ALLOWED_CHAT_IDS missing, empty or whitespace-only approves NO chat.
++ *  - A malformed value throws at startup. It is never partially applied, ignored or widened (no wildcards, no names,
++ *    no ranges, no empty entries); error messages name the problem and the entry position, never the entry itself.
++ *  - TWINS_TELEGRAM_OPTIONS_ONLY accepts exactly "true" or "false" (unset/empty = false); anything else throws, so a
++ *    typo can never silently turn the safety mode off.
++ *
++ * The same policy object is enforced by the API (before enqueue) and by the worker (before ingestion, source creation
++ * or any downstream work), so a job queued earlier or by another producer is still checked.
++ */
++export class TelegramPolicyConfigError extends Error {
++  constructor(message: string) {
++    super(`invalid Telegram intake configuration: ${message}`);
++    this.name = "TelegramPolicyConfigError";
++  }
++}
++
++export const MAX_ALLOWED_CHAT_IDS = 50;
++/** Canonical decimal integer: optional minus, no leading zero, not zero, no plus sign, no whitespace inside. */
++const CANONICAL_CHAT_ID = /^-?[1-9][0-9]{0,15}$/;
++
++/** Parses the allowlist. Returns a (possibly empty) set of canonical chat-id strings, or throws. */
++export function parseAllowedChatIds(raw: string | undefined): ReadonlySet<string> {
++  if (raw === undefined || raw.trim() === "") return new Set();
++  const parts = raw.split(",");
++  if (parts.length > MAX_ALLOWED_CHAT_IDS) throw new TelegramPolicyConfigError(`more than ${MAX_ALLOWED_CHAT_IDS} entries`);
++  const out = new Set<string>();
++  parts.forEach((part, i) => {
++    const entry = part.trim();
++    if (entry === "") throw new TelegramPolicyConfigError(`entry ${i + 1} is empty`);
++    if (!CANONICAL_CHAT_ID.test(entry) || !Number.isSafeInteger(Number(entry))) {
++      throw new TelegramPolicyConfigError(`entry ${i + 1} is not a canonical integer chat id (digits only, optional leading '-', no wildcard, name or range)`);
++    }
++    out.add(entry);
++  });
++  return out;
++}
++
++/** Strict boolean: "true" -> true, "false" or unset/empty -> false, anything else throws. */
++export function parseOptionsOnly(raw: string | undefined): boolean {
++  if (raw === undefined || raw.trim() === "") return false;
++  if (raw === "true") return true;
++  if (raw === "false") return false;
++  throw new TelegramPolicyConfigError('TWINS_TELEGRAM_OPTIONS_ONLY must be exactly "true" or "false"');
++}
++
++export interface TelegramIntakePolicy {
++  /** True only for a chat id that is explicitly on the allowlist. Anything else (null, undefined, malformed) is false. */
++  isChatApproved(chatId: string | number | null | undefined): boolean;
++  /** Number of approved chats (a count only; ids are not exposed). */
++  readonly approvedChatCount: number;
++  /** When true the worker lets only options messages proceed; everything else is blocked before any downstream work. */
++  readonly optionsOnly: boolean;
++}
++
++export function createTelegramIntakePolicy(input: { allowedChatIds?: string | undefined; optionsOnly?: string | undefined } = {}): TelegramIntakePolicy {
++  const approved = parseAllowedChatIds(input.allowedChatIds);
++  const optionsOnly = parseOptionsOnly(input.optionsOnly);
++  return {
++    approvedChatCount: approved.size,
++    optionsOnly,
++    isChatApproved(chatId) {
++      let key: string;
++      if (typeof chatId === "number") {
++        if (!Number.isSafeInteger(chatId)) return false;
++        key = String(chatId);
++      } else if (typeof chatId === "string") {
++        key = chatId;
++      } else {
++        return false;
++      }
++      return CANONICAL_CHAT_ID.test(key) && approved.has(key);
++    },
++  };
++}
++
++/** Reads the policy from the environment. Throws TelegramPolicyConfigError for malformed values. */
++export function loadTelegramIntakePolicy(env: Record<string, string | undefined> = process.env): TelegramIntakePolicy {
++  return createTelegramIntakePolicy({
++    allowedChatIds: env["TWINS_TELEGRAM_ALLOWED_CHAT_IDS"],
++    optionsOnly: env["TWINS_TELEGRAM_OPTIONS_ONLY"],
++  });
++}
++
++/**
++ * Chat id of a queued job, derived without trusting a single field. `chatId` (set for current producers) is used when
++ * present; otherwise the identifier must encode it as `tg_chat_<id>`. When both exist they must agree. Returns null when
++ * no usable id can be derived (such a job is never approved).
++ */
++export function chatIdOfQueuedMessage(message: { chatId?: string | undefined | null; channelIdentifier?: string | undefined }): string | null {
++  const fromIdentifier = typeof message.channelIdentifier === "string" ? /^tg_chat_(-?[1-9][0-9]{0,15})$/.exec(message.channelIdentifier)?.[1] ?? null : null;
++  const fromField = typeof message.chatId === "string" && CANONICAL_CHAT_ID.test(message.chatId) ? message.chatId : null;
++  if (message.chatId !== undefined && message.chatId !== null && fromField === null) return null; // present but unusable
++  if (fromField !== null && fromIdentifier !== null && fromField !== fromIdentifier) return null; // contradictory
++  return fromField ?? fromIdentifier;
++}
+diff --git a/apps/api/src/index.ts b/apps/api/src/index.ts
+index 54bd393..b480b59 100644
+--- a/apps/api/src/index.ts
++++ b/apps/api/src/index.ts
+@@ -38,7 +38,7 @@ import { Redis } from "ioredis";
+ import { eq } from "drizzle-orm";
+ import { loadConfig } from "@twins/config";
+ import { getDb, schema, type Db } from "@twins/database";
+-import { normalizeRawUpdate } from "@twins/adapter-telegram";
++import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
+ import { ProviderDataError } from "@twins/types";
+ import {
+   acceptCorrelationId,
+@@ -133,6 +133,11 @@ export interface ApiOptions {
+   enqueueTimeoutMs?: number;
+   /** Structured end-to-end correlation log sink; defaults to JSON lines on the console. */
+   structuredLogger?: StructuredLogger;
++  /**
++   * Which Telegram chats may be ingested. Default: read from TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty = NO chat is
++   * approved; a malformed value makes buildApp throw, i.e. the API does not start). Tests inject an explicit policy.
++   */
++  telegramIntakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "approvedChatCount">;
+ }
+ 
+ export interface BuildAppResult {
+@@ -159,6 +164,8 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
+   }
+ 
+   const config = loadConfig();
++  // Fail-closed intake policy: throws on a malformed allowlist (the API then refuses to start).
++  const intakePolicy = options.telegramIntakePolicy ?? loadTelegramIntakePolicy();
+   const enqueueTimeoutMs = resolveEnqueueTimeoutMs(options.enqueueTimeoutMs, readEnv("TWINS_ENQUEUE_TIMEOUT_MS"));
+ 
+   // Resources created here are owned by the app and closed in onClose below.
+@@ -327,6 +334,24 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
+ 
+       // Exchange for which the signal's symbols are interpreted.
+       // Configurable via env; defaults to NSE (India equities, spec section 12).
++      // Approved-chat gate: runs after the secret check and BEFORE normalization or any enqueue. The chat is taken from
++      // the very message the normalizer would ingest (selectUpdateMessage), so approval and ingestion cannot diverge.
++      // An update with no ingestible message passes through (it is acknowledged as ignored and enqueues nothing).
++      const chat = describeUpdateChat(request.body);
++      if (chat !== null && !intakePolicy.isChatApproved(chat.chatId)) {
++        // Minimal metadata only: never the text, the sender, the secret or the raw update. The chat id (a number) is
++        // logged so the owner can discover which id to approve. 200 so Telegram does not retry; the body is generic.
++        log.warn("webhook.intake.chat_rejected", {
++          reason: chat.chatId === null ? "chat_id_unusable" : "chat_not_approved",
++          updateKind: chat.kind,
++          chatType: chat.chatType,
++          chatId: chat.chatId,
++          approvedChats: intakePolicy.approvedChatCount,
++          statusCode: 200,
++        });
++        return reply.code(200).send({ status: "ignored", reason: "not accepted" });
++      }
++
+       const exchange = readEnv("TELEGRAM_SIGNAL_EXCHANGE") ?? "NSE";
+       const instrumentType =
+         readEnv("TELEGRAM_SIGNAL_INSTRUMENT_TYPE") ?? "equity";
+diff --git a/scripts/options-demo.ts b/scripts/options-demo.ts
+index 1491901..f9ecebb 100644
+--- a/scripts/options-demo.ts
++++ b/scripts/options-demo.ts
+@@ -152,12 +152,14 @@ function baseEnv(env: Record<string, string | undefined>): Record<string, string
+ }
+ 
+ /** Minimal per-process environments: each child gets only what it needs. The webhook secret exists in the API's only. */
+-export function buildChildEnvs(env: Record<string, string | undefined>, webhookSecret: string, apiPort = API_PORT) {
++export function buildChildEnvs(env: Record<string, string | undefined>, webhookSecret: string, approvedChatId: number, apiPort = API_PORT) {
+   const db = { DATABASE_URL: env["DATABASE_URL"] ?? "", REDIS_URL: env["REDIS_URL"] ?? "" };
++  // Telegram intake is deny-by-default: the demo approves exactly the one chat it generated, and runs options-only.
++  const intake = { TWINS_TELEGRAM_ALLOWED_CHAT_IDS: String(approvedChatId), TWINS_TELEGRAM_OPTIONS_ONLY: "true" };
+   return {
+-    api: { ...baseEnv(env), ...db, HOST: "127.0.0.1", PORT: String(apiPort), TWINS_API_KEY: env["TWINS_API_KEY"] ?? "", TELEGRAM_WEBHOOK_SECRET: webhookSecret, TELEGRAM_SIGNAL_EXCHANGE: "NSE" },
++    api: { ...baseEnv(env), ...db, ...intake, HOST: "127.0.0.1", PORT: String(apiPort), TWINS_API_KEY: env["TWINS_API_KEY"] ?? "", TELEGRAM_WEBHOOK_SECRET: webhookSecret, TELEGRAM_SIGNAL_EXCHANGE: "NSE" },
+     // The manual reference is attached EXPLICITLY for the demo (and is printed as such); the worker never attaches one otherwise.
+-    worker: { ...baseEnv(env), ...db, TELEGRAM_SIGNAL_EXCHANGE: "NSE", TWINS_OPTIONS_MANUAL_REFERENCE: MANUAL_REFERENCE },
++    worker: { ...baseEnv(env), ...db, ...intake, TELEGRAM_SIGNAL_EXCHANGE: "NSE", TWINS_OPTIONS_MANUAL_REFERENCE: MANUAL_REFERENCE },
+     viewer: { ...baseEnv(env) },
+   };
+ }
+@@ -277,7 +279,8 @@ export async function runDemo(env: Record<string, string | undefined>, out: (l:
+   out(`Preflight OK: database '${pre.database}' (${pre.migrations} migrations, matches the repository), test Redis idle, ports ${API_PORT}/${VIEWER_PORT} free.`);
+ 
+   const webhookSecret = randomBytes(24).toString("hex"); // in memory only
+-  const envs = buildChildEnvs(env, webhookSecret);
++  const payload = buildWebhookPayload(); // generated first: its chat id is the only chat the children approve
++  const envs = buildChildEnvs(env, webhookSecret, payload.chatId);
+   const runDir = join(tmpdir(), `twins-options-demo-${Date.now()}`);
+   mkdirSync(runDir, { recursive: true });
+   const procs = new ProcessSet();
+@@ -305,7 +308,6 @@ export async function runDemo(env: Record<string, string | undefined>, out: (l:
+     out(`Started (owned by this demo): ${procs.names.join(", ")}. Logs: ${runDir}`);
+     out("Worker options reference: the MANUAL reference file is attached explicitly for this demo (not live entitlement; does not prove tradability).");
+ 
+-    const payload = buildWebhookPayload();
+     out(`Submitting ONE hypothetical message (not a recommendation): ${HYPOTHETICAL_MESSAGE}`);
+     const res = await fetch(`http://127.0.0.1:${API_PORT}/webhooks/telegram`, {
+       method: "POST",
+@@ -399,12 +401,12 @@ export async function runVerify(env: Record<string, string | undefined>, ops: Ve
+   let owned: OwnedHandle | undefined;
+   try {
+     const before = await ops.counts();
+-    owned = ops.start(buildChildEnvs(verifyEnv, webhookSecret), runDir);
++    const payload = buildWebhookPayload(ops.now()); // generated first: its chat id is the only chat the children approve
++    owned = ops.start(buildChildEnvs(verifyEnv, webhookSecret, payload.chatId), runDir);
+     const ready = await ops.waitReady(runDir);
+     step("start only demo-owned API, worker, viewer", ready.api && ready.viewer && ready.worker && owned.names.join() === "api,worker,viewer", owned.names.join(","));
+     if (!(ready.api && ready.viewer && ready.worker)) throw new Error("a service did not become ready");
+ 
+-    const payload = buildWebhookPayload(ops.now());
+     const res = await ops.fetch(`http://127.0.0.1:${API_PORT}/webhooks/telegram`, {
+       method: "POST",
+       headers: { "content-type": "application/json", "x-telegram-bot-api-secret-token": webhookSecret },
+diff --git a/services/worker/src/index.ts b/services/worker/src/index.ts
+index d558e96..7ec7a41 100644
+--- a/services/worker/src/index.ts
++++ b/services/worker/src/index.ts
+@@ -36,7 +36,7 @@ import {
+   resolveTelegramSource,
+   runIngestionJob,
+ } from "@twins/ingestion";
+-import { assessOptionsClaim, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
++import { analyzeTelegramText, assessOptionsClaim, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
+ import { readFileSync } from "node:fs";
+ import { findValidationByKey, validateSignal } from "@twins/decision-intelligence";
+ import {
+@@ -48,7 +48,10 @@ import {
+   telegramProviders,
+   TelegramBotWebhookAdapter,
+   TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
++  chatIdOfQueuedMessage,
++  loadTelegramIntakePolicy,
+   type NormalizedTelegramMessage,
++  type TelegramIntakePolicy,
+ } from "@twins/adapter-telegram";
+ import type { MarketBarRequest } from "@twins/types";
+ 
+@@ -132,6 +135,12 @@ export interface TelegramJobOptions {
+   optionsMaster?: OptionsContractMaster;
+   /** Structured logger (tests inject a capture sink). Defaults to JSON lines on the console. */
+   logger?: StructuredLogger;
++  /**
++   * Which chats may be ingested and whether only options messages may proceed. Default: the policy read from
++   * TWINS_TELEGRAM_ALLOWED_CHAT_IDS / TWINS_TELEGRAM_OPTIONS_ONLY at startup (missing/empty = NO chat approved).
++   * Tests inject an explicit policy.
++   */
++  intakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "optionsOnly">;
+ }
+ 
+ export type TelegramJobOutcomeKind =
+@@ -141,7 +150,11 @@ export type TelegramJobOutcomeKind =
+   | "ambiguous_message_no_signal"
+   | "options_claim_not_ingested"
+   | "rejected_data_quality"
+-  | "message_row_missing";
++  | "message_row_missing"
++  /** The queued message's chat is not on the approved list: nothing was written or started. */
++  | "chat_not_approved"
++  /** Options-only mode: the message is not an options message: nothing was written or started. */
++  | "non_options_blocked";
+ 
+ export interface TelegramJobOutcome {
+   outcome: TelegramJobOutcomeKind;
+@@ -172,6 +185,12 @@ export const configuredOptionsMaster: OptionsContractMaster | null = optionsRefe
+ 
+ const defaultWorkerLogger = createStructuredLogger(undefined, { service: "worker" });
+ 
++/**
++ * Fail-closed intake policy for this process: TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty approves NO chat; malformed
++ * throws here, so the worker does not start) and TWINS_TELEGRAM_OPTIONS_ONLY ("true"/"false"; anything else throws).
++ */
++const defaultIntakePolicy: Pick<TelegramIntakePolicy, "isChatApproved" | "optionsOnly"> = loadTelegramIntakePolicy();
++
+ export async function processTelegramQueueJob(
+   job: Job<TelegramJobPayload>,
+   correlationId?: string,
+@@ -182,7 +201,7 @@ export async function processTelegramQueueJob(
+   const startedAt = Date.now();
+   log.info("worker.job.started");
+   try {
+-    const result = await processTelegramJob(job, correlationId, db, { logger: log });
++    const result = await processTelegramJob(job, correlationId, db, { logger: log, ...(options.intakePolicy ? { intakePolicy: options.intakePolicy } : {}) });
+     log.info("worker.job.completed", { ...result, durationMs: Date.now() - startedAt });
+   } catch (err) {
+     const permanent = err instanceof ReconciliationRequiredError || err instanceof InvalidJobInputError;
+@@ -225,6 +244,31 @@ export async function processTelegramJob(
+ ): Promise<TelegramJobOutcome> {
+   // When called through processTelegramQueueJob the logger already carries the job context.
+   const log = options.logger ?? defaultWorkerLogger.child(buildJobLogContext(job, correlationId));
++  const policy = options.intakePolicy ?? defaultIntakePolicy;
++
++  // Gate 1 - approved chat. Runs before ANY write or downstream work: no jobs row, source, message, signal, instrument,
++  // market request or validation exists for a chat that is not approved. The job completes (it is not retried).
++  const queuedMessage = job.data?.telegram?.normalizedMessage;
++  const queuedChatId = queuedMessage ? chatIdOfQueuedMessage(queuedMessage) : null;
++  if (!policy.isChatApproved(queuedChatId)) { // a null (unusable) id is never approved by a real policy
++    log.warn("worker.intake.chat_rejected", { reason: queuedChatId === null ? "chat_id_unusable" : "chat_not_approved", chatId: queuedChatId });
++    return { outcome: "chat_not_approved", reasonCodes: [queuedChatId === null ? "chat.id_unusable" : "chat.not_approved"] };
++  }
++
++  // Gate 2 - explicit options-only mode (fail closed). Only a message the options path will handle may proceed; an
++  // equity-style directive, an equity-ambiguous message, a message with no directive or an unusable text is blocked here,
++  // before ingestion, so it can never reach the equity signal / instrument / market-data pipeline. This is a parser
++  // classification only: it verifies nothing about an options contract or premium.
++  if (policy.optionsOnly) {
++    const text = queuedMessage?.rawText;
++    const analysis = typeof text === "string" ? analyzeTelegramText(text) : undefined;
++    const optionsFlow = analysis !== undefined && (analysis.kind === "options_claim" || analysis.kind === "options_unsupported" || (analysis.kind === "ambiguous" && analysis.optionsRelated === true));
++    if (!optionsFlow) {
++      log.warn("worker.intake.non_options_blocked", { analysisKind: analysis?.kind ?? "unreadable" });
++      return { outcome: "non_options_blocked", reasonCodes: ["options_only.not_an_options_message"] };
++    }
++  }
++
+   const { telegram } = job.data;
+   const { exchange, instrumentType } = telegram;
+   // BullMQ serialises job data as JSON, so Date fields arrive as ISO strings.
+@@ -336,6 +380,12 @@ export async function processTelegramJob(
+   if (signalOutcome.reconciliationRequired) {
+     throw new ReconciliationRequiredError(signalOutcome.reason ?? "reconciliation required");
+   }
++  if (policy.optionsOnly && signalOutcome.signalId) {
++    // Defence in depth: gate 2 let an options message through, yet an equity signal exists for this message (e.g. created
++    // by an older parser version). Options-only mode never continues into validation or market data for it.
++    log.warn("worker.intake.non_options_blocked", { analysisKind: "existing_equity_signal" });
++    return { outcome: "non_options_blocked", reasonCodes: ["options_only.equity_signal_present"] };
++  }
+   if (signalOutcome.optionsIntake) {
+     // Options-style message: stored raw (telegram_messages) and recorded as an UNVERIFIED options claim row. Never an
+     // equity signal, instrument, approval or order. Only a master that was explicitly configured is used (and recorded).
