@@ -9,12 +9,10 @@ import { Queue, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import { getTableName } from "drizzle-orm";
 import type { StructuredLogger } from "../../../packages/shared/src/index";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createBoundedDb, type BoundedDbHandle } from "../../../packages/database/src/index";
-import {
-  processTelegramQueueJob,
-  type TelegramJobPayload,
-} from "../../../services/worker/src/index";
+import { type TelegramJobPayload } from "../../../services/worker/src/index";
+import { processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 import {
   marketDataProviders,
   YAHOO_PROVIDER_NAME,

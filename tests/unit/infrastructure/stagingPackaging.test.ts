@@ -111,6 +111,24 @@ describe("staging packaging (static)", () => {
     expect(compose).toMatch(/x-app-env: &app-env[\s\S]*?@postgres:5432[\s\S]*?@redis:6379/);
     for (const n of ["worker", "scheduler", "migrate"]) expect(service(n), n).not.toMatch(/DATABASE_URL|REDIS_URL/);
   });
+  it("passes the Telegram intake guards explicitly to BOTH the API and the worker, deny-by-default and options-only", () => {
+    for (const name of ["api", "worker"]) {
+      const block = service(name);
+      expect(block, name).toMatch(/TWINS_TELEGRAM_ALLOWED_CHAT_IDS: \$\{TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-\}/); // empty default = no chat approved
+      expect(block, name).toMatch(/TWINS_TELEGRAM_OPTIONS_ONLY: "true"/); // a literal: the env file cannot switch it off
+    }
+    // not in the shared anchor (scheduler/migrate neither need nor receive them) and not taken from the env file for options-only
+    const anchor = /x-app-env: &app-env\n([\s\S]*?)^services:/m.exec(compose)?.[1] ?? "";
+    expect(anchor).not.toMatch(/TWINS_TELEGRAM/);
+    expect(compose).not.toMatch(/TWINS_TELEGRAM_OPTIONS_ONLY: \$\{/);
+    for (const name of ["scheduler", "migrate"]) expect(service(name), name).not.toMatch(/TWINS_TELEGRAM/);
+  });
+  it("the intended staging configuration approves no chat yet: the template leaves the allowlist empty", () => {
+    expect(env).toMatch(/^TWINS_TELEGRAM_ALLOWED_CHAT_IDS=$/m);
+    expect(env).not.toMatch(/^TWINS_TELEGRAM_ALLOWED_CHAT_IDS=.+/m);
+    expect(env).toMatch(/separate approval/);
+    expect(env).not.toMatch(/TELEGRAM_BOT_TOKEN=/);
+  });
   it("pins PostgreSQL 16 and Redis 7 as the project is tested, and the app image never pulls", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/postgres:16-alpine/);
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);

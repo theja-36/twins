@@ -14,7 +14,7 @@ import {
   reparseTelegramMessage,
 } from "../../../packages/signals/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
-import { processTelegramJob } from "../../../services/worker/src/index";
+import { processTelegramJob } from "../../support/workerWithTestPolicy";
 
 const db = createDb(requireTestDatabaseUrl());
 afterAll(async () => {

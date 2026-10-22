@@ -16,8 +16,21 @@ export {
   TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
   normalizeRawUpdate,
   normalizeUpdate,
+  selectUpdateMessage,
+  describeUpdateChat,
 } from "./botApi.js";
+export {
+  TelegramPolicyConfigError,
+  MAX_ALLOWED_CHAT_IDS,
+  parseAllowedChatIds,
+  parseOptionsOnly,
+  createTelegramIntakePolicy,
+  loadTelegramIntakePolicy,
+  chatIdOfQueuedMessage,
+} from "./intakePolicy.js";
+export type { TelegramIntakePolicy } from "./intakePolicy.js";
 export type {
+  TelegramUpdateKind,
   TelegramBotUpdate,
   TelegramBotMessage,
   TelegramBotChat,

@@ -24,7 +24,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { Queue, QueueEvents } from "bullmq";
 import { Redis } from "ioredis";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createBoundedDb, schema } from "../../../packages/database/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 import { DATABASE_URL, REDIS_URL, TEST_API_KEY, TEST_WEBHOOK_SECRET, must, telegramWebhookPayload, uniqueChatId, waitFor, webhookHeaders } from "./harness";

@@ -38,7 +38,7 @@ import { Redis } from "ioredis";
 import { eq } from "drizzle-orm";
 import { loadConfig } from "@twins/config";
 import { getDb, schema, type Db } from "@twins/database";
-import { normalizeRawUpdate } from "@twins/adapter-telegram";
+import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
 import { ProviderDataError } from "@twins/types";
 import {
   acceptCorrelationId,
@@ -133,6 +133,11 @@ export interface ApiOptions {
   enqueueTimeoutMs?: number;
   /** Structured end-to-end correlation log sink; defaults to JSON lines on the console. */
   structuredLogger?: StructuredLogger;
+  /**
+   * Which Telegram chats may be ingested. Default: read from TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty = NO chat is
+   * approved; a malformed value makes buildApp throw, i.e. the API does not start). Tests inject an explicit policy.
+   */
+  telegramIntakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "approvedChatCount">;
 }
 
 export interface BuildAppResult {
@@ -159,6 +164,8 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   }
 
   const config = loadConfig();
+  // Fail-closed intake policy: throws on a malformed allowlist (the API then refuses to start).
+  const intakePolicy = options.telegramIntakePolicy ?? loadTelegramIntakePolicy();
   const enqueueTimeoutMs = resolveEnqueueTimeoutMs(options.enqueueTimeoutMs, readEnv("TWINS_ENQUEUE_TIMEOUT_MS"));
 
   // Resources created here are owned by the app and closed in onClose below.
@@ -327,6 +334,24 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
 
       // Exchange for which the signal's symbols are interpreted.
       // Configurable via env; defaults to NSE (India equities, spec section 12).
+      // Approved-chat gate: runs after the secret check and BEFORE normalization or any enqueue. The chat is taken from
+      // the very message the normalizer would ingest (selectUpdateMessage), so approval and ingestion cannot diverge.
+      // An update with no ingestible message passes through (it is acknowledged as ignored and enqueues nothing).
+      const chat = describeUpdateChat(request.body);
+      if (chat !== null && !intakePolicy.isChatApproved(chat.chatId)) {
+        // Minimal metadata only: never the text, the sender, the secret or the raw update. The chat id (a number) is
+        // logged so the owner can discover which id to approve. 200 so Telegram does not retry; the body is generic.
+        log.warn("webhook.intake.chat_rejected", {
+          reason: chat.chatId === null ? "chat_id_unusable" : "chat_not_approved",
+          updateKind: chat.kind,
+          chatType: chat.chatType,
+          chatId: chat.chatId,
+          approvedChats: intakePolicy.approvedChatCount,
+          statusCode: 200,
+        });
+        return reply.code(200).send({ status: "ignored", reason: "not accepted" });
+      }
+
       const exchange = readEnv("TELEGRAM_SIGNAL_EXCHANGE") ?? "NSE";
       const instrumentType =
         readEnv("TELEGRAM_SIGNAL_INSTRUMENT_TYPE") ?? "equity";

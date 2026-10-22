@@ -152,12 +152,14 @@ function baseEnv(env: Record<string, string | undefined>): Record<string, string
 }
 
 /** Minimal per-process environments: each child gets only what it needs. The webhook secret exists in the API's only. */
-export function buildChildEnvs(env: Record<string, string | undefined>, webhookSecret: string, apiPort = API_PORT) {
+export function buildChildEnvs(env: Record<string, string | undefined>, webhookSecret: string, approvedChatId: number, apiPort = API_PORT) {
   const db = { DATABASE_URL: env["DATABASE_URL"] ?? "", REDIS_URL: env["REDIS_URL"] ?? "" };
+  // Telegram intake is deny-by-default: the demo approves exactly the one chat it generated, and runs options-only.
+  const intake = { TWINS_TELEGRAM_ALLOWED_CHAT_IDS: String(approvedChatId), TWINS_TELEGRAM_OPTIONS_ONLY: "true" };
   return {
-    api: { ...baseEnv(env), ...db, HOST: "127.0.0.1", PORT: String(apiPort), TWINS_API_KEY: env["TWINS_API_KEY"] ?? "", TELEGRAM_WEBHOOK_SECRET: webhookSecret, TELEGRAM_SIGNAL_EXCHANGE: "NSE" },
+    api: { ...baseEnv(env), ...db, ...intake, HOST: "127.0.0.1", PORT: String(apiPort), TWINS_API_KEY: env["TWINS_API_KEY"] ?? "", TELEGRAM_WEBHOOK_SECRET: webhookSecret, TELEGRAM_SIGNAL_EXCHANGE: "NSE" },
     // The manual reference is attached EXPLICITLY for the demo (and is printed as such); the worker never attaches one otherwise.
-    worker: { ...baseEnv(env), ...db, TELEGRAM_SIGNAL_EXCHANGE: "NSE", TWINS_OPTIONS_MANUAL_REFERENCE: MANUAL_REFERENCE },
+    worker: { ...baseEnv(env), ...db, ...intake, TELEGRAM_SIGNAL_EXCHANGE: "NSE", TWINS_OPTIONS_MANUAL_REFERENCE: MANUAL_REFERENCE },
     viewer: { ...baseEnv(env) },
   };
 }
@@ -277,7 +279,8 @@ export async function runDemo(env: Record<string, string | undefined>, out: (l: 
   out(`Preflight OK: database '${pre.database}' (${pre.migrations} migrations, matches the repository), test Redis idle, ports ${API_PORT}/${VIEWER_PORT} free.`);
 
   const webhookSecret = randomBytes(24).toString("hex"); // in memory only
-  const envs = buildChildEnvs(env, webhookSecret);
+  const payload = buildWebhookPayload(); // generated first: its chat id is the only chat the children approve
+  const envs = buildChildEnvs(env, webhookSecret, payload.chatId);
   const runDir = join(tmpdir(), `twins-options-demo-${Date.now()}`);
   mkdirSync(runDir, { recursive: true });
   const procs = new ProcessSet();
@@ -305,7 +308,6 @@ export async function runDemo(env: Record<string, string | undefined>, out: (l: 
     out(`Started (owned by this demo): ${procs.names.join(", ")}. Logs: ${runDir}`);
     out("Worker options reference: the MANUAL reference file is attached explicitly for this demo (not live entitlement; does not prove tradability).");
 
-    const payload = buildWebhookPayload();
     out(`Submitting ONE hypothetical message (not a recommendation): ${HYPOTHETICAL_MESSAGE}`);
     const res = await fetch(`http://127.0.0.1:${API_PORT}/webhooks/telegram`, {
       method: "POST",
@@ -399,12 +401,12 @@ export async function runVerify(env: Record<string, string | undefined>, ops: Ve
   let owned: OwnedHandle | undefined;
   try {
     const before = await ops.counts();
-    owned = ops.start(buildChildEnvs(verifyEnv, webhookSecret), runDir);
+    const payload = buildWebhookPayload(ops.now()); // generated first: its chat id is the only chat the children approve
+    owned = ops.start(buildChildEnvs(verifyEnv, webhookSecret, payload.chatId), runDir);
     const ready = await ops.waitReady(runDir);
     step("start only demo-owned API, worker, viewer", ready.api && ready.viewer && ready.worker && owned.names.join() === "api,worker,viewer", owned.names.join(","));
     if (!(ready.api && ready.viewer && ready.worker)) throw new Error("a service did not become ready");
 
-    const payload = buildWebhookPayload(ops.now());
     const res = await ops.fetch(`http://127.0.0.1:${API_PORT}/webhooks/telegram`, {
       method: "POST",
       headers: { "content-type": "application/json", "x-telegram-bot-api-secret-token": webhookSecret },

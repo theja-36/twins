@@ -5,7 +5,7 @@
  * have no enqueue side effect.
  */
 import { describe, expect, it, vi } from "vitest";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 
 const API_KEY = "boundary-api-key-9d2";

@@ -5,10 +5,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   DEFAULT_ENQUEUE_TIMEOUT_MS,
-  buildApp,
   isDependencyUnavailable,
   resolveEnqueueTimeoutMs,
 } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 
 const API_KEY = "bound-api-key-77";

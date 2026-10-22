@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { UnrecoverableError } from "bullmq";
 import { InvalidJobInputError, parseJobTimestamp } from "../../../services/worker/src/jobTimestamp";
-import { processTelegramJob, processTelegramQueueJob } from "../../../services/worker/src/index";
+import { processTelegramJob, processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 
 describe("parseJobTimestamp (BullMQ JSON boundary)", () => {
   it("accepts a serialized ISO string and returns the same instant", () => {

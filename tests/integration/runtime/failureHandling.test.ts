@@ -15,7 +15,7 @@ import {
   waitFor,
   webhookHeaders,
   type Harness, must } from "./harness";
-import { processTelegramQueueJob } from "../../../services/worker/src/index";
+import { processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 
 const harnesses: Harness[] = [];
 async function harness(opts: Parameters<typeof createHarness>[0] = {}) {

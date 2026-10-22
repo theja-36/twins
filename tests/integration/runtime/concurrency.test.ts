@@ -14,7 +14,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, getTableName, inArray } from "drizzle-orm";
 import { createBoundedDb, schema, type BoundedDbHandle, type Db } from "../../../packages/database/src/index";
-import { processTelegramJob } from "../../../services/worker/src/index";
+import { processTelegramJob } from "../../support/workerWithTestPolicy";
 import { reparseTelegramMessage } from "../../../packages/signals/src/index";
 import { validateSignal } from "../../../packages/decision-intelligence/src/index";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../adapters/market/src/index";

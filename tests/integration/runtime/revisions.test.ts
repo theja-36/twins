@@ -8,7 +8,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, inArray } from "drizzle-orm";
 import { createBoundedDb, schema, type BoundedDbHandle, type Db } from "../../../packages/database/src/index";
-import { processTelegramJob, processTelegramQueueJob } from "../../../services/worker/src/index";
+import { processTelegramJob, processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 import { UnrecoverableError } from "bullmq";
 import { getRevisionStates, resolveTelegramSource } from "../../../packages/ingestion/src/index";
 import { analyzeTelegramText, reparseTelegramMessage, TELEGRAM_PARSER_VERSION } from "../../../packages/signals/src/index";

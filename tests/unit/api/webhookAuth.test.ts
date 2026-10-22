@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 
 /** A clearly test-owned fake queue. There is no NODE_ENV-based stub in the API: tests that do not enqueue still inject this. */
 const testOwnedFakeQueue = () => ({ add: vi.fn().mockResolvedValue({ id: "test-owned-fake-job" }) });

@@ -17,7 +17,8 @@ import { Redis } from "ioredis";
 import { getTableName } from "drizzle-orm";
 import { createBoundedDb, type Db } from "../../../../packages/database/src/index";
 import { createStructuredLogger } from "../../../../packages/shared/src/index";
-import { processTelegramQueueJob, type TelegramJobPayload } from "../../../../services/worker/src/index";
+import { type TelegramJobPayload } from "../../../../services/worker/src/index";
+import { processTelegramQueueJob } from "../../../support/workerWithTestPolicy";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../../adapters/market/src/index";
 import { syntheticMarketProvider } from "../harness";
 

@@ -36,7 +36,7 @@ import {
   resolveTelegramSource,
   runIngestionJob,
 } from "@twins/ingestion";
-import { assessOptionsClaim, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
+import { analyzeTelegramText, assessOptionsClaim, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
 import { readFileSync } from "node:fs";
 import { findValidationByKey, validateSignal } from "@twins/decision-intelligence";
 import {
@@ -48,7 +48,10 @@ import {
   telegramProviders,
   TelegramBotWebhookAdapter,
   TELEGRAM_BOT_WEBHOOK_PROVIDER_NAME,
+  chatIdOfQueuedMessage,
+  loadTelegramIntakePolicy,
   type NormalizedTelegramMessage,
+  type TelegramIntakePolicy,
 } from "@twins/adapter-telegram";
 import type { MarketBarRequest } from "@twins/types";
 
@@ -132,6 +135,12 @@ export interface TelegramJobOptions {
   optionsMaster?: OptionsContractMaster;
   /** Structured logger (tests inject a capture sink). Defaults to JSON lines on the console. */
   logger?: StructuredLogger;
+  /**
+   * Which chats may be ingested and whether only options messages may proceed. Default: the policy read from
+   * TWINS_TELEGRAM_ALLOWED_CHAT_IDS / TWINS_TELEGRAM_OPTIONS_ONLY at startup (missing/empty = NO chat approved).
+   * Tests inject an explicit policy.
+   */
+  intakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "optionsOnly">;
 }
 
 export type TelegramJobOutcomeKind =
@@ -141,7 +150,11 @@ export type TelegramJobOutcomeKind =
   | "ambiguous_message_no_signal"
   | "options_claim_not_ingested"
   | "rejected_data_quality"
-  | "message_row_missing";
+  | "message_row_missing"
+  /** The queued message's chat is not on the approved list: nothing was written or started. */
+  | "chat_not_approved"
+  /** Options-only mode: the message is not an options message: nothing was written or started. */
+  | "non_options_blocked";
 
 export interface TelegramJobOutcome {
   outcome: TelegramJobOutcomeKind;
@@ -172,6 +185,12 @@ export const configuredOptionsMaster: OptionsContractMaster | null = optionsRefe
 
 const defaultWorkerLogger = createStructuredLogger(undefined, { service: "worker" });
 
+/**
+ * Fail-closed intake policy for this process: TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty approves NO chat; malformed
+ * throws here, so the worker does not start) and TWINS_TELEGRAM_OPTIONS_ONLY ("true"/"false"; anything else throws).
+ */
+const defaultIntakePolicy: Pick<TelegramIntakePolicy, "isChatApproved" | "optionsOnly"> = loadTelegramIntakePolicy();
+
 export async function processTelegramQueueJob(
   job: Job<TelegramJobPayload>,
   correlationId?: string,
@@ -182,7 +201,7 @@ export async function processTelegramQueueJob(
   const startedAt = Date.now();
   log.info("worker.job.started");
   try {
-    const result = await processTelegramJob(job, correlationId, db, { logger: log });
+    const result = await processTelegramJob(job, correlationId, db, { logger: log, ...(options.intakePolicy ? { intakePolicy: options.intakePolicy } : {}) });
     log.info("worker.job.completed", { ...result, durationMs: Date.now() - startedAt });
   } catch (err) {
     const permanent = err instanceof ReconciliationRequiredError || err instanceof InvalidJobInputError;
@@ -225,6 +244,31 @@ export async function processTelegramJob(
 ): Promise<TelegramJobOutcome> {
   // When called through processTelegramQueueJob the logger already carries the job context.
   const log = options.logger ?? defaultWorkerLogger.child(buildJobLogContext(job, correlationId));
+  const policy = options.intakePolicy ?? defaultIntakePolicy;
+
+  // Gate 1 - approved chat. Runs before ANY write or downstream work: no jobs row, source, message, signal, instrument,
+  // market request or validation exists for a chat that is not approved. The job completes (it is not retried).
+  const queuedMessage = job.data?.telegram?.normalizedMessage;
+  const queuedChatId = queuedMessage ? chatIdOfQueuedMessage(queuedMessage) : null;
+  if (!policy.isChatApproved(queuedChatId)) { // a null (unusable) id is never approved by a real policy
+    log.warn("worker.intake.chat_rejected", { reason: queuedChatId === null ? "chat_id_unusable" : "chat_not_approved", chatId: queuedChatId });
+    return { outcome: "chat_not_approved", reasonCodes: [queuedChatId === null ? "chat.id_unusable" : "chat.not_approved"] };
+  }
+
+  // Gate 2 - explicit options-only mode (fail closed). Only a message the options path will handle may proceed; an
+  // equity-style directive, an equity-ambiguous message, a message with no directive or an unusable text is blocked here,
+  // before ingestion, so it can never reach the equity signal / instrument / market-data pipeline. This is a parser
+  // classification only: it verifies nothing about an options contract or premium.
+  if (policy.optionsOnly) {
+    const text = queuedMessage?.rawText;
+    const analysis = typeof text === "string" ? analyzeTelegramText(text) : undefined;
+    const optionsFlow = analysis !== undefined && (analysis.kind === "options_claim" || analysis.kind === "options_unsupported" || (analysis.kind === "ambiguous" && analysis.optionsRelated === true));
+    if (!optionsFlow) {
+      log.warn("worker.intake.non_options_blocked", { analysisKind: analysis?.kind ?? "unreadable" });
+      return { outcome: "non_options_blocked", reasonCodes: ["options_only.not_an_options_message"] };
+    }
+  }
+
   const { telegram } = job.data;
   const { exchange, instrumentType } = telegram;
   // BullMQ serialises job data as JSON, so Date fields arrive as ISO strings.
@@ -335,6 +379,12 @@ export async function processTelegramJob(
 
   if (signalOutcome.reconciliationRequired) {
     throw new ReconciliationRequiredError(signalOutcome.reason ?? "reconciliation required");
+  }
+  if (policy.optionsOnly && signalOutcome.signalId) {
+    // Defence in depth: gate 2 let an options message through, yet an equity signal exists for this message (e.g. created
+    // by an older parser version). Options-only mode never continues into validation or market data for it.
+    log.warn("worker.intake.non_options_blocked", { analysisKind: "existing_equity_signal" });
+    return { outcome: "non_options_blocked", reasonCodes: ["options_only.equity_signal_present"] };
   }
   if (signalOutcome.optionsIntake) {
     // Options-style message: stored raw (telegram_messages) and recorded as an UNVERIFIED options claim row. Never an

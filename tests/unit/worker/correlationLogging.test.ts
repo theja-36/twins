@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { UnrecoverableError } from "bullmq";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 import { buildJobLogContext } from "../../../services/worker/src/correlationLog";
-import { processTelegramQueueJob } from "../../../services/worker/src/index";
+import { processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 
 const must = <T,>(v: T | undefined | null): T => { if (v === undefined || v === null) throw new Error("expected a value"); return v; };
 

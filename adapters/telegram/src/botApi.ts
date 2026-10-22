@@ -134,6 +134,42 @@ function parseUpdate(raw: unknown): TelegramBotUpdate {
   return obj as unknown as TelegramBotUpdate;
 }
 
+/** The four update types that carry a message this system ingests. */
+export type TelegramUpdateKind = "message" | "channel_post" | "edited_message" | "edited_channel_post";
+
+/**
+ * The single place that decides WHICH message of an update is ingested: the first present of message, channel_post,
+ * edited_message, edited_channel_post (in that order). Both normalization and the approved-chat check use it.
+ * A field that is present but not an object is treated as absent (it can never be ingested).
+ */
+export function selectUpdateMessage(update: TelegramBotUpdate): { kind: TelegramUpdateKind; message: TelegramBotMessage } | null {
+  const kinds: TelegramUpdateKind[] = ["message", "channel_post", "edited_message", "edited_channel_post"];
+  for (const kind of kinds) {
+    const candidate = update[kind];
+    if (candidate !== undefined && candidate !== null) return { kind, message: candidate };
+  }
+  return null;
+}
+
+/**
+ * Minimal, secret-free description of the chat an update would be ingested from, for the approved-chat check and for
+ * rejection logging. `chatId` is the canonical decimal string of chat.id when it is a safe integer, otherwise null
+ * (an unusable id is never approved). Returns null when the update has no ingestible message at all.
+ */
+export function describeUpdateChat(rawPayload: unknown): { kind: TelegramUpdateKind; chatId: string | null; chatType: string | null } | null {
+  if (typeof rawPayload !== "object" || rawPayload === null) return null;
+  const selected = selectUpdateMessage(rawPayload as TelegramBotUpdate);
+  if (!selected) return null;
+  const chat = (selected.message as { chat?: unknown }).chat as { id?: unknown; type?: unknown } | undefined;
+  const id = chat && typeof chat === "object" ? chat.id : undefined;
+  const type = chat && typeof chat === "object" ? chat.type : undefined;
+  return {
+    kind: selected.kind,
+    chatId: typeof id === "number" && Number.isSafeInteger(id) && id !== 0 ? String(id) : null,
+    chatType: typeof type === "string" && ["private", "group", "supergroup", "channel"].includes(type) ? type : null,
+  };
+}
+
 /**
  * Translates a single parsed TelegramBotUpdate into zero or one
  * NormalizedTelegramMessage. Returns null when the update contains no
@@ -150,20 +186,17 @@ function parseUpdate(raw: unknown): TelegramBotUpdate {
 export function normalizeUpdate(
   update: TelegramBotUpdate,
 ): NormalizedTelegramMessage | null {
-  const message =
-    update.message ??
-    update.channel_post ??
-    update.edited_message ??
-    update.edited_channel_post;
-
-  if (!message) return null;
+  // The SAME selection the intake allowlist uses (selectUpdateMessage), so the chat that is approved is always the
+  // chat that is ingested.
+  const selected = selectUpdateMessage(update);
+  if (!selected) return null;
+  const { message } = selected;
 
   const rawText = extractText(message);
   if (rawText === null) return null;
 
-  const isEdit =
-    update.edited_message !== undefined ||
-    update.edited_channel_post !== undefined;
+  // Edit-ness follows the SELECTED message, not the mere presence of an edited_* field elsewhere in the update.
+  const isEdit = selected.kind === "edited_message" || selected.kind === "edited_channel_post";
 
   const channel = channelIdentity(message.chat);
   const originMessageId = String(message.message_id);

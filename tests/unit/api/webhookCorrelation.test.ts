@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 
 const must = <T,>(v: T | undefined | null): T => { if (v === undefined || v === null) throw new Error("expected a value"); return v; };

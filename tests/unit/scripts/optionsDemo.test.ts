@@ -97,7 +97,7 @@ describe("preflight (read-only; refuses rather than adjusts)", () => {
 });
 
 describe("what each child process gets", () => {
-  const envs = buildChildEnvs({ ...goodEnv, AWS_SECRET_ACCESS_KEY: "must-not-leak", OPENROUTER_API_KEY: "must-not-leak" }, SECRET);
+  const envs = buildChildEnvs({ ...goodEnv, AWS_SECRET_ACCESS_KEY: "must-not-leak", OPENROUTER_API_KEY: "must-not-leak" }, SECRET, -1001234567890);
   it("minimal environments; secrets only where needed; never inherited extras", () => {
     for (const e of [envs.api, envs.worker, envs.viewer]) {
       expect(e["LIVE_TRADING"]).toBe("false");
@@ -105,6 +105,9 @@ describe("what each child process gets", () => {
       expect(JSON.stringify(e)).not.toContain("must-not-leak");
     }
     expect(envs.api).toMatchObject({ HOST: "127.0.0.1", PORT: String(API_PORT), TWINS_API_KEY: API_KEY, TELEGRAM_WEBHOOK_SECRET: SECRET });
+    // deny-by-default Telegram intake: exactly the one generated chat is approved, options-only
+    for (const e of [envs.api, envs.worker]) expect(e).toMatchObject({ TWINS_TELEGRAM_ALLOWED_CHAT_IDS: "-1001234567890", TWINS_TELEGRAM_OPTIONS_ONLY: "true" });
+    expect(envs.viewer["TWINS_TELEGRAM_ALLOWED_CHAT_IDS"]).toBeUndefined();
     expect(envs.worker["TELEGRAM_WEBHOOK_SECRET"]).toBeUndefined();
     expect(envs.worker["TWINS_API_KEY"]).toBeUndefined();
     expect(envs.worker["TWINS_OPTIONS_MANUAL_REFERENCE"]).toMatch(/data\/options-reference\/manual-reference\.v1\.json$/);

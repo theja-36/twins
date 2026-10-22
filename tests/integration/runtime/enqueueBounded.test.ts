@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { buildApp } from "../../../apps/api/src/index";
+import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 import { REDIS_URL, TEST_API_KEY, TEST_WEBHOOK_SECRET, telegramWebhookPayload, uniqueChatId, waitFor, webhookHeaders, must } from "./harness";
 

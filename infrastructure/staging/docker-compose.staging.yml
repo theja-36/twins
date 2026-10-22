@@ -120,6 +120,10 @@ services:
       TWINS_API_KEY: ${TWINS_API_KEY:?set TWINS_API_KEY}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET}
       TELEGRAM_SIGNAL_EXCHANGE: NSE
+      # Telegram intake guards (deny by default). Empty/unset approves NO chat; the approved numeric test-chat id is added to
+      # staging.env under a SEPARATE approval. Options-only is a literal here, so the env file cannot switch it off.
+      TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TWINS_TELEGRAM_OPTIONS_ONLY: "true"
     ports:
       - "127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000"
     depends_on:
@@ -164,7 +168,12 @@ services:
     image: twins-staging:local
     pull_policy: never
     command: ["node", "--import", "tsx", "/app/services/worker/src/index.ts"]
-    environment: *app-env
+    environment:
+      <<: *app-env
+      # Same intake guards as the API; the worker enforces them again on every queued job (a job queued earlier or by
+      # another producer is still checked). Empty = no chat approved. Options-only is a literal.
+      TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TWINS_TELEGRAM_OPTIONS_ONLY: "true"
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
