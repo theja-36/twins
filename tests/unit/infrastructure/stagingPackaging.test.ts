@@ -51,7 +51,8 @@ describe("staging packaging (static)", () => {
     expect(service("redis")).toMatch(/networks: \[twins_data\]/);
   });
   it("has placeholders only and requires every secret", () => {
-    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l) && !/^TWINS_TELEGRAM_SESSION_DB_KEY=$/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    for (const name of ["TWINS_TELEGRAM_API_ID", "TWINS_TELEGRAM_API_HASH", "TWINS_TELEGRAM_SESSION_DB_KEY"]) expect(env, name).toMatch(new RegExp(`^${name}=$`, "m")); // owner-supplied later: EMPTY in the template
     for (const v of ["POSTGRES_PASSWORD", "REDIS_PASSWORD", "TWINS_API_KEY", "TELEGRAM_WEBHOOK_SECRET"]) expect(compose).toContain(`\${${v}:?`);
     expect(existsSync("infrastructure/staging/staging.env")).toBe(false);
   });
@@ -160,10 +161,10 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: all four app services share one tag variable, default `local`", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(4);
+  it("a new image gets its own tag and never overwrites the running one: all five app services share one tag variable, default `local`", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(5);
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(4); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(5); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -179,24 +180,48 @@ describe("staging packaging (static)", () => {
     expect(api).toMatch(/networks: \[twins_data, twins_edge, coolify\]/);
     for (const name of ["worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/coolify/);
   });
-  it("passes the internal capture token to the API ONLY, empty by default, and never routes /internal on the proxy", () => {
+  it("passes the internal capture token to the API and the capture client ONLY, empty by default, and never routes /internal on the proxy", () => {
     expect(service("api")).toMatch(/TWINS_CAPTURE_INGEST_TOKEN: \$\{TWINS_CAPTURE_INGEST_TOKEN:-\}/); // empty = the endpoint does not exist
+    expect(service("capture")).toMatch(/TWINS_CAPTURE_INGEST_TOKEN: \$\{TWINS_CAPTURE_INGEST_TOKEN:-\}/);
     const anchor = /x-app-env: &app-env\n([\s\S]*?)^services:/m.exec(compose)?.[1] ?? "";
     expect(anchor).not.toMatch(/CAPTURE/);
     for (const name of ["worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/CAPTURE/);
     expect(env).toMatch(/^TWINS_CAPTURE_INGEST_TOKEN=$/m);
     expect(env).not.toMatch(/^TWINS_CAPTURE_INGEST_TOKEN=.+/m);
     // the proxy exposes only GET /health: no router rule, label or prefix mentions /internal, /webhooks or any other path
-    expect(compose).not.toMatch(/\/internal/);
+    expect(service("api")).not.toMatch(/\/internal/);
+    expect(compose.match(/\/internal\//g)?.length).toBe(1); // only the capture client's own URL to the API (internal network)
     expect([...new Set([...service("api").matchAll(/Path\(`([^`]*)`\)/g)].map((m) => m[1]))]).toEqual(["/health"]);
     expect(service("api")).not.toMatch(/PathPrefix|PathRegexp/);
+  });
+  it("the capture service is off by default, internal-only, read-only, restart no, with two backup-excluded volumes and no secret literals", () => {
+    const c = service("capture");
+    expect(c).toMatch(/profiles: \["capture"\]/); // a plain `up` never starts it
+    expect(c).toMatch(/restart: "no"/); // a stop on flood-wait or authorization failure stays stopped
+    expect(c).toMatch(/networks: \[twins_data\]/); // internal network; no coolify, no edge
+    expect(c).not.toMatch(/ports:|coolify|twins_edge|labels:/);
+    expect(c).toMatch(/user: "1000:1000"/);
+    expect(c).toMatch(/TWINS_CAPTURE_INGEST_URL: http:\/\/twins-staging-api-1:4000\/internal\/ingest\/telegram-user/);
+    for (const v of ["TWINS_TELEGRAM_API_ID", "TWINS_TELEGRAM_API_HASH", "TWINS_TELEGRAM_SESSION_DB_KEY", "TWINS_TELEGRAM_ALLOWED_CHAT_IDS", "TWINS_CAPTURE_INGEST_TOKEN"]) expect(c).toContain(`${v}: \${${v}:-}`);
+    expect(c).not.toMatch(/DATABASE_URL|REDIS_URL|OPTIONS_ONLY/); // it never touches the database or the queue
+    expect(c).toContain("twins_capture_session:/var/lib/twins-capture/tdlib-db");
+    expect(c).toContain("twins_capture_state:/var/lib/twins-capture/state");
+    expect(compose).toMatch(/twins_capture_session:[\s\S]*?twins\.backup: "exclude"[\s\S]*?twins_capture_state:[\s\S]*?twins\.backup: "exclude"/);
+    const hardening = /x-hardening: &hardening\n([\s\S]*?)\n\n/.exec(compose)?.[1] ?? "";
+    expect(hardening).toMatch(/read_only: true/);
+    expect(hardening).toMatch(/init: true/);
+    expect(hardening).toMatch(/tmpfs: \["\/tmp:/);
+    expect(hardening).toMatch(/cap_drop: \["ALL"\]/);
+    expect(c).toMatch(/<<: \*hardening/);
+    expect(read("infrastructure/staging/backup-postgres.sh")).toMatch(/NOT included/);
+    expect(read("infrastructure/staging/backup-postgres.sh")).not.toMatch(/capture/i.test("") ? "" : /docker (volume|cp|run)|tar |rsync/);
   });
   it("pins PostgreSQL 16 and Redis 7 as the project is tested, and the app image never pulls", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/postgres:16-alpine/);
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(4);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(5);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

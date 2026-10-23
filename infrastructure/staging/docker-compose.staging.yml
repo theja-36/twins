@@ -130,7 +130,7 @@ services:
       TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
       TWINS_TELEGRAM_OPTIONS_ONLY: "true"
       # Token of the INTERNAL capture endpoint (POST /internal/ingest/telegram-user, never routed publicly). EMPTY = the endpoint
-      # does not exist. API only: the worker, migrate and scheduler never receive it.
+      # does not exist. Only the API and the capture client receive it: the worker, migrate and scheduler never do.
       TWINS_CAPTURE_INGEST_TOKEN: ${TWINS_CAPTURE_INGEST_TOKEN:-}
     ports:
       - "127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000"
@@ -208,6 +208,37 @@ services:
     mem_limit: 192m
     cpus: 0.25
 
+  # Telegram USER-API capture client (T2b). OFF by default: profile `capture`, so a plain `up` never starts it, and restart is "no" so a stop
+  # on flood-wait or authorization failure STAYS stopped until the owner acts. Read-only root filesystem; its two named volumes hold the encrypted
+  # TDLib database and a little state, are never part of the PostgreSQL backup script, and must never be copied between hosts.
+  # It sits on the INTERNAL network only (reaches the API by its unique container name). Telegram egress is NOT provided here: a separate,
+  # approved change must give it a route before it can connect. The allowlist stays empty until the owner approves a test channel.
+  capture:
+    <<: *hardening
+    restart: "no"
+    profiles: ["capture"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    user: "1000:1000"
+    working_dir: /app
+    command: ["python3", "-E", "-s", "-B", "/app/services/telegram-capture/main.py", "run"]
+    environment:
+      TWINS_TELEGRAM_API_ID: ${TWINS_TELEGRAM_API_ID:-}
+      TWINS_TELEGRAM_API_HASH: ${TWINS_TELEGRAM_API_HASH:-}
+      TWINS_TELEGRAM_SESSION_DB_KEY: ${TWINS_TELEGRAM_SESSION_DB_KEY:-}
+      TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
+      TWINS_CAPTURE_INGEST_TOKEN: ${TWINS_CAPTURE_INGEST_TOKEN:-}
+      TWINS_CAPTURE_INGEST_URL: http://twins-staging-api-1:4000/internal/ingest/telegram-user
+    depends_on:
+      api: { condition: service_healthy }
+    networks: [twins_data]
+    volumes:
+      - twins_capture_session:/var/lib/twins-capture/tdlib-db
+      - twins_capture_state:/var/lib/twins-capture/state
+    stop_grace_period: 30s
+    mem_limit: 512m
+    cpus: 0.5
+
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks
@@ -218,3 +249,7 @@ networks:
 volumes:
   twins_pgdata:
   twins_redisdata:
+  twins_capture_session:        # encrypted TDLib database (the Telegram login). NOT backed up, NEVER copied to another host.
+    labels: { twins.backup: "exclude" }
+  twins_capture_state:          # blocked_until / alert / protected-content flag
+    labels: { twins.backup: "exclude" }
