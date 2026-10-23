@@ -211,8 +211,9 @@ services:
   # Telegram USER-API capture client (T2b). OFF by default: profile `capture`, so a plain `up` never starts it, and restart is "no" so a stop
   # on flood-wait or authorization failure STAYS stopped until the owner acts. Read-only root filesystem; its two named volumes hold the encrypted
   # TDLib database and a little state, are never part of the PostgreSQL backup script, and must never be copied between hosts.
-  # It sits on the INTERNAL network only (reaches the API by its unique container name). Telegram egress is NOT provided here: a separate,
-  # approved change must give it a route before it can connect. The allowlist stays empty until the owner approves a test channel.
+  # It reaches the API by its unique container name on the INTERNAL network and has ORDINARY outbound connectivity (NAT) through its own
+  # `twins_egress` network. That is NOT a Telegram-only restriction: limiting destinations to Telegram's ranges needs separate, approved host
+  # firewall rules. Nothing else joins twins_egress. The allowlist holds only the owner-approved private test channel (set in staging.env).
   capture:
     <<: *hardening
     restart: "no"
@@ -231,7 +232,7 @@ services:
       TWINS_CAPTURE_INGEST_URL: http://twins-staging-api-1:4000/internal/ingest/telegram-user
     depends_on:
       api: { condition: service_healthy }
-    networks: [twins_data]
+    networks: [twins_data, twins_egress]
     volumes:
       - twins_capture_session:/var/lib/twins-capture/tdlib-db
       - twins_capture_state:/var/lib/twins-capture/state
@@ -242,6 +243,10 @@ services:
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks
+  twins_egress:                  # ordinary outbound (NAT) for the capture client ONLY; not a Telegram-only restriction
+    ipam:
+      config:
+        - subnet: 10.0.24.0/24   # free on the host when chosen (existing bridges use 10.0.0.0/24 .. 10.0.23.0/24)
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true

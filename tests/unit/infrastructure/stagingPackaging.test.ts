@@ -198,7 +198,10 @@ describe("staging packaging (static)", () => {
     const c = service("capture");
     expect(c).toMatch(/profiles: \["capture"\]/); // a plain `up` never starts it
     expect(c).toMatch(/restart: "no"/); // a stop on flood-wait or authorization failure stays stopped
-    expect(c).toMatch(/networks: \[twins_data\]/); // internal network; no coolify, no edge
+    expect(c).toMatch(/networks: \[twins_data, twins_egress\]/); // internal network for the API + its own outbound network; no coolify, no edge
+    expect(compose).toMatch(/twins_egress:[\s\S]*?subnet: 10\.0\.24\.0\/24/);
+    expect(compose).not.toMatch(/twins_egress:[^\n]*\n\s+internal: true/); // it must route out (that is its only purpose)
+    for (const name of ["api", "worker", "postgres", "redis", "scheduler", "migrate"]) expect(service(name), name).not.toMatch(/twins_egress/); // capture ONLY
     expect(c).not.toMatch(/ports:|coolify|twins_edge|labels:/);
     expect(c).toMatch(/user: "1000:1000"/);
     expect(c).toMatch(/TWINS_CAPTURE_INGEST_URL: http:\/\/twins-staging-api-1:4000\/internal\/ingest\/telegram-user/);

@@ -40,16 +40,16 @@ Conclusion: **basic feasibility is established** - the account can read the chan
 | 3 | A validation regex accepted a trailing newline (`$` vs `\Z`) | fixed for all validation patterns; regression tests |
 | 4 | Several guard tests only passed because a wrong code returns an error that aborts first | added "re-asked without an error" fake variants for phone, code and password |
 
-## 5. T1-D cleanup status - **NOT YET RECORDED**
-The owner's message contained the unfilled placeholder `[fill in actual logout and Devices-revocation result]`. The assistant will not assume or infer any of the following; each must be filled in by the owner:
-| Step | Result (owner to fill) |
+## 5. T1-D cleanup status - PARTLY OWNER-REPORTED, rest NOT CONFIRMED
+**Owner-reported (2026-10-23):** the owner explicitly confirmed that the T1 feasibility session was **terminated** (revoked). This is the owner's statement; the assistant did not observe it. The assistant does **not** infer from it that the tool's `--mode logout` ran or that `~/.twins-t1` was removed: those results remain unconfirmed until separately supplied.
+| Step | Result |
 |---|---|
-| `python3 -I tools/t1-feasibility/t1_check.py --mode logout` output (exit status and the two result lines) | `[ ]` |
-| Telegram app > Settings > Devices: session "TWINS T1 feasibility" gone, or terminated manually | `[ ]` |
-| `rm -rf ~/.twins-t1` done and the directory confirmed absent | `[ ]` |
-| Homebrew `tdlib` 1.8.0 (not used by the tool) kept or uninstalled | `[ ]` |
+| T1 session terminated / revoked on Telegram's side (Settings > Devices or equivalent) | **owner-reported: terminated** (2026-10-23) |
+| `python3 -I tools/t1-feasibility/t1_check.py --mode logout` output (exit status and the two result lines) | not confirmed `[owner to fill if it was run]` |
+| `rm -rf ~/.twins-t1` done and the directory confirmed absent | not confirmed `[owner to fill]` |
+| Homebrew `tdlib` 1.8.0 (not used by the tool) kept or uninstalled | not confirmed `[owner to fill]` |
 | `~/.twins-t1-build` (pinned build, 520 MB) kept for reuse | kept unless the owner says otherwise |
-Until the first three lines are filled in, **T1 is not closed** and the throwaway session on this Mac must be treated as still active. Closing T1 is a precondition for T2b (any session on the VPS) and should precede it.
+Consequence: a revoked session cannot read Telegram, so the earlier "treat the Mac session as active" warning no longer applies to the session itself. If `~/.twins-t1` still exists it still holds `api_id`, `api_hash`, `db.key` and an unusable (revoked) database; those files remain secrets until removed. Closing T1 fully still needs the three unconfirmed lines above; it is no longer a precondition for creating the separate, new session of the VPS capture service (T2b), which uses its own device name ("TWINS capture") and its own database key.
 
 ## 6. Consequences for the plan
 - **T2a** (schema + internal ingest endpoint) does not depend on event observation and can proceed to review.
