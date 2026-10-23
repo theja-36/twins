@@ -1,0 +1,23 @@
+# Re-applies the Telegram-only egress rules for the capture network (10.0.24.0/24) at boot and whenever Docker restarts.
+# Install: copy to /etc/systemd/system/, `systemctl daemon-reload && systemctl enable --now twins-capture-egress-firewall`.
+# `systemctl stop` (or disable) REMOVES the rules: only do that while the capture service is stopped. The ufw rule that keeps the capture
+# network away from the host's own services is stored by ufw itself and does not depend on this unit.
+[Unit]
+Description=TWINS capture egress firewall (Telegram-only, 10.0.24.0/24)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=60
+# A leftover chain (for example from a manual apply) is removed first; `apply` itself refuses to touch an existing chain.
+ExecStartPre=-/opt/twins-staging/capture-egress-firewall.sh remove
+ExecStart=/opt/twins-staging/capture-egress-firewall.sh apply /opt/twins-staging/telegram-cidr-ipv4.txt
+# The unit fails (and the problem is visible) unless the chain is exactly what `apply` builds.
+ExecStartPost=/opt/twins-staging/capture-egress-firewall.sh status /opt/twins-staging/telegram-cidr-ipv4.txt
+ExecStop=/opt/twins-staging/capture-egress-firewall.sh remove
+
+[Install]
+WantedBy=multi-user.target

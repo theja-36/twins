@@ -45,3 +45,23 @@ describe("capture egress firewall script", () => {
     expect(readFileSync("infrastructure/staging/docker-compose.staging.yml", "utf8")).toContain("subnet: 10.0.24.0/24");
   });
 });
+
+describe("capture egress firewall systemd unit", () => {
+  const unit = readFileSync("infrastructure/staging/twins-capture-egress-firewall.service", "utf8");
+  const body = unit.split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
+  it("runs the script (apply, then status as a post-check, remove on stop) after Docker, as a oneshot that stays active", () => {
+    expect(body).toMatch(/^After=docker\.service network-online\.target$/m);
+    expect(body).toMatch(/^Requires=docker\.service$/m); // a Docker restart restarts the unit, which re-applies the rules
+    expect(body).toMatch(/^Type=oneshot$/m);
+    expect(body).toMatch(/^RemainAfterExit=yes$/m);
+    expect(body).toMatch(/^ExecStartPre=-\/opt\/twins-staging\/capture-egress-firewall\.sh remove$/m);
+    expect(body).toMatch(/^ExecStart=\/opt\/twins-staging\/capture-egress-firewall\.sh apply \/opt\/twins-staging\/telegram-cidr-ipv4\.txt$/m);
+    expect(body).toMatch(/^ExecStartPost=\/opt\/twins-staging\/capture-egress-firewall\.sh status \/opt\/twins-staging\/telegram-cidr-ipv4\.txt$/m);
+    expect(body).toMatch(/^ExecStop=\/opt\/twins-staging\/capture-egress-firewall\.sh remove$/m);
+    expect(body).toMatch(/^WantedBy=multi-user\.target$/m);
+  });
+  it("executes nothing but the reviewed script (no shell, no iptables, no ufw, no network tools)", () => {
+    for (const line of body.split("\n").filter((l) => /^Exec/.test(l))) expect(line).toMatch(/=-?\/opt\/twins-staging\/capture-egress-firewall\.sh (apply|remove|status)/);
+    expect(body).not.toMatch(/\b(sh -c|bash|iptables|ufw|curl|wget)\b/);
+  });
+});
