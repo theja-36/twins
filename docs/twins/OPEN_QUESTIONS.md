@@ -1,0 +1,34 @@
+# Open questions (information requests)
+
+Statuses: `ANSWERED`, `DEFERRED` (explicit; the affected work stays blocked; a deferral never authorizes that work), `UNRESOLVED` (no answer and no agreed deferral), `SUPERSEDED`. As of 2026-10-24 all five A-00.2 prerequisites (Q-003, Q-006, Q-007, Q-017, Q-018) are explicitly DEFERRED. Owner **decisions** are in [DECISION_LOG.md](DECISION_LOG.md). Q-002..Q-014 were carried from `docs/implementation/ROADMAP_AND_AUDIT_2026-10-22.md` section H; whether they have since been answered is not recorded in the repository. A recorded UNRESOLVED status is not evidence of readiness.
+
+| ID | Question | Needed by | Status |
+|---|---|---|---|
+| Q-001 | Final architecture diagram | now | **ANSWERED 2026-10-24** (received; reconciled; closes F-001) |
+| Q-002 | Instrument scope: index options only, stock options, equities, all? NSE only? (the parser currently supports NIFTY, BANKNIFTY, SENSEX) | P02/P04; prerequisite of alternative-search scope (D-034) | UNRESOLVED |
+| Q-003 | Channel(s), archive size/period, and permission to export/process the content (owner/admin status, member privacy, retention) | P02; A-00.2 prerequisite | **EXPLICITLY DEFERRED 2026-10-24 -> D-038.** Not assumed: that the owner owns/administers the channel or holds export, redistribution or third-party-processing permission. Blocked: full-history backfill beyond the previously authorized pilot; archive import; coverage claims beyond verified captured material; closing the Telegram compliance row. Existing runtime permission is neither renewed, expanded nor revoked. |
+| Q-004 | Market-data budget and preferred vendors; is EOD-only research acceptable first? | P04 | UNRESOLVED (decision D-004) |
+| Q-005 | Outcome conventions | - | SUPERSEDED by D-005 |
+| Q-006 | How many messages will you label for the parser accuracy baseline, and who labels? | P02; A-00.2 prerequisite | **EXPLICITLY DEFERRED 2026-10-24 -> D-039.** Blocked: parser/classification accuracy acceptance; ground-truth baseline completion; dependent review-queue acceptance. Model-generated labels are never independent human ground truth. |
+| Q-007 | Off-host backup target, who holds the encryption key and its escrow copy? (not invented here) | P01 (1C); A-00.2 prerequisite | **EXPLICITLY DEFERRED 2026-10-24 -> D-040.** Blocked: off-host backup activation; key escrow; off-host restore acceptance; relevant G1 acceptance. Local-only copies are not claimed to mitigate loss of the host. |
+| Q-008 | Signal Library decisions | - | SUPERSEDED by D-006 (explicitly DEFERRED) |
+| Q-009 | Model use, choosing among: no model component activated yet; a local model; an external provider; or a mixed deployment (only if separately proposed) - and, for anything other than "none yet", whether any channel text may be disclosed. (The hybrid target architecture D-026 does not make an active model provider mandatory for any phase or release slice.) | before any model-assisted component is activated | UNRESOLVED. Current state: no model component exists or is activated. Provider selection, data disclosure and activation remain unapproved. |
+| Q-010 | Broker, account status, registration requirements, maximum capital at risk, option-buying-only? | P12 | UNRESOLVED |
+| Q-011 | Host hardening decisions (root/password SSH, non-root deploy user, exposed services on the shared host) | P01 | UNRESOLVED |
+| Q-012 | Who performs the independent F1 review? (the assistant never self-certifies independence; no reviewer is assumed) | P00 (A-00.3) | UNRESOLVED |
+| Q-013 | Which external terms/regulatory reviews apply and who reviews them? | P00 (A-00.4) | UNRESOLVED (decision D-013) |
+| Q-014 | What result would make you stop the project (for example no measurable edge after costs)? | P05-P08 | UNRESOLVED |
+| Q-015 | Risk budgets and loss limits | - | SUPERSEDED by D-007 |
+| Q-016 | Pre-flight tolerances | - | SUPERSEDED by D-010 |
+| Q-017 | Retention policy for raw messages, logs and diagnostic data (jobs.error text) | P01; A-00.2 prerequisite | **EXPLICITLY DEFERRED 2026-10-24 -> D-041.** Blocked: production retention/pruning jobs; acceptance of the diagnostic-data remediation; exports/sharing needing the privacy decision. No existing data is pruned. Not approval of indefinite retention or of continued sensitive diagnostic logging. |
+| Q-018 | Which channel receives operational alerts? (separate approval already required by D-003; also the unresolved alert destination in D-030a) | P01; A-00.2 prerequisite | **EXPLICITLY DEFERRED 2026-10-24 -> D-042.** Blocked: external alert activation or test messages; production alert-readiness claims; relevant acceptance criteria and G1. Local rehearsal logging is not an approved production alert channel. |
+| Q-019 | Agents 1-15: deterministic service, statistical job, or model-based? | P07 | **ANSWERED 2026-10-24 -> D-026** |
+| Q-020 | Exact fields and validity of a "trading mandate" | P09 | **ANSWERED 2026-10-24 -> D-027** |
+| Q-021 | Handling of source CANCEL / EXIT_UPDATE / TARGET_UPDATE / revision after approval or while a position is open | P09/P10 | **ANSWERED 2026-10-24 -> D-028** |
+| Q-022 | What does RESEARCH_ONLY trigger? | P07/P08 | **ANSWERED 2026-10-24 -> D-029** |
+| Q-023 | Confirm architecture STEP 1-6 plus the outcome/learning section is the existing six-step product flow | P00 | **ANSWERED 2026-10-24 (confirmed) -> D-025** |
+| Q-024 | What counts as a "material change" that invalidates an approval card (which fields, what tolerance)? | P09 | **ANSWERED 2026-10-24 -> D-032** (fields defined; no numerical tolerance selected - D-010 stays UNRESOLVED) |
+| Q-025 | Outbox retention and depth/age alert thresholds for durable intake | P01 | **PARTIALLY ANSWERED -> D-030** (initial rules); remaining parts **DEFERRED -> D-030a** (work blocked: production alert readiness claim, threshold-based alerting, completed-row pruning) |
+| Q-026 | Do TWINS_PLAN review checkpoints map 1:1 to source targets, and who may add checkpoints? | P07 | **ANSWERED 2026-10-24 -> D-033** |
+| Q-027 | Which instruments/markets may TWINS_GENERATED candidates cover (ties to Q-002)? | P09 | **EXPLICITLY DEFERRED 2026-10-24 -> D-034** (not answered; alternative search stays disabled; no market allowlist granted) |
+| Q-028 | The "open-position policy" referred to by D-028: what is it and where is it defined? | P09/P10 | **ANSWERED 2026-10-24 -> D-035** (open-position execution contract; components D-011 and D-021 remain UNRESOLVED) |

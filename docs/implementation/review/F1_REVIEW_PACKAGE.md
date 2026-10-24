@@ -2,6 +2,35 @@
 
 **Status: NOT independently reviewed.** Prepared by the implementing agent; an agent self-review or self-remediation is not independent review. F1 stays open until a person or separate reviewer examines the CURRENT code (the `f1/*.diff` files were regenerated after the remediation below) and records findings. Nothing was sent to any external service.
 
+## Refresh 2026-10-24 - DOCUMENTATION ONLY; NO REVIEW HAS OCCURRED
+This section was added on 2026-10-24 and everything below it is the earlier 2026-10-19 package, kept unchanged as history. It records what a reviewer must now be pointed at. **Reviewer: UNASSIGNED.** Nothing here is a review result, a waiver, or a retrospective approval of the later use of real data (see `docs/twins/DECISION_LOG.md` D-031 and finding F-020). No reviewer was contacted and no external service was used.
+
+**Preparing or refreshing this package is not a review.** It records what a reviewer should examine; it does not examine, accept or approve anything.
+
+**Target commit (what the reviewer reads):** `702d4a82ba37e3e533f5acdd652b290bb025e7b1` (branch `main`, 2026-10-24; local HEAD at refresh time; `origin/main` matched at the last push and was not re-fetched).
+**Review base commit:** `b2ad592be7bdd3747cfed92b3eaa0557491c853c` (2026-10-03, an ancestor of the target). Rationale: it is the last commit before the R0A/R0B-era changes and is the "HEAD" the earlier package diffed against, so `git diff <base> <target> -- <paths>` shows the complete change set under review and keeps the earlier package's references meaningful. The reviewer should still read the files at the target (`git show 702d4a82ba37e3e533f5acdd652b290bb025e7b1:<path>`); the diff is an aid, not the scope.
+
+**History preserved.** The earlier package (below) states that HEAD was `b2ad592` with nothing of R0A/R0B committed, and its `f1/*.diff` files were regenerated on 2026-10-19 against that state. Those statements were true then and are now historical. The `f1/*.diff` files are retained unchanged as the 2026-10-19 snapshot and are NOT regenerated here; they are superseded, for current-code review, by the command below. Whether the committed content equals those snapshots was not compared (unverified).
+
+**Scope carried over from the earlier package, with size at the target (lines):** `apps/api/src/index.ts` 687; `packages/shared/src/crypto.ts` 32 (new since the base); `packages/database/src/client.ts` 171 and `packages/database/src/index.ts` 14; `packages/decision-intelligence/src/decide.ts` 146, `structuralValidation.ts` 98, `persist.ts` 51, `engine.ts` 99; `services/worker/src/index.ts` 741 (mixed file: the `workerDb`/`shutdown`, intake-gate and bounded-producer parts).
+**PROPOSED scope additions - NOT APPROVED, NOT PART OF THE CURRENT SCOPE until the owner decides (not in the earlier package):** `apps/api/src/internalIngest.ts` 240 and `apps/api/src/internalIngestValidation.ts` 251 (internal capture endpoint: bearer auth, proxy-header refusal, rate and volume caps, chat gate, validation); `adapters/telegram/src/intakePolicy.ts` 99 (approved-chat allowlist and options-only guard shared by API and worker). These were written after the earlier package and are security-relevant.
+
+**Reproduction command (diff aid):**
+`git diff b2ad592be7bdd3747cfed92b3eaa0557491c853c 702d4a82ba37e3e533f5acdd652b290bb025e7b1 -- apps/api/src/index.ts packages/shared/src/crypto.ts packages/database/src/client.ts packages/database/src/index.ts packages/decision-intelligence/src/decide.ts packages/decision-intelligence/src/structuralValidation.ts packages/decision-intelligence/src/persist.ts packages/decision-intelligence/src/engine.ts services/worker/src/index.ts`
+
+**Changes to F1-scope files since the earlier package (commits touching them after 2026-10-19):** `fb3320c` (database schema, migrations 0004-0006, bounded client), `6d17f80` (shared crypto helpers, correlation ids, structured logging), `6be1c64` (revision-aware ingestion, options claims, fail-closed decisions), `ad2478e` (bounded webhook intake, correlated worker, read-only viewer), `5cdeb10` (approved-chat allowlist and options-only intake guards), `2aba808` (user-capture provenance, internal ingest endpoint and worker events), `702d4a8` (optional `analysisMarket` seam in the worker; test isolation). The first six are the 2026-10-22 commits that committed the previously uncommitted working tree; `702d4a8` is the only change after that in these files.
+
+**Known unverified items (for the reviewer; nothing below is asserted as correct):**
+1. The agent-made remediations R1-R7 below are unreviewed (self-implemented).
+2. Tracked items T2, T3, T4, T5, T7 below were not remediated; the pre-remediation probe results below were taken on 2026-10-19 and were not re-run at the target.
+3. Test results (938 unit tests and the integration runs at `702d4a8`) are the implementing agent's and are not a review; hosted CI was not observed.
+4. The running staging api/worker image (`capture-8cb22f9`) has not been mapped to a commit (finding F-009), so reviewing the target does not establish what runs.
+5. The executable-freshness policy is undefined (see below); nothing may execute on an engine `APPROVE`.
+6. The proposed scope additions above have no earlier review material at all.
+
+**Required reviewer profile (owner decision D-036):** independent of the implementation of the code under review; relevant Node.js/TypeScript backend experience; competence in authentication, webhook and input handling, cryptography usage and secret handling; competence in PostgreSQL connection, transaction and shutdown lifecycle; ability to evaluate decision guards and fail-closed behaviour.
+**Required reviewer deliverable to close F1:** name and date; the commit(s) and files actually examined; findings with severity; an explicit accept / changes-requested per area (sections 1-4 below, plus any approved scope additions); and a statement of what was NOT examined. Only after that may the package be labelled independently reviewed. Until then F1 is OPEN.
+
 ## Remediation applied 2026-10-19 (by the implementing agent; to be reviewed, not self-certified)
 | # | Change | Where | Tests |
 |---|---|---|---|
