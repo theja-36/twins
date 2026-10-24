@@ -218,7 +218,8 @@ services:
     <<: *hardening
     restart: "no"
     profiles: ["capture"]
-    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    # Its own optional tag, so the capture client can be updated without recreating the API or worker; unset = the shared TWINS_IMAGE_TAG.
+    image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}
     pull_policy: never
     user: "1000:1000"
     working_dir: /app

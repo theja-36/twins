@@ -12,6 +12,8 @@ from .tdlib import CaptureError, FloodWait, req
 
 REQUEST_TIMEOUT = 60.0
 LOGIN_TIMEOUT = 600.0
+CLOSE_REQUEST_TIMEOUT = 10.0
+CLOSE_WAIT_TIMEOUT = 15.0  # request + wait stay under the container's 30 s stop grace period
 STALE_CONNECTION_SECONDS = 600
 MAX_LOAD_PAGES = 10
 CHAT_LIST_MAIN = {"@type": "chatListMain"}
@@ -265,10 +267,23 @@ class Session(object):
                 raise Recoverable("connection stale")
 
     def close(self):
+        """Graceful TDLib shutdown. `close` is only the START of closing: TDLib answers `ok` at once, then flushes its database and stops its
+        threads and finally announces authorizationStateClosed. The process must not exit before that, or TDLib's threads are torn down
+        mid-shutdown (an intermittent SIGABRT, exit code 134, was observed). So: ask, then keep receiving until Closed (bounded)."""
+        if self.auth_state == "authorizationStateClosed":
+            return True
         try:
-            self.request("close", timeout=15.0)
+            self.request("close", timeout=CLOSE_REQUEST_TIMEOUT)
         except CaptureError:
             pass
+        deadline = self.clock() + CLOSE_WAIT_TIMEOUT
+        while self.auth_state != "authorizationStateClosed" and self.clock() < deadline:
+            self.pump(1.0)
+        if self.auth_state == "authorizationStateClosed":
+            self.log.log("capture.closed", tdlib_state="authorizationStateClosed")
+            return True
+        self.log.log("capture.close_timeout", level="warn", tdlib_state=_safe_name(self.auth_state))
+        return False
 
 
 def check_session_dir(path):

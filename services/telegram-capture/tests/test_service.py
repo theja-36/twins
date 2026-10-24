@@ -10,7 +10,7 @@ from twins_capture.service import EXIT_AUTH, EXIT_BLOCKED, EXIT_CHAT, EXIT_INGES
 from twins_capture.tdlib import CaptureError
 
 
-def service(env, stop_after=5, backoff=None):
+def service(env, stop_after=5, backoff=None, sleep=None):
     end = env.clock() + stop_after
     calls = {"n": 0}
 
@@ -18,7 +18,7 @@ def service(env, stop_after=5, backoff=None):
         calls["n"] += 1  # a supervisor that spins without waiting (e.g. retrying a flood-wait) is cut off and fails the assertions instead of hanging
         return env.clock() >= end or calls["n"] > 2000
 
-    return run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, env.clock.sleep, should_stop, backoff=backoff)
+    return run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, sleep or env.clock.sleep, should_stop, backoff=backoff)
 
 
 class BackoffRules(unittest.TestCase):
@@ -43,7 +43,8 @@ class SupervisorStops(unittest.TestCase):
         env.transport.errors["getChat"] = (429, "Too Many Requests: retry after 120")
         self.assertEqual(service(env), EXIT_BLOCKED)
         self.assertEqual(len([r for r in env.transport.sent if r["@type"] == "getChat"]), 1)
-        self.assertEqual(env.state.blocked_until(), int(env.clock()) + 120 + 60)
+        # blocked_until = (time of the error) + 120 s + 60 s margin; the graceful close afterwards advances the fake clock a little
+        self.assertTrue(0 <= (env.clock() - (env.state.blocked_until() - 180)) <= 20, env.state.blocked_until())
         self.assertEqual(env.transport.client_ids, 1)  # no second client
         alerts = [r for r in env.logs() if r["event"] == "capture.alert"]
         self.assertEqual(alerts[0]["reason"], "flood_wait")
@@ -102,8 +103,7 @@ class SupervisorStops(unittest.TestCase):
         env.transport.errors["getChat"] = (500, "Internal")
         slept = []
         original = env.clock.sleep
-        env.clock.sleep = lambda s: (slept.append(s), original(s))[1]
-        self.assertEqual(service(env, stop_after=3000, backoff=Backoff(rng=lambda: 0.0)), EXIT_OK)
+        self.assertEqual(service(env, stop_after=3000, backoff=Backoff(rng=lambda: 0.0), sleep=lambda sec: (slept.append(sec), original(sec))[1]), EXIT_OK)
         delays = [s for s in slept if s >= 1 and s == int(s) and s in (1, 2, 4, 8, 16, 32, 64, 128, 256, 300)]
         self.assertGreaterEqual(len(delays), 8)
         self.assertEqual(delays[:8], [1, 2, 4, 8, 16, 32, 64, 128])
@@ -230,3 +230,64 @@ class RealHttp(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class GracefulShutdown(unittest.TestCase):
+    """TDLib `close` only STARTS closing. The process must not exit before authorizationStateClosed (the intermittent SIGABRT / exit 134)."""
+
+    def test_close_waits_for_the_closed_state_before_returning(self):
+        from twins_capture.session import Session
+        env = Env()
+        session = Session(env.transport, env.cfg, env.sink, env.log, env.state, env.clock, env.clock.sleep)
+        session.ensure_ready(None)
+        self.assertFalse(env.transport.closed_delivered)
+        self.assertTrue(session.close())
+        self.assertTrue(env.transport.closed_delivered)  # returned only AFTER Closed was received
+        self.assertEqual(session.auth_state, "authorizationStateClosed")
+        self.assertGreater(env.transport.close_polls, env.transport.close_delay_polls)  # it really kept receiving
+        self.assertIn("capture.closed", [r["event"] for r in env.logs()])
+        env.close()
+
+    def test_close_is_bounded_when_telegram_never_reports_closed(self):
+        from twins_capture.session import CLOSE_REQUEST_TIMEOUT, CLOSE_WAIT_TIMEOUT, Session
+        env = Env()
+        env.transport.never_close = True
+        session = Session(env.transport, env.cfg, env.sink, env.log, env.state, env.clock, env.clock.sleep)
+        session.ensure_ready(None)
+        before = env.clock()
+        self.assertFalse(session.close())
+        self.assertLessEqual(env.clock() - before, CLOSE_REQUEST_TIMEOUT + CLOSE_WAIT_TIMEOUT + 2)
+        self.assertLess(CLOSE_REQUEST_TIMEOUT + CLOSE_WAIT_TIMEOUT, 30)  # inside the container's 30 s stop grace period
+        self.assertIn("capture.close_timeout", [r["event"] for r in env.logs()])
+        env.close()
+
+    def test_an_already_closed_client_is_not_asked_again(self):
+        from twins_capture.session import Session
+        env = Env()
+        session = Session(env.transport, env.cfg, env.sink, env.log, env.state, env.clock, env.clock.sleep)
+        session.ensure_ready(None)
+        session.close()
+        sent = len(env.transport.sent)
+        self.assertTrue(session.close())
+        self.assertEqual(len(env.transport.sent), sent)
+        env.close()
+
+    def test_a_stop_signal_ends_the_service_with_exit_code_0_only_after_tdlib_closed(self):
+        env = Env()
+        calls = {"n": 0}
+
+        def should_stop():
+            calls["n"] += 1
+            return calls["n"] > 3  # the SIGTERM flag flips while the service is running
+
+        code = run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, env.clock.sleep, should_stop)
+        self.assertEqual(code, EXIT_OK)
+        self.assertTrue(env.transport.closed_delivered)  # run_service returns (the process may exit) only after Closed
+        env.close()
+
+    def test_fatal_stops_also_wait_for_the_closed_state(self):
+        env = Env(ready=False)  # authorization failure path
+        code = run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, env.clock.sleep, lambda: False)
+        self.assertEqual(code, EXIT_AUTH)
+        self.assertTrue(env.transport.closed_delivered)
+        env.close()

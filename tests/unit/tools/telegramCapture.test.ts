@@ -118,6 +118,26 @@ describe("capture client: no content, no secrets, no escape hatches", () => {
   });
 });
 
+describe("capture client: graceful shutdown (no SIGABRT / exit 134)", () => {
+  const session = sources[`${DIR}/twins_capture/session.py`] ?? "";
+  const service = sources[`${DIR}/twins_capture/service.py`] ?? "";
+  it("close() waits for authorizationStateClosed (bounded) before returning, so the process never exits mid-TDLib-shutdown", () => {
+    const close = /    def close\(self\):[\s\S]*?\n\n\ndef check_session_dir/.exec(session)?.[0] ?? "";
+    expect(close).toContain('self.request("close", timeout=CLOSE_REQUEST_TIMEOUT)');
+    expect(close).toMatch(/while self\.auth_state != "authorizationStateClosed" and self\.clock\(\) < deadline:\s+self\.pump\(1\.0\)/);
+    expect(close).toContain("capture.close_timeout");
+    expect(session).toMatch(/CLOSE_REQUEST_TIMEOUT = 10\.0/);
+    expect(session).toMatch(/CLOSE_WAIT_TIMEOUT = 15\.0/); // 10 + 15 < the container's 30 s stop grace period
+  });
+  it("every way out of the supervisor goes through session.close() (finally), and the signal handlers only set a flag", () => {
+    expect(service).toMatch(/finally:\s+session\.close\(\)/);
+    expect(sources[MAIN]).toContain('signal.signal(signal.SIGTERM, lambda *_: stop.__setitem__("flag", True))');
+    expect(sources[MAIN]).toContain('signal.signal(signal.SIGINT, lambda *_: stop.__setitem__("flag", True))');
+    expect(all).not.toMatch(/os\._exit|os\.kill|os\.abort|faulthandler|\bsignal\.(alarm|SIGKILL)/); // nothing may bypass the graceful close
+    expect(sources[MAIN]).toContain("sys.exit(main(sys.argv[1:], os.environ))"); // exit code 0 comes from run_service's EXIT_OK
+  });
+});
+
 describe("capture client: payloads are accepted by the REAL API validator", () => {
   it("new, edited (with entities and caption) and deleted payloads validate", () => {
     const script = `

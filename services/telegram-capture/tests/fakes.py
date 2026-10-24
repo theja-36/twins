@@ -61,6 +61,8 @@ class FakeTransport(object):
         self.ready, self.protected, self.member, self.commit, self.version = ready, protected, member, commit, version
         self.auth_after_params = "authorizationStateReady" if ready else "authorizationStateWaitCode"
         self.client_ids = 0
+        self.closing, self.close_polls, self.close_delay_polls, self.never_close = False, 0, 2, False
+        self.closed_delivered = False
 
     def execute(self, request):
         ensure_allowed(request.get("@type"))
@@ -86,7 +88,10 @@ class FakeTransport(object):
             self.inbox.appendleft({"@type": "error", "@extra": extra, "code": code, "message": text})
             return
         reply = {"@type": "ok"}
-        if kind == "getOption":
+        if kind == "close":
+            self.closing = True  # TDLib answers `ok` at once and only LATER reports authorizationStateClosed
+            self.inbox.append({"@type": "updateAuthorizationState", "authorization_state": {"@type": "authorizationStateClosing"}})
+        elif kind == "getOption":
             self.push_state("authorizationStateWaitTdlibParameters")
         elif kind == "setTdlibParameters":
             self.push_state(self.auth_after_params)
@@ -108,7 +113,16 @@ class FakeTransport(object):
 
     def receive(self, timeout):
         if self.inbox:
-            return self.inbox.popleft()
+            update = self.inbox.popleft()
+            if update.get("@type") == "updateAuthorizationState" and update["authorization_state"]["@type"] == "authorizationStateClosed":
+                self.closed_delivered = True
+            return update
+        if self.closing and not self.never_close:
+            self.close_polls += 1
+            if self.close_polls > self.close_delay_polls:
+                self.push_state("authorizationStateClosed")
+                self.closing = False
+                return self.receive(timeout)
         self.clock.sleep(timeout)
         return None
 

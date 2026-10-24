@@ -161,8 +161,9 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: all five app services share one tag variable, default `local`", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(5);
+  it("a new image gets its own tag and never overwrites the running one: the four shared app services use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(4);
+    expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
     expect(compose.match(/pull_policy: never/g)?.length).toBe(5); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
