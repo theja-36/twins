@@ -57,6 +57,13 @@
       "when": 1792679391450,
       "tag": "0007_telegram_user_capture_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792856153526,
+      "tag": "0008_approval_bot_review_log",
+      "breakpoints": true
     }
   ]
 }

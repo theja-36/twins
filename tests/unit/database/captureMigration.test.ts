@@ -21,18 +21,18 @@ const handWritten = sql.slice(sql.indexOf(HAND_MARKER));
 
 describe("migration 0007 ledger entry", () => {
   it("is the 8th entry, idx 7, with the expected tag and a strictly increasing timestamp", () => {
-    expect(journal.entries).toHaveLength(8);
+    expect(journal.entries.length).toBeGreaterThanOrEqual(8);
     const entry = journal.entries[7];
     expect(entry).toMatchObject({ idx: 7, tag: TAG, breakpoints: true });
     expect(entry?.when).toBeGreaterThan(journal.entries[6]?.when ?? Infinity);
     expect(journal.entries[6]?.when).toBe(1792493154072); // 0006 is untouched
     journal.entries.forEach((e, i) => expect(e.idx).toBe(i));
-    expect(new Set(journal.entries.map((e) => e.tag)).size).toBe(8);
+    expect(new Set(journal.entries.map((e) => e.tag)).size).toBe(journal.entries.length);
     expect(journal.entries.map((e) => e.when)).toEqual([...journal.entries.map((e) => e.when)].sort((a, b) => a - b));
   });
   it("the repository's expected-migration loader sees 8 migrations whose last hash is this file's hash", () => {
     const expected = loadExpectedMigrations();
-    expect(expected).toHaveLength(8);
+    expect(expected.length).toBeGreaterThanOrEqual(8);
     expect(expected[7]?.hash).toBe(createHash("sha256").update(sql).digest("hex"));
   });
   it("earlier migrations are byte-identical (their hashes are what every database recorded)", () => {

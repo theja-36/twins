@@ -1,0 +1,16 @@
+{
+  "name": "@twins/approval-bot",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx src/index.ts"
+  },
+  "dependencies": {
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.6",
+    "tsx": "^4.16.0"
+  }
+}

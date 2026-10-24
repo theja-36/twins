@@ -245,6 +245,31 @@ services:
     mem_limit: 512m
     cpus: 0.5
 
+  # Telegram APPROVAL BOT (T5). OFF by default: profile `bot`; a plain `up` never starts it. It records an approver's approve/reject on parsed options
+  # claims and places NO order (no broker code exists in the image path it runs). Two independent locks: the container must be started AND
+  # TWINS_BOT_ACTIVE=true must be set in bot.env. Its secrets (token, approver id, restricted-role database URL, HMAC key) live ONLY in the host file
+  # bot.env (0600, never in the repository or staging.env), which no other service receives. The database role `twins_bot` cannot write claims
+  # or read the channel text (infrastructure/staging/approval-bot-role.sql). Outbound is through its own `twins_bot_egress` network, limited to
+  # Telegram's ranges on tcp/443 by the host firewall (bot-egress-firewall.sh); the bot refuses to start if a non-Telegram canary host is reachable,
+  # and on any fatal condition it alerts and HOLDS 15 minutes before exiting, so `unless-stopped` cannot become a tight restart loop.
+  approval-bot:
+    <<: *hardening
+    profiles: ["bot"]
+    image: twins-staging:${TWINS_BOT_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/services/approval-bot/src/index.ts", "run"]
+    env_file:
+      - path: ./bot.env
+        required: false
+    environment:
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data, twins_bot_egress]
+    stop_grace_period: 20s
+    mem_limit: 192m
+    cpus: 0.25
+
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks
@@ -252,6 +277,10 @@ networks:
     ipam:
       config:
         - subnet: 10.0.24.0/24   # free on the host when chosen (existing bridges use 10.0.0.0/24 .. 10.0.23.0/24)
+  twins_bot_egress:              # ordinary outbound (NAT) for the approval bot ONLY; narrowed to Telegram by the host firewall
+    ipam:
+      config:
+        - subnet: 10.0.25.0/24   # chosen as the next free /24 after twins_egress; verify it is free on the host before creating
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true

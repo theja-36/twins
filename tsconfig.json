@@ -18,6 +18,7 @@
     { "path": "adapters/broker" },
     { "path": "apps/api" },
     { "path": "services/worker" },
-    { "path": "services/scheduler" }
+    { "path": "services/scheduler" },
+    { "path": "services/approval-bot" }
   ]
 }

@@ -18,3 +18,4 @@ export * from "./qualityAssessments";
 export * from "./entities";
 export * from "./signalValidations";
 export * from "./optionsClaims";
+export * from "./approvalBot";

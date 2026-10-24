@@ -165,7 +165,7 @@ describe("staging packaging (static)", () => {
     expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(4);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(5); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(6); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -225,7 +225,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(5);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(6);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

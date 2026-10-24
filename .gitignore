@@ -24,4 +24,5 @@ data/options-snapshots/
 
 # Filled staging environment file (real secrets) - never commit
 infrastructure/staging/staging.env
+infrastructure/staging/bot.env
 infrastructure/staging/backups/
