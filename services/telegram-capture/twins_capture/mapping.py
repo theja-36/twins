@@ -129,3 +129,18 @@ def build_payload(action, chat_id, observed_iso, message=None, ids=None):
         body["event"] = "message"
         body["messages"] = [message]
     return body
+
+
+def build_history_payload(chat_id, observed_iso, messages, batch_id):
+    """POST body for one history-import batch (captureMethod api_history). `messages` are already mapped (map_message); the batch carries its
+    own lowest id/date so the server can record the import range."""
+    lowest = min(messages, key=lambda m: m["id"])
+    return {
+        "schemaVersion": 1,
+        "captureMethod": "api_history",
+        "chat": {"id": chat_id, "type": "channel"},
+        "event": "message",
+        "messages": list(messages),
+        "clientObservedAt": observed_iso,
+        "importBatch": {"batchId": batch_id, "lowestMessageId": lowest["id"], "lowestMessageDate": lowest["date"]},
+    }

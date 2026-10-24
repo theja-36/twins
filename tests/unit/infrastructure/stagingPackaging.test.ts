@@ -195,10 +195,10 @@ describe("staging packaging (static)", () => {
     expect([...new Set([...service("api").matchAll(/Path\(`([^`]*)`\)/g)].map((m) => m[1]))]).toEqual(["/health"]);
     expect(service("api")).not.toMatch(/PathPrefix|PathRegexp/);
   });
-  it("the capture service is off by default, internal-only, read-only, restart no, with two backup-excluded volumes and no secret literals", () => {
+  it("the capture service is off by default, read-only, restart unless-stopped, with two backup-excluded volumes and no secret literals", () => {
     const c = service("capture");
     expect(c).toMatch(/profiles: \["capture"\]/); // a plain `up` never starts it
-    expect(c).toMatch(/restart: "no"/); // a stop on flood-wait or authorization failure stays stopped
+    expect(c).toMatch(/restart: unless-stopped/); // survives a crash/reboot but not a manual stop; the client holds 15 min before exiting on a fatal condition and refuses to run with open egress
     expect(c).toMatch(/networks: \[twins_data, twins_egress\]/); // internal network for the API + its own outbound network; no coolify, no edge
     expect(compose).toMatch(/twins_egress:[\s\S]*?subnet: 10\.0\.24\.0\/24/);
     expect(compose).not.toMatch(/twins_egress:[^\n]*\n\s+internal: true/); // it must route out (that is its only purpose)

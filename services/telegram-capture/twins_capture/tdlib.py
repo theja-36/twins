@@ -21,11 +21,14 @@ ALLOWED_REQUESTS = frozenset(
         "getChat",
         "getSupergroup",
         "getMessage",                    # read one message of an approved chat (to read the new content of an edit)
+        "getChatHistory",                # history pilot only: read-only, hard-limited below, used solely by history.py
         "logOut",
         "close",
     }
 )
 LOG_STREAM_EMPTY = {"@type": "logStreamEmpty"}
+CHAT_SCOPED_REQUESTS = frozenset({"getChat", "getMessage", "getChatHistory"})
+HISTORY_PAGE_LIMIT = 50  # hard cap per getChatHistory request, enforced in req() so no caller can widen it
 
 
 class CaptureError(Exception):
@@ -50,8 +53,14 @@ def ensure_allowed(request_type):
 def req(allowed_chats, request_type, **fields):
     """Builds a request. Any request that names a chat may name ONLY an approved chat (second allowlist, same discipline)."""
     ensure_allowed(request_type)
+    if request_type in CHAT_SCOPED_REQUESTS and "chat_id" not in fields:
+        raise CaptureError("internal error: a chat-scoped request must name its chat")  # an omitted chat_id must not skip the approved-chat check
     if "chat_id" in fields and fields["chat_id"] not in allowed_chats:
         raise CaptureError("internal error: chat is not approved")
+    if request_type == "getChatHistory":
+        limit, offset, only_local, from_id = fields.get("limit"), fields.get("offset"), fields.get("only_local"), fields.get("from_message_id")
+        if not all(isinstance(v, int) and not isinstance(v, bool) for v in (limit, offset, from_id)) or not 1 <= limit <= HISTORY_PAGE_LIMIT or offset != 0 or from_id < 0 or only_local is not False:
+            raise CaptureError("internal error: getChatHistory parameters are outside the hard limits")
     body = {"@type": request_type}
     body.update(fields)
     return body

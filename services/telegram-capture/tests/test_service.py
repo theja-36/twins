@@ -5,8 +5,8 @@ import threading
 import unittest
 
 from fakes import CHAT, TOKEN, Env, tdmsg
-from twins_capture.ingest import Backoff, HttpPoster, IngestFatal, MAX_BACKOFF_SECONDS, MAX_QUEUE, Sink
-from twins_capture.service import EXIT_AUTH, EXIT_BLOCKED, EXIT_CHAT, EXIT_INGEST, EXIT_OK, run_service
+from twins_capture.ingest import Backoff, HttpPoster, IngestFatal, MAX_BACKOFF_SECONDS, MAX_QUEUE, Sink, egress_is_restricted
+from twins_capture.service import EXIT_AUTH, EXIT_BLOCKED, EXIT_CHAT, EXIT_EGRESS, EXIT_INGEST, EXIT_OK, FATAL_HOLD_SECONDS, run_service
 from twins_capture.tdlib import CaptureError
 
 
@@ -291,3 +291,130 @@ class GracefulShutdown(unittest.TestCase):
         self.assertEqual(code, EXIT_AUTH)
         self.assertTrue(env.transport.closed_delivered)
         env.close()
+
+
+class FatalHoldAndEgress(unittest.TestCase):
+    """Under `restart: unless-stopped` a fatal stop must not become a tight restart loop, and the service must not run with open egress."""
+
+    def run_never_stopping(self, env, **kwargs):
+        slept = []
+        original = env.clock.sleep
+        calls = {"n": 0}
+
+        def should_stop():
+            calls["n"] += 1
+            return calls["n"] > 5000  # a supervisor that never stops on its own fails the assertions instead of hanging the suite
+
+        code = run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, lambda sec: (slept.append(sec), original(sec))[1], should_stop, **kwargs)
+        return code, slept
+
+    def test_a_fatal_condition_holds_for_fifteen_minutes_AFTER_tdlib_closed_and_then_exits_with_its_code(self):
+        env = Env(ready=False)  # authorization failure
+        closed_when_hold_started = []
+
+        def sleep(sec):
+            if sec == 1.0 and not closed_when_hold_started:
+                closed_when_hold_started.append(env.transport.closed_delivered)
+            env.clock.sleep(sec)
+
+        t0 = env.clock()
+        calls = {"n": 0}
+
+        def should_stop():
+            calls["n"] += 1
+            return calls["n"] > 5000
+
+        code = run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, sleep, should_stop)
+        self.assertEqual(code, EXIT_AUTH)
+        self.assertEqual(FATAL_HOLD_SECONDS, 900)
+        self.assertGreaterEqual(env.clock() - t0, FATAL_HOLD_SECONDS)
+        self.assertLess(env.clock() - t0, FATAL_HOLD_SECONDS + 60)
+        self.assertEqual(closed_when_hold_started, [True])  # the hold starts only after TDLib reported Closed
+        self.assertEqual(env.transport.client_ids, 1)  # no second client during the hold
+        env.close()
+
+    def test_a_stop_signal_ends_the_hold_at_once(self):
+        env = Env(ready=False)
+        calls = {"n": 0}
+
+        def should_stop():
+            calls["n"] += 1
+            return calls["n"] > 12
+
+        t0 = env.clock()
+        code = run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, env.clock.sleep, should_stop)
+        self.assertEqual(code, EXIT_AUTH)
+        self.assertLess(env.clock() - t0, 60)
+        env.close()
+
+    def test_every_fatal_exit_holds(self):
+        for kwargs, expect in (({"ready": False}, EXIT_AUTH), ({"protected": True}, EXIT_CHAT)):
+            env = Env(**kwargs)
+            t0 = env.clock()
+            code, _ = self.run_never_stopping(env)
+            self.assertEqual(code, expect)
+            self.assertGreaterEqual(env.clock() - t0, FATAL_HOLD_SECONDS)
+            env.close()
+        env = Env(statuses=[401])
+        env.transport.inbox.append({"@type": "updateNewMessage", "message": tdmsg(CHAT, 5, "hi")})
+        t0 = env.clock()
+        code, _ = self.run_never_stopping(env)
+        self.assertEqual(code, EXIT_INGEST)
+        self.assertGreaterEqual(env.clock() - t0, FATAL_HOLD_SECONDS)
+        env.close()
+
+    def test_a_clean_stop_and_a_transient_restart_do_not_hold(self):
+        env = Env()
+        t0 = env.clock()
+        self.assertEqual(service(env, stop_after=5), EXIT_OK)
+        self.assertLess(env.clock() - t0, 60)
+        env.close()
+
+    def test_unrestricted_egress_refuses_to_start_before_tdlib_or_any_session(self):
+        env = Env()
+        code, _ = self.run_never_stopping(env, egress_check=lambda: False)
+        self.assertEqual(code, EXIT_EGRESS)
+        self.assertEqual(env.transport.client_ids, 0)
+        self.assertEqual((env.transport.executed, env.transport.sent), ([], []))  # TDLib never touched
+        self.assertIn("egress_unrestricted", [r.get("reason") for r in env.logs()])
+        env.close()
+
+    def test_restricted_egress_lets_the_service_start(self):
+        env = Env()
+        self.assertEqual(service_with_check(env, lambda: True), EXIT_OK)
+        self.assertEqual(env.transport.client_ids, 1)
+        env.close()
+
+    def test_the_probe_is_fail_closed(self):
+        import errno
+        import socket
+        def raising(error):
+            def connect(target, timeout):
+                raise error
+            return connect
+        class Conn(object):
+            closed = False
+            def close(self):
+                Conn.closed = True
+        self.assertTrue(egress_is_restricted(connect=raising(socket.timeout())))
+        self.assertTrue(egress_is_restricted(connect=raising(OSError(errno.ENETUNREACH, "unreachable"))))
+        self.assertTrue(egress_is_restricted(connect=raising(OSError(errno.EHOSTUNREACH, "no route"))))
+        self.assertFalse(egress_is_restricted(connect=raising(ConnectionRefusedError(errno.ECONNREFUSED, "refused"))))  # something answered
+        self.assertFalse(egress_is_restricted(connect=raising(ConnectionResetError(errno.ECONNRESET, "reset"))))
+        self.assertFalse(egress_is_restricted(connect=raising(ValueError("unexpected"))))
+        self.assertFalse(egress_is_restricted(connect=lambda target, timeout: Conn()))
+        self.assertTrue(Conn.closed)  # a completed connection is closed at once, and counts as UNRESTRICTED
+        seen = {}
+        egress_is_restricted(connect=lambda target, timeout: (seen.update(target=target, timeout=timeout), Conn())[1])
+        self.assertEqual(seen["target"], ("1.1.1.1", 443))  # a public non-Telegram canary
+        self.assertLessEqual(seen["timeout"], 5)
+
+
+def service_with_check(env, check):
+    calls = {"n": 0}
+
+    def should_stop():
+        calls["n"] += 1
+        return calls["n"] > 3
+
+    return run_service(env.cfg, env.transport, env.sink, env.log, env.state, env.clock, env.clock.sleep, should_stop, egress_check=check)

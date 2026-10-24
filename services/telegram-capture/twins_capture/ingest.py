@@ -1,15 +1,39 @@
 """Delivery to the internal ingest endpoint: bearer token, bounded queue, capped backoff. The API's idempotency makes redelivery safe.
 Responses are reduced to a status class; bodies and payloads are never logged."""
 import collections
+import errno
 import http.client
 import json
 import random
 import re
+import socket
 
 MAX_BACKOFF_SECONDS = 300
 REQUEST_TIMEOUT = 15
 MAX_QUEUE = 500
 MAX_RETRY_AFTER = 3600
+EGRESS_CANARY = ("1.1.1.1", 443)  # a public host that is NOT Telegram: the egress firewall must make it unreachable
+EGRESS_PROBE_TIMEOUT = 4
+
+
+def egress_is_restricted(connect=socket.create_connection, target=EGRESS_CANARY, timeout=EGRESS_PROBE_TIMEOUT):
+    """Fail-closed self-test of the Telegram-only egress firewall, run before the client starts. True ONLY when a connection to a non-Telegram
+    public host times out or has no route (what the DROP rule produces). A completed connection, a refusal/reset (something answered) or any
+    other error is NOT proof of a restriction, so the service refuses to start. This closes the boot-time gap where Docker restarts the
+    container before the host's firewall unit has re-applied the rules."""
+    try:
+        conn = connect(target, timeout=timeout)
+    except (socket.timeout, TimeoutError):
+        return True
+    except OSError as error:
+        return error.errno in (errno.ENETUNREACH, errno.EHOSTUNREACH)
+    except Exception:
+        return False
+    try:
+        conn.close()
+    except Exception:
+        pass
+    return False
 
 
 class Backoff(object):
@@ -35,24 +59,47 @@ class IngestFatal(Exception):
         self.reason, self.status = reason, status
 
 
+def _counts(body):
+    try:
+        data = json.loads(body.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None
+    out = {}
+    for key in ("accepted", "duplicates", "ignored"):
+        value = data.get(key) if isinstance(data, dict) else None
+        out[key] = value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else None
+    return out
+
+
 class HttpPoster(object):
     def __init__(self, scheme, host, port, path, token):
         self._scheme, self._host, self._port, self._path, self._token = scheme, host, port, path, token
 
     def post(self, payload):
         """Returns (status, retry_after_seconds_or_None). Raises OSError/HTTPException on transport failure. No redirects are followed."""
+        status, retry_after, _counts_unused = self.post_detail(payload)
+        return status, retry_after
+
+    def post_detail(self, payload):
+        """Like post(), also returning the API's response counts (or None)."""
         cls = http.client.HTTPSConnection if self._scheme == "https" else http.client.HTTPConnection
         conn = cls(self._host, self._port, timeout=REQUEST_TIMEOUT)
         try:
             body = json.dumps(payload).encode("utf-8")
             conn.request("POST", self._path, body=body, headers={"content-type": "application/json", "authorization": "Bearer " + self._token, "content-length": str(len(body))})
             response = conn.getresponse()
-            response.read(65536)
+            raw = response.read(65536)
             retry = response.getheader("retry-after")
             retry_after = int(retry) if retry and re.match(r"^[0-9]{1,6}\Z", retry) else None
-            return response.status, retry_after
+            return response.status, retry_after, _counts(raw)
         finally:
             conn.close()
+
+
+def post_detail(poster, payload):
+    """One POST for the history import: returns (status, retry_after, counts) where counts is the API's {accepted, duplicates, ignored} (ints
+    only, else None). Raises OSError/HTTPException on transport failure. No retry here: the import stops on the first problem."""
+    return poster.post_detail(payload)
 
 
 class Sink(object):

@@ -202,8 +202,8 @@ class Session(object):
         except CaptureError:
             raise ChatUnavailable("chat_not_found")
 
-    def resolve_chats(self):
-        for chat_id in sorted(self.cfg.chat_ids):
+    def resolve_chats(self, only=None):
+        for chat_id in sorted(self.cfg.chat_ids if only is None else [only]):
             chat = self._find_chat(chat_id)
             chat_type = chat.get("type") if isinstance(chat.get("type"), dict) else {}
             supergroup_id = chat_type.get("supergroup_id")

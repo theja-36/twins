@@ -13,7 +13,7 @@ from twins_capture.tdlib import ALLOWED_REQUESTS, CaptureError, FloodWait, ensur
 
 class AllowlistRuntime(unittest.TestCase):
     def test_forbidden_requests_are_refused(self):
-        for name in ("sendMessage", "forwardMessages", "joinChat", "leaveChat", "deleteMessages", "viewMessages", "openChat", "getChatMember", "getChatHistory", "downloadFile", "toggleChatIsMuted"):
+        for name in ("sendMessage", "forwardMessages", "joinChat", "leaveChat", "deleteMessages", "viewMessages", "openChat", "getChatMember", "getMessages", "searchChatMessages", "downloadFile", "toggleChatIsMuted"):
             with self.assertRaises(CaptureError, msg=name):
                 ensure_allowed(name)
 
@@ -22,8 +22,24 @@ class AllowlistRuntime(unittest.TestCase):
             req(frozenset([CHAT]), "getMessage", chat_id=OTHER_CHAT, message_id=1 << 20)
         self.assertEqual(req(frozenset([CHAT]), "getMessage", chat_id=CHAT, message_id=1 << 20)["chat_id"], CHAT)
 
-    def test_exactly_thirteen_request_types(self):
-        self.assertEqual(len(ALLOWED_REQUESTS), 13)
+    def test_exactly_fourteen_request_types(self):
+        self.assertEqual(len(ALLOWED_REQUESTS), 14)  # the previous 13 plus getChatHistory (history pilot)
+        self.assertIn("getChatHistory", ALLOWED_REQUESTS)
+
+    def test_get_chat_history_is_hard_limited_in_the_request_layer(self):
+        from twins_capture.tdlib import HISTORY_PAGE_LIMIT
+        approved = frozenset([CHAT])
+        ok = dict(chat_id=CHAT, from_message_id=0, offset=0, limit=HISTORY_PAGE_LIMIT, only_local=False)
+        self.assertEqual(req(approved, "getChatHistory", **ok)["limit"], 50)
+        self.assertEqual(HISTORY_PAGE_LIMIT, 50)
+        for change in ({"limit": 51}, {"limit": 100}, {"limit": 0}, {"limit": -1}, {"limit": "50"}, {"limit": True}, {"offset": -5}, {"offset": 10},
+                       {"only_local": True}, {"only_local": None}, {"from_message_id": -1}, {"from_message_id": "0"}, {"chat_id": OTHER_CHAT}):
+            with self.assertRaises(CaptureError, msg=change):
+                req(approved, "getChatHistory", **dict(ok, **change))
+        for missing in ("limit", "offset", "only_local", "from_message_id", "chat_id"):
+            without = {k: v for k, v in ok.items() if k != missing}
+            with self.assertRaises(CaptureError, msg=missing):
+                req(approved, "getChatHistory", **without)
 
     def test_the_transport_refuses_forbidden_requests_before_sending(self):
         env = Env()

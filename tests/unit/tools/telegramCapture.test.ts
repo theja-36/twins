@@ -8,7 +8,7 @@ import { validateIngestBody } from "../../../apps/api/src/internalIngestValidati
  * No Telegram, no native TDLib, no external network: the Python tests use a scripted fake transport and a loopback HTTP server.
  */
 const DIR = "services/telegram-capture";
-const MODULES = ["config", "safelog", "tdlib", "mapping", "ingest", "state", "session", "service"].map((m) => `${DIR}/twins_capture/${m}.py`);
+const MODULES = ["config", "safelog", "tdlib", "mapping", "ingest", "state", "session", "service", "history"].map((m) => `${DIR}/twins_capture/${m}.py`);
 const MAIN = `${DIR}/main.py`;
 const sources = Object.fromEntries([...MODULES, MAIN].map((f) => [f, readFileSync(f, "utf8")])) as Record<string, string>;
 const all = Object.values(sources).join("\n");
@@ -16,7 +16,7 @@ const tdlib = sources[`${DIR}/twins_capture/tdlib.py`] ?? "";
 
 /** The exact TDLib request types the client may send (reviewed). Changing this list is a reviewed change. */
 const EXPECTED_REQUESTS = [
-  "checkAuthenticationCode", "checkAuthenticationPassword", "close", "getChat", "getMessage", "getOption", "getSupergroup",
+  "checkAuthenticationCode", "checkAuthenticationPassword", "close", "getChat", "getChatHistory", "getMessage", "getOption", "getSupergroup",
   "loadChats", "logOut", "setAuthenticationPhoneNumber", "setLogStream", "setLogVerbosityLevel", "setTdlibParameters",
 ].sort();
 const NESTED_TYPES = ["chatListArchive", "chatListMain", "logStreamEmpty"];
@@ -27,6 +27,7 @@ describe("capture client: exact TDLib request allowlist", () => {
   it("ALLOWED_REQUESTS in the source is exactly the reviewed list", () => {
     const block = /ALLOWED_REQUESTS = frozenset\(\s*\{([\s\S]*?)\}\s*\)/.exec(tdlib)?.[1] ?? "";
     expect(sorted(matches(/"([A-Za-z]+)"/g, block))).toEqual(EXPECTED_REQUESTS);
+    expect(EXPECTED_REQUESTS).toHaveLength(14); // 13 + getChatHistory (history pilot)
   });
   it("every request the code can send is on the list, and every listed request is used", () => {
     const used = sorted([
@@ -42,7 +43,7 @@ describe("capture client: exact TDLib request allowlist", () => {
   });
   it("no request type that sends, forwards, joins, leaves, deletes, read-marks or changes anything exists in the source", () => {
     const forbidden =
-      /\b(sendMessage\w*|sendBotStartMessage|forwardMessages|joinChat\w*|leaveChat|deleteMessages\w*|deleteChat\w*|viewMessages|openChat|closeChat|addChatMember\w*|addChatMembers|setChat\w*|createChat\w*|createNewSupergroupChat|setProfile\w*|setName|setUsername|searchPublicChat\w*|downloadFile|getFile|importContacts|addContact|setBio|toggle\w+|report\w+|banChatMember|setMessage\w*|editMessage\w*|readAllChat\w*|getChatMember\w*|getSupergroupMembers|searchChatMembers|getChatAdministrators|getSupergroupFullInfo|getBasicGroupFullInfo|getMe|getUser\w*|getContacts|searchContacts|getChatHistory|getMessages|getMessageThread\w*|searchChatMessages|getCallbackQueryAnswer|getInlineQueryResults)\b/;
+      /\b(sendMessage\w*|sendBotStartMessage|forwardMessages|joinChat\w*|leaveChat|deleteMessages\w*|deleteChat\w*|viewMessages|openChat|closeChat|addChatMember\w*|addChatMembers|setChat\w*|createChat\w*|createNewSupergroupChat|setProfile\w*|setName|setUsername|searchPublicChat\w*|downloadFile|getFile|importContacts|addContact|setBio|toggle\w+|report\w+|banChatMember|setMessage\w*|editMessage\w*|readAllChat\w*|getChatMember\w*|getSupergroupMembers|searchChatMembers|getChatAdministrators|getSupergroupFullInfo|getBasicGroupFullInfo|getMe|getUser\w*|getContacts|searchContacts|getMessages|getMessageThread\w*|searchChatMessages|getCallbackQueryAnswer|getInlineQueryResults)\b/;
     expect(forbidden.test(all)).toBe(false);
   });
   it("login requests exist only in the interactive login step, never in the update loop or the supervisor", () => {
@@ -73,7 +74,7 @@ describe("capture client: no content, no secrets, no escape hatches", () => {
     expect(all).not.toMatch(/\bprint\(/);
     expect(all.match(/sys\.stdout/g)?.length).toBe(1); // safelog default stream
     expect(sources[`${DIR}/twins_capture/safelog.py`]).toContain("sys.stdout");
-    expect(sources[MAIN].match(/sys\.stderr\.write/g)?.length).toBe(2); // usage + config error (names a rule, never a value)
+    expect(sources[MAIN].match(/sys\.stderr\.write/g)?.length).toBe(3); // usage + the two config-error lines (run/login and history); each names a rule, never a value
     expect(all).not.toMatch(/traceback|logging\.|\.exception\(/);
   });
   it("no network code outside the ingest client, no shell, no dynamic code, no serialization of untrusted data", () => {
@@ -109,7 +110,7 @@ describe("capture client: no content, no secrets, no escape hatches", () => {
   });
   it("ships only the reviewed files", () => {
     expect(readdirSync(DIR).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["README.md", "main.py", "tests", "twins_capture"]);
-    expect(readdirSync(`${DIR}/twins_capture`).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["__init__.py", "config.py", "ingest.py", "mapping.py", "safelog.py", "service.py", "session.py", "state.py", "tdlib.py"]);
+    expect(readdirSync(`${DIR}/twins_capture`).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["__init__.py", "config.py", "history.py", "ingest.py", "mapping.py", "safelog.py", "service.py", "session.py", "state.py", "tdlib.py"]);
   });
   it("Dockerfile.capture copies the client (services/ is copied wholesale) and python3 is installed", () => {
     const dockerfile = readFileSync("infrastructure/staging/Dockerfile.capture", "utf8");
@@ -138,8 +139,66 @@ describe("capture client: graceful shutdown (no SIGABRT / exit 134)", () => {
   });
 });
 
+describe("capture client: unattended operation under a restart policy", () => {
+  const service = sources[`${DIR}/twins_capture/service.py`] ?? "";
+  const ingest = sources[`${DIR}/twins_capture/ingest.py`] ?? "";
+  it("refuses to start unless the egress canary is unreachable, BEFORE any TDLib call or session (fail-closed)", () => {
+    expect(service.indexOf("egress_check()")).toBeGreaterThan(0);
+    expect(service.indexOf("egress_check()")).toBeLessThan(service.indexOf("prepare_transport(transport, log)\n    backoff"));
+    expect(service.indexOf("egress_check()")).toBeLessThan(service.indexOf("Session(transport"));
+    expect(sources[MAIN]).toContain("egress_check=egress_is_restricted");
+    expect(ingest).toContain('EGRESS_CANARY = ("1.1.1.1", 443)');
+    expect(ingest).toMatch(/return error\.errno in \(errno\.ENETUNREACH, errno\.EHOSTUNREACH\)/); // a refusal/reset is NOT proof of a restriction
+  });
+  it("every fatal exit holds 15 minutes after closing TDLib, and nothing in the supervisor re-logs-in", () => {
+    expect(service).toContain("FATAL_HOLD_SECONDS = 900");
+    expect(service.match(/_hold\(FATAL_HOLD_SECONDS/g)?.length).toBe(3); // flood block, egress, and the shared fatal path
+    expect(service).toMatch(/finally:\s+session\.close\(\)[^\n]*\n\s+if fatal is not None:\s+_hold\(FATAL_HOLD_SECONDS/); // close first, then hold
+    expect(service).not.toMatch(/Authentication|ensure_ready\(io|TerminalIO/);
+  });
+  it("the compose capture service uses unless-stopped and the exit codes are documented", () => {
+    expect(readFileSync("infrastructure/staging/docker-compose.staging.yml", "utf8")).toMatch(/capture:\n\s+<<: \*hardening\n\s+restart: unless-stopped/);
+    expect(readFileSync(`${DIR}/README.md`, "utf8")).toContain("79");
+  });
+});
+
+describe("capture client: history pilot (read-only, hard-bounded, two-phase)", () => {
+  const history = sources[`${DIR}/twins_capture/history.py`] ?? "";
+  const tdlibSrc = sources[`${DIR}/twins_capture/tdlib.py`] ?? "";
+  it("getChatHistory is requested from exactly one place (history.py) and is hard-limited in the request layer", () => {
+    const users = Object.entries(sources).filter(([f, t]) => /"getChatHistory"/.test(t) && !f.endsWith("tdlib.py")).map(([f]) => f);
+    expect(users).toEqual([`${DIR}/twins_capture/history.py`]);
+    expect(history.match(/session\.request\("getChatHistory"/g)?.length).toBe(1);
+    expect(tdlibSrc).toContain("HISTORY_PAGE_LIMIT = 50");
+    expect(tdlibSrc).toMatch(/not 1 <= limit <= HISTORY_PAGE_LIMIT or offset != 0 or from_id < 0 or only_local is not False/);
+    expect(tdlibSrc).toContain('CHAT_SCOPED_REQUESTS = frozenset({"getChat", "getMessage", "getChatHistory"})');
+    expect(history).toContain("only_local=False");
+  });
+  it("the window is bounded at 50 messages / 7 days / 6 pages and the caller cannot widen it", () => {
+    expect(history).toContain("HISTORY_MAX_MESSAGES = 50");
+    expect(history).toContain("HISTORY_MAX_DAYS = 7");
+    expect(history).toContain("HISTORY_MAX_PAGES = 6");
+    expect(history).toContain("if max_messages > HISTORY_MAX_MESSAGES or max_days > HISTORY_MAX_DAYS:");
+  });
+  it("the dry-run returns before any ingest call; the import verifies the confirmed window BEFORE the first post and never retries", () => {
+    const run = /def run_history[\s\S]*$/.exec(history)?.[0] ?? "";
+    expect(run.indexOf("if not importing:")).toBeGreaterThan(0);
+    expect(run.indexOf("if not importing:")).toBeLessThan(run.indexOf("poster.post_detail"));
+    expect(run.indexOf('report["with_text"] != args["expect_count"]')).toBeLessThan(run.indexOf("poster.post_detail"));
+    expect(run.match(/poster\.post_detail/g)?.length).toBe(1);
+    expect(run).not.toMatch(/while True|retry\(|for attempt|sleep\(/); // no loop around the POST, no sleep-and-retry
+    expect(history).not.toMatch(/sink|Sink/); // the import never goes through the live queue
+    expect(run).toMatch(/finally:\s+session\.close\(\)/);
+  });
+  it("the history command takes the chat explicitly and requires the three confirmed parameters to import", () => {
+    expect(sources[MAIN]).toContain('"--dry-run"');
+    expect(sources[MAIN]).toContain("--import needs --from-ts, --to-id and --expect-count from a confirmed dry-run");
+    expect(sources[MAIN]).toContain("egress_check=egress_is_restricted");
+  });
+});
+
 describe("capture client: payloads are accepted by the REAL API validator", () => {
-  it("new, edited (with entities and caption) and deleted payloads validate", () => {
+  it("new, edited (with entities and caption), deleted and api_history import payloads validate", () => {
     const script = `
 import json, sys
 sys.path.insert(0, "${DIR}")
@@ -155,10 +214,13 @@ for msg in (m(5, "BUY X", entities=ents), m(6, "edited", edit=1760000100), m(7, 
     assert reason is None, reason
     out.append(mapping.build_payload("message", chat, "2026-10-22T00:00:00Z", message=mapped))
 out.append(mapping.build_payload("deleted", chat, "2026-10-22T00:00:00Z", ids=[5, 6]))
+mapped = [mapping.map_message(m(8, "older"))[0], mapping.map_message(m(9, "edited later", edit=1760000300))[0]]
+out.append(mapping.build_history_payload(chat, "2026-10-22T00:00:00Z", mapped, "6f1d2c3a-4b5e-4f60-8a71-92b3c4d5e6f7"))
 print(json.dumps(out))
 `;
     const payloads = JSON.parse(execFileSync("python3", ["-I", "-c", script], { encoding: "utf8" })) as unknown[];
-    expect(payloads).toHaveLength(4);
+    expect(payloads).toHaveLength(5);
+    expect((payloads[4] as { captureMethod: string }).captureMethod).toBe("api_history");
     for (const body of payloads) {
       const result = validateIngestBody(body, Date.now());
       expect(result, JSON.stringify(result)).toMatchObject({ ok: true });

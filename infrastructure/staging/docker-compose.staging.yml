@@ -208,15 +208,19 @@ services:
     mem_limit: 192m
     cpus: 0.25
 
-  # Telegram USER-API capture client (T2b). OFF by default: profile `capture`, so a plain `up` never starts it, and restart is "no" so a stop
-  # on flood-wait or authorization failure STAYS stopped until the owner acts. Read-only root filesystem; its two named volumes hold the encrypted
-  # TDLib database and a little state, are never part of the PostgreSQL backup script, and must never be copied between hosts.
-  # It reaches the API by its unique container name on the INTERNAL network and has ORDINARY outbound connectivity (NAT) through its own
-  # `twins_egress` network. That is NOT a Telegram-only restriction: limiting destinations to Telegram's ranges needs separate, approved host
-  # firewall rules. Nothing else joins twins_egress. The allowlist holds only the owner-approved private test channel (set in staging.env).
+  # Telegram USER-API capture client (T2b). OFF by default: profile `capture`, so a plain `up` never starts it. restart is `unless-stopped`: it
+  # comes back after a crash, a Docker restart or a reboot, but NOT after a manual `compose stop`. That is safe only because the client itself
+  # (a) refuses to start unless a non-Telegram canary host is unreachable (the Telegram-only egress firewall is in force; this also covers a boot
+  # where Docker restarts the container before the host firewall unit has re-applied its rules) and (b) on any fatal condition (flood-wait,
+  # authorization failure, unusable channel, refusing endpoint, open egress) alerts, closes TDLib gracefully and HOLDS for 15 minutes before
+  # exiting, so a restart loop can contact Telegram at most about once per 15 minutes and never logs in by itself.
+  # Read-only root filesystem; its two named volumes hold the encrypted TDLib database and a little state, are never part of the PostgreSQL
+  # backup script, and must never be copied between hosts. It reaches the API by its unique container name on the INTERNAL network and has
+  # outbound connectivity through its own `twins_egress` network, limited to Telegram's ranges on tcp/443 by the host firewall
+  # (infrastructure/staging/capture-egress-firewall.sh, persisted by the systemd unit). The allowlist is set in staging.env.
   capture:
     <<: *hardening
-    restart: "no"
+    restart: unless-stopped
     profiles: ["capture"]
     # Its own optional tag, so the capture client can be updated without recreating the API or worker; unset = the shared TWINS_IMAGE_TAG.
     image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}

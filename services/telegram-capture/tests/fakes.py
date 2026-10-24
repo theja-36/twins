@@ -63,6 +63,8 @@ class FakeTransport(object):
         self.client_ids = 0
         self.closing, self.close_polls, self.close_delay_polls, self.never_close = False, 0, 2, False
         self.closed_delivered = False
+        self.history, self.history_first_page_cap = [], None  # history: raw TDLib messages; first page may return fewer than asked (as TDLib does)
+        self.history_requests = []
 
     def execute(self, request):
         ensure_allowed(request.get("@type"))
@@ -101,6 +103,17 @@ class FakeTransport(object):
             reply = {"@type": "chat", "id": request["chat_id"], "title": "T", "type": {"@type": "chatTypeSupergroup", "supergroup_id": 1}, "has_protected_content": self.protected}
         elif kind == "getSupergroup":
             reply = {"@type": "supergroup", "id": request["supergroup_id"], "is_channel": True, "status": {"@type": self.member}}
+        elif kind == "getChatHistory":
+            self.history_requests.append({k: v for k, v in request.items() if k != "@extra"})
+            ordered = sorted(self.history, key=lambda m: m["id"], reverse=True)
+            if request["from_message_id"] == 0:
+                page = ordered
+            else:
+                page = [m for m in ordered if m["id"] <= request["from_message_id"]]
+            page = page[: request["limit"]]
+            if self.history_first_page_cap is not None and len(self.history_requests) == 1:
+                page = page[: self.history_first_page_cap]
+            reply = {"@type": "messages", "total_count": len(page), "messages": page}
         elif kind == "getMessage":
             found = self.messages.get((request["chat_id"], request["message_id"]))
             if found is None:
@@ -130,6 +143,14 @@ class FakeTransport(object):
 class RecordingPoster(object):
     def __init__(self, statuses=None):
         self.bodies, self.statuses = [], collections.deque(statuses or [])
+        self.detail_counts = {"accepted": None, "duplicates": 0, "ignored": 0}
+
+    def post_detail(self, payload):
+        status, retry = self.post(payload)
+        counts = dict(self.detail_counts)
+        if counts["accepted"] is None:
+            counts["accepted"] = len(payload.get("messages", []))
+        return status, retry, counts
 
     def post(self, payload):
         self.bodies.append(payload)
