@@ -26,13 +26,14 @@ export const REDIS_URL = requireTestRedisUrl();
 export const TEST_API_KEY = "test-twins-api-key-r0b";
 export const TEST_WEBHOOK_SECRET = "test-telegram-secret-r0b";
 
+const SYNTHETIC_SOURCE = "r0b-synthetic";
 export const syntheticMarketProvider: MarketDataProvider = {
   providerName: YAHOO_PROVIDER_NAME,
   async getHistoricalBars(request) {
     return [
       {
         instrument: request.instrument,
-        source: "r0b-synthetic",
+        source: SYNTHETIC_SOURCE,
         timeframe: "1d",
         observedAt: new Date(Date.now() - 60 * 60 * 1000),
         open: 2800,
@@ -130,7 +131,12 @@ export async function createHarness(opts: {
     async (job: Job<TelegramJobPayload>) => {
       const id = String(job.id);
       invocations.set(id, (invocations.get(id) ?? 0) + 1);
-      await processTelegramQueueJob(job, undefined, workerDb, opts.logger ? { logger: opts.logger } : {});
+      await processTelegramQueueJob(job, undefined, workerDb, {
+        ...(opts.logger ? { logger: opts.logger } : {}),
+        // The harness's market provider writes SYNTHETIC bars; name that source/context so the analysis uses them and never depends on
+        // real (Yahoo) bars that may be sitting in a shared database and ageing past the freshness window.
+        analysisMarket: { source: SYNTHETIC_SOURCE, timeframe: "1d", context: "synthetic" },
+      });
     },
     { connection: workerRedis, concurrency: 1 },
   );

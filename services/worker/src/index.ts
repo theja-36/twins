@@ -152,6 +152,12 @@ export interface TelegramJobOptions {
    * Tests inject an explicit policy.
    */
   intakePolicy?: Pick<TelegramIntakePolicy, "isChatApproved" | "optionsOnly">;
+  /**
+   * Which market bars the validation analyses. Default (and the only production behaviour): the Yahoo daily bars this worker just
+   * refreshed - never synthetic rows. Tests that run the pipeline on SYNTHETIC bars name that source and context explicitly,
+   * so they do not depend on whatever real bars happen to be in the database (which age out of the freshness window).
+   */
+  analysisMarket?: { source: string; timeframe: string; context?: "analysis" | "synthetic" };
 }
 
 export type TelegramJobOutcomeKind =
@@ -212,7 +218,11 @@ export async function processTelegramQueueJob(
   const startedAt = Date.now();
   log.info("worker.job.started");
   try {
-    const result = await processTelegramJob(job, correlationId, db, { logger: log, ...(options.intakePolicy ? { intakePolicy: options.intakePolicy } : {}) });
+    const result = await processTelegramJob(job, correlationId, db, {
+      logger: log,
+      ...(options.intakePolicy ? { intakePolicy: options.intakePolicy } : {}),
+      ...(options.analysisMarket ? { analysisMarket: options.analysisMarket } : {}),
+    });
     log.info("worker.job.completed", { ...result, durationMs: Date.now() - startedAt });
   } catch (err) {
     const permanent = err instanceof ReconciliationRequiredError || err instanceof InvalidJobInputError;
@@ -587,7 +597,7 @@ export async function processTelegramJob(
     // Explicit analysis inputs: the Yahoo daily bars this worker just refreshed (never synthetic rows), cut at now.
     // No macro relevance rule exists yet, so no macro row is used as evidence.
     asOf: new Date(),
-    intelligence: { market: { source: YAHOO_PROVIDER_NAME, timeframe: "1d" } },
+    intelligence: { market: options.analysisMarket ?? { source: YAHOO_PROVIDER_NAME, timeframe: "1d" } },
   });
 
   log.info("worker.validation.recorded", {
