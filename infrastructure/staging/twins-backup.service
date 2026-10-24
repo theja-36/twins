@@ -1,0 +1,12 @@
+# Runs one verified, encrypted, local PostgreSQL backup (see twins-backup.sh). Triggered by twins-backup.timer.
+[Unit]
+Description=TWINS staging daily encrypted PostgreSQL backup
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/twins-backup
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=idle

@@ -1,0 +1,12 @@
+# Daily at 02:30 UTC (design 0C). Persistent: a run missed while the host was down is made up at the next boot.
+[Unit]
+Description=TWINS staging daily backup timer
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=twins-backup.service
+
+[Install]
+WantedBy=timers.target
