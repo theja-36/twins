@@ -64,7 +64,7 @@ services:
 
   redis:
     <<: *hardening
-    image: redis:7-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499   # Redis 7.4.11, resolved 2026-10-21
+    image: redis:8-alpine@sha256:0bf6577d7774e592b29d093e3ac9390eb91e13d72c21e506afce736de5e0eeb0   # Redis 7.4.11, resolved 2026-10-21
     user: redis                 # run unprivileged from the start; /data in the image is owned by this user
     # BullMQ requires noeviction. Redis is queue transport only; authoritative state lives in PostgreSQL.
     # The password goes into a 0600 file on the tmpfs, NOT into the process arguments (argv is visible to host users).
