@@ -19,7 +19,7 @@ services:
       retries: 15
 
   twins-redis-test:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: twins-redis-test
     ports:
       - "127.0.0.1:16379:6379"
