@@ -139,6 +139,33 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     ],
     triggers: [...guards("historical_source_records"), "historical_source_records_a_integrity_before_insert"],
   },
+  {
+    chain: "historical_datasets",
+    table: "historical_datasets",
+    fields: [txt("t.id"), plain("t.provider_id"), plain("t.dataset_id"), plain("t.dataset_version"), plain("t.content_sha256"), txt("t.series_count"), txt("t.bar_count"), ts("t.coverage_from"), ts("t.coverage_to"), txt("t.descriptor"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_datasets"),
+  },
+  {
+    chain: "historical_evaluation_runs",
+    table: "historical_evaluation_runs",
+    fields: [txt("t.id"), plain("t.run_key"), plain("t.scope"), txt("t.import_batch_id"), txt("t.normalized_record_id"), plain("t.algorithm_version"), txt("t.config"), plain("t.config_sha256"), ts("t.evaluated_at"), txt("t.dataset_ids"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_evaluation_runs"),
+  },
+  {
+    chain: "historical_outcome_labels",
+    table: "historical_outcome_labels",
+    fields: [
+      txt("t.id"), txt("t.run_id"), txt("t.normalized_record_id"), txt("t.source_record_id"), txt("t.dataset_id"), plain("t.algorithm_version"), plain("t.final_outcome"), plain("t.primary_reason"), txt("t.reasons"), plain("t.entry_status"),
+      ts("t.entry_first_touch_at"), plain("t.sl_status"), ts("t.sl_first_touch_at"), txt("t.target_evaluations"), plain("t.data_quality"), txt("t.data_window"), txt("t.input_snapshot"), txt("t.evidence"), plain("t.created_by"), ts("t.created_at"),
+    ],
+    triggers: [...guards("historical_outcome_labels"), "historical_outcome_labels_a_integrity_before_insert"],
+  },
+  {
+    chain: "historical_evaluation_events",
+    table: "historical_evaluation_events",
+    fields: [txt("t.id"), txt("t.run_id"), plain("t.event_type"), txt("t.sequence"), txt("t.detail"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_evaluation_events"),
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */

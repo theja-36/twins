@@ -9,7 +9,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
-import { inspectInput, runImport } from "../../../packages/historical/src/index";
+import { inspectInput, memoryProvider, runEvaluation, runImport } from "../../../packages/historical/src/index";
+import { dailyBars, datasetOf, equitySeries } from "../../support/outcomeFixtures";
 import { makeRecords, tempDir, writeJsonl } from "../../support/historicalFixtures";
 import { addEventWindow, createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent, recordRiskApproval } from "../../../packages/risk/src/index";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -42,11 +43,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows", "risk_approvals", "historical_source_records"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows", "risk_approvals", "historical_source_records", "historical_datasets", "historical_evaluation_runs", "historical_outcome_labels", "historical_evaluation_events"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason", risk_approvals: "reason", historical_source_records: "raw_text" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason", risk_approvals: "reason", historical_source_records: "raw_text", historical_datasets: "dataset_version", historical_evaluation_runs: "algorithm_version", historical_outcome_labels: "algorithm_version", historical_evaluation_events: "created_by" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -118,6 +119,17 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
        values (gen_random_uuid(), $1, $2, $3, '1', '2024-03-04T04:00:00Z', $4, $5, '[]', $6, 1, '2024-03-04T05:00:00Z', 'itest.jsonl', $5, 2, '{}', 'service:itest')`,
       [batchId, (randomUUID() + randomUUID()).replace(/-/g, "").slice(0, 64), `itest-${suffix}-${i}`, `historical edit ${suffix} ${i}`, "b".repeat(64), origId],
     );
+    // historical outcome evaluation (Stage 4 / Task 2): a normalized record, a dataset reference, a run, one label and one event
+    const normId = randomUUID(), datasetRowId = randomUUID(), runId = randomUUID();
+    await c.query(`insert into historical_normalized_records (id, source_record_id, parser_version, parse_status, targets, conditions, missing_fields, ambiguous_fields, validation_result, warnings) values ($1, $2, 'p1', 'SIGNAL', '[]', '[]', '[]', '[]', 'VALID', '[]')`, [normId, origId]);
+    await c.query(`insert into historical_datasets (id, provider_id, dataset_id, dataset_version, content_sha256, series_count, bar_count, descriptor, created_by) values ($1, 'itest', 'ds', $2, $3, 1, 1, '[]', 'service:itest')`, [datasetRowId, `v-${suffix}-${i}`, "c".repeat(64)]);
+    await c.query(`insert into historical_evaluation_runs (id, run_key, scope, import_batch_id, algorithm_version, config, config_sha256, evaluated_at, dataset_ids, created_by) values ($1, $2, 'BATCH', $3, 'outcome-eval-v1', '{}', $4, now(), '[]', 'service:itest')`, [runId, (randomUUID() + randomUUID()).replace(/-/g, "").slice(0, 64), batchId, "d".repeat(64)]);
+    await c.query(
+      `insert into historical_outcome_labels (run_id, normalized_record_id, source_record_id, dataset_id, algorithm_version, final_outcome, primary_reason, reasons, entry_status, sl_status, target_evaluations, data_quality, data_window, input_snapshot, evidence, created_by)
+       values ($1, $2, $3, $4, 'outcome-eval-v1', 'NO_ENTRY', 'ENTRY_NOT_REACHED_WITHIN_HORIZON', '[]', 'ENTRY_NOT_REACHED', 'SL_NOT_HIT', '[]', 'GOOD', '{}', '{}', '{}', 'service:itest')`,
+      [runId, normId, origId, datasetRowId],
+    );
+    await c.query(`insert into historical_evaluation_events (run_id, event_type, sequence, detail, created_by) values ($1, 'RUN_STARTED', 1, '{}', 'service:itest')`, [runId]);
     // a risk approval (Stage 3 / Task 6): a REJECT of the decision above (the table guard allows it for any existing decision version)
     await c.query(
       `insert into risk_approvals (id, risk_decision_id, decision_version, action, actor, actor_context, reason, decision_snapshot, evidence_references) values (gen_random_uuid(), $1, $2, 'REJECT', 'operator:itest', '{}', $3, '{"itest":true}', '{}')`,
@@ -263,7 +275,11 @@ describe("valid append flows still work and extend the chain", () => {
     // Stage 4 real writer: a two-message historical import (synthetic) appends evidence to the twelfth chain
     const histDir = tempDir();
     const histFiles = await inspectInput(writeJsonl(histDir, "h.jsonl", makeRecords(`itest-hist-${suffix}`, 2)));
-    expect((await runImport(handle.db, histFiles, { label: `itest-${suffix}`, defaultMarket: null, createdBy: "service:itest", confirmedSource: "h.jsonl" })).outcome).toBe("IMPORTED");
+    const histImport = await runImport(handle.db, histFiles, { label: `itest-${suffix}`, defaultMarket: null, createdBy: "service:itest", confirmedSource: "h.jsonl" });
+    expect(histImport.outcome).toBe("IMPORTED");
+    // Stage 4 / Task 2 real writer: evaluates that batch against a tiny synthetic dataset (appends to the four outcome chains)
+    const histRun = await runEvaluation(handle.db, { scope: { kind: "BATCH", batchId: histImport.batchId }, provider: memoryProvider([datasetOf([equitySeries("ITESTONLY", dailyBars({ days: 3, base: 10 }))], { dataset_id: `itest-${suffix}` })]), createdBy: "service:itest", asOf: new Date("2026-01-01T00:00:00Z") });
+    expect(histRun.outcome).toBe("EVALUATED");
     const claim = await recordOptionsIntake(handle.db, { telegramMessageId: must(msg).id, parserVersion: `itest-${suffix}`, intake: { kind: "ambiguous", directives: [] } as never, assessment: undefined, master: null, premium: null });
     expect(claim.created).toBe(true);
     const pendingDecision = await createPendingRiskDecisionForSignal(handle.db, must(signal).id);

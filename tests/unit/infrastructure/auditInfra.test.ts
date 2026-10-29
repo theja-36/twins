@@ -10,7 +10,7 @@ const service = (name: string) => {
   if (!m) throw new Error(`service ${name} not found`);
   return must(m[1]).split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
 };
-const migration = read("packages/database/drizzle/0010_audit_immutability_hash_chain.sql") + read("packages/database/drizzle/0011_stop_loss_validations.sql") + read("packages/database/drizzle/0014_risk_decisions_foundation.sql") + read("packages/database/drizzle/0017_circuit_breakers.sql") + read("packages/database/drizzle/0018_market_risk_gates.sql") + read("packages/database/drizzle/0019_risk_approvals.sql") + read("packages/database/drizzle/0020_historical_import.sql");
+const migration = read("packages/database/drizzle/0010_audit_immutability_hash_chain.sql") + read("packages/database/drizzle/0011_stop_loss_validations.sql") + read("packages/database/drizzle/0014_risk_decisions_foundation.sql") + read("packages/database/drizzle/0017_circuit_breakers.sql") + read("packages/database/drizzle/0018_market_risk_gates.sql") + read("packages/database/drizzle/0019_risk_approvals.sql") + read("packages/database/drizzle/0020_historical_import.sql") + read("packages/database/drizzle/0021_historical_outcomes.sql");
 const migration0009 = read("packages/database/drizzle/0009_system_controls_kill_switch.sql");
 
 describe("migration 0010 and the verifier specification agree", () => {
@@ -43,8 +43,8 @@ describe("migration 0010 and the verifier specification agree", () => {
     expect(migration).toMatch(/ORDER BY chain_index DESC LIMIT 1/);
     expect(migration).toMatch(/AFTER INSERT ON "audit_events" FOR EACH ROW EXECUTE FUNCTION "twins_audit_chain_after_insert"/);
   });
-  it("the protected tables are the five of Task 3, the stop-loss evidence table of Task 4 and the risk decisions of Stage 3 the loss / breaker events of Task 4 the event blackout windows of Task 5 the risk approvals of Task 6 and the historical source records of Stage 4", () => {
-    expect([...PROTECTED_TABLES].sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "historical_source_records", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
+  it("the protected tables are the five of Task 3, the stop-loss evidence table of Task 4 and the risk decisions of Stage 3 the loss / breaker events of Task 4 the event blackout windows of Task 5 the risk approvals of Task 6 and the historical source records of Stage 4 and the outcome datasets / runs / labels / events of Stage 4 Task 2", () => {
+    expect([...PROTECTED_TABLES].sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "historical_datasets", "historical_evaluation_events", "historical_evaluation_runs", "historical_outcome_labels", "historical_source_records", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
   });
 });
 
