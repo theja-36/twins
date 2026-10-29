@@ -70,6 +70,8 @@ function input(subject: Subject, stopLossValidationId: string, over: Partial<Ris
     decisionReasonCode: "awaiting_risk_gates", decisionReason: "synthetic", inputSnapshot: { synthetic: true, signal: "fixture" }, outputSnapshot: { stage: "test" }, evidenceReferences: { fixture: true }, ...over,
   };
 }
+/** What a SIZED position size looks like on a row (Stage 3 / Task 2: the database refuses APPROVED_FOR_REVIEW without it). */
+const SIZED = { plannedQuantity: 100, plannedNotional: 10000, plannedMaxLossAmount: 500, plannedMaxLossPercent: 0.5, outputSnapshot: { sizing: { status: "SIZED" } } };
 const err = async (p: Promise<unknown>): Promise<RiskDecisionError> => { try { await p; } catch (e) { return e as RiskDecisionError; } throw new Error("expected a RiskDecisionError"); };
 const rowCount = async (t: string): Promise<number> => Number(must((await pool.query(`select count(*)::int as n from ${t}`)).rows[0])["n"]);
 
@@ -142,7 +144,7 @@ describe("stop-loss evidence rules", () => {
     const { signal: s2 } = await makeSignal();
     const ev = await evidence({ signalId: s2.id }, "VALID");
     await expect(createRiskDecision(db(), input({ signalId: s2.id }, ev.id, { status: "APPROVED_FOR_REVIEW", stopLoss: 94 }))).rejects.toMatchObject({ code: "stop_loss_not_valid" }); // differs from the validated stop
-    const ok = await createRiskDecision(db(), input({ signalId: s2.id }, ev.id, { status: "APPROVED_FOR_REVIEW" }));
+    const ok = await createRiskDecision(db(), input({ signalId: s2.id }, ev.id, { status: "APPROVED_FOR_REVIEW", ...SIZED }));
     expect(ok).toMatchObject({ created: true, status: "APPROVED_FOR_REVIEW" });
   });
   it("an APPROVED_FOR_REVIEW decision also needs a stop-loss, entry price and basis in the row itself (check constraint)", async () => {
@@ -185,7 +187,7 @@ describe("supersession (revisions without mutation)", () => {
     const ev = await evidence({ signalId: signal.id }, "VALID");
     const v1 = await createRiskDecision(db(), input({ signalId: signal.id }, ev.id));
     const before = must((await pool.query("select event_hash, payload_hash, status from risk_decisions where id = $1", [v1.id])).rows[0]);
-    const rev = await supersedeRiskDecision(db(), v1.id, { stopLossValidationId: ev.id, status: "APPROVED_FOR_REVIEW", idempotencyKey: `rd-test:${randomUUID()}`, createdBy: "operator:itest", instrumentType: "equity", symbol: "SYNTH", entryPrice: 100, stopLoss: 95, stopLossBasis: "price", target1: 112, decisionReasonCode: "review_ready", inputSnapshot: { synthetic: true, revision: 2 } });
+    const rev = await supersedeRiskDecision(db(), v1.id, { stopLossValidationId: ev.id, status: "APPROVED_FOR_REVIEW", ...SIZED, idempotencyKey: `rd-test:${randomUUID()}`, createdBy: "operator:itest", instrumentType: "equity", symbol: "SYNTH", entryPrice: 100, stopLoss: 95, stopLossBasis: "price", target1: 112, decisionReasonCode: "review_ready", inputSnapshot: { synthetic: true, revision: 2 } });
     expect(rev).toMatchObject({ created: true, decisionVersion: 2, status: "APPROVED_FOR_REVIEW" });
     const old = must(await getRiskDecision(db(), v1.id));
     expect(old).toMatchObject({ status: "PENDING", effectiveStatus: "SUPERSEDED", supersededById: rev.id });
@@ -273,7 +275,7 @@ describe("relationship integrity", () => {
     expect(await tryOrder(null)).toMatch(/23514:orders: an order requires a risk decision/);
     expect(await tryOrder(randomUUID())).toMatch(/orders: the risk decision must be APPROVED_FOR_REVIEW and not superseded \(is missing\)/);
     expect(await tryOrder(pending.id)).toMatch(/\(is PENDING\)/);
-    const approved = await supersedeRiskDecision(db(), pending.id, { stopLossValidationId: ev.id, status: "APPROVED_FOR_REVIEW", idempotencyKey: `rd-test:${randomUUID()}`, createdBy: "service:risk-test", instrumentType: "equity", symbol: "SYNTH", entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "review_ready", inputSnapshot: { x: 1 } });
+    const approved = await supersedeRiskDecision(db(), pending.id, { stopLossValidationId: ev.id, status: "APPROVED_FOR_REVIEW", ...SIZED, idempotencyKey: `rd-test:${randomUUID()}`, createdBy: "service:risk-test", instrumentType: "equity", symbol: "SYNTH", entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "review_ready", inputSnapshot: { x: 1 } });
     expect(await tryOrder(pending.id)).toMatch(/\(is SUPERSEDED\)/);
     // an approved, un-superseded decision passes the risk-decision guard; the insert then fails on the NEXT rule (the fake account is not a real FK), proving the guard is not the blocker
     const outcome = await tryOrder(approved.id);

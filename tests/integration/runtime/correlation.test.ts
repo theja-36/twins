@@ -71,7 +71,7 @@ describe("end-to-end correlation logging (real Redis + PostgreSQL)", () => {
     expect(mine.filter((r) => r.event.startsWith("outbox.")).map((r) => r.event).sort()).toEqual(["outbox.accepted", "outbox.claimed", "outbox.completed", "outbox.enqueued"]);
     expect(mine.filter((r) => r.event.startsWith("worker.")).map((r) => r.event)).toEqual([
       "worker.job.started", "worker.message.ingested", "worker.revision.state", "worker.signal.resolved",
-      "worker.market_context.refreshed", "worker.validation.recorded", "worker.risk_decision.recorded", "worker.job.completed",
+      "worker.market_context.refreshed", "worker.validation.recorded", "worker.risk_decision.recorded", "worker.risk_sizing.skipped", "worker.job.completed",
     ]);
     const accepted = must(mine.find((r) => r.event === "webhook.intake.accepted"));
     for (const r of mine.filter((x) => x.event.startsWith("worker."))) {
