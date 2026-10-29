@@ -78,3 +78,5 @@ Superuser compromise or restore-from-edited-dump (anchor + off-host backup are t
 **Stage 4 / Task 2 addition:** `historical_datasets`, `historical_evaluation_runs`, `historical_outcome_labels` and `historical_evaluation_events` are chains 13-16 (payload version 1; see [HISTORICAL_OUTCOME_EVALUATION.md](HISTORICAL_OUTCOME_EVALUATION.md)); the label table also has an integrity trigger tying a label to the source record of its normalized record.
 
 **Stage 4 / Task 3 addition:** `historical_source_registry`, `historical_scorecard_runs`, `historical_scorecard_metrics`, `historical_trust_tiers` and `historical_scorecard_events` are chains 17-21 (payload version 1; see [SOURCE_SCORECARDS.md](SOURCE_SCORECARDS.md)).
+
+**Stage 4 / Task 4 addition:** `historical_pattern_definitions`, `historical_pattern_runs`, `historical_pattern_snapshots`, `historical_confidence_runs` and `historical_confidence_estimates` are chains 22-26 (payload version 1; see [PATTERN_LIBRARY_AND_CONFIDENCE.md](PATTERN_LIBRARY_AND_CONFIDENCE.md)).
