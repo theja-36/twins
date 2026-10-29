@@ -1,0 +1,19 @@
+# Weekly integrity verification of the off-host objects: re-downloads recent encrypted objects and compares SHA-256 with their manifests. Needs NO decryption key.
+[Unit]
+Description=TWINS off-host backup checksum verification
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=twins-backup
+Group=twins-backup
+WorkingDirectory=/opt/twins-staging
+EnvironmentFile=/etc/twins-backup/offhost.env
+ExecStart=/usr/bin/npx --no-install tsx scripts/ops/offhost-backup.ts verify
+TimeoutStartSec=3600
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/twins-backup /var/lib/twins-monitor
