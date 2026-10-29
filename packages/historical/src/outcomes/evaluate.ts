@@ -136,7 +136,7 @@ export function evaluateOutcome(sig: EvalSignal, cfg: EvalConfig, data: SeriesIn
   const mismatch: string[] = [];
   if (!slBad && lo !== null && hi !== null) {
     if (long ? !(stop < lo) : !(stop > hi)) mismatch.push("STOP_LOSS_ON_WRONG_SIDE");
-    targets.forEach((t, i) => { if (!tBad[i] && (long ? !(t > hi!) : !(t < lo!))) { tBad[i] = true; mismatch.push("TARGET_ON_WRONG_SIDE"); } });
+    targets.forEach((t, i) => { if (!tBad[i] && (long ? !(t > (hi as number)) : !(t < (lo as number)))) { tBad[i] = true; mismatch.push("TARGET_ON_WRONG_SIDE"); } });
   }
   if (!slBad && lo === null) targets.forEach((t, i) => { if (!tBad[i] && (long ? !(t > stop) : !(t < stop))) { tBad[i] = true; mismatch.push("TARGET_ON_WRONG_SIDE"); } });
   for (let i = 1; i < targets.length; i++) if (!tBad[i] && !tBad[i - 1] && (long ? !((targets[i] as number) > (targets[i - 1] as number)) : !((targets[i] as number) < (targets[i - 1] as number)))) { tBad[i] = true; mismatch.push("TARGETS_NOT_ORDERED"); }

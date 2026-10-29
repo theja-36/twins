@@ -5,7 +5,6 @@ import { config, dailyBars, datasetOf, day, equitySeries, optionSeries, optionSi
 const seriesOf = (raw: Record<string, unknown>): Series => buildDataset(datasetOf([raw]), "a".repeat(64)).series[0] as Series;
 const equity = (spec: Parameters<typeof dailyBars>[0], over: Record<string, unknown> = {}): Series => seriesOf(equitySeries("ACME", dailyBars(spec), over));
 const run = (sig = signal(), s: Series | null = equity({ days: 30, base: 100 }), cfg = config()): OutcomeResult => evaluateOutcome(sig, cfg, { series: s, underlyingAvailable: false });
-const flat = (p: number): Ohlc => [p, p, p, p];
 
 describe("entry, stop-loss and targets on equity bars", () => {
   it("entry reached, then T1 / T2 / T3 before the stop-loss, labelled with the HIGHEST target hit", () => {
