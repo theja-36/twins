@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
-import { createPendingRiskDecisionForSignal } from "../../../packages/risk/src/index";
+import { createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent } from "../../../packages/risk/src/index";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq } from "drizzle-orm";
@@ -40,11 +40,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -99,6 +99,16 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
       [riskId, signalId, stopLossId, i === 0 ? null : lastRiskId, i + 1, `itest-risk-${suffix}-${i}`, `T${suffix}`.toUpperCase(), `risk reason ${suffix} ${i}`],
     );
     lastRiskId = riskId;
+    // loss events and circuit-breaker events (Stage 3 / Task 4); WARNED rows only, so no breaker is ever left open
+    await c.query(
+      "insert into loss_events (id, amount, occurred_at, source, source_ref, idempotency_key, created_by) values ($1, 10, '1960-01-04T10:00:00Z', 'synthetic', $2, $3, 'service:itest')",
+      [randomUUID(), `itest-${suffix}-${i}`, `itest-loss-${suffix}-${i}`],
+    );
+    await c.query(
+      `insert into circuit_breaker_events (id, scope, event_type, period_start, period_end, loss_amount, limit_amount, capital, loss_pct, planned_exposure_amount, reason_code, idempotency_key, snapshot, created_by)
+       values ($1, 'DAILY', 'WARNED', '1960-01-04T00:00:00Z', '1960-01-05T00:00:00Z', 15, 20, 1000, 1.5, 0, $2, $3, '{}', 'service:itest')`,
+      [randomUUID(), `daily_loss_warning_${suffix}_${i}`, `itest-breaker-${suffix}-${i}`],
+    );
     await c.query("insert into audit_events (id, event_type, entity_type, actor_type, metadata) values ($1, $2, 'itest', 'system', $3::jsonb)", [randomUUID(), `itest.${suffix}.${i}`, JSON.stringify({ b: 2, a: [1, null, "x"] })]);
   }
   return { sourceId, messageIds, signalId };
@@ -215,6 +225,13 @@ describe("valid append flows still work and extend the chain", () => {
     const claim = await recordOptionsIntake(handle.db, { telegramMessageId: must(msg).id, parserVersion: `itest-${suffix}`, intake: { kind: "ambiguous", directives: [] } as never, assessment: undefined, master: null, premium: null });
     expect(claim.created).toBe(true);
     expect(await createPendingRiskDecisionForSignal(handle.db, must(signal).id)).toMatchObject({ created: true, status: "PENDING" }); // the real writer of risk decisions (evidence recorded by the validation above)
+    // Task 4 real writers: a loss event, then the breaker records the breach (and, a week later, the automatic reset); a far-past date keeps every breaker closed at the database clock
+    const when = new Date(Date.UTC(1800 + Math.floor(Math.random() * 100), Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28), 10)); // a random far-past day per run, so repeated runs on one database do not share a period
+    expect(await recordLossEvent(handle.db, { amount: 25_000, occurredAt: when, source: "synthetic", sourceRef: `itest-${suffix}`, createdBy: "service:itest" })).toMatchObject({ created: true });
+    const breached = await evaluateCircuitBreakers(handle.db, { capital: 1_000_000, asOf: new Date(when.getTime() + 2 * 3_600_000) });
+    expect(breached.events.filter((e) => e.created).map((e) => e.eventType)).toContain("BREACHED");
+    const reset = await evaluateCircuitBreakers(handle.db, { capital: 1_000_000, asOf: new Date(when.getTime() + 10 * 86_400_000) });
+    expect(reset.events.filter((e) => e.created).map((e) => e.eventType)).toContain("RESET");
     await handle.db.insert(schema.auditEvents).values({ eventType: `itest.valid.${suffix}`, entityType: "itest", actorType: "system", metadata: { suffix } });
     const report = await verifyAuditChainsWithPool(pool);
     expect(report.failures).toEqual([]);

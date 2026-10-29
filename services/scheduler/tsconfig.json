@@ -7,9 +7,29 @@
     "moduleResolution": "Bundler"
   },
   "references": [
-    { "path": "../../packages/runtime-state" },
-    { "path": "../../packages/config" },
-    { "path": "../../adapters/market" }
+    {
+      "path": "../../packages/runtime-state"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../adapters/market"
+    },
+    {
+      "path": "../../packages/database"
+    },
+    {
+      "path": "../../packages/risk"
+    },
+    {
+      "path": "../../packages/alerting"
+    },
+    {
+      "path": "../../packages/shared"
+    }
   ],
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }

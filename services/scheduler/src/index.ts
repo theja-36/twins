@@ -29,6 +29,10 @@ import { Redis } from "ioredis";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { YAHOO_PROVIDER_NAME } from "@twins/adapter-market";
 import { configureRuntimeState, createPooledStateSource } from "@twins/runtime-state";
+import { createBoundedDb } from "@twins/database";
+import { alerterFromEnv } from "@twins/alerting";
+import { createStructuredLogger } from "@twins/shared";
+import { breakerAlert, evaluateCircuitBreakers, expireStaleRiskDecisions, loadBreakerConfig, loadExpiryConfig, loadSizingConfig } from "@twins/risk";
 import { runScheduledJob } from "./scheduledJob.js";
 
 enforceLiveTradingGuard("scheduler");
@@ -145,6 +149,43 @@ cron.schedule(cronExpression, () => {
   });
 });
 
+// ─── Risk housekeeping (Stage 3 / Task 4) ───────────────────────────────────
+// Expires stale risk decisions (appends EXPIRED versions) and records / alerts the daily and weekly loss circuit breakers. Both only remove exposure or record
+// state ("risk_housekeeping"), so they keep running under the kill switch. Not started under NODE_ENV=test.
+//   TWINS_RISK_EXPIRY_CRON (default every minute)   TWINS_BREAKER_CRON (default every minute)
+const riskDb = process.env["NODE_ENV"] === "test" ? undefined : createBoundedDb(config.databaseUrl, { max: 3, idleTimeoutMillis: 10_000 });
+if (riskDb) {
+  const expiryCron = process.env["TWINS_RISK_EXPIRY_CRON"] ?? "* * * * *";
+  const breakerCron = process.env["TWINS_BREAKER_CRON"] ?? "* * * * *";
+  for (const [name, expr] of [["TWINS_RISK_EXPIRY_CRON", expiryCron], ["TWINS_BREAKER_CRON", breakerCron]] as const) {
+    if (!cron.validate(expr)) throw new Error(`${name} "${expr}" is not a valid cron expression.`);
+  }
+  const riskLog = createStructuredLogger((r) => console.log(JSON.stringify(r)));
+  // the breaker alerts are specified at INFO/WARNING/CRITICAL, so this alerter delivers INFO too (the destination is still the configured relay/webhook)
+  const breakerAlerter = alerterFromEnv({ ...process.env, TWINS_ALERT_MIN_SEVERITY: "INFO" }, "scheduler", riskLog);
+  const expiryConfig = loadExpiryConfig();
+  const breakerConfig = loadBreakerConfig();
+  cron.schedule(expiryCron, () => {
+    void runScheduledJob({ name: "risk_decision_expiry", effect: "risk_housekeeping" }, async () => {
+      const run = await expireStaleRiskDecisions(riskDb.db, { config: expiryConfig });
+      if (run.examined > 0) riskLog.info("scheduler.risk_expiry.run", { examined: run.examined, expired: run.expired.length, alreadyExpired: run.alreadyExpired, skipped: run.skipped.length });
+    }, { log: (event, fields) => console.warn(`[scheduler] ${event} ${JSON.stringify(fields)}`) }).catch((err: unknown) => {
+      console.error(`[scheduler] risk expiry failed: ${err instanceof Error ? err.name : "Error"}`);
+    });
+  });
+  cron.schedule(breakerCron, () => {
+    void runScheduledJob({ name: "circuit_breaker_evaluation", effect: "risk_housekeeping" }, async () => {
+      const capital = loadSizingConfig().availableCapital;
+      if (capital === null) return; // nothing is sized without configured capital, so there is no loss limit to evaluate
+      await evaluateCircuitBreakers(riskDb.db, { capital, breakers: breakerConfig, expiry: expiryConfig, onBreakerEvent: (e) => breakerAlerter.alert({ ...breakerAlert(e), dedupeKey: e.id }) });
+      await breakerAlerter.flush();
+    }, { log: (event, fields) => console.warn(`[scheduler] ${event} ${JSON.stringify(fields)}`) }).catch((err: unknown) => {
+      console.error(`[scheduler] circuit breaker evaluation failed: ${err instanceof Error ? err.name : "Error"}`);
+    });
+  });
+  console.log(`[scheduler] risk housekeeping: expiry "${expiryCron}", circuit breakers "${breakerCron}"`);
+}
+
 // ─── Graceful shutdown ──────────────────────────────────────────────────────
 
 async function shutdown(signal: string): Promise<void> {
@@ -156,6 +197,7 @@ async function shutdown(signal: string): Promise<void> {
   }
   await redis.quit().catch(() => redis.disconnect());
   await runtimeStatePool?.close().catch(() => undefined);
+  await riskDb?.close().catch(() => undefined);
   process.exit(0);
 }
 

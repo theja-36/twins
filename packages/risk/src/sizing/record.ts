@@ -1,6 +1,10 @@
+import { createHash } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { getLatestRiskDecisionForOptionsClaim, getLatestRiskDecisionForSignal, getRiskDecision, refuseUnlessSafe, RiskDecisionError, supersedeRiskDecision, type CreateOutcome, type RiskDecisionRecord } from "../riskDecisions";
+import { breakerBlockId, breakerGate, type BreakerOptions, type CircuitBreakerStatus } from "../breakers/record";
+import { databaseNow, isStale } from "../expiry/record";
+import { loadExpiryConfig } from "../expiry/config";
 import { loadSizingConfig, type SizingConfig } from "./config";
 import { computePositionSize, SIZING_ENGINE_VERSION, type SizingInput, type SizingResult } from "./engine";
 
@@ -12,14 +16,14 @@ import { computePositionSize, SIZING_ENGINE_VERSION, type SizingInput, type Sizi
  */
 export const SIZING_ACTOR = "service:position-sizing";
 
-export interface SizeOptions {
+export interface SizeOptions extends BreakerOptions {
   config?: SizingConfig;
   /** Overrides config.availableCapital (tests, operator tools). */
   capital?: number | null;
 }
 
 export interface SizingOutcome extends CreateOutcome {
-  sizingStatus: SizingResult["status"];
+  sizingStatus: SizingResult["status"] | "CIRCUIT_BREAKER_OPEN";
   reasonCode: string;
   quantity: number;
   maxLossAmount: number;
@@ -60,6 +64,9 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
   const prev = await getRiskDecision(db, decisionId);
   if (!prev) throw new RiskDecisionError("not_found", "the risk decision does not exist");
   if (!(prev.status === "PENDING" || (prev.status === "REJECTED" && isSizingRevision(prev)))) throw new RiskDecisionError("not_sizable", `a ${prev.status} decision is not sized`);
+  const expiry = opts.expiry ?? loadExpiryConfig();
+  const asOf = opts.asOf ?? (await databaseNow(db));
+  if (!prev.supersededById && isStale(prev, asOf, expiry)) throw new RiskDecisionError("decision_expired", "the decision is past its validity window; it is expired, not sized");
 
   const subjectWhere = prev.signalId ? eq(schema.stopLossValidations.signalId, prev.signalId) : eq(schema.stopLossValidations.optionsClaimId, prev.optionsClaimId as string);
   const [evidence] = await db.select().from(schema.stopLossValidations).where(subjectWhere).orderBy(desc(schema.stopLossValidations.createdAt), desc(schema.stopLossValidations.id)).limit(1);
@@ -82,10 +89,17 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
     context: { riskDecisionId: prev.id, decisionVersion: prev.decisionVersion, status: prev.status, stopLossValidationId: evidence?.id ?? null, lotSizeSource },
   };
   const result = computePositionSize(input, config);
+  // Circuit breakers (Stage 3 / Task 4): a new SIZED decision is not created while a loss breaker is open (the rejection is recorded instead). Unreadable state fails closed.
+  let blocked: CircuitBreakerStatus | null = null;
+  if (result.status === "SIZED" && capital > 0) {
+    const gate = await breakerGate(db, capital, { ...opts, asOf, expiry });
+    if (gate.blocked) blocked = gate;
+  }
+  const hash = blocked ? createHash("sha256").update(`${result.inputHash}:${breakerBlockId(blocked)}`).digest("hex") : result.inputHash;
 
   // unchanged inputs: the current version (or, for a retry against the version it superseded, its successor) already carries this sizing
-  const carries = (d: RiskDecisionRecord): boolean => isSizingRevision(d) && (d.outputSnapshot as { sizing?: { inputHash?: string } } | null)?.sizing?.inputHash === result.inputHash;
-  const outcomeOf = (d: RiskDecisionRecord): SizingOutcome => ({ id: d.id, created: false, decisionVersion: d.decisionVersion, status: d.status as CreateOutcome["status"], sizingStatus: result.status, reasonCode: result.reasonCode, quantity: result.quantity, maxLossAmount: result.maxLossAmount });
+  const carries = (d: RiskDecisionRecord): boolean => isSizingRevision(d) && (d.outputSnapshot as { sizing?: { inputHash?: string } } | null)?.sizing?.inputHash === hash;
+  const outcomeOf = (d: RiskDecisionRecord): SizingOutcome => ({ id: d.id, created: false, decisionVersion: d.decisionVersion, status: d.status as CreateOutcome["status"], sizingStatus: blocked ? "CIRCUIT_BREAKER_OPEN" : result.status, reasonCode: blocked ? "circuit_breaker_open" : result.reasonCode, quantity: blocked ? 0 : result.quantity, maxLossAmount: blocked ? 0 : result.maxLossAmount });
   if (prev.supersededById) {
     const successor = await getRiskDecision(db, prev.supersededById);
     if (successor && !successor.supersededById && carries(successor)) return outcomeOf(successor);
@@ -94,11 +108,11 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
   if (carries(prev)) return outcomeOf(prev);
   if (!evidence) throw new RiskDecisionError("stop_loss_evidence_missing", "the stop-loss evidence for this decision no longer exists");
 
-  const sized = result.status === "SIZED";
-  const out = await supersedeRiskDecision(db, prev.id, {
+  const sized = result.status === "SIZED" && !blocked;
+  const append = () => supersedeRiskDecision(db, prev.id, {
     stopLossValidationId: evidence.id,
     status: sized ? "PENDING" : "REJECTED",
-    idempotencyKey: `risk-sizing:${prev.id}:${result.inputHash.slice(0, 32)}`,
+    idempotencyKey: `risk-sizing:${prev.id}:${hash.slice(0, 32)}`,
     createdBy: SIZING_ACTOR,
     instrumentType: prev.instrumentType,
     market: prev.market,
@@ -119,18 +133,30 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
     plannedMaxLossPercent: sized ? result.maxLossPercent : null,
     confidenceScore: input.confidenceScore,
     sourceTrustTier: prev.sourceTrustTier,
-    decisionReasonCode: sized ? "sized_awaiting_limits" : `sizing_${result.reasonCode}`.slice(0, 60),
-    decisionReason: sized ? `${result.explanation} Awaiting the remaining risk gates (portfolio limits, circuit breakers, market checks), which are not part of this stage.` : result.explanation,
-    inputSnapshot: { sizing: result.snapshot, previousDecisionId: prev.id, previousVersion: prev.decisionVersion, base: prev.inputSnapshot },
+    decisionReasonCode: sized ? "sized_awaiting_limits" : blocked ? "sizing_circuit_breaker_open" : `sizing_${result.reasonCode}`.slice(0, 60),
+    decisionReason: sized ? `${result.explanation} Awaiting the remaining risk gates (portfolio limits, circuit breakers, market checks), which are not part of this stage.` : blocked ? `A loss circuit breaker is open (${blocked.blockedBy.join(", ")}); no new sized decision is created until it resets.` : result.explanation,
+    inputSnapshot: { sizing: result.snapshot, ...(blocked ? { circuitBreaker: { blockedBy: blocked.blockedBy, openBreachIds: blocked.openBreachIds, asOf: blocked.asOf.toISOString() } } : {}), previousDecisionId: prev.id, previousVersion: prev.decisionVersion, base: prev.inputSnapshot },
     outputSnapshot: {
       stage: "position_sizing",
       sized,
       limitsApplied: false,
-      sizing: { engineVersion: SIZING_ENGINE_VERSION, status: result.status, reasonCode: result.reasonCode, inputHash: result.inputHash, quantity: result.quantity, notional: result.notional, maxLossAmount: result.maxLossAmount, maxLossPercent: result.maxLossPercent, riskPerUnit: result.riskPerUnit, riskRewardRatio: result.riskRewardRatio, appliedTier: result.appliedTier },
+      sizing: { engineVersion: SIZING_ENGINE_VERSION, status: blocked ? "CIRCUIT_BREAKER_OPEN" : result.status, reasonCode: blocked ? "circuit_breaker_open" : result.reasonCode, inputHash: hash, quantity: blocked ? 0 : result.quantity, notional: blocked ? 0 : result.notional, maxLossAmount: blocked ? 0 : result.maxLossAmount, maxLossPercent: blocked ? 0 : result.maxLossPercent, riskPerUnit: result.riskPerUnit, riskRewardRatio: result.riskRewardRatio, appliedTier: result.appliedTier },
     },
-    evidenceReferences: { ...((prev.evidenceReferences as Record<string, unknown> | null) ?? {}), previousDecisionId: prev.id, sizingInputHash: result.inputHash },
+    evidenceReferences: { ...((prev.evidenceReferences as Record<string, unknown> | null) ?? {}), previousDecisionId: prev.id, sizingInputHash: hash },
   });
-  return { ...out, sizingStatus: result.status, reasonCode: result.reasonCode, quantity: result.quantity, maxLossAmount: result.maxLossAmount };
+  let out: CreateOutcome;
+  try {
+    out = await append();
+  } catch (error) {
+    // a concurrent sizer may append the successor between our read and our write: if it carries this same sizing, that IS the idempotent result
+    if (error instanceof RiskDecisionError && error.code === "not_latest_version") {
+      const again = await getRiskDecision(db, prev.id);
+      const successor = again?.supersededById ? await getRiskDecision(db, again.supersededById) : undefined;
+      if (successor && !successor.supersededById && carries(successor)) return outcomeOf(successor);
+    }
+    throw error;
+  }
+  return { ...out, sizingStatus: blocked ? "CIRCUIT_BREAKER_OPEN" : result.status, reasonCode: blocked ? "circuit_breaker_open" : result.reasonCode, quantity: blocked ? 0 : result.quantity, maxLossAmount: blocked ? 0 : result.maxLossAmount };
 }
 
 export type SizeLatestResult = SizingOutcome | { skipped: "no_risk_decision" | "capital_not_configured" | "already_sized_or_final" };

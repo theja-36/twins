@@ -179,7 +179,7 @@ describe("architecture: portfolio evaluation places no orders, calls no broker a
   it("no portfolio code references orders, fills, positions, brokers, Telegram or approval cards; the only write path is supersedeRiskDecision", () => {
     for (const f of files("packages/risk/src/portfolio")) expect(strip(read(f)), f).not.toMatch(/schema\.(orders|fills|positions|decisions|claimReviewCards)\b|zerodha|kite|broker|telegram|sendMessage|approval card/i);
     const rec = strip(read("packages/risk/src/portfolio/record.ts"));
-    expect(rec).not.toMatch(/\.insert\(|\.update\(|\.delete\(/);
+    expect(rec).not.toMatch(/\.insert\(|(db|tx)\.update\(|\.delete\(/);
     expect(rec).toContain("supersedeRiskDecision(");
     expect(read("packages/database/drizzle/0016_risk_decision_portfolio_review.sql")).toMatch(/risk_decisions_portfolio_review_check[\s\S]*portfolio[\s\S]*NOT VALID/);
   });

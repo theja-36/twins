@@ -114,10 +114,10 @@ describe("architecture: the schema, the chain and the boundaries", () => {
     for (const f of walk("packages/risk/src")) expect(strip(read(f)), f).not.toMatch(/claim_review|sendMessage|approval-bot|api\.telegram|adapter-telegram|fetch\(/i);
     for (const f of walk("services/approval-bot/src")) expect(strip(read(f)), f).not.toMatch(/risk_decisions|riskDecisions|@twins\/risk/);
   });
-  it("only the worker (and tests) import the risk module; it writes nothing but risk_decisions", () => {
+  it("only the worker, the scheduler and the risk-control CLI (and tests) import the risk module; it writes nothing but risk_decisions", () => {
     const walk = (d: string): string[] => readdirSync(join(ROOT, d)).flatMap((n) => { const p = `${d}/${n}`; return statSync(join(ROOT, p)).isDirectory() ? (n === "node_modules" || n === "dist" ? [] : walk(p)) : /\.ts$/.test(n) ? [p] : []; });
     const importers = ["apps", "services", "adapters", "scripts"].flatMap(walk).filter((f) => /@twins\/risk|packages\/risk/.test(strip(read(f))));
-    expect(importers).toEqual(["services/worker/src/index.ts"]);
-    for (const f of walk("packages/risk/src")) expect(strip(read(f)), f).not.toMatch(/\.(insert|update|delete)\(\s*schema\.(?!riskDecisions\b)\w+/);
+    expect(importers).toEqual(["services/scheduler/src/index.ts", "services/worker/src/index.ts", "scripts/ops/risk-control.ts"]);
+    for (const f of walk("packages/risk/src")) expect(strip(read(f)), f).not.toMatch(/\.(insert|update|delete)\(\s*schema\.(?!riskDecisions\b|lossEvents\b|circuitBreakerEvents\b)\w+/); // loss events and breaker events are the Task 4 tables, written only by breakers/record.ts (asserted below)
   });
 });

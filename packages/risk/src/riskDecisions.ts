@@ -27,7 +27,9 @@ export type RiskErrorCode =
   | "not_sizable"
   | "capital_not_configured"
   | "sizing_missing"
-  | "not_evaluable";
+  | "not_evaluable"
+  | "decision_expired"
+  | "circuit_breaker_unavailable";
 
 /** Fixed code + message naming the rule, never a driver message or a value. `cause` keeps the safety refusal for callers that must map it. */
 export class RiskDecisionError extends Error {
@@ -247,17 +249,18 @@ export async function createRiskDecision(db: Db, input: RiskDecisionInput): Prom
 export type RevisionInput = Omit<RiskDecisionInput, "subject">;
 
 /** Appends a new version that supersedes `previousId` (which must be the latest, un-superseded version). The old row is not touched: its SUPERSEDED state is derived. */
-export async function supersedeRiskDecision(db: Db, previousId: string, revision: RevisionInput): Promise<CreateOutcome> {
+export async function supersedeRiskDecision(db: Db, previousId: string, revision: RevisionInput, options: { riskReducing?: boolean } = {}): Promise<CreateOutcome> {
   const prev = await getRiskDecision(db, previousId);
   if (!prev) throw new RiskDecisionError("not_found", "the decision to supersede does not exist");
   if (prev.supersededById) throw new RiskDecisionError("not_latest_version", "that decision has already been superseded", prev.supersededById);
   const subject: RiskSubject = prev.signalId ? { kind: "signal", signalId: prev.signalId } : { kind: "options_claim", optionsClaimId: prev.optionsClaimId as string };
-  return insertDecision(db, { ...revision, subject }, prev);
+  // Only an EXPIRED version may bypass the intake controls: it removes exposure and must still be recorded while the kill switch is on. Nothing else may.
+  return insertDecision(db, { ...revision, subject }, prev, options.riskReducing === true && revision.status === "EXPIRED");
 }
 
-async function insertDecision(db: Db, input: RiskDecisionInput, previous: RiskDecisionRecord | undefined): Promise<CreateOutcome> {
+async function insertDecision(db: Db, input: RiskDecisionInput, previous: RiskDecisionRecord | undefined, skipSafety = false): Promise<CreateOutcome> {
   validateRiskDecisionInput(input);
-  await refuseUnlessSafe(previous ? "risk_decision.supersede" : "risk_decision.create");
+  if (!skipSafety) await refuseUnlessSafe(previous ? "risk_decision.supersede" : "risk_decision.create");
 
   // Idempotent retry: the same key returns the stored decision, but only if it is the same request (same subject, evidence and status).
   const existing = await findByKey(db, input.idempotencyKey);

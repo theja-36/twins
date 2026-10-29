@@ -174,11 +174,11 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the eight shared app services (migrate, safety-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(8);
+  it("a new image gets its own tag and never overwrites the running one: the nine shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(9);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(10); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(11); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -238,7 +238,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(10);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(11);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

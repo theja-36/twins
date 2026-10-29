@@ -95,7 +95,22 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
       txt("t.planned_risk_reward_ratio"), txt("t.confidence_score"), plain("t.source_trust_tier"), plain("t.decision_reason_code"), plain("t.decision_reason"), txt("t.input_snapshot"), txt("t.output_snapshot"),
       txt("t.evidence_references"), plain("t.created_by"), ts("t.created_at"),
     ],
-    triggers: [...guards("risk_decisions"), "risk_decisions_a_integrity_before_insert"],
+    triggers: [...guards("risk_decisions"), "risk_decisions_a_integrity_before_insert", "risk_decisions_b_breaker_before_insert"],
+  },
+  {
+    chain: "loss_events",
+    table: "loss_events",
+    fields: [txt("t.id"), txt("t.amount"), plain("t.currency"), ts("t.occurred_at"), plain("t.source"), plain("t.source_ref"), txt("t.risk_decision_id"), plain("t.idempotency_key"), txt("t.details"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("loss_events"),
+  },
+  {
+    chain: "circuit_breaker_events",
+    table: "circuit_breaker_events",
+    fields: [
+      txt("t.id"), plain("t.scope"), plain("t.event_type"), ts("t.period_start"), ts("t.period_end"), txt("t.loss_amount"), txt("t.limit_amount"), txt("t.capital"), txt("t.loss_pct"),
+      txt("t.planned_exposure_amount"), plain("t.reason_code"), plain("t.reason"), txt("t.breach_event_id"), plain("t.reset_authorization"), plain("t.idempotency_key"), txt("t.snapshot"), plain("t.created_by"), ts("t.created_at"),
+    ],
+    triggers: [...guards("circuit_breaker_events"), "circuit_breaker_events_a_integrity_before_insert"],
   },
 ];
 

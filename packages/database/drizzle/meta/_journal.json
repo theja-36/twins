@@ -120,6 +120,13 @@
       "when": 1793294344077,
       "tag": "0016_risk_decision_portfolio_review",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793295457284,
+      "tag": "0017_circuit_breakers",
+      "breakpoints": true
     }
   ]
 }

@@ -22,3 +22,4 @@ export * from "./optionsClaims";
 export * from "./approvalBot";
 export * from "./systemControl";
 export * from "./stopLossValidations";
+export * from "./circuitBreakers";

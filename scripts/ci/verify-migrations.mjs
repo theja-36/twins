@@ -75,7 +75,7 @@ try {
     if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
   }
   const heads = await client.query("select count(*)::int as n from audit_chain_heads");
-  if (heads.rows[0].n !== 7) throw new Error(`audit_chain_heads must hold 7 chains, found ${heads.rows[0].n}`);
+  if (heads.rows[0].n !== 9) throw new Error(`audit_chain_heads must hold 9 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
   // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
@@ -103,7 +103,7 @@ try {
   // 0014: immutable risk decisions: chain + integrity triggers ENABLE ALWAYS, the derived view, the orders guard, and no legacy rows reinterpreted.
   const rd = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.risk_decisions'::regclass and not tgisinternal order by tgname");
   const rdNames = rd.rows.map((r) => r.tgname).join(",");
-  if (rdNames !== "risk_decisions_a_integrity_before_insert,risk_decisions_chain_after_insert,risk_decisions_chain_before_insert,risk_decisions_no_truncate,risk_decisions_no_update_delete" || rd.rows.some((r) => r.tgenabled !== "A")) throw new Error(`risk_decisions triggers missing or not ENABLE ALWAYS: [${rdNames}]`);
+  if (rdNames !== "risk_decisions_a_integrity_before_insert,risk_decisions_b_breaker_before_insert,risk_decisions_chain_after_insert,risk_decisions_chain_before_insert,risk_decisions_no_truncate,risk_decisions_no_update_delete" || rd.rows.some((r) => r.tgenabled !== "A")) throw new Error(`risk_decisions triggers missing or not ENABLE ALWAYS: [${rdNames}]`);
   const rdView = await client.query("select to_regclass('public.risk_decisions_effective') is not null as ok");
   if (!rdView.rows[0].ok) throw new Error("risk_decisions_effective (0014) is missing");
   const ordersGuard = await client.query("select tgenabled from pg_trigger where tgrelid = 'public.orders'::regclass and tgname = 'orders_require_risk_decision'");
@@ -116,7 +116,14 @@ try {
   // 0016: an APPROVED_FOR_REVIEW decision must carry a passing portfolio evaluation (enforced on every new row).
   const portfolioCheck = await client.query("select 1 from pg_constraint where conrelid = 'public.risk_decisions'::regclass and conname = 'risk_decisions_portfolio_review_check'");
   if (portfolioCheck.rowCount !== 1) throw new Error("risk_decisions_portfolio_review_check (0016) is missing");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present`);
+  // 0017: loss events and circuit-breaker events (chained, append-only), the breaker gate on approvals and orders.
+  for (const [table, trigger] of [["loss_events", "loss_events_no_update_delete"], ["circuit_breaker_events", "circuit_breaker_events_no_update_delete"], ["circuit_breaker_events", "circuit_breaker_events_a_integrity_before_insert"], ["risk_decisions", "risk_decisions_b_breaker_before_insert"]]) {
+    const t = await client.query("select tgenabled from pg_trigger where tgrelid = $1::regclass and tgname = $2", [`public.${table}`, trigger]);
+    if (t.rowCount !== 1 || t.rows[0].tgenabled !== "A") throw new Error(`${trigger} (0017) is missing or not ENABLE ALWAYS`);
+  }
+  const breakerFn = await client.query("select 1 from pg_proc where proname = 'twins_circuit_breaker_open'");
+  if (breakerFn.rowCount !== 1) throw new Error("twins_circuit_breaker_open (0017) is missing");
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present`);
 } finally {
   await client.end();
 }

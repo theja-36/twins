@@ -237,7 +237,7 @@ describe("architecture: sizing places no orders, calls no broker and writes noth
   });
   it("the only database write path is supersedeRiskDecision (the audited, chained writer)", () => {
     const code = strip(read("packages/risk/src/sizing/record.ts"));
-    expect(code).not.toMatch(/\.insert\(|\.update\(|\.delete\(|db\.execute\(/);
+    expect(code).not.toMatch(/\.insert\(|(db|tx)\.update\(|\.delete\(|db\.execute\(/);
     expect(code).toContain("supersedeRiskDecision(");
     expect(read("packages/database/drizzle/0015_risk_decision_sizing.sql")).toMatch(/risk_decisions_sized_review_check[\s\S]*SIZED[\s\S]*NOT VALID/);
   });
