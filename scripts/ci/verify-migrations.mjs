@@ -75,7 +75,7 @@ try {
     if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
   }
   const heads = await client.query("select count(*)::int as n from audit_chain_heads");
-  if (heads.rows[0].n !== 12) throw new Error(`audit_chain_heads must hold 12 chains, found ${heads.rows[0].n}`);
+  if (heads.rows[0].n !== 16) throw new Error(`audit_chain_heads must hold 16 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
   // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
@@ -144,7 +144,12 @@ try {
     const t = await client.query("select tgenabled from pg_trigger where tgrelid = $1::regclass and tgname = $2", [`public.${table}`, trigger]);
     if (t.rowCount !== 1 || t.rows[0].tgenabled !== "A") throw new Error(`${trigger} (0020) is missing or not ENABLE ALWAYS`);
   }
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present; 0019 approval chain, card guard and SECURITY DEFINER doors present; 0020 historical import evidence chain and append-only tables present`);
+  // 0021: historical outcome evaluation (four chained, append-only tables; the label table also has its integrity guard).
+  for (const [table, trigger] of [["historical_datasets", "historical_datasets_no_update_delete"], ["historical_datasets", "historical_datasets_chain_before_insert"], ["historical_evaluation_runs", "historical_evaluation_runs_no_update_delete"], ["historical_evaluation_runs", "historical_evaluation_runs_chain_before_insert"], ["historical_outcome_labels", "historical_outcome_labels_no_update_delete"], ["historical_outcome_labels", "historical_outcome_labels_a_integrity_before_insert"], ["historical_evaluation_events", "historical_evaluation_events_no_update_delete"], ["historical_evaluation_events", "historical_evaluation_events_no_truncate"]]) {
+    const t = await client.query("select tgenabled from pg_trigger where tgrelid = $1::regclass and tgname = $2", [`public.${table}`, trigger]);
+    if (t.rowCount !== 1 || t.rows[0].tgenabled !== "A") throw new Error(`${trigger} (0021) is missing or not ENABLE ALWAYS`);
+  }
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present; 0019 approval chain, card guard and SECURITY DEFINER doors present; 0020 historical import evidence chain and append-only tables present; 0021 historical outcome chains and append-only guards present`);
 } finally {
   await client.end();
 }

@@ -74,3 +74,5 @@ Superuser compromise or restore-from-edited-dump (anchor + off-host backup are t
 **Stage 3 / Task 6 addition:** `risk_approvals` is the eleventh chain (payload version 1; see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md)); it is written only by the SECURITY DEFINER function `twins_record_risk_approval`, and `orders_require_risk_decision` now also requires a recorded APPROVE.
 
 **Stage 4 / Task 1 addition:** `historical_source_records` is the twelfth chain (payload version 1; see [HISTORICAL_ARCHIVE_IMPORT.md](HISTORICAL_ARCHIVE_IMPORT.md)); the historical batch, normalized, issue and checkpoint tables are append-only by trigger.
+
+**Stage 4 / Task 2 addition:** `historical_datasets`, `historical_evaluation_runs`, `historical_outcome_labels` and `historical_evaluation_events` are chains 13-16 (payload version 1; see [HISTORICAL_OUTCOME_EVALUATION.md](HISTORICAL_OUTCOME_EVALUATION.md)); the label table also has an integrity trigger tying a label to the source record of its normalized record.
