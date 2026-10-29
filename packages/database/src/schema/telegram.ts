@@ -210,3 +210,28 @@ export const telegramIntakeOutbox = pgTable(
     completedCheck: check("telegram_intake_outbox_completed_check", sql`(${table.status} = 'COMPLETED') = (${table.completedAt} is not null)`),
   }),
 );
+
+/**
+ * Operator-initiated replays of DEAD_LETTER outbox rows (Stage 2 / Task 5). Append-only. A dead-letter row can return to PENDING only in the same
+ * transaction that inserts a row here (enforced by the outbox guard trigger); the runtime role cannot insert here, so only the owner-run
+ * operations CLI can replay. Each row records who, why, and the state the row was in.
+ */
+export const telegramIntakeOutboxReplays = pgTable(
+  "telegram_intake_outbox_replays",
+  {
+    id: idColumn(),
+    outboxId: uuid("outbox_id")
+      .notNull()
+      .references(() => telegramIntakeOutbox.id, { onDelete: "restrict" }),
+    reason: text("reason").notNull(),
+    requestedBy: text("requested_by").notNull(),
+    previousAttemptCount: integer("previous_attempt_count").notNull(),
+    previousLastError: text("previous_last_error"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    outboxIdx: index("telegram_intake_outbox_replays_outbox_idx").on(table.outboxId),
+    reasonCheck: check("telegram_intake_outbox_replays_reason_check", sql`char_length(${table.reason}) between 8 and 500`),
+    actorCheck: check("telegram_intake_outbox_replays_actor_check", sql`${table.requestedBy} ~ '^operator:[a-z0-9][a-z0-9._-]{1,40}$'`),
+  }),
+);

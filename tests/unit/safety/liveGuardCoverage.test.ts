@@ -35,7 +35,7 @@ const isPython = (p: string) => p.endsWith(".py");
 
 describe("LIVE_TRADING guard coverage: static", () => {
   it("finds the compose-started processes (so this test cannot silently pass on an empty set)", () => {
-    expect(Object.keys(entries).sort()).toEqual(["api", "approval-bot", "audit-verify", "capture", "migrate", "safety-control", "scheduler", "worker"]);
+    expect(Object.keys(entries).sort()).toEqual(["alert-relay", "api", "approval-bot", "audit-verify", "capture", "migrate", "outbox-deadletter", "safety-control", "scheduler", "worker"]);
   });
 
   it("every entry point calls the shared guard; module-level guards precede configuration, and capture's main() starts with it", () => {

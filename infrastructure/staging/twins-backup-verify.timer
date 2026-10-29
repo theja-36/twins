@@ -1,0 +1,12 @@
+# Weekly, Sundays 04:30 UTC. Persistent: a run missed while the host was down is made up at boot. Configurable with a drop-in (systemctl edit).
+[Unit]
+Description=TWINS weekly local backup verification timer
+
+[Timer]
+OnCalendar=Sun *-*-* 04:30:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+Unit=twins-backup-verify.service
+
+[Install]
+WantedBy=timers.target

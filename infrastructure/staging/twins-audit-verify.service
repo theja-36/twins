@@ -2,10 +2,13 @@
 Description=TWINS audit-chain integrity check (read-only)
 After=docker.service
 Requires=docker.service
+OnFailure=twins-alert-on-failure@%n.service
 
 [Service]
 Type=oneshot
 # Exit 0 = PASS, 1 = FAIL (first failure is printed to the journal), 2/3 = the check itself could not run. The status file is for monitoring
 # (a stale or ok=false file is an alert). Keep --anchor-file on this host OUTSIDE the database volume: it is what exposes a rewritten history.
 WorkingDirectory=/opt/twins-staging
-ExecStart=/usr/bin/docker compose -f infrastructure/staging/docker-compose.staging.yml --env-file infrastructure/staging/staging.env --profile ops run --rm -T audit-verify --require-ddl-watch --anchor-file /var/lib/twins-monitor/audit-anchor.json --status-file /var/lib/twins-monitor/audit-verify.json
+ExecStart=/usr/bin/docker compose -f infrastructure/staging/docker-compose.staging.yml --env-file infrastructure/staging/staging.env --profile ops run --rm -T audit-verify --require-ddl-watch --anchor-file /monitor/audit-anchor.json --status-file /monitor/audit-verify.json
+# Raises reminders for stale/failed backup and audit status (WARNING/CRITICAL, throttled); never fails this unit.
+ExecStartPost=-/usr/local/sbin/twins-health-check.sh

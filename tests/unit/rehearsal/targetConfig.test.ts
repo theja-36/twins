@@ -58,13 +58,13 @@ describe("integration test target resolution (no defaults, exact contexts)", () 
 describe("migration state comparison (repository journal/hash convention)", () => {
   const expected = loadExpectedMigrations();
   const recorded = expected.map((m) => ({ hash: m.hash, created_at: String(m.when) }));
-  it("matches the repository chain exactly (13 migrations)", () => {
-    expect(expected).toHaveLength(13);
+  it("matches the repository chain exactly (14 migrations)", () => {
+    expect(expected).toHaveLength(14);
     expect(describeMigrationMismatch(expected, recorded)).toBeNull();
   });
   it("reports a target that is behind, naming the missing migrations", () => {
     const msg = describeMigrationMismatch(expected, recorded.slice(0, 4));
-    expect(msg).toMatch(/behind: 4 of 13/);
+    expect(msg).toMatch(/behind: 4 of 14/);
     expect(msg).toContain("0005_r0b_signal_evidence_unique_links");
     expect(msg).toContain("0006_options_claims_unverified");
     expect(msg).toContain("0007_telegram_user_capture_provenance");
@@ -73,9 +73,10 @@ describe("migration state comparison (repository journal/hash convention)", () =
     expect(msg).toContain("0010_audit_immutability_hash_chain");
     expect(msg).toContain("0011_stop_loss_validations");
     expect(msg).toContain("0012_telegram_intake_outbox");
+    expect(msg).toContain("0013_outbox_dead_letter_replay");
   });
   it("reports an empty history, extra history, and altered content or timestamp", () => {
-    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 13/);
+    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 14/);
     expect(describeMigrationMismatch(expected, [...recorded, { hash: "x", created_at: "1" }])).toMatch(/ahead or foreign/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 2 ? { ...r, hash: "0".repeat(64) } : r)))).toMatch(/different content/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 7 ? { ...r, created_at: "1" } : r)))).toMatch(/timestamp/);

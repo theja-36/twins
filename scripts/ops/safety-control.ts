@@ -17,6 +17,8 @@ import os from "node:os";
 import { pathToFileURL } from "node:url";
 import pg from "pg";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
+import { observe } from "../../packages/alerting/src/index";
+import type { StructuredLogger } from "../../packages/shared/src/index";
 import {
   changeControl,
   ControlChangeInvalidError,
@@ -38,6 +40,9 @@ export interface CliDeps {
   openPool?: (databaseUrl: string) => { pool: PoolLike; close: () => Promise<void> };
   /** Declared operator context (tests inject a fixed one). Default: OS user, host name and pid of this process. */
   operatorContext?: () => OperatorContext;
+  /** Logger for the change events (the real entry point passes one that also raises alerts); `flush` waits for alert delivery before the process exits. */
+  logger?: StructuredLogger;
+  flush?: () => Promise<void>;
 }
 
 function safeUser(): string {
@@ -136,8 +141,9 @@ export async function main(argv: string[], deps: CliDeps): Promise<number> {
       return 0;
     }
     const result = await changeControl(pool, input as NonNullable<typeof input>, {
-      logger: { info: () => undefined, warn: (e, f) => deps.err(JSON.stringify({ event: e, ...f })), error: (e, f) => deps.err(JSON.stringify({ event: e, ...f })), child() { return this; } },
+      logger: deps.logger ?? { info: () => undefined, warn: (e, f) => deps.err(JSON.stringify({ event: e, ...f })), error: (e, f) => deps.err(JSON.stringify({ event: e, ...f })), child() { return this; } },
     });
+    await deps.flush?.();
     deps.out(result.changed ? `changed ${result.control}: ${result.previousValue} -> ${result.newValue} (version ${result.version})` : `unchanged: ${result.control} is already ${result.newValue} (version ${result.version}); nothing recorded`);
     return 0;
   } catch (error) {
@@ -156,5 +162,6 @@ export async function main(argv: string[], deps: CliDeps): Promise<number> {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   enforceLiveTradingGuard("safety-control");
-  void main(process.argv.slice(2), { env: process.env, out: (l) => console.log(l), err: (l) => console.error(l) }).then((code) => process.exit(code));
+  const observed = observe("safety-control", process.env, (r) => console.error(JSON.stringify(r)));
+  void main(process.argv.slice(2), { env: process.env, out: (l) => console.log(l), err: (l) => console.error(l), logger: observed.logger, flush: () => observed.alerter.flush() }).then((code) => process.exit(code));
 }

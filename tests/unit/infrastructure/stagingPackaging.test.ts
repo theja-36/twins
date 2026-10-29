@@ -51,7 +51,9 @@ describe("staging packaging (static)", () => {
     expect(service("redis")).toMatch(/networks: \[twins_data\]/);
   });
   it("has placeholders only and requires every secret", () => {
-    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l) && !/^TWINS_TELEGRAM_SESSION_DB_KEY=$/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l) && !/^TWINS_TELEGRAM_SESSION_DB_KEY=$/.test(l) && !/^TWINS_ALERT_WEBHOOK_SECRET=$/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    expect(env).toMatch(/^TWINS_ALERT_WEBHOOK_URL=$/m); // the alert destination is optional and EMPTY in the template (empty = alerts are logged as undelivered)
+    expect(env).toMatch(/^TWINS_ALERT_RELAY_TOKEN=CHANGE_ME_/m);
     for (const name of ["TWINS_TELEGRAM_API_ID", "TWINS_TELEGRAM_API_HASH", "TWINS_TELEGRAM_SESSION_DB_KEY"]) expect(env, name).toMatch(new RegExp(`^${name}=$`, "m")); // owner-supplied later: EMPTY in the template
     for (const v of ["POSTGRES_PASSWORD", "REDIS_PASSWORD", "TWINS_API_KEY", "TELEGRAM_WEBHOOK_SECRET"]) expect(compose).toContain(`\${${v}:?`);
     expect(existsSync("infrastructure/staging/staging.env")).toBe(false);
@@ -166,11 +168,11 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the six shared app services (migrate, safety-control, audit-verify, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(6);
+  it("a new image gets its own tag and never overwrites the running one: the eight shared app services (migrate, safety-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(8);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(8); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(10); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -230,7 +232,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(8);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(10);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

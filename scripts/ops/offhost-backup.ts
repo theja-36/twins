@@ -20,10 +20,12 @@ import { pathToFileURL } from "node:url";
 import { promisify } from "node:util";
 import pg from "pg";
 import {
+  type BackupLogger,
   createDirStore, createS3Store, databaseScratch, dockerPgTools, dockerScratch, dumpWithFacts, isAgeRecipient, jsonLogger, localPgTools,
   pruneBackups, readStatus, resolveRetention, runBackup, runDrill, StepError, verifyRemote,
   type BackupManifest, type ObjectStore, type ScratchHooks, type StatusKind,
 } from "../../packages/backup/src/index";
+import { alerterFromEnv, alertingSink, createAlerter, type Alerter } from "../../packages/alerting/src/index";
 import { main as verifyAuditMain } from "./verify-audit-chain";
 // @ts-expect-error plain ESM script without types
 import { scanText } from "../ci/secret-scan.mjs";
@@ -105,7 +107,15 @@ export function restoreHooks(repoRoot: string): ScratchHooks {
 
 export async function main(argv: string[], env: Env = process.env, out: (l: string) => void = (l) => process.stdout.write(`${l}\n`)): Promise<number> {
   const command = argv[0];
-  const log = jsonLogger(out);
+  let alerter: Alerter;
+  try { alerter = alerterFromEnv(env, "offhost-backup"); } catch { alerter = createAlerter({ context: { environment: env["TWINS_ENV_NAME"] ?? "unknown", service: "offhost-backup" } }); }
+  const baseLog = jsonLogger(out);
+  const raise = alertingSink(() => undefined, alerter);
+  /** Structured log line, and an alert for the events in the alert policy (backup/verify/drill failures). */
+  const log: BackupLogger = (event, fields = {}) => {
+    baseLog(event, fields);
+    raise({ ts: new Date().toISOString(), level: event.endsWith(".failed") ? "error" : "info", event, ...fields });
+  };
   const repoRoot = resolve(env["TWINS_BACKUP_REPO_DIR"] ?? process.cwd());
   const now = (): Date => new Date();
   try {
@@ -180,11 +190,18 @@ export async function main(argv: string[], env: Env = process.env, out: (l: stri
   } catch (error) {
     if (error instanceof ConfigError) {
       out(JSON.stringify({ ts: now().toISOString(), level: "error", event: "offhost.config_error", message: error.message }));
+      // a job that cannot even start is a failed job: it must not fail silently
+      const failedEvent = command === "backup" ? "backup.failed" : command === "verify" ? "verify.failed" : command === "drill" ? "drill.failed" : undefined;
+      if (failedEvent) raise({ ts: new Date().toISOString(), level: "error", event: failedEvent, step: "config", failure: "config_error" });
+      await alerter.flush();
       return 2;
     }
-    if (error instanceof StepError) return 1; // already logged and written to the status file by the pipeline
+    if (error instanceof StepError) { await alerter.flush(); return 1; } // already logged and written to the status file by the pipeline
     out(JSON.stringify({ ts: now().toISOString(), level: "error", event: "offhost.failed", failure: "unexpected_error", errorName: error instanceof Error ? error.name : "Error" }));
+    await alerter.flush();
     return 1;
+  } finally {
+    await alerter.flush();
   }
 }
 

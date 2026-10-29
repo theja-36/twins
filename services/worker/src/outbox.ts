@@ -7,6 +7,7 @@ import {
   completeOutboxRow,
   failOutboxRow,
   findRedeliverableOutboxRows,
+  findStuckOutboxRows,
   OUTBOX_JOB_ID,
   OUTBOX_QUEUE_JOB_NAME,
   PgIntakeOutbox,
@@ -85,7 +86,7 @@ export async function processOutboxQueueJob(job: Pick<Job<OutboxJobPayload>, "da
       log.error("safety.outbox.dead_lettered", { attempt: failure.attemptCount, permanent, ...describeErrorSafely(error) });
       return "dead_lettered";
     }
-    log.warn("outbox.retry_scheduled", { attempt: failure.attemptCount, nextAvailableAt: failure.nextAvailableAt?.toISOString(), ...describeErrorSafely(error) });
+    log.warn("outbox.retry_scheduled", { attempt: failure.attemptCount, maxAttempts: row.maxAttempts, nextAvailableAt: failure.nextAvailableAt?.toISOString(), ...describeErrorSafely(error) });
     return "retry_scheduled";
   }
   const done = await completeOutboxRow(db, row.id, workerId, now?.());
@@ -108,9 +109,12 @@ export interface ReconcilerOptions {
   /** An enqueued row that is still due after this long is re-enqueued (the Redis job is presumed lost). */
   redeliverAfterMs?: number;
   batchSize?: number;
+  /** Rows due for longer than this (default 15 min) are reported as stuck (CRITICAL). */
+  stuckAfterMs?: number;
   now?: () => Date;
 }
 
+export const DEFAULT_STUCK_AFTER_MS = 15 * 60_000;
 export const DEFAULT_LEASE_MS = 5 * 60_000;
 export const DEFAULT_GRACE_MS = 5_000;
 export const DEFAULT_REDELIVER_AFTER_MS = 60_000;
@@ -121,6 +125,8 @@ export interface ReconcileSummary {
   deadLettered: number;
   enqueued: number;
   enqueueFailed: number;
+  /** Rows still not moving after a recovery pass (also logged as safety.outbox.stuck). */
+  stuck?: number;
 }
 
 /**
@@ -163,6 +169,11 @@ export async function reconcileOutbox(db: Db, options: ReconcilerOptions): Promi
       summary.enqueueFailed += 1;
       options.logger.warn("outbox.reconcile_enqueue_failed", { outboxId: row.id, ...describeErrorSafely(error) });
     }
+  }
+  const stuck = await findStuckOutboxRows(db, now, { dueForMs: options.stuckAfterMs ?? DEFAULT_STUCK_AFTER_MS, processingForMs: 3 * (options.leaseMs ?? DEFAULT_LEASE_MS) });
+  if (stuck.count > 0) {
+    summary.stuck = stuck.count;
+    options.logger.error("safety.outbox.stuck", { count: stuck.count, oldestAgeSeconds: stuck.oldestAgeSeconds });
   }
   return summary;
 }

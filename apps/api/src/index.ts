@@ -35,7 +35,7 @@ import { STATUS_CODES } from "node:http";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { getDb, getPool, schema, type Db } from "@twins/database";
 import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusalError } from "@twins/runtime-state";
@@ -45,11 +45,13 @@ import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type 
 import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
 import { buildMessageOutboxInput, OUTBOX_JOB_ID, OUTBOX_QUEUE_JOB_NAME, PgIntakeOutbox, type IntakeOutbox } from "@twins/ingestion";
+import { observe, recordProcessStart } from "@twins/alerting";
+import { currentRuntimeState } from "@twins/runtime-state";
+import { buildStatus } from "./statusSurface.js";
 import { createIntakeService, type IntakeEnqueue } from "./intakeService.js";
 import {
   acceptCorrelationId,
   constantTimeCompare,
-  createStructuredLogger,
   describeErrorSafely,
   newCorrelationId,
   newRequestId,
@@ -127,6 +129,18 @@ function settleWithin<T>(p: Promise<T>, ms: number): Promise<Settled<T>> {
 export function replyIntakePaused(reply: FastifyReply, log: StructuredLogger, refusal: SafetyRefusalError): FastifyReply {
   log.warn("api.intake.paused", { operation: refusal.operation, reason: refusal.reason, statusCode: 503 });
   return reply.code(503).header("Retry-After", "30").send({ error: "intake_paused", reason: refusal.reason });
+}
+
+/** Counts this process start for crash/restart-loop detection (best effort; needs Redis). */
+async function recordApiStart(logger: ReturnType<typeof observe>["logger"]): Promise<void> {
+  const redis = new Redis(loadConfig().redisUrl, { maxRetriesPerRequest: 1, connectTimeout: 3000, lazyConnect: true });
+  redis.on("error", () => undefined);
+  try {
+    await redis.connect();
+    await recordProcessStart({ incr: async (key, ttl) => { const n = await redis.incr(key); if (n === 1) await redis.expire(key, ttl); return n; } }, "api", logger);
+  } catch { /* not counted */ } finally {
+    redis.disconnect();
+  }
 }
 
 export interface ApiOptions {
@@ -219,7 +233,7 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
     requestIdHeader: false,
     genReqId: () => newRequestId(),
   });
-  const structuredLog = (options.structuredLogger ?? createStructuredLogger()).child({ service: "api" });
+  const structuredLog = (options.structuredLogger ?? observe("api").logger).child({ service: "api" });
 
   // Owned Redis/Queue diagnostics. ioredis emits an `error` on every reconnect attempt and BullMQ re-emits it;
   // record a safe code (never the message) at most once per 10 s so an outage cannot flood the logs. Logging is
@@ -315,6 +329,25 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
     tradingMode: config.tradingMode,
     liveTradingEnabled: config.liveTradingEnabled,
   }));
+
+  // ── Operational status (authenticated: the unauthenticated /health above stays minimal) ──
+  const startedAt = new Date();
+  app.get("/health/status", async (request, reply) => {
+    if (!checkBearerToken(request.headers.authorization)) return reply.code(401).send({ error: "Unauthorized" });
+    const statusDir = readEnv("TWINS_STATUS_DIR");
+    return buildStatus({
+      now: () => new Date(),
+      startedAt,
+      statusDir,
+      pingDatabase: async () => { await db.execute(sql`select 1`); },
+      pingRedis: ownedRedis ? async () => { await ownedRedis.ping(); } : undefined,
+      readSafety: () => currentRuntimeState().snapshot(),
+      outboxCounts: async () => {
+        const rows = await db.select({ status: schema.telegramIntakeOutbox.status, n: sql<number>`count(*)::int` }).from(schema.telegramIntakeOutbox).groupBy(schema.telegramIntakeOutbox.status);
+        return Object.fromEntries(rows.map((r) => [r.status, Number(r.n)]));
+      },
+    });
+  });
 
   // ── Internal User API capture endpoint (absent unless TWINS_CAPTURE_INGEST_TOKEN is set; never routed publicly) ──
   if (captureToken !== undefined) {
@@ -644,7 +677,9 @@ const isDirectRun =
 if (isDirectRun) {
   enforceLiveTradingGuard("api"); // before any configuration or connection (buildApp enforces it again)
   // Runtime safety state for this process (Stage 1 / Task 2). The API reads it through the shared pool; unreadable state fails closed.
-  configureRuntimeState({ source: pgStateSource(getPool()), logger: createStructuredLogger(undefined, { service: "api" }) });
+  const observedApi = observe("api");
+  configureRuntimeState({ source: pgStateSource(getPool()), logger: observedApi.logger });
+  void recordApiStart(observedApi.logger);
   // Role separation (Stage 1 / Task 3): outside local development the API must run as the least-privilege role (cannot update, delete or truncate
   // the audit tables, cannot alter them); otherwise it refuses to start (exit 82).
   if (loadConfig().appEnv !== "development") await enforceRuntimeRoleSeparation("api", getPool());
