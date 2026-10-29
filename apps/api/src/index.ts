@@ -42,8 +42,10 @@ import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusa
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { getValidationEligibility } from "@twins/signals";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
-import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
+import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
+import { buildMessageOutboxInput, OUTBOX_JOB_ID, OUTBOX_QUEUE_JOB_NAME, PgIntakeOutbox, type IntakeOutbox } from "@twins/ingestion";
+import { createIntakeService, type IntakeEnqueue } from "./intakeService.js";
 import {
   acceptCorrelationId,
   constantTimeCompare,
@@ -138,6 +140,8 @@ export interface ApiOptions {
    */
   telegramQueue?: Pick<Queue, "add"> & Partial<Pick<Queue, "getJob">>;
   db?: Db;
+  /** The durable intake outbox. Defaults to the PostgreSQL implementation over `db`; tests may inject a clearly test-owned in-memory one. */
+  intakeOutbox?: IntakeOutbox;
   logger?: boolean | object;
   /** Producer-side bound for one webhook enqueue in ms (default 3000, range 250-30000); see DEFAULT_ENQUEUE_TIMEOUT_MS. */
   enqueueTimeoutMs?: number;
@@ -246,6 +250,26 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
         })
     : undefined;
 
+  /**
+   * Durable intake (Stage 2 / Task 2): every accepted Telegram entry is written to the PostgreSQL outbox first; only then is a Redis job that carries
+   * just the outbox row id enqueued, under the same bound as before. A Redis failure after the durable write is not a request failure: the worker's
+   * reconciler re-enqueues the row. The job id embeds the attempt count, so duplicate enqueues of one attempt collapse while a later retry is a new job.
+   */
+  const intakeOutbox = options.intakeOutbox ?? new PgIntakeOutbox(db);
+  const enqueueOutboxJob: IntakeEnqueue = async (outboxId, attemptCount, deadlineMs) => {
+    const remaining = () => Math.max(0, deadlineMs - Date.now());
+    if (waitForQueueReady && !(await waitForQueueReady(remaining()))) throw new QueueUnavailableError("not_attempted");
+    const outcome = await settleWithin(
+      Promise.resolve().then(() =>
+        telegramQueue.add(OUTBOX_QUEUE_JOB_NAME, { jobType: OUTBOX_QUEUE_JOB_NAME, outboxId }, { jobId: OUTBOX_JOB_ID(outboxId, attemptCount), attempts: 3, backoff: { type: "exponential", delay: 1000 } }),
+      ),
+      remaining(),
+    );
+    if (outcome.kind === "timeout") throw new QueueUnavailableError("timed_out_unconfirmed");
+    if (outcome.kind === "error") throw outcome.error;
+  };
+  const intakeService = createIntakeService({ outbox: intakeOutbox, enqueue: enqueueOutboxJob });
+
   // Keep the stock JSON parser's protections (prototype/constructor poisoning -> error) but replace its
   // error: the stock SyntaxError message embeds a fragment of the request body, which Fastify would log.
   const stockJsonParser = app.getDefaultJsonParser("error", "error");
@@ -294,35 +318,11 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
 
   // ── Internal User API capture endpoint (absent unless TWINS_CAPTURE_INGEST_TOKEN is set; never routed publicly) ──
   if (captureToken !== undefined) {
-    /** Bounded enqueue for capture jobs: same unavailable/timeout semantics as the webhook; a repeated job id is a duplicate. */
-    const addCaptureJob = async (job: AddCaptureJob): Promise<AddCaptureJobResult> => {
-      const remaining = () => Math.max(0, job.deadlineMs - Date.now());
-      if (waitForQueueReady && !(await waitForQueueReady(remaining()))) throw new QueueUnavailableError("not_attempted");
-      if (telegramQueue.getJob) {
-        const lookup = await settleWithin(Promise.resolve(telegramQueue.getJob(job.jobId)), remaining());
-        if (lookup.kind === "timeout") throw new QueueUnavailableError("timed_out_unconfirmed");
-        if (lookup.kind === "error") {
-          if (isDependencyUnavailable(lookup.error)) throw new QueueUnavailableError("failed_unconfirmed");
-          throw lookup.error;
-        }
-        if (lookup.value) return "duplicate";
-      }
-      const outcome = await settleWithin(
-        Promise.resolve().then(() => telegramQueue.add(job.name, job.data, { jobId: job.jobId, attempts: 3, backoff: { type: "exponential", delay: 1000 } })),
-        remaining(),
-      );
-      if (outcome.kind === "timeout") throw new QueueUnavailableError("timed_out_unconfirmed");
-      if (outcome.kind === "error") {
-        if (isDependencyUnavailable(outcome.error)) throw new QueueUnavailableError("failed_unconfirmed");
-        throw outcome.error;
-      }
-      return "added";
-    };
     registerInternalIngest(app, {
       token: captureToken,
       policy: intakePolicy,
       log: structuredLog,
-      addJob: addCaptureJob,
+      intake: intakeService,
       exchange: readEnv("TELEGRAM_SIGNAL_EXCHANGE") ?? "NSE",
       instrumentType: readEnv("TELEGRAM_SIGNAL_INSTRUMENT_TYPE") ?? "equity",
       caps: captureCaps,
@@ -439,9 +439,10 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
         return reply.code(200).send({ status: "ignored", reason: "no text content" });
       }
 
-      // Business deduplication key (NOT the correlation id): one job per message revision.
+      // Business deduplication key (NOT the correlation id): one outbox row per message revision (channel + revision identity + type).
       const jobId = `tg-${normalized.channelIdentifier}-${normalized.externalMessageId}`;
-      const correlation = { correlationId, requestId, receivedAt: new Date().toISOString() };
+      const receivedAt = new Date();
+      const correlation = { correlationId, requestId, receivedAt: receivedAt.toISOString() };
       log.info("webhook.intake.accepted", {
         jobId,
         updateId: normalized.updateId,
@@ -450,90 +451,31 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
         originMessageId: normalized.originMessageId,
       });
 
-      // Enqueue the ingestion job under a producer-side bound (HTTP path only). 202 is returned ONLY after the
-      // queue confirmed the submission; every other outcome is a generic 503 (connectivity/timeout) or 500.
-      const startedAt = Date.now();
-      const remaining = () => Math.max(0, enqueueTimeoutMs - (Date.now() - startedAt));
-      if (waitForQueueReady && !(await waitForQueueReady(remaining()))) {
-        log.warn("webhook.enqueue.unavailable", { jobId, submission: "not_attempted" satisfies SubmissionKnowledge, boundMs: enqueueTimeoutMs, statusCode: 503 });
-        throw new QueueUnavailableError("not_attempted");
-      }
-      const submission = Promise.resolve().then(() =>
-        telegramQueue.add(
-          "telegram_messages",
-          {
+      // Durable acceptance: 202 is returned ONLY after the outbox row is committed in PostgreSQL. A database failure is a generic 503
+      // (Telegram redelivers the update; nothing was accepted). A Redis failure after the durable write is NOT an error: the worker's
+      // reconciler enqueues the row, so the update is acknowledged. The identity makes a redelivery an idempotent duplicate.
+      const submitted = await intakeService.submit(
+        buildMessageOutboxInput({
+          intakeSource: "bot_webhook",
+          normalized,
+          correlationId,
+          receivedAt,
+          payload: {
             jobType: "telegram_messages",
             providerName: "telegram-bot-webhook",
             correlation,
             telegram: {
-              params: {
-                channelIdentifier: normalized.channelIdentifier,
-                sinceExternalMessageId: undefined,
-              },
+              params: { channelIdentifier: normalized.channelIdentifier },
               normalizedMessage: normalized,
               exchange,
               instrumentType,
             },
           },
-          {
-            jobId,
-            attempts: 3,
-            backoff: { type: "exponential", delay: 1000 },
-          },
-        ),
+        }),
+        Date.now() + enqueueTimeoutMs,
+        log,
       );
-      const outcome = await settleWithin(submission, remaining());
-      if (outcome.kind === "timeout") {
-        // The call is NOT cancelled and may still complete: the outcome is UNKNOWN, not "no job". The same
-        // deterministic job id means a retry of this update cannot create a second job. Record the late result.
-        log.warn("webhook.enqueue.outcome_unknown", { jobId, submission: "timed_out_unconfirmed" satisfies SubmissionKnowledge, boundMs: enqueueTimeoutMs, statusCode: 503 });
-        submission.then(
-          () => log.info("webhook.enqueue.late_completion", { jobId, outcome: "succeeded", completedAfterMs: Date.now() - startedAt }),
-          (err: unknown) => log.warn("webhook.enqueue.late_completion", { jobId, outcome: "failed", ...describeErrorSafely(err) }),
-        );
-        throw new QueueUnavailableError("timed_out_unconfirmed");
-      }
-      if (outcome.kind === "error") {
-        if (isDependencyUnavailable(outcome.error)) {
-          log.warn("webhook.enqueue.unavailable", { jobId, submission: "failed_unconfirmed" satisfies SubmissionKnowledge, ...describeErrorSafely(outcome.error), statusCode: 503 });
-          throw new QueueUnavailableError("failed_unconfirmed");
-        }
-        log.error("webhook.enqueue.failed", { jobId, ...describeErrorSafely(outcome.error), statusCode: 500 });
-        throw outcome.error;
-      }
-
-      // BullMQ keeps the FIRST job for a jobId. If the stored job carries a different correlation
-      // id, this request deduplicated onto an existing job: link to it instead of implying that
-      // this request's ids became the job's context. (Best effort; needs getJob.)
-      let existing: { jobId: string; correlationId?: string; requestId?: string } | undefined;
-      try {
-        // Bounded too: a successful submission must not turn into a hang because the best-effort lookup stalls.
-        const lookup = await settleWithin(Promise.resolve(telegramQueue.getJob?.(jobId)), Math.min(1000, remaining()));
-        if (lookup.kind === "timeout") throw Object.assign(new Error("lookup timed out"), { code: "LOOKUP_TIMEOUT" });
-        if (lookup.kind === "error") throw lookup.error;
-        const stored = lookup.value;
-        const storedCorrelation = (stored?.data as { correlation?: { correlationId?: unknown; requestId?: unknown } } | undefined)?.correlation;
-        const storedId = acceptCorrelationId(storedCorrelation?.correlationId);
-        if (stored && storedId !== correlationId) {
-          existing = {
-            jobId,
-            ...(storedId ? { correlationId: storedId } : {}),
-            ...(typeof storedCorrelation?.requestId === "string" ? { requestId: storedCorrelation.requestId.slice(0, 80) } : {}),
-          };
-        }
-      } catch (err) {
-        log.warn("webhook.enqueue.link_lookup_failed", { jobId, ...describeErrorSafely(err) });
-      }
-      if (existing) {
-        log.info("webhook.enqueue.deduplicated", {
-          jobId,
-          existingJobCorrelationId: existing.correlationId,
-          existingJobRequestId: existing.requestId,
-          statusCode: 202,
-        });
-      } else {
-        log.info("webhook.enqueue.succeeded", { jobId, statusCode: 202 });
-      }
+      log.info(submitted.outcome === "duplicate" ? "webhook.enqueue.deduplicated" : "webhook.enqueue.succeeded", { jobId, outboxId: submitted.outboxId, enqueued: submitted.enqueued, statusCode: 202 });
 
       return reply.code(202).send({ status: "accepted" });
     },

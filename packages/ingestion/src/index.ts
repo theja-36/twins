@@ -11,3 +11,4 @@ export type { Db } from "./db";
 export * from "./telegramRevisions";
 export * from "./captureEvents";
 export * from "./history";
+export * from "./intakeOutbox";

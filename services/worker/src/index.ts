@@ -20,11 +20,12 @@
  *   index) is the backstop.
  */
 
-import { UnrecoverableError, Worker, type Job } from "bullmq";
+import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { withIntakeGate } from "./safetyGate.js";
+import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
 import { createStructuredLogger, describeErrorSafely, type StructuredLogger } from "@twins/shared";
 import { buildJobLogContext } from "./correlationLog.js";
@@ -136,7 +137,7 @@ export interface MarketBarsJobPayload {
 }
 
 /** Everything the signal queue can carry: message jobs (Bot API or User API capture) and observed-deletion event jobs. */
-export type SignalQueueJobPayload = TelegramJobPayload | TelegramEventsJobPayload;
+export type SignalQueueJobPayload = TelegramJobPayload | TelegramEventsJobPayload | OutboxJobPayload;
 export type WorkerJobPayload = SignalQueueJobPayload | MarketBarsJobPayload;
 
 // ─── Queue boundary ────────────────────────────────────────────────────────
@@ -149,6 +150,8 @@ export type WorkerJobPayload = SignalQueueJobPayload | MarketBarsJobPayload;
  * carries only the job id and external message id - no payload or secrets.
  */
 export interface TelegramJobOptions {
+  /** Durable-intake retry backoff (tests inject a fast policy; production uses the default). */
+  outboxRetryPolicy?: { baseMs: number; maxMs: number };
   /** Contract master for options assessments (tests inject one). Default: the explicitly configured one, else NONE. */
   optionsMaster?: OptionsContractMaster;
   /** Structured logger (tests inject a capture sink). Defaults to JSON lines on the console. */
@@ -293,6 +296,15 @@ export async function processSignalQueueJob(
   options: TelegramJobOptions = {},
 ): Promise<void> {
   const data = job.data as { jobType?: unknown } | undefined;
+  if (data?.jobType === "telegram_outbox") {
+    // Durable intake (Stage 2 / Task 2): the job carries only the outbox row id. Jobs queued before this change keep their full payload and take the paths below.
+    await processOutboxQueueJob(job as unknown as Job<OutboxJobPayload>, db, {
+      logger: options.logger ?? defaultWorkerLogger,
+      ...(options.outboxRetryPolicy ? { retryPolicy: options.outboxRetryPolicy } : {}),
+      runPipeline: (pseudoJob) => processSignalQueueJob(pseudoJob as Job<SignalQueueJobPayload>, correlationId, db, options),
+    });
+    return;
+  }
   if (data?.jobType === "telegram_events") {
     return processTelegramEventsQueueJob(job as Job<TelegramEventsJobPayload>, correlationId, db, options);
   }
@@ -705,6 +717,25 @@ export const marketWorker =
         },
       );
 
+// Outbox reconciler (Stage 2 / Task 2): re-enqueues outbox rows whose Redis job was never created or was lost, and recovers rows orphaned by a dead worker.
+// It does nothing while intake is disabled or the kill switch is active. Interval / lease are configurable; defaults 10 s / 5 min.
+const positiveMs = (name: string, fallback: number): number => {
+  const raw = process.env[name];
+  if (raw === undefined || raw === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1000 || n > 86_400_000) throw new Error(`${name} must be an integer number of milliseconds between 1000 and 86400000`);
+  return n;
+};
+const outboxQueue = process.env["NODE_ENV"] === "test" ? null : new Queue("signal_queue", { connection: createWorkerRedis() });
+const outboxReconciler = outboxQueue
+  ? startOutboxReconciler(workerDb.db, {
+      logger: defaultWorkerLogger,
+      queue: outboxQueue,
+      intervalMs: positiveMs("TWINS_OUTBOX_RECONCILE_INTERVAL_MS", 10_000),
+      leaseMs: positiveMs("TWINS_OUTBOX_LEASE_MS", 300_000),
+    })
+  : null;
+
 if (signalWorker) {
   // Per-attempt detail is logged by processTelegramQueueJob; this reports the queue-level result
   // without the error message (which may embed row values).
@@ -732,7 +763,9 @@ if (marketWorker) {
 
 export async function shutdown(signal: string): Promise<void> {
   console.log(`[worker] received ${signal}, shutting down gracefully`);
+  outboxReconciler?.stop();
   const closers: Array<Promise<unknown>> = [];
+  if (outboxQueue) closers.push(outboxQueue.close());
   if (signalWorker) closers.push(signalWorker.close());
   if (marketWorker) closers.push(marketWorker.close());
   for (const r of await Promise.allSettled(closers)) {
