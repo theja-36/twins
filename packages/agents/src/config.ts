@@ -5,13 +5,15 @@ import { AgentContractError } from "./contract";
  * THROWS (the process does not start with a silently wrong configuration), like the sizing and expiry configurations.
  *
  *   TWINS_AGENT_ENGINE_ENABLED         true | false (default false)
- *   TWINS_AGENT_ENGINE_REQUIRED        comma list of agent ids whose COMPLETED result is mandatory (default none)
+ *   TWINS_AGENT_ENGINE_REQUIRED        comma list of agent ids whose COMPLETED result is mandatory (default: signal-integrity-v1, instrument-verification-v1; set to an empty value for none)
  *   TWINS_AGENT_ENGINE_DISABLED_AGENTS comma list of agent ids switched off
  *   TWINS_AGENT_ENGINE_WEIGHTS         JSON {"agent_id": 0-100} overriding contract weights
  *   TWINS_AGENT_ENGINE_MAX_CONCURRENCY 1-16 (default 4)
  *   TWINS_AGENT_ENGINE_HALT_ON         comma list of assessments that stop the risk flow before sizing (default RESEARCH_BLOCKED,RESEARCH_INCOMPLETE,RESEARCH_ADVERSE)
  */
 export const AGENT_CONFIG_VERSION = "agent-engine-config-v1";
+/** Stage 5 / Task 2: when the engine is enabled and TWINS_AGENT_ENGINE_REQUIRED is not set, both production agents are REQUIRED (a missing result fails closed). */
+export const DEFAULT_REQUIRED_AGENTS: readonly string[] = ["instrument-verification-v1", "signal-integrity-v1"];
 export const ASSESSMENTS = ["RESEARCH_SUPPORTIVE", "RESEARCH_NEUTRAL", "RESEARCH_CAUTION", "RESEARCH_ADVERSE", "RESEARCH_BLOCKED", "RESEARCH_INCOMPLETE"] as const;
 export type ResearchAssessment = (typeof ASSESSMENTS)[number];
 
@@ -36,7 +38,7 @@ export const DEFAULT_AGENT_CONFIG: AgentEngineConfig = {
   version: AGENT_CONFIG_VERSION, enabled: false, requiredAgents: [], disabledAgents: [], weights: {}, maxConcurrency: 4,
   haltOn: ["RESEARCH_BLOCKED", "RESEARCH_INCOMPLETE", "RESEARCH_ADVERSE"], thresholds: DEFAULT_THRESHOLDS,
 };
-const AGENT_ID = /^[a-z][a-z0-9_]{2,40}$/;
+const AGENT_ID = /^[a-z][a-z0-9_-]{2,40}$/;
 const bad = (what: string): never => { throw new AgentContractError("INVALID_ENGINE_CONFIG", `invalid agent engine configuration: ${what}`); };
 const list = (v: string | undefined, name: string): string[] => {
   if (v === undefined || v.trim() === "") return [];
@@ -70,7 +72,7 @@ export function loadAgentEngineConfig(env: Record<string, string | undefined> = 
   if (conc !== undefined && !/^\d{1,2}$/.test(conc)) bad("TWINS_AGENT_ENGINE_MAX_CONCURRENCY");
   const halt = env["TWINS_AGENT_ENGINE_HALT_ON"];
   return validateAgentEngineConfig({
-    ...DEFAULT_AGENT_CONFIG, enabled: flag === "true", requiredAgents: list(env["TWINS_AGENT_ENGINE_REQUIRED"], "TWINS_AGENT_ENGINE_REQUIRED"), disabledAgents: list(env["TWINS_AGENT_ENGINE_DISABLED_AGENTS"], "TWINS_AGENT_ENGINE_DISABLED_AGENTS"),
+    ...DEFAULT_AGENT_CONFIG, enabled: flag === "true", requiredAgents: env["TWINS_AGENT_ENGINE_REQUIRED"] === undefined ? [...DEFAULT_REQUIRED_AGENTS] : list(env["TWINS_AGENT_ENGINE_REQUIRED"], "TWINS_AGENT_ENGINE_REQUIRED"), disabledAgents: list(env["TWINS_AGENT_ENGINE_DISABLED_AGENTS"], "TWINS_AGENT_ENGINE_DISABLED_AGENTS"),
     weights, maxConcurrency: conc === undefined ? DEFAULT_AGENT_CONFIG.maxConcurrency : Number(conc),
     haltOn: halt === undefined || halt.trim() === "" ? DEFAULT_AGENT_CONFIG.haltOn : (halt.split(",").map((x) => x.trim()) as ResearchAssessment[]),
   });

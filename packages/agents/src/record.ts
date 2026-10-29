@@ -1,6 +1,7 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { deriveFeatures } from "@twins/historical";
+import { getRevisionStates, originOf } from "@twins/ingestion";
 import { getRiskDecision, intelligenceOf, refuseUnlessSafe, RiskDecisionError, type RiskDecisionRecord } from "@twins/risk";
 import type { AgentEngineConfig, ResearchAssessment } from "./config";
 import type { ContextInputKey } from "./contract";
@@ -44,8 +45,51 @@ export async function buildDecisionInputs(db: Db, d: RiskDecisionRecord): Promis
       dataSufficiency: i.dataSufficiency, asOf: i.asOf,
     } : null,
     stop_loss_validation: stop ? { id: stop.id, result: stop.result, reasonCode: stop.reasonCode, levelBasis: stop.levelBasis, riskPct: num(stop.riskPct), ruleVersion: stop.ruleVersion } : null,
+    signal_context: await buildSignalContext(db, d),
     signal_features: deriveFeatures({ market: d.market, instrumentType: d.instrumentType, underlying: d.symbol, optionType: d.optionType, side: d.side, entry: d.entryPrice === null ? null : { type: "at", price: Number(d.entryPrice) }, stopLoss: num(d.stopLoss), targets, expiryDate: d.expiry, timestamp: asOf }),
   };
+}
+
+
+export interface SignalContext {
+  subject: "signal" | "options_claim";
+  /** When the signal was sent (null if unknown - an agent must not guess it). */
+  signalTimestamp: string | null;
+  messageLinked: boolean;
+  revision: { known: boolean; otherVersions: number; state: "current" | "superseded" | "ambiguous" | "unknown"; anyAmbiguous: boolean; levelsChanged: boolean | null };
+  entryType: string | null;
+  parserVersion: string | null;
+}
+/** Signal time and revision state from stored, deterministic data (no message text). */
+export async function buildSignalContext(db: Db, d: RiskDecisionRecord): Promise<SignalContext> {
+  let messageId: string | null = null, ts: Date | null = null, entryType: string | null = null, parserVersion: string | null = null;
+  const fingerprint = (x: { direction: string; entryPrice: unknown; stopLoss: unknown; targets: unknown }): string => JSON.stringify([x.direction, num(x.entryPrice), num(x.stopLoss), x.targets ?? null]);
+  let mine: string | null = null;
+  if (d.signalId) {
+    const [s] = await db.select().from(schema.signals).where(eq(schema.signals.id, d.signalId));
+    messageId = s?.telegramMessageId ?? null; ts = s?.signalTimestamp ?? null; entryType = s ? "at" : null; parserVersion = s?.parserVersion ?? null;
+    mine = s ? fingerprint(s) : null;
+  } else {
+    const [c] = await db.select().from(schema.optionsClaims).where(eq(schema.optionsClaims.id, d.optionsClaimId as string));
+    messageId = c?.telegramMessageId ?? null; parserVersion = c?.parserVersion ?? null;
+    entryType = (c?.claim as { entry?: { type?: string } } | null)?.entry?.type ?? null;
+  }
+  const base = { subject: (d.signalId ? "signal" : "options_claim") as SignalContext["subject"], entryType, parserVersion };
+  if (!messageId) return { ...base, signalTimestamp: ts?.toISOString() ?? null, messageLinked: false, revision: { known: false, otherVersions: 0, state: "unknown", anyAmbiguous: false, levelsChanged: null } };
+  const [m] = await db.select({ id: schema.telegramMessages.id, source: schema.telegramMessages.telegramSourceId, external: schema.telegramMessages.externalMessageId, origin: schema.telegramMessages.originMessageId, at: schema.telegramMessages.messageTimestamp }).from(schema.telegramMessages).where(eq(schema.telegramMessages.id, messageId));
+  if (!m) return { ...base, signalTimestamp: ts?.toISOString() ?? null, messageLinked: false, revision: { known: false, otherVersions: 0, state: "unknown", anyAmbiguous: false, levelsChanged: null } };
+  const states = await getRevisionStates(db, m.source, originOf({ externalMessageId: m.external, originMessageId: m.origin }));
+  const me = states.find((x) => x.id === m.id);
+  const others = states.filter((x) => x.id !== m.id).map((x) => x.id);
+  let levelsChanged: boolean | null = null;
+  if (d.signalId && mine !== null) {
+    levelsChanged = false;
+    if (others.length > 0) {
+      const sibs = await db.select().from(schema.signals).where(and(inArray(schema.signals.telegramMessageId, others)));
+      levelsChanged = sibs.some((x) => fingerprint(x) !== mine);
+    }
+  }
+  return { ...base, signalTimestamp: (ts ?? m.at).toISOString(), messageLinked: true, revision: { known: me !== undefined, otherVersions: others.length, state: me?.state ?? "unknown", anyAmbiguous: states.some((x) => x.state === "ambiguous"), levelsChanged } };
 }
 
 const configSnapshot = (c: AgentEngineConfig): Record<string, unknown> => ({ version: c.version, requiredAgents: c.requiredAgents, disabledAgents: c.disabledAgents, weights: c.weights, maxConcurrency: c.maxConcurrency, haltOn: c.haltOn, thresholds: c.thresholds });
