@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { observe, recordProcessStart } from "@twins/alerting";
-import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError } from "@twins/risk";
+import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
@@ -326,11 +326,20 @@ async function recordPendingRiskDecision(
   log: StructuredLogger,
   create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
   subject: { signalId?: string; optionsClaimId?: string },
+  size?: () => ReturnType<typeof sizeLatestRiskDecisionForSignal>,
 ): Promise<void> {
   try {
     const r = await create();
-    if (r.skipped) log.warn("worker.risk_decision.skipped", { reason: r.skipped, ...subject });
-    else log.info("worker.risk_decision.recorded", { riskDecisionId: r.id, created: r.created, status: r.status, decisionVersion: r.decisionVersion, ...subject });
+    if (r.skipped) {
+      log.warn("worker.risk_decision.skipped", { reason: r.skipped, ...subject });
+      return;
+    }
+    log.info("worker.risk_decision.recorded", { riskDecisionId: r.id, created: r.created, status: r.status, decisionVersion: r.decisionVersion, ...subject });
+    // Stage 3 / Task 2: append the position-size version. Planning only: no order, broker call or approval is produced.
+    const sz = size ? await size() : undefined;
+    if (!sz) return;
+    if ("skipped" in sz && sz.skipped) log.info("worker.risk_sizing.skipped", { reason: sz.skipped, ...subject });
+    else if (!("skipped" in sz)) log.info("worker.risk_sizing.recorded", { riskDecisionId: sz.id, created: sz.created, sizingStatus: sz.sizingStatus, reasonCode: sz.reasonCode, quantity: sz.quantity, decisionVersion: sz.decisionVersion, ...subject });
   } catch (error) {
     if (error instanceof RiskDecisionError && error.cause instanceof SafetyRefusalError) throw error.cause;
     throw error;
@@ -545,7 +554,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
-    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id });
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id));
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -583,7 +592,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
-    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }); // resume: a crash after validation must not leave the signal without its risk decision
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId)); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -659,7 +668,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
-  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId });
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId));
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,
