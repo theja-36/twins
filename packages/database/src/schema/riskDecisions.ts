@@ -94,6 +94,11 @@ export const riskDecisions = pgTable(
       sql`(${table.entryPrice} is null or ${table.entryPrice} > 0) and (${table.stopLoss} is null or ${table.stopLoss} > 0) and (${table.target1} is null or ${table.target1} > 0) and (${table.target2} is null or ${table.target2} > 0) and (${table.target3} is null or ${table.target3} > 0) and (${table.strike} is null or ${table.strike} > 0) and (${table.plannedQuantity} is null or ${table.plannedQuantity} >= 0) and (${table.plannedNotional} is null or ${table.plannedNotional} >= 0) and (${table.plannedMaxLossAmount} is null or ${table.plannedMaxLossAmount} >= 0) and (${table.plannedMaxLossPercent} is null or ${table.plannedMaxLossPercent} >= 0) and (${table.plannedRiskRewardRatio} is null or ${table.plannedRiskRewardRatio} >= 0) and (${table.confidenceScore} is null or (${table.confidenceScore} >= 0 and ${table.confidenceScore} <= 100))`,
     ),
     reviewShapeCheck: check("risk_decisions_review_shape_check", sql`${table.status} <> 'APPROVED_FOR_REVIEW' or (${table.stopLoss} is not null and ${table.entryPrice} is not null and ${table.stopLossBasis} is not null)`),
+    // Stage 3 / Task 2: a decision without a valid position size can never be approval-eligible.
+    sizedReviewCheck: check(
+      "risk_decisions_sized_review_check",
+      sql`${table.status} <> 'APPROVED_FOR_REVIEW' or (coalesce(${table.plannedQuantity} > 0, false) and coalesce(${table.plannedNotional} > 0, false) and coalesce(${table.plannedMaxLossAmount} > 0, false) and coalesce(${table.plannedMaxLossPercent} > 0, false) and coalesce(${table.outputSnapshot} -> 'sizing' ->> 'status' = 'SIZED', false))`,
+    ),
     actorCheck: check("risk_decisions_actor_check", sql`${table.createdBy} ~ '^(service|operator):[a-z0-9][a-z0-9._-]{1,40}$'`),
   }),
 );
