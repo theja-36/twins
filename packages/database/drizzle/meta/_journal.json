@@ -155,6 +155,13 @@
       "when": 1793308136663,
       "tag": "0021_historical_outcomes",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1793309620670,
+      "tag": "0022_historical_scorecards",
+      "breakpoints": true
     }
   ]
 }
