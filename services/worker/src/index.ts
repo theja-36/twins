@@ -25,6 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
+import { createDefaultRegistry, loadAgentEngineConfig, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -338,6 +339,12 @@ function alertMarket(log: StructuredLogger, a: MarketAlert): void {
   marketAlerter?.alert({ ...a, dedupeKey: `${a.code}:${a.details.reason}:${a.details.kind}` });
 }
 
+// Stage 5 / Task 1: the agent engine. DISABLED by default (TWINS_AGENT_ENGINE_ENABLED); no research agent is implemented yet, so the registry is empty. A malformed configuration
+// throws here, at start-up. When disabled, the risk flow below is exactly as before.
+const agentEngineConfig = loadAgentEngineConfig();
+const agentRegistry = createDefaultRegistry();
+const agentEngineFor = (log: StructuredLogger, db: Db) => (decisionId: string) => runAgentEngine(db, decisionId, { registry: agentRegistry, config: agentEngineConfig, emit: (e) => log.info("worker.agent_engine.event", { ...e }) });
+
 async function recordPendingRiskDecision(
   log: StructuredLogger,
   create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
@@ -346,6 +353,7 @@ async function recordPendingRiskDecision(
   evaluate?: (decisionId: string) => ReturnType<typeof evaluatePortfolioRisk>,
   db?: Db,
   intel?: () => ReturnType<typeof recordIntelligenceForSignal>,
+  agents?: (decisionId: string) => ReturnType<typeof runAgentEngine>,
 ): Promise<void> {
   try {
     const r = await create();
@@ -356,10 +364,21 @@ async function recordPendingRiskDecision(
     log.info("worker.risk_decision.recorded", { riskDecisionId: r.id, created: r.created, status: r.status, decisionVersion: r.decisionVersion, ...subject });
     // Stage 4 / Task 5: record point-in-time source intelligence (trust tier + calibrated confidence) as a new decision version BEFORE sizing. Unavailable intelligence is recorded as such
     // (the decision stays PENDING with an explicit reason and cannot be sized or approved); a database / runtime-state error propagates, so the job fails closed and is retried.
+    let latestId = r.id;
     if (intel) {
       const ir = await intel();
       if ("skipped" in ir) log.info("worker.source_intelligence.skipped", { reason: ir.skipped, ...subject });
-      else log.info("worker.source_intelligence.recorded", { riskDecisionId: ir.id, created: ir.created, intelligenceStatus: ir.intelligenceStatus, reasonCode: ir.reasonCode, trustTier: ir.trustTier, confidenceTier: ir.confidenceTier, decisionVersion: ir.decisionVersion, ...subject });
+      else { latestId = ir.id; log.info("worker.source_intelligence.recorded", { riskDecisionId: ir.id, created: ir.created, intelligenceStatus: ir.intelligenceStatus, reasonCode: ir.reasonCode, trustTier: ir.trustTier, confidenceTier: ir.confidenceTier, decisionVersion: ir.decisionVersion, ...subject }); }
+    }
+    // Stage 5 / Task 1: the agent-engine extension point (after source intelligence, before sizing and the later gates). Disabled by default => skipped, nothing changes. When enabled, a
+    // BLOCKED / INCOMPLETE / ADVERSE research assessment (or a missing required agent result) stops the flow here: the decision stays PENDING and can never be sized, gated or approved.
+    // The assessment never grants approval and never bypasses a later gate. A database or runtime-state error propagates (fail closed).
+    if (agents) {
+      const ar = await agents(latestId);
+      if (!ar.skipped) {
+        log.info("worker.agent_engine.recorded", { riskDecisionId: ar.riskDecisionId, runId: ar.runId, created: ar.created, status: ar.status, assessment: ar.assessment, agents: ar.agents, ...subject });
+        if (ar.halt) { log.warn("worker.agent_engine.halted", { riskDecisionId: ar.riskDecisionId, assessment: ar.assessment, ...subject }); return; }
+      }
     }
     // Stage 3 / Task 2: append the position-size version. Planning only: no order, broker call or approval is produced.
     const sz = size ? await size() : undefined;
@@ -599,7 +618,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
-    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForOptionsClaim(db, record.id));
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForOptionsClaim(db, record.id), agentEngineFor(log, db));
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -637,7 +656,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
-    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId)); // resume: a crash after validation must not leave the signal without its risk decision
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db)); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -713,7 +732,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
-  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId));
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db));
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,

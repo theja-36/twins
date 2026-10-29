@@ -11,6 +11,7 @@
     { "path": "packages/alerting" },
     { "path": "packages/risk" },
     { "path": "packages/historical" },
+    { "path": "packages/agents" },
     { "path": "packages/stop-loss" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },
