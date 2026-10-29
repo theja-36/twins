@@ -25,7 +25,8 @@
     "@twins/types": "*",
     "bullmq": "^6.3.11",
     "ioredis": "^5.11.1",
-    "@twins/alerting": "*"
+    "@twins/alerting": "*",
+    "@twins/risk": "*"
   },
   "devDependencies": {
     "tsx": "^4.16.0"
