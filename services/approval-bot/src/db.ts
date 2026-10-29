@@ -16,6 +16,18 @@ export interface CardRow {
   expiresAt: Date;
 }
 
+/** A risk-approval card (Stage 3 / Task 6): created by the application with the text already rendered; the bot only reads it and advances its state through database functions. */
+export interface RiskCardRow {
+  id: string;
+  nonce: string;
+  cardText: string;
+  cardContentSha256: string;
+  state: CardState;
+  telegramMessageId: number | null;
+  expiresAt: Date;
+}
+export type DecideRiskResult = { outcome: "recorded" } | { outcome: "duplicate" } | { outcome: "expired" } | { outcome: "not_pending" } | { outcome: "refused"; reason: string } | { outcome: "unknown" };
+
 export interface BotState {
   activatedAt: Date;
   paused: boolean;
@@ -50,13 +62,23 @@ export interface BotDb {
   countSentSince(since: Date): Promise<number>;
   countByState(): Promise<Record<string, number>>;
   recordEvent(type: string, cardId: string | null, detail: Record<string, string | number | boolean>): Promise<void>;
+  // risk-approval cards (Stage 3 / Task 6)
+  listPendingRiskCards(limit: number): Promise<RiskCardRow[]>;
+  getRiskCard(cardId: string): Promise<RiskCardRow | null>;
+  markRiskSent(cardId: string, telegramMessageId: number, cardTextSha256: string): Promise<boolean>;
+  decideRisk(input: DecideInput & { decisionId: string }): Promise<DecideRiskResult>;
+  expireDueRisk(): Promise<Array<{ cardId: string; telegramMessageId: number | null }>>;
+  /** The decision a risk card belongs to (needed to record the tap; the bot reads no decision data beyond this id). */
+  getRiskCardDecisionId(cardId: string): Promise<string | null>;
   close(): Promise<void>;
 }
 
 /** Tables the bot may write. A static test pins this list and checks that no other table appears in an INSERT/UPDATE/DELETE statement. */
 export const WRITE_TABLES = ["claim_review_cards", "claim_reviews", "approval_bot_events", "approval_bot_state"] as const;
 /** Everything the role may read, with the column lists granted (raw_text and raw_payload are NOT among them). */
-const READABLE = ["options_claims", "telegram_messages", "telegram_sources", "system_controls", ...WRITE_TABLES];
+const READABLE = ["options_claims", "telegram_messages", "telegram_sources", "system_controls", "risk_approval_cards", ...WRITE_TABLES];
+/** The three SECURITY DEFINER functions through which the bot advances risk cards and records a tap. It holds no table privilege on risk_approval_cards beyond SELECT. */
+export const RISK_FUNCTIONS = ["twins_risk_card_mark_sent(uuid,bigint,text)", "twins_risk_card_expire_due()", "twins_record_risk_approval(uuid,uuid,text,text,jsonb,text,timestamptz)"] as const;
 
 const CARD_COLUMNS = "id, kind, claim_id, state, nonce, telegram_message_id, card_text_sha256, expires_at";
 
@@ -136,6 +158,11 @@ export class PgBotDb implements BotDb {
     if (controls?.["r"] !== true) problems.push("cannot_read:system_controls");
     if (controls?.["w"] === true) problems.push("can_write:system_controls");
     if (controls?.["extra"] === true) problems.push("can_read_beyond_values:system_controls");
+    // Stage 3 / Task 6: risk approval cards are READ-ONLY for the bot (state changes go through the three functions), and the decisions / approvals behind them are not accessible at all.
+    const riskCards = (await q(`select has_any_column_privilege('risk_approval_cards','INSERT') or has_any_column_privilege('risk_approval_cards','UPDATE') or has_table_privilege('risk_approval_cards','DELETE') or has_table_privilege('risk_approval_cards','TRUNCATE') as w, has_table_privilege('risk_approval_cards','SELECT') as r`))[0];
+    if (riskCards?.["w"] === true) problems.push("can_write:risk_approval_cards");
+    if (riskCards?.["r"] !== true) problems.push("cannot_read:risk_approval_cards");
+    for (const fn of RISK_FUNCTIONS) if ((await q("select has_function_privilege($1, 'EXECUTE') as e", [fn]))[0]?.["e"] !== true) problems.push(`cannot_execute:${fn.split("(")[0]}`);
     const others = await q(
       `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
         where n.nspname = 'public' and c.relkind in ('r','v','m','p','f') and c.relname <> all($1)
@@ -286,6 +313,41 @@ export class PgBotDb implements BotDb {
 
   async recordEvent(type: string, cardId: string | null, detail: Record<string, string | number | boolean>): Promise<void> {
     await this.pool.query("insert into approval_bot_events (id, event_type, card_id, detail) values (gen_random_uuid(), $1, $2, $3::jsonb)", [type, cardId, JSON.stringify(detail)]);
+  }
+
+  // ── risk-approval cards (Stage 3 / Task 6) ──
+  private toRiskCard(r: Record<string, unknown>): RiskCardRow {
+    return { id: r["id"] as string, nonce: r["nonce"] as string, cardText: r["card_text"] as string, cardContentSha256: r["card_content_sha256"] as string, state: r["state"] as CardState, telegramMessageId: r["telegram_message_id"] === null || r["telegram_message_id"] === undefined ? null : Number(r["telegram_message_id"]), expiresAt: r["expires_at"] as Date };
+  }
+  async listPendingRiskCards(limit: number): Promise<RiskCardRow[]> {
+    return (await this.pool.query("select id, nonce, card_text, card_content_sha256, state, telegram_message_id, expires_at from risk_approval_cards where state = 'pending' and expires_at > now() order by created_at asc limit $1", [limit])).rows.map((r) => this.toRiskCard(r));
+  }
+  async getRiskCard(cardId: string): Promise<RiskCardRow | null> {
+    const r = (await this.pool.query("select id, nonce, card_text, card_content_sha256, state, telegram_message_id, expires_at from risk_approval_cards where id = $1", [cardId])).rows[0];
+    return r ? this.toRiskCard(r) : null;
+  }
+  async getRiskCardDecisionId(cardId: string): Promise<string | null> {
+    return ((await this.pool.query("select risk_decision_id from risk_approval_cards where id = $1", [cardId])).rows[0]?.risk_decision_id as string | undefined) ?? null;
+  }
+  async markRiskSent(cardId: string, telegramMessageId: number, cardTextSha256: string): Promise<boolean> {
+    return (await this.pool.query("select twins_risk_card_mark_sent($1::uuid, $2::bigint, $3::text) as ok", [cardId, telegramMessageId, cardTextSha256])).rows[0]?.ok === true;
+  }
+  async expireDueRisk(): Promise<Array<{ cardId: string; telegramMessageId: number | null }>> {
+    return (await this.pool.query("select card_id, message_id from twins_risk_card_expire_due()")).rows.map((r) => ({ cardId: r.card_id as string, telegramMessageId: r.message_id === null ? null : Number(r.message_id) }));
+  }
+  /** The tap is recorded by the database function, which re-checks eligibility at this instant. A card that is not 'sent', is late or has another message id records nothing. */
+  async decideRisk(input: DecideInput & { decisionId: string }): Promise<DecideRiskResult> {
+    const context = JSON.stringify({ cardMessageId: input.cardMessageId, updateId: input.updateId, via: "approval_bot" });
+    const r = await this.pool.query("select twins_record_risk_approval($1::uuid, $2::uuid, $3::text, $4::text, $5::jsonb, $6::text, null::timestamptz) as outcome", [
+      input.decisionId, input.cardId, input.action === "approve" ? "APPROVE" : "REJECT", `telegram:${input.approverId}`, context, input.action === "reject" ? "rejected_by_reviewer" : null,
+    ]);
+    const outcome = String(r.rows[0]?.outcome ?? "");
+    if (outcome === "recorded") return { outcome: "recorded" };
+    if (outcome === "duplicate") return { outcome: "duplicate" };
+    if (outcome === "refused:card_expired") return { outcome: "expired" };
+    if (outcome === "refused:card_not_active") return { outcome: "not_pending" };
+    if (outcome === "refused:card_not_found" || outcome === "refused:decision_not_found") return { outcome: "unknown" };
+    return { outcome: "refused", reason: outcome.replace(/^refused:/, "").replace(/[^a-z_]/g, "").slice(0, 60) };
   }
 
   async close(): Promise<void> {
