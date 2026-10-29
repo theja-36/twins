@@ -74,7 +74,7 @@ jobs:
           npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/unit-junit.xml
       - name: Upload test reports on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: unit-reports-node-${{ matrix.node }}
           path: reports/
@@ -139,7 +139,7 @@ jobs:
         run: npm run audit:verify -- --require-ddl-watch --status-file reports/audit-verify-status.json 2>&1 | tee reports/audit-verify.txt; exit "${PIPESTATUS[0]}"
       - name: Upload test reports and logs on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: integration-reports-node-${{ matrix.node }}
           path: reports/
@@ -191,7 +191,7 @@ jobs:
           npx vitest run --config vitest.integration.config.ts tests/integration/runtime/crashRecovery.test.ts --reporter=default --reporter=junit --outputFile.junit=reports/crash-junit.xml
       - name: Upload test reports on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: crash-reports
           path: reports/

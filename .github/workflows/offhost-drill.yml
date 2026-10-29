@@ -80,7 +80,7 @@ jobs:
           bash infrastructure/staging/twins-alert.sh backup.restore_drill_failed CRITICAL github-actions drill_failed "The monthly restore drill failed."
       - name: Upload evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: offhost-drill-evidence
           path: |
