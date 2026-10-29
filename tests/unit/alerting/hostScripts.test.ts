@@ -57,6 +57,8 @@ describe("twins-alert.sh (host alert sender)", () => {
         await run(ALERT, ["--unit", unit], { TWINS_ALERT_ENV_FILE: join(dir, "alert.env"), TWINS_ALERT_STATE_DIR: join(dir, "s") });
         expect(s.got.at(-1)?.body).toMatchObject({ event, severity: "CRITICAL", service: "systemd", code: "unit_failed", details: { unit } });
       }
+      await run(ALERT, ["--unit", "twins-backup-verify"], { TWINS_ALERT_ENV_FILE: join(dir, "alert.env"), TWINS_ALERT_STATE_DIR: join(dir, "s2") }); // instance name without the suffix
+      expect(s.got.at(-1)?.body).toMatchObject({ event: "backup.verification_failed", details: { unit: "twins-backup-verify.service" } });
     } finally { s.close(); }
   });
   it("rejects secret-shaped or malformed arguments without sending anything", async () => {

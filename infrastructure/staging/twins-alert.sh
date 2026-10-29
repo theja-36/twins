@@ -29,6 +29,7 @@ while [ $# -gt 0 ]; do
 done
 if [ -n "$UNIT" ]; then
   [[ "$UNIT" =~ ^[A-Za-z0-9_.@-]{1,80}$ ]] || fail_usage "bad_unit"
+  case "$UNIT" in *.service) ;; *) UNIT="$UNIT.service" ;; esac # an instance of a template unit loses the suffix
   case "$UNIT" in
     twins-backup.service|twins-offhost-backup.service) EVENT="backup.failed" ;;
     twins-backup-verify.service|twins-offhost-verify.service) EVENT="backup.verification_failed" ;;

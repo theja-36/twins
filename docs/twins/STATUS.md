@@ -17,6 +17,9 @@ Stage 2 / Task 1 (commit checkpoint + hosted CI) is complete and **merged to `ma
 ## 1c. Staging (2026-10-29)
 Stage 2 / Task 4: **staging runs commit `a0120d75`** (Stage 1 safety core, hosted CI, durable outbox, off-host backup code) with migrations 0000-0012, the `twins_app` runtime role, api/worker/approval-bot (inactive) on image `sha256:ef8b49d6…`; LIVE_TRADING=false, TRADING_ENABLED=false, TWINS_BOT_ACTIVE=false. Verification and rollback: [STAGING_DEPLOYMENT_VERIFICATION.md](STAGING_DEPLOYMENT_VERIFICATION.md).
 
+## 1d. Alerting and scheduled verification (2026-10-29)
+Stage 2 / Task 5 is implemented on branch `feat/stage2-alerting` and **deployed to staging from that unmerged branch** (commit `5683e412`, image `twins-staging:task5-5683e412`, migrations 0000-0013). Installed timers: daily backup (existing), hourly audit verification, weekly local backup verification; alert relay running with **no destination configured yet**. See [OPERATIONAL_ALERTING.md](OPERATIONAL_ALERTING.md).
+
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |
 |---|---|---|---|---|

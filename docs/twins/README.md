@@ -15,6 +15,7 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Baseline state, phase states, release readiness | [STATUS.md](STATUS.md) |
 | Runtime safety state, kill switch, fail-closed rules, integration points (Stage 1 / Task 2) | [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md) |
 | Immutable audit trail, hash chains, verifier, role separation, operator identity (Stage 1 / Task 3) | [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md) |
+| Operational alerting, severity policy, payload contract, scheduled verification, status surface, dead-letter operations (Stage 2 / Task 5) | [OPERATIONAL_ALERTING.md](OPERATIONAL_ALERTING.md) |
 | Staging redeployment of Stage 1/2, image provenance, runtime verification, rollback (Stage 2 / Task 4) | [STAGING_DEPLOYMENT_VERIFICATION.md](STAGING_DEPLOYMENT_VERIFICATION.md) |
 | Off-host encrypted backup, key custody, retention, restore drill, runbook, evidence classes (Stage 2 / Task 3) | [OFF_HOST_BACKUP_AND_RECOVERY.md](OFF_HOST_BACKUP_AND_RECOVERY.md) |
 | Durable Telegram intake outbox: flow, statuses, retry, reconciliation, idempotency, failure behaviour (Stage 2 / Task 2) | [DURABLE_INTAKE_OUTBOX.md](DURABLE_INTAKE_OUTBOX.md) |
