@@ -229,6 +229,9 @@ services:
     working_dir: /app
     command: ["python3", "-E", "-s", "-B", "/app/services/telegram-capture/main.py", "run"]
     environment:
+      # Fixed safety posture: the shared LIVE_TRADING guard refuses to start the capture client otherwise.
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
       TWINS_TELEGRAM_API_ID: ${TWINS_TELEGRAM_API_ID:-}
       TWINS_TELEGRAM_API_HASH: ${TWINS_TELEGRAM_API_HASH:-}
       TWINS_TELEGRAM_SESSION_DB_KEY: ${TWINS_TELEGRAM_SESSION_DB_KEY:-}
@@ -263,6 +266,9 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      # Fixed safety posture (literals win over env_file): the shared LIVE_TRADING guard refuses to start the bot otherwise.
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
     depends_on:
       postgres: { condition: service_healthy }
     networks: [twins_data, twins_bot_egress]

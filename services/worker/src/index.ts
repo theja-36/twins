@@ -9,7 +9,7 @@
  *   market_queue   — standalone market-bar ingestion (driven by scheduler)
  *
  * Safety invariants (spec section 2/45/47):
- * - LIVE_TRADING is verified false at startup; the process exits if true.
+ * - The shared live-trading guard (@twins/config) runs first; the process exits if live trading is configured.
  * - All database writes go through Drizzle (PostgreSQL is the source of
  *   record; Redis is ephemeral queue transport only, spec section 47).
  * - A failed job is recorded in the `jobs` table (via runIngestionJob) and
@@ -28,7 +28,7 @@ import { InvalidJobInputError, ReconciliationRequiredError } from "./jobErrors.j
 import { parseJobTimestamp } from "./jobTimestamp.js";
 import { parseCapture, processTelegramEventsJob, type CapturePayload, type TelegramEventsJobPayload } from "./telegramEvents.js";
 import { randomUUID } from "node:crypto";
-import { loadConfig } from "@twins/config";
+import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { createBoundedDb, type Db } from "@twins/database";
 import {
   getRevisionStates,
@@ -61,14 +61,8 @@ import type { MarketBarRequest } from "@twins/types";
 
 // ─── Config & safety gate ──────────────────────────────────────────────────
 
+enforceLiveTradingGuard("worker");
 const config = loadConfig();
-
-if (config.liveTradingEnabled) {
-  // This should be unreachable given loadConfig()'s own guard, but belts
-  // and braces: a worker must never start in live-trading mode (spec section 40).
-  console.error("[worker] FATAL: LIVE_TRADING=true is not permitted in the worker process.");
-  process.exit(1);
-}
 
 console.log(
   `[worker] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,

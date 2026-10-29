@@ -26,15 +26,11 @@
 import cron from "node-cron";
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
-import { loadConfig } from "@twins/config";
+import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { YAHOO_PROVIDER_NAME } from "@twins/adapter-market";
 
+enforceLiveTradingGuard("scheduler");
 const config = loadConfig();
-
-if (config.liveTradingEnabled) {
-  console.error("[scheduler] FATAL: LIVE_TRADING=true is not permitted in the scheduler process.");
-  process.exit(1);
-}
 
 console.log(
   `[scheduler] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,

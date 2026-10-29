@@ -16,6 +16,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { enforceLiveTradingGuard } from "../packages/config/src/liveGuard";
 import { analyzeTelegramText, TELEGRAM_PARSER_VERSION } from "../packages/signals/src/extract";
 import { assessOptionsClaim } from "../packages/signals/src/options/assess";
 import type { ContractVerification, OptionsContractMaster } from "../packages/signals/src/options/master";
@@ -225,6 +226,7 @@ async function main(): Promise<number> {
 }
 
 if (process.argv[1]?.endsWith("options-preview.ts")) {
+  enforceLiveTradingGuard("options-preview");
   main().then(
     (code) => process.exit(code),
     (err: unknown) => {

@@ -1,3 +1,4 @@
+import { enforceLiveTradingGuard } from "@twins/config";
 import { ApprovalBot, FatalBotError } from "./bot";
 import { BotConfigError, loadBotConfig } from "./config";
 import { PgBotDb } from "./db";
@@ -13,6 +14,7 @@ import { BotApi } from "./telegramApi";
  *   check-config     validates the environment; no network.
  *   check-privileges connects to the database only (needs TWINS_BOT_DATABASE_URL only) and prints the privilege report.
  */
+enforceLiveTradingGuard("approval-bot");
 const FATAL_HOLD_SECONDS = 900;
 const log = createLogger();
 let stopping = false;

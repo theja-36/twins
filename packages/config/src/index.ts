@@ -60,3 +60,5 @@ export function loadConfig(): TwinsConfig {
     redisUrl,
   };
 }
+
+export * from "./liveGuard.js";

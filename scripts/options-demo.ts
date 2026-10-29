@@ -29,6 +29,7 @@ import pg from "pg";
 import { Redis } from "ioredis";
 import { describeMigrationMismatch, loadExpectedMigrations, type RecordedMigration } from "../tests/integration/migrationState";
 import { resolveTestTarget, TestTargetError } from "../tests/integration/targetConfig";
+import { enforceLiveTradingGuard, evaluateLiveGuard } from "../packages/config/src/liveGuard";
 import { installNetworkGuard } from "../tests/support/networkGuard";
 
 export const API_PORT = 4010;
@@ -65,7 +66,7 @@ export interface PreflightResult {
 
 export async function preflight(deps: PreflightDeps): Promise<PreflightResult> {
   const { env } = deps;
-  if (env["LIVE_TRADING"] !== undefined && env["LIVE_TRADING"] !== "false") throw new PreflightError("LIVE_TRADING must be unset or exactly 'false'");
+  if (!evaluateLiveGuard(env).ok) throw new PreflightError("LIVE_TRADING must be unset or exactly 'false' (and TRADING_MODE paper or shadow)");
   if (!env["TWINS_API_KEY"] || env["TWINS_API_KEY"].trim().length < 8) throw new PreflightError("TWINS_API_KEY must be set in your environment (it is never printed; you type it into the viewer)");
   let target: ReturnType<typeof resolveTestTarget>;
   try {
@@ -544,5 +545,6 @@ export async function main(argv: string[], env: Record<string, string | undefine
 }
 
 if (process.argv[1]?.endsWith("scripts/options-demo.ts")) {
+  enforceLiveTradingGuard("options-demo");
   void main(process.argv.slice(2), process.env).then((c) => process.exit(c));
 }

@@ -36,8 +36,8 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 import { eq } from "drizzle-orm";
-import { loadConfig } from "@twins/config";
-import { getDb, schema, type Db } from "@twins/database";
+import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
+import { getDb, getPool, schema, type Db } from "@twins/database";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
 import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
@@ -159,6 +159,7 @@ export interface BuildAppResult {
  * Exported for test isolation (app.inject) and process execution.
  */
 export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstance> {
+  enforceLiveTradingGuard("api");
   const apiKey = options.apiKey ?? readEnv("TWINS_API_KEY");
   if (!apiKey || apiKey.trim().length === 0) {
     throw new Error("TWINS_API_KEY environment variable is required to start the API.");
@@ -679,6 +680,7 @@ const isDirectRun =
   import.meta.url === `file://${argv1}`;
 
 if (isDirectRun) {
+  enforceLiveTradingGuard("api"); // before any configuration or connection (buildApp enforces it again)
   const port = Number(readEnv("PORT") ?? "4000");
   const server = await buildApp();
   // HOST defaults to 0.0.0.0 (previous behaviour); set HOST=127.0.0.1 for loopback-only local runs.
