@@ -270,10 +270,17 @@ describe("architecture: the engine creates no executable state and calls nothing
       const t = strip(readFileSync(join(ROOT, f), "utf8"));
       for (const m of t.matchAll(/\b(?:db|tx)\.(insert|update|delete)\(\s*(?:schema\.)?(\w+)/g)) expect(m[2], f).toMatch(/^(D|O|S|agentRuns|agentFindings|agentEvidenceReferences|agentDefinitions|agentOrchestrator\w+)$/);
       expect(t, f).not.toMatch(/\b(?:db|tx)\.(update|delete)\(/);
-      expect(t, f).not.toMatch(/schema\.(orders|fills|positions|riskApprovals|riskApprovalCards|riskDecisions|decisions|signals)\b|createRiskDecision|supersedeRiskDecision|createApprovalCard|recordRiskApproval/);
+      expect(t, f).not.toMatch(/schema\.(orders|fills|positions|riskApprovals|riskApprovalCards|decisions)\b|createRiskDecision|supersedeRiskDecision|createApprovalCard|recordRiskApproval/);
+      // (Stage 5 / Task 2: signal_context READS signals / options claims / message METADATA; every write is still limited to the agent tables by the insert check above)
     }
   });
-  it("neither reads nor stores raw message text", () => { for (const f of files) expect(strip(readFileSync(join(ROOT, f), "utf8")), f).not.toMatch(/rawText|raw_text|rawPayload|telegramMessages/); });
+  it("neither reads nor stores raw message text: no text column is referenced and messages are read with an explicit metadata-only column list", () => {
+    for (const f of files) {
+      const t = strip(readFileSync(join(ROOT, f), "utf8"));
+      expect(t, f).not.toMatch(/rawText|raw_text|rawPayload/);
+      expect(t, f).not.toMatch(/select\(\)\.from\(schema\.telegramMessages\)/);
+    }
+  });
   it("the synthesis can never grant approval: the result type is the literal false and nothing creates APPROVED_FOR_REVIEW", () => {
     const t = strip(readFileSync(join(ROOT, "packages/agents/src/synthesis.ts"), "utf8"));
     expect(t).toMatch(/grantsApproval: false/);
