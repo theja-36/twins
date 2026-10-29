@@ -64,6 +64,7 @@ Reason codes: `sized_within_risk_budget`, `sized_capital_limited`, `capital_inva
 | Unknown trust | any | `REJECTED` `source_trust_unknown`, no size |
 
 ## 9. Limits and remaining risks
+* **Update (Stage 4 / Task 5):** sizing now takes the confidence and trust tiers from recorded source intelligence ([SOURCE_INTELLIGENCE_INTEGRATION.md](SOURCE_INTELLIGENCE_INTEGRATION.md)); the statement below describes the pre-Task-5 inputs.
 * **In practice nothing is sized yet:** the signal validation's source reliability is always `UNKNOWN` (no source intelligence yet) and the confidence is a self-reported, uncalibrated value (often the placeholder 0), so with the specified "unknown = 0%" rule every current signal ends `REJECTED` (`confidence_unknown`/`source_trust_unknown`) until those inputs exist. This is the specified fail-closed behaviour, not a defect; it needs source intelligence and calibrated confidence (later stages).
 * Capital is a configured number, not read from a broker (no broker integration). Affordability uses full notional (cash basis); futures margin is not modelled.
 * The recorder treats a verified options contract from a *test fixture* like any verified contract (the fixture flag is not inspected); production has no such master.
