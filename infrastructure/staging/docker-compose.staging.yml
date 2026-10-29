@@ -383,7 +383,7 @@ networks:
   twins_alert_egress:            # ordinary outbound (NAT) for the alert-relay ONLY (it posts alerts to the configured webhook)
     ipam:
       config:
-        - subnet: 10.0.26.0/24   # next free /24 after twins_bot_egress; verify on the host before creating
+        - subnet: 10.0.27.0/24   # 10.0.26.0/24 is taken by another stack on the host; verify this one is free before creating
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true
