@@ -1,9 +1,19 @@
+import { createHash } from "node:crypto";
 import { desc, eq, sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { getRiskDecision, refuseUnlessSafe, RiskDecisionError, supersedeRiskDecision, type CreateOutcome, type RiskDecisionRecord } from "../riskDecisions";
 import { SIZING_ACTOR } from "../sizing/record";
+import { breakerBlockId, breakerGate, type BreakerOptions, type CircuitBreakerStatus } from "../breakers/record";
+import { databaseNow, freshCondition, isStale } from "../expiry/record";
+import { loadExpiryConfig, type ExpiryConfig } from "../expiry/config";
 import { loadPortfolioConfig, type PortfolioConfig } from "./config";
 import { evaluatePortfolio, hashPortfolioInput, PORTFOLIO_ENGINE_VERSION, type ExposureInput, type PortfolioResult } from "./engine";
+
+function blockedVariant(result: PortfolioResult, gate: CircuitBreakerStatus): PortfolioResult {
+  const explanation = `A loss circuit breaker is open (${gate.blockedBy.join(", ")}); approval for review is blocked until it resets.`;
+  const circuitBreaker = { blockedBy: gate.blockedBy, openBreachIds: gate.openBreachIds, asOf: gate.asOf.toISOString() };
+  return { ...result, outcome: "REJECTED", reasonCode: "CIRCUIT_BREAKER_OPEN", explanation, snapshot: { ...result.snapshot, outcome: "REJECTED", reasonCode: "CIRCUIT_BREAKER_OPEN", explanation, circuitBreaker } };
+}
 
 /**
  * Records a portfolio evaluation on a sized risk decision (Stage 3 / Task 3). Append-only: the evaluation is a NEW version that supersedes the sized one
@@ -20,7 +30,7 @@ export interface OpenPositionSource {
 }
 export const noOpenPositions: OpenPositionSource = { listOpenExposures: async () => [] };
 
-export interface PortfolioOptions {
+export interface PortfolioOptions extends BreakerOptions {
   config?: PortfolioConfig;
   /** Overrides the capital the candidate was sized with. */
   capital?: number | null;
@@ -46,10 +56,10 @@ function capitalOf(d: RiskDecisionRecord): number | null {
   return asNum(inp?.sizing?.input?.capital) ?? asNum(inp?.base?.sizing?.input?.capital) ?? asNum(out?.portfolio?.capital);
 }
 
-async function activeExposures(db: Db, candidate: RiskDecisionRecord): Promise<ExposureInput[]> {
+async function activeExposures(db: Db, candidate: RiskDecisionRecord, asOf: Date, expiry: ExpiryConfig): Promise<ExposureInput[]> {
   const subject = candidate.signalId ? sql`signal_id is distinct from ${candidate.signalId}` : sql`options_claim_id is distinct from ${candidate.optionsClaimId}`;
   const r = await db.execute(sql`select id, planned_max_loss_amount, market, instrument_type, symbol, side, expiry from risk_decisions_effective
-    where superseded_by_id is null and status in ('PENDING', 'APPROVED_FOR_REVIEW') and planned_max_loss_amount > 0 and ${subject} order by chain_index`);
+    where superseded_by_id is null and status in ('PENDING', 'APPROVED_FOR_REVIEW') and ${freshCondition(asOf, expiry)} and planned_max_loss_amount > 0 and ${subject} order by chain_index`);
   return (r.rows as Array<Record<string, unknown>>).map((row) => ({
     id: String(row["id"]), source: "risk_decision" as const, maxLossAmount: Number(row["planned_max_loss_amount"]), market: row["market"] === null ? null : String(row["market"]),
     instrumentType: String(row["instrument_type"]), underlying: String(row["symbol"]), side: row["side"] === null ? null : String(row["side"]),
@@ -66,6 +76,7 @@ export async function evaluatePortfolioRisk(db: Db, decisionId: string, opts: Po
   await refuseUnlessSafe("risk_decision.portfolio"); // fail closed before anything is read or written
   const config = opts.config ?? loadPortfolioConfig();
   const positions = opts.openPositions ?? noOpenPositions;
+  const expiry = opts.expiry ?? loadExpiryConfig();
   return db.transaction(async (txRaw) => {
     const tx = txRaw as unknown as Db;
     await tx.execute(sql`select pg_advisory_xact_lock(${LOCK_KEY}, hashtext('risk_portfolio'))`);
@@ -84,12 +95,23 @@ export async function evaluatePortfolioRisk(db: Db, decisionId: string, opts: Po
 
     const capital = opts.capital === undefined ? capitalOf(prev) : opts.capital;
     const candidate = candidateOf(prev);
-    const active = [...(await activeExposures(tx, prev)), ...(await positions.listOpenExposures())];
-    const result = evaluatePortfolio({ capital, candidate, active, config });
+    const asOf = opts.asOf ?? (await databaseNow(tx));
+    if (!prev.supersededById && isStale(prev, asOf, expiry)) throw new RiskDecisionError("decision_expired", "the decision is past its validity window; it is expired, not evaluated");
+    const active = [...(await activeExposures(tx, prev, asOf, expiry)), ...(await positions.listOpenExposures())];
+    let result = evaluatePortfolio({ capital, candidate, active, config });
     if (result.outcome === "INVALID_INPUT") {
       throw new RiskDecisionError(result.reasonCode === "portfolio_sizing_missing" ? "sizing_missing" : "invalid_input", result.explanation);
     }
-    const hash = hashPortfolioInput(capital, candidate, active, config);
+    let hash = hashPortfolioInput(capital, candidate, active, config);
+    // Circuit breakers (Stage 3 / Task 4): an approval for review is not granted while a loss breaker is open; the rejection is recorded. Unreadable state fails closed.
+    if (result.outcome === "APPROVED_FOR_REVIEW" && (capital as number) > 0) {
+      const gate = await breakerGate(tx, capital as number, { ...opts, asOf, expiry });
+      if (gate.blocked) {
+        result = blockedVariant(result, gate);
+        hash = createHash("sha256").update(`${hash}:${breakerBlockId(gate)}`).digest("hex");
+        result = { ...result, inputHash: hash, snapshot: { ...result.snapshot, inputHash: hash } }; // the stored hash identifies THIS (blocked) evaluation, so a retry is idempotent and a later retry after the reset is not
+      }
+    }
 
     const outcomeOf = (d: RiskDecisionRecord): PortfolioRecordOutcome => ({ id: d.id, created: false, decisionVersion: d.decisionVersion, status: d.status as CreateOutcome["status"], portfolioOutcome: result.outcome as "APPROVED_FOR_REVIEW" | "REJECTED", reasonCode: result.reasonCode });
     const carries = (d: RiskDecisionRecord): boolean => isPortfolioRevision(d) && (d.outputSnapshot as Snap)?.portfolio?.inputHash === hash;

@@ -28,7 +28,7 @@ export interface AlertPayload {
 /** The ONLY detail keys that may travel in an alert. Everything else is dropped. */
 export const DETAIL_ALLOWLIST = [
   "name", "step", "failure", "count", "attempt", "maxAttempts", "outboxId", "channelId", "messageType", "control", "version", "previousValue", "newValue",
-  "changedBy", "chain", "rows", "ageSeconds", "bytes", "sha256", "reason", "action", "unit", "kind", "restarts", "windowSeconds", "oldestAgeSeconds", "firstFailure",
+  "changedBy", "chain", "rows", "ageSeconds", "bytes", "sha256", "reason", "action", "unit", "kind", "restarts", "windowSeconds", "oldestAgeSeconds", "firstFailure", "scope", "lossPct", "limitPct",
 ] as const;
 const ALLOWED = new Set<string>(DETAIL_ALLOWLIST);
 

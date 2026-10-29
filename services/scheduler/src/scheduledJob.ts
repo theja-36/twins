@@ -6,9 +6,11 @@ import { evaluateSafety } from "@twins/runtime-state";
  *                     by the trading/kill-switch state (stale prices would only make later decisions worse; nothing trades from it).
  *  - "trade_state"  : can create, modify or act on trade state (proposals, orders, positions, exits...). It runs only while TRADING_ENABLED
  *                     is true AND the kill switch is inactive AND the state is readable; otherwise it is skipped and a safety event is emitted.
+ *  - "risk_housekeeping" : only REMOVES exposure or RECORDS risk state (appends EXPIRED risk-decision versions; records and alerts circuit-breaker state). It never
+ *                     creates a decision, approval or order, so - like the kill switch itself - it must keep running while trading is off or the kill switch is on.
  * No trade_state job exists yet; this is the boundary future ones must use.
  */
-export type JobEffect = "market_data" | "trade_state";
+export type JobEffect = "market_data" | "risk_housekeeping" | "trade_state";
 
 export interface ScheduledJobSpec {
   name: string;

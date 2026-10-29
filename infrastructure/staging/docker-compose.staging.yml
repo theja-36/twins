@@ -124,6 +124,25 @@ services:
     mem_limit: 256m
     cpus: 0.25
 
+  # EXPLICIT one-shot operations CLI for risk-decision expiry and the loss circuit breakers (Stage 3 / Task 4). Not part of `up`:
+  #   docker compose ... --profile ops run --rm risk-control expiry list
+  #   docker compose ... --profile ops run --rm risk-control expiry run --dry-run
+  #   docker compose ... --profile ops run --rm risk-control breakers status --capital 1000000
+  # It appends EXPIRED versions / auditable loss events only; it cannot reset a breaker early and does not touch the kill switch.
+  risk-control:
+    <<: *hardening
+    restart: "no"
+    profiles: ["ops"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    entrypoint: ["node", "--import", "tsx", "/app/scripts/ops/risk-control.ts"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
+    mem_limit: 256m
+    cpus: 0.25
+
   # EXPLICIT one-shot, read-only audit-chain integrity check (profile `ops`; also run by twins-audit-verify.timer):
   #   docker compose ... --profile ops run --rm audit-verify            (exit 0 PASS, 1 FAIL with the first failure printed)
   audit-verify:

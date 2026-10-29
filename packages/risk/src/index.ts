@@ -6,3 +6,8 @@ export * from "./sizing/record";
 export * from "./portfolio/config";
 export * from "./portfolio/engine";
 export * from "./portfolio/record";
+export * from "./expiry/config";
+export * from "./expiry/record";
+export * from "./breakers/config";
+export * from "./breakers/periods";
+export * from "./breakers/record";
