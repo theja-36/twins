@@ -8,7 +8,7 @@ import { validateIngestBody } from "../../../apps/api/src/internalIngestValidati
  * No Telegram, no native TDLib, no external network: the Python tests use a scripted fake transport and a loopback HTTP server.
  */
 const DIR = "services/telegram-capture";
-const MODULES = ["config", "safelog", "tdlib", "mapping", "ingest", "state", "session", "service", "history"].map((m) => `${DIR}/twins_capture/${m}.py`);
+const MODULES = ["config", "safelog", "tdlib", "mapping", "ingest", "state", "session", "service", "history", "liveguard"].map((m) => `${DIR}/twins_capture/${m}.py`);
 const MAIN = `${DIR}/main.py`;
 const sources = Object.fromEntries([...MODULES, MAIN].map((f) => [f, readFileSync(f, "utf8")])) as Record<string, string>;
 const all = Object.values(sources).join("\n");
@@ -110,7 +110,7 @@ describe("capture client: no content, no secrets, no escape hatches", () => {
   });
   it("ships only the reviewed files", () => {
     expect(readdirSync(DIR).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["README.md", "main.py", "tests", "twins_capture"]);
-    expect(readdirSync(`${DIR}/twins_capture`).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["__init__.py", "config.py", "history.py", "ingest.py", "mapping.py", "safelog.py", "service.py", "session.py", "state.py", "tdlib.py"]);
+    expect(readdirSync(`${DIR}/twins_capture`).filter((f) => !f.startsWith("__pycache__")).sort()).toEqual(["__init__.py", "config.py", "history.py", "ingest.py", "liveguard.py", "mapping.py", "safelog.py", "service.py", "session.py", "state.py", "tdlib.py"]);
   });
   it("Dockerfile.capture copies the client (services/ is copied wholesale) and python3 is installed", () => {
     const dockerfile = readFileSync("infrastructure/staging/Dockerfile.capture", "utf8");

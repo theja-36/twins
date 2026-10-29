@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     include: ["tests/unit/**/*.test.ts"],
-    setupFiles: ["tests/support/networkGuardSetup.ts"],
+    setupFiles: ["tests/support/networkGuardSetup.ts", "tests/support/runtimeStateSetup.ts"],
     env: {
       DATABASE_URL: "postgresql://unit-tests-never-connect.invalid:5432/none",
       REDIS_URL: "redis://localhost:6379",
