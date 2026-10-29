@@ -34,8 +34,8 @@ jobs:
       TWINS_BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.TWINS_DRILL_S3_ACCESS_KEY_ID }}
       TWINS_BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.TWINS_DRILL_S3_SECRET_ACCESS_KEY }}
       TWINS_BACKUP_RUNNER_LABEL: github-hosted-runner
-      TWINS_BACKUP_STATUS_DIR: ${{ runner.temp }}/status
-      TWINS_BACKUP_DRILL_WORK_DIR: ${{ runner.temp }}/drill
+      TWINS_BACKUP_STATUS_DIR: /tmp/twins-drill/status
+      TWINS_BACKUP_DRILL_WORK_DIR: /tmp/twins-drill/work
     steps:
       - uses: actions/checkout@v4
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: Evidence (status file and log contain no secret)
         if: always()
         run: |
-          cat "$RUNNER_TEMP/status/offhost-drill.json" || true
+          cat /tmp/twins-drill/status/offhost-drill.json || true
           shred -u "$RUNNER_TEMP/age-identity.txt" 2>/dev/null || rm -f "$RUNNER_TEMP/age-identity.txt"
       - name: Upload evidence
         if: always()
@@ -70,7 +70,7 @@ jobs:
         with:
           name: offhost-drill-evidence
           path: |
-            ${{ runner.temp }}/status/offhost-drill.json
+            /tmp/twins-drill/status/offhost-drill.json
             ${{ runner.temp }}/drill.log
           if-no-files-found: ignore
           retention-days: 30
