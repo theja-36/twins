@@ -28,3 +28,4 @@ export * from "./riskApprovals";
 export * from "./historicalImport";
 export * from "./historicalOutcomes";
 export * from "./historicalScorecards";
+export * from "./historicalPatterns";

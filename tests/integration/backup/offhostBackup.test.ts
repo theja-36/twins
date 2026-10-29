@@ -54,8 +54,8 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
       expect(head).toBe("age-encryption.org/v1");
     }
     const manifest = JSON.parse(await readFile(join(root, "manifest.jsonl"), "utf8")) as { snapshot: { migrations: number; tableCounts: Record<string, number>; chainHeads: Record<string, unknown> } };
-    expect(manifest.snapshot.migrations).toBe(23);
-    expect(Object.keys(manifest.snapshot.chainHeads).sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "historical_datasets", "historical_evaluation_events", "historical_evaluation_runs", "historical_outcome_labels", "historical_scorecard_events", "historical_scorecard_metrics", "historical_scorecard_runs", "historical_source_records", "historical_source_registry", "historical_trust_tiers", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
+    expect(manifest.snapshot.migrations).toBe(24);
+    expect(Object.keys(manifest.snapshot.chainHeads).sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "historical_confidence_estimates", "historical_confidence_runs", "historical_datasets", "historical_evaluation_events", "historical_evaluation_runs", "historical_outcome_labels", "historical_pattern_definitions", "historical_pattern_runs", "historical_pattern_snapshots", "historical_scorecard_events", "historical_scorecard_metrics", "historical_scorecard_runs", "historical_source_records", "historical_source_registry", "historical_trust_tiers", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
     expect(manifest.snapshot.tableCounts["audit_events"]).toBeGreaterThan(0);
 
     const hooks = restoreHooks(process.cwd());
@@ -63,11 +63,11 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
       store, environment: "ci", identityFile, statusDir, workDir: join(root, "drill"), log, now: () => new Date(), hostFingerprint: "ci-recovery-host", runnerLabel: "ci-runner-scratch-database",
       createScratch: databaseScratch(DATABASE_URL, hooks, container ? { dockerContainer: container } : {}),
     });
-    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "23" });
+    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "24" });
     expect(drill.checks["row_counts"]).toMatch(/tables match/);
-    expect(drill.checks["chain_heads"]).toBe("21 chains match");
+    expect(drill.checks["chain_heads"]).toBe("26 chains match");
     expect(drill.checks["audit_chain"]).toMatch(/PASS/);
-    expect(drill.checks["verify_migrations"]).toMatch(/23 migrations/);
+    expect(drill.checks["verify_migrations"]).toMatch(/24 migrations/);
     expect(drill.crossHost).toBe(true);
     expect((await readStatus(statusDir, "drill", new Date(), 100)).ok).toBe(true);
     // the scratch database is gone and no plaintext is left behind

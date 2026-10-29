@@ -196,6 +196,36 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     fields: [txt("t.id"), txt("t.run_id"), plain("t.event_type"), txt("t.sequence"), txt("t.detail"), plain("t.created_by"), ts("t.created_at")],
     triggers: guards("historical_scorecard_events"),
   },
+  {
+    chain: "historical_pattern_definitions",
+    table: "historical_pattern_definitions",
+    fields: [txt("t.id"), plain("t.pattern_key"), plain("t.key_text"), txt("t.level"), txt("t.features"), plain("t.definition_version"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_pattern_definitions"),
+  },
+  {
+    chain: "historical_pattern_runs",
+    table: "historical_pattern_runs",
+    fields: [txt("t.id"), plain("t.run_key"), plain("t.algorithm_version"), txt("t.config"), plain("t.config_sha256"), ts("t.as_of"), ts("t.embargo_cutoff"), plain("t.label_set_sha256"), txt("t.input_summary"), txt("t.pattern_count"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_pattern_runs"),
+  },
+  {
+    chain: "historical_pattern_snapshots",
+    table: "historical_pattern_snapshots",
+    fields: [txt("t.id"), txt("t.run_id"), txt("t.pattern_id"), txt("t.level"), plain("t.evidence_status"), txt("t.flags"), txt("t.sample_size"), txt("t.metrics"), txt("t.mixes"), ts("t.first_observed"), ts("t.last_observed"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_pattern_snapshots"),
+  },
+  {
+    chain: "historical_confidence_runs",
+    table: "historical_confidence_runs",
+    fields: [txt("t.id"), plain("t.run_key"), txt("t.pattern_run_id"), plain("t.scope"), txt("t.import_batch_id"), txt("t.normalized_record_id"), plain("t.algorithm_version"), txt("t.config"), plain("t.config_sha256"), plain("t.trust_mode"), txt("t.lookahead"), txt("t.input_summary"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_confidence_runs"),
+  },
+  {
+    chain: "historical_confidence_estimates",
+    table: "historical_confidence_estimates",
+    fields: [txt("t.id"), txt("t.run_id"), txt("t.normalized_record_id"), txt("t.source_record_id"), txt("t.score"), plain("t.tier"), plain("t.evidence_quality"), txt("t.sample_size"), txt("t.pattern_refs"), txt("t.inputs"), txt("t.explanation"), txt("t.limitations"), txt("t.evidence_references"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_confidence_estimates"),
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */
