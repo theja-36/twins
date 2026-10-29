@@ -94,7 +94,13 @@ try {
   const obTriggers = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.telegram_intake_outbox'::regclass and not tgisinternal order by tgname");
   const obNames = obTriggers.rows.map((r) => r.tgname).join(",");
   if (obNames !== "telegram_intake_outbox_guard,telegram_intake_outbox_no_truncate" || obTriggers.rows.some((r) => r.tgenabled !== "A")) throw new Error(`telegram_intake_outbox triggers missing or not ENABLE ALWAYS: [${obNames}]`);
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present`);
+  // 0013: operator replay log (append-only, owner-only) and the amended outbox guard that allows ONLY an audited DEAD_LETTER -> PENDING replay.
+  const replays = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.telegram_intake_outbox_replays'::regclass and not tgisinternal order by tgname");
+  const rn = replays.rows.map((r) => r.tgname).join(",");
+  if (rn !== "telegram_intake_outbox_replays_no_truncate,telegram_intake_outbox_replays_no_update_delete" || replays.rows.some((r) => r.tgenabled !== "A")) throw new Error(`telegram_intake_outbox_replays triggers missing or not ENABLE ALWAYS: [${rn}]`);
+  const guard = await client.query("select pg_get_functiondef('telegram_intake_outbox_guard'::regproc) as d");
+  if (!/only an audited operator replay/.test(guard.rows[0].d)) throw new Error("telegram_intake_outbox_guard (0013 replay rule) is missing");
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present`);
 } finally {
   await client.end();
 }

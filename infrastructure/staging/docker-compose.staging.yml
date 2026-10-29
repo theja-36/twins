@@ -34,6 +34,12 @@ x-app-env: &app-env
   NODE_ENV: production
   DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}
   REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@redis:6379
+  # Operational alerting (Stage 2 / Task 5). The containers are on an internal network and never see the webhook: they post to the alert-relay
+  # service, which alone holds TWINS_ALERT_WEBHOOK_URL. With no relay token configured alerts are logged as undelivered.
+  TWINS_ENV_NAME: staging
+  TWINS_IMAGE_TAG: ${TWINS_IMAGE_TAG:-unknown}
+  TWINS_ALERT_RELAY_URL: http://alert-relay:8099/v1/alert
+  TWINS_ALERT_RELAY_TOKEN: ${TWINS_ALERT_RELAY_TOKEN:-}
 
 services:
   postgres:
@@ -131,6 +137,50 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
     networks: [twins_data]
+    # status + anchor files live on the host (owner uid 1000 = the image's node user), so the anchor survives the container and the API can report the last PASS
+    volumes:
+      - /var/lib/twins-monitor/audit:/monitor
+    mem_limit: 256m
+    cpus: 0.25
+
+  # Alert relay (Stage 2 / Task 5): the ONLY container that holds the alert webhook credential and can reach the internet (via twins_alert_egress).
+  # Accepts alerts only from the internal network (bearer token), re-validates and re-sanitises them, forwards them. No published port.
+  alert-relay:
+    <<: *hardening
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/scripts/ops/alert-relay.ts"]
+    environment:
+      APP_ENV: staging
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
+      NODE_ENV: production
+      TWINS_ALERT_RELAY_TOKEN: ${TWINS_ALERT_RELAY_TOKEN:-}
+      TWINS_ALERT_WEBHOOK_URL: ${TWINS_ALERT_WEBHOOK_URL:-}
+      TWINS_ALERT_WEBHOOK_SECRET: ${TWINS_ALERT_WEBHOOK_SECRET:-}
+      TWINS_ALERT_ALLOW_INSECURE_TEST: ${TWINS_ALERT_ALLOW_INSECURE_TEST:-}
+    networks: [twins_data, twins_alert_egress]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8099/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    mem_limit: 128m
+    cpus: 0.25
+
+  # EXPLICIT one-shot dead-letter operations (profile `ops`, owner credential): list / show / replay ONE row by id with a reason.
+  #   docker compose ... --profile ops run --rm outbox-deadletter list
+  outbox-deadletter:
+    <<: *hardening
+    restart: "no"
+    profiles: ["ops"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    entrypoint: ["node", "--import", "tsx", "/app/scripts/ops/outbox-deadletter.ts"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
     mem_limit: 256m
     cpus: 0.25
 
@@ -147,8 +197,12 @@ services:
       context: ../../src
       dockerfile: infrastructure/staging/Dockerfile
     command: ["node", "--import", "tsx", "/app/apps/api/src/index.ts"]
+    # read-only view of the monitor status files (backup / audit verification results) for GET /health/status
+    volumes:
+      - /var/lib/twins-monitor:/monitor:ro
     environment:
       <<: *app-env
+      TWINS_STATUS_DIR: /monitor
       # The API also joins the shared `coolify` network, where Coolify's own containers carry the bare aliases `postgres`
       # and `redis`. Bare names would therefore resolve to Coolify's services (and send them TWINS credentials), so the
       # API uses the unique container names, which resolve only to the TWINS containers on twins_data. Only the API
@@ -326,6 +380,10 @@ networks:
     ipam:
       config:
         - subnet: 10.0.25.0/24   # chosen as the next free /24 after twins_egress; verify it is free on the host before creating
+  twins_alert_egress:            # ordinary outbound (NAT) for the alert-relay ONLY (it posts alerts to the configured webhook)
+    ipam:
+      config:
+        - subnet: 10.0.26.0/24   # next free /24 after twins_bot_egress; verify on the host before creating
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true

@@ -260,3 +260,16 @@ export async function findRedeliverableOutboxRows(
     .orderBy(table.availableAt)
     .limit(options.limit);
 }
+
+/** Rows that should have moved long ago: due for longer than `dueForMs`, or PROCESSING with a lease older than `processingForMs`. Counts and the oldest age only. */
+export async function findStuckOutboxRows(db: Db, now: Date, options: { dueForMs: number; processingForMs: number }): Promise<{ count: number; oldestAgeSeconds: number }> {
+  const dueCutoff = new Date(now.getTime() - options.dueForMs);
+  const procCutoff = new Date(now.getTime() - options.processingForMs);
+  const rows = await db
+    .select({ since: sql<Date>`case when ${table.status} = 'PROCESSING' then ${table.lockedAt} else ${table.availableAt} end` })
+    .from(table)
+    .where(or(and(inArray(table.status, ["PENDING", "FAILED"]), lte(table.availableAt, dueCutoff)), and(eq(table.status, "PROCESSING"), lte(table.lockedAt, procCutoff))))
+    .limit(1000);
+  const oldest = rows.reduce((m, r) => Math.min(m, new Date(r.since).getTime()), now.getTime());
+  return { count: rows.length, oldestAgeSeconds: rows.length ? Math.max(0, Math.floor((now.getTime() - oldest) / 1000)) : 0 };
+}

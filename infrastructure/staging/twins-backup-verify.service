@@ -1,0 +1,11 @@
+# Weekly local backup verification (see twins-backup-verify.sh). A failure raises a CRITICAL alert (from the script and, as a backstop, OnFailure).
+[Unit]
+Description=TWINS weekly local backup checksum and decrypt verification
+OnFailure=twins-alert-on-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/twins-backup-verify.sh
+TimeoutStartSec=1800
+Nice=10
+IOSchedulingClass=idle

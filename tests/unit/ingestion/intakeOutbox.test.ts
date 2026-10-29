@@ -112,9 +112,9 @@ describe("migration 0012", () => {
     expect(sql).toMatch(/terminal status/);
     expect(sql).toMatch(/rows are never deleted/);
   });
-  it("is registered in the journal as the 13th migration", () => {
+  it("is registered in the journal as the 13th migration (0013 follows it)", () => {
     const journal = JSON.parse(read("packages/database/drizzle/meta/_journal.json")) as { entries: Array<{ tag: string }> };
-    expect(journal.entries).toHaveLength(13);
+    expect(journal.entries).toHaveLength(14);
     expect(journal.entries[12]?.tag).toBe("0012_telegram_intake_outbox");
   });
 });

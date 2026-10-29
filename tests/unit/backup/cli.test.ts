@@ -91,11 +91,11 @@ describe("deployment artifacts keep storage credentials away from the applicatio
 describe("the manual cross-host drill workflow", () => {
   const wf = read(".github/workflows/offhost-drill.yml");
   it("is manual only, read-only, not part of the required gate, and uses repository secrets for every credential", () => {
-    expect(wf).toMatch(/^on:\n  workflow_dispatch:/m);
-    expect(wf).not.toMatch(/^\s+(push|pull_request|pull_request_target|schedule):/m);
+    expect(wf).toMatch(/^on:\n(?:  #[^\n]*\n)?  schedule:\n    - cron: "0 5 2 \* \*"\n  workflow_dispatch:/m); // monthly + manual only
+    expect(wf).not.toMatch(/^\s+(push|pull_request|pull_request_target):/m);
     expect(wf).toMatch(/permissions:\n  contents: read/);
     expect(read(".github/workflows/ci.yml")).not.toMatch(/offhost|TWINS_DRILL/); // ci-gate does not depend on it
-    for (const s of ["TWINS_DRILL_S3_ENDPOINT", "TWINS_DRILL_S3_BUCKET", "TWINS_DRILL_S3_ACCESS_KEY_ID", "TWINS_DRILL_S3_SECRET_ACCESS_KEY", "TWINS_DRILL_AGE_IDENTITY"]) expect(wf).toContain(`secrets.${s}`);
+    for (const s of ["TWINS_ALERT_WEBHOOK_URL", "TWINS_DRILL_S3_ENDPOINT", "TWINS_DRILL_S3_BUCKET", "TWINS_DRILL_S3_ACCESS_KEY_ID", "TWINS_DRILL_S3_SECRET_ACCESS_KEY", "TWINS_DRILL_AGE_IDENTITY"]) expect(wf).toContain(`secrets.${s}`);
     expect(wf).not.toMatch(/AGE-SECRET-KEY-1[0-9A-Z]|SECRET_ACCESS_KEY: [A-Za-z0-9]{10}/);
   });
 });

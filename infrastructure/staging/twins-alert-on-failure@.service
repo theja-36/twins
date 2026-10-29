@@ -1,0 +1,7 @@
+# systemd OnFailure handler: `OnFailure=twins-alert-on-failure@%n.service` raises a CRITICAL alert naming the failed unit. Installed next to the units it covers.
+[Unit]
+Description=TWINS alert for failed unit %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/twins-alert.sh --throttle 300 --unit %i

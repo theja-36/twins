@@ -79,7 +79,7 @@ describe("role separation in the staging stack", () => {
 describe("scheduled and CI verification", () => {
   it("the systemd units run the audit-verify job with an external anchor and a status file", () => {
     const unit = read("infrastructure/staging/twins-audit-verify.service");
-    expect(unit).toMatch(/--profile ops run --rm -T audit-verify .*--require-ddl-watch .*--anchor-file \/var\/lib\/twins-monitor\/audit-anchor\.json .*--status-file/);
+    expect(unit).toMatch(/--profile ops run --rm -T audit-verify .*--require-ddl-watch .*--anchor-file \/monitor\/audit-anchor\.json .*--status-file \/monitor\/audit-verify\.json/); // /monitor = the host directory mounted into the one-shot container (compose volumes)
     expect(unit).toMatch(/Type=oneshot/);
     const timer = read("infrastructure/staging/twins-audit-verify.timer");
     expect(timer).toMatch(/OnCalendar=hourly/);

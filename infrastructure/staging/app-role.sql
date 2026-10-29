@@ -23,7 +23,7 @@ DECLARE
 	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch
 	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads'];
 	-- read only: the runtime safety controls are changed only through the owner-run safety-control CLI
-	read_only text[] := ARRAY['system_controls'];
+	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay)
 BEGIN
 	FOR t IN SELECT c.relname AS name, c.relkind AS kind,
 	               (EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'event_hash' AND NOT a.attisdropped)

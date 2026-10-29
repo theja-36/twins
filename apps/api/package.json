@@ -22,7 +22,8 @@
     "bullmq": "^6.3.11",
     "drizzle-orm": "^0.45.2",
     "fastify": "^4.28.0",
-    "ioredis": "^5.11.1"
+    "ioredis": "^5.11.1",
+    "@twins/alerting": "*"
   },
   "devDependencies": {
     "tsx": "^4.16.0"

@@ -6,6 +6,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler"
   },
-  "references": [{ "path": "../config" }],
+  "references": [{ "path": "../config" }, { "path": "../alerting" }],
   "include": ["src"]
 }

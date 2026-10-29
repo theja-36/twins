@@ -6,6 +6,9 @@
 name: offhost-drill
 
 on:
+  # Monthly scheduled drill on the synthetic `drill` backups (2nd of the month, 05:00 UTC), plus manual runs. The scheduled run never touches real staging data.
+  schedule:
+    - cron: "0 5 2 * *"
   workflow_dispatch:
     inputs:
       environment_name:
@@ -28,7 +31,7 @@ jobs:
     env:
       CI: "true"
       LIVE_TRADING: "false"
-      TWINS_BACKUP_ENV_NAME: ${{ inputs.environment_name }}
+      TWINS_BACKUP_ENV_NAME: ${{ inputs.environment_name || 'drill' }}
       TWINS_BACKUP_S3_ENDPOINT: ${{ secrets.TWINS_DRILL_S3_ENDPOINT }}
       TWINS_BACKUP_S3_BUCKET: ${{ secrets.TWINS_DRILL_S3_BUCKET }}
       TWINS_BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.TWINS_DRILL_S3_ACCESS_KEY_ID }}
@@ -64,6 +67,17 @@ jobs:
         run: |
           cat /tmp/twins-drill/status/offhost-drill.json || true
           shred -u "$RUNNER_TEMP/age-identity.txt" 2>/dev/null || rm -f "$RUNNER_TEMP/age-identity.txt"
+      - name: Alert on failure (CRITICAL; skipped when no destination secret exists)
+        if: failure()
+        env:
+          TWINS_ALERT_WEBHOOK_URL: ${{ secrets.TWINS_ALERT_WEBHOOK_URL }}
+          TWINS_ALERT_WEBHOOK_SECRET: ${{ secrets.TWINS_ALERT_WEBHOOK_SECRET }}
+          TWINS_ENV_NAME: ci
+          TWINS_BUILD: ${{ github.sha }}
+        run: |
+          if [ -z "$TWINS_ALERT_WEBHOOK_URL" ]; then echo "no alert destination configured; nothing sent"; exit 0; fi
+          export TWINS_BUILD="${TWINS_BUILD:0:12}"
+          bash infrastructure/staging/twins-alert.sh backup.restore_drill_failed CRITICAL github-actions drill_failed "The monthly restore drill failed."
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4

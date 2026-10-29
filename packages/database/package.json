@@ -14,7 +14,8 @@
   "dependencies": {
     "@twins/config": "*",
     "drizzle-orm": "^0.45.2",
-    "pg": "^8.12.0"
+    "pg": "^8.12.0",
+    "@twins/alerting": "*"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10",

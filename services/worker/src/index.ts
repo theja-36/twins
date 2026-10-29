@@ -24,10 +24,11 @@ import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
+import { observe, recordProcessStart } from "@twins/alerting";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
-import { createStructuredLogger, describeErrorSafely, type StructuredLogger } from "@twins/shared";
+import { describeErrorSafely, type StructuredLogger } from "@twins/shared";
 import { buildJobLogContext } from "./correlationLog.js";
 import { InvalidJobInputError, ReconciliationRequiredError } from "./jobErrors.js";
 import { parseJobTimestamp } from "./jobTimestamp.js";
@@ -69,6 +70,9 @@ import type { MarketBarRequest } from "@twins/types";
 enforceLiveTradingGuard("worker");
 const config = loadConfig();
 
+// Standard process logger: JSON lines plus alerts for the events in the alert policy (docs/twins/OPERATIONAL_ALERTING.md).
+const observed = observe("worker");
+
 console.log(
   `[worker] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,
 );
@@ -85,7 +89,7 @@ export const workerDb = createBoundedDb({
 // Every critical loop reads the database-backed controls (kill switch, intake, trading) through this one per-process instance. Fail closed:
 // an unreadable state refuses. Not configured under NODE_ENV=test, where the vitest setup installs an explicit test source instead.
 if (process.env["NODE_ENV"] !== "test") {
-  configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: createStructuredLogger(undefined, { service: "worker" }) });
+  configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: observed.logger });
   // Role separation (Stage 1 / Task 3): outside local development the worker must run as the least-privilege role, or it refuses to start (exit 82).
   if (config.appEnv !== "development") await enforceRuntimeRoleSeparation("worker", workerDb.pool);
 }
@@ -210,7 +214,7 @@ export const configuredOptionsMaster: OptionsContractMaster | null = optionsRefe
     ? createProviderSnapshotContractMaster(parseProviderSnapshotFile(JSON.parse(readFileSync(optionsProviderSnapshotPath, "utf8"))))
     : null;
 
-const defaultWorkerLogger = createStructuredLogger(undefined, { service: "worker" });
+const defaultWorkerLogger = observed.logger;
 
 /** Mandatory stop-loss sanity bounds (TWINS_STOPLOSS_MAX_RISK_PCT_*); a malformed override makes the worker refuse to start. */
 const stopLossConfig = loadStopLossConfig();
@@ -686,6 +690,16 @@ const createWorkerRedis = (): Redis => {
   workerRedisClients.push(client);
   return client;
 };
+
+// Restart-loop detection: the third start inside 10 minutes raises a CRITICAL alert (best effort; needs Redis).
+if (process.env["NODE_ENV"] !== "test") {
+  const startRedis = createWorkerRedis();
+  void recordProcessStart(
+    { incr: async (key, ttl) => { const n = await startRedis.incr(key); if (n === 1) await startRedis.expire(key, ttl); return n; } },
+    "worker",
+    defaultWorkerLogger,
+  ).finally(() => void startRedis.quit().catch(() => undefined));
+}
 
 // In test environment, do not start active BullMQ worker event loops unless explicitly triggered
 export const signalWorker: Worker<SignalQueueJobPayload> =
