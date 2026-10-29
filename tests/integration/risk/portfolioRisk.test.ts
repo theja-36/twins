@@ -87,14 +87,14 @@ async function retire(m: Made, status: "REJECTED" | "EXPIRED") {
   return supersedeRiskDecision(db(), d.id, { stopLossValidationId: m.evidenceId, status, idempotencyKey: `pf-retire:${randomUUID()}`, createdBy: "operator:itest", instrumentType: d.instrumentType, market: d.market, symbol: d.symbol, side: d.side, entryPrice: 100, stopLoss: 95, stopLossBasis: "price", plannedQuantity: Number(d.plannedQuantity), plannedNotional: Number(d.plannedNotional), plannedMaxLossAmount: Number(d.plannedMaxLossAmount), plannedMaxLossPercent: Number(d.plannedMaxLossPercent), decisionReasonCode: `retired_${status.toLowerCase()}`, inputSnapshot: { retired: true } });
 }
 
-describe("a candidate within the limits becomes a new APPROVED_FOR_REVIEW version", () => {
+describe("a candidate within the limits becomes a new PENDING (portfolio-passed) version", () => {
   it("appends v3 (portfolio-risk actor) with sizing, evaluated limits, current/proposed/resulting exposure; v2 untouched", async () => {
     const m = await makeSized(sym());
     const before = await raw(m.decisionId);
     const out = await evaluatePortfolioRisk(db(), m.decisionId, opts());
-    expect(out).toMatchObject({ created: true, decisionVersion: 3, status: "APPROVED_FOR_REVIEW", portfolioOutcome: "APPROVED_FOR_REVIEW", reasonCode: null });
+    expect(out).toMatchObject({ created: true, decisionVersion: 3, status: "PENDING", portfolioOutcome: "APPROVED_FOR_REVIEW", reasonCode: null }); // passing the portfolio limits is not an approval: the market gates come next
     const v3 = must(await getRiskDecision(db(), out.id));
-    expect(v3).toMatchObject({ supersedesId: m.decisionId, createdBy: "service:portfolio-risk", decisionReasonCode: "portfolio_within_limits", stopLossValidationId: m.evidenceId, effectiveStatus: "APPROVED_FOR_REVIEW" });
+    expect(v3).toMatchObject({ supersedesId: m.decisionId, createdBy: "service:portfolio-risk", decisionReasonCode: "portfolio_within_limits", stopLossValidationId: m.evidenceId, effectiveStatus: "PENDING" });
     expect(Number(v3.plannedQuantity)).toBe(2000);
     expect(Number(v3.plannedMaxLossAmount)).toBe(10000);
     const snap = v3.outputSnapshot as { stage: string; limitsApplied: boolean; sizing: { status: string }; portfolio: Record<string, Record<string, unknown>> };
@@ -231,7 +231,7 @@ describe("versioned, idempotent recalculation", () => {
     // the blocker leaves the portfolio: the rejected decision can be evaluated again and is approved as version 4
     await retire(blocker, "EXPIRED");
     const v4 = await evaluatePortfolioRisk(db(), v3.id, opts(cfg));
-    expect(v4).toMatchObject({ created: true, decisionVersion: 4, status: "APPROVED_FOR_REVIEW" });
+    expect(v4).toMatchObject({ created: true, decisionVersion: 4, status: "PENDING", portfolioOutcome: "APPROVED_FOR_REVIEW" });
     expect(must(await getRiskDecision(db(), v4.id))).toMatchObject({ supersedesId: v3.id });
     expect(await raw(v3.id)).toEqual(before);
     expect(must(await getRiskDecision(db(), v3.id)).effectiveStatus).toBe("SUPERSEDED");
@@ -243,7 +243,7 @@ describe("versioned, idempotent recalculation", () => {
     const results = await Promise.all(symbols.map(async (s) => { const m = await makeSized(s); return evaluatePortfolioRisk(db(), m.decisionId, opts(cfg)); }));
     const approved = results.filter((r) => r.portfolioOutcome === "APPROVED_FOR_REVIEW");
     expect(approved.length).toBeLessThanOrEqual(2);
-    const sum = await pool.query("select coalesce(sum(planned_max_loss_amount), 0)::float as s from risk_decisions_effective where id = any($1) and status = 'APPROVED_FOR_REVIEW'", [results.map((r) => r.id)]);
+    const sum = await pool.query("select coalesce(sum(planned_max_loss_amount), 0)::float as s from risk_decisions_effective where id = any($1) and status = 'PENDING'", [results.map((r) => r.id)]);
     expect(Number(must(sum.rows[0])["s"])).toBeLessThanOrEqual(25000);
   });
 });
@@ -278,7 +278,7 @@ describe("no evaluation or approval without valid sizing and stop-loss evidence"
     const d = must(await getRiskDecision(db(), m.decisionId));
     const approvedElsewhere = await supersedeRiskDecision(db(), d.id, {
       stopLossValidationId: m.evidenceId, status: "APPROVED_FOR_REVIEW", idempotencyKey: `pf-elsewhere:${randomUUID()}`, createdBy: "operator:itest", instrumentType: "equity", market: "NSE", symbol: m.symbol, side: "BUY", entryPrice: 100, stopLoss: 95, stopLossBasis: "price",
-      plannedQuantity: 1000, plannedNotional: 100000, plannedMaxLossAmount: 5000, plannedMaxLossPercent: 0.5, decisionReasonCode: "manual", inputSnapshot: { x: 1 }, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" } },
+      plannedQuantity: 1000, plannedNotional: 100000, plannedMaxLossAmount: 5000, plannedMaxLossPercent: 0.5, decisionReasonCode: "manual", inputSnapshot: { x: 1 }, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } },
     });
     expect((await err(evaluatePortfolioRisk(db(), approvedElsewhere.id, opts()))).code).toBe("not_evaluable");
   });

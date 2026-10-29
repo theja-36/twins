@@ -58,13 +58,13 @@ describe("integration test target resolution (no defaults, exact contexts)", () 
 describe("migration state comparison (repository journal/hash convention)", () => {
   const expected = loadExpectedMigrations();
   const recorded = expected.map((m) => ({ hash: m.hash, created_at: String(m.when) }));
-  it("matches the repository chain exactly (18 migrations)", () => {
-    expect(expected).toHaveLength(18);
+  it("matches the repository chain exactly (19 migrations)", () => {
+    expect(expected).toHaveLength(19);
     expect(describeMigrationMismatch(expected, recorded)).toBeNull();
   });
   it("reports a target that is behind, naming the missing migrations", () => {
     const msg = describeMigrationMismatch(expected, recorded.slice(0, 4));
-    expect(msg).toMatch(/behind: 4 of 18/);
+    expect(msg).toMatch(/behind: 4 of 19/);
     expect(msg).toContain("0005_r0b_signal_evidence_unique_links");
     expect(msg).toContain("0006_options_claims_unverified");
     expect(msg).toContain("0007_telegram_user_capture_provenance");
@@ -78,9 +78,10 @@ describe("migration state comparison (repository journal/hash convention)", () =
     expect(msg).toContain("0015_risk_decision_sizing");
     expect(msg).toContain("0016_risk_decision_portfolio_review");
     expect(msg).toContain("0017_circuit_breakers");
+    expect(msg).toContain("0018_market_risk_gates");
   });
   it("reports an empty history, extra history, and altered content or timestamp", () => {
-    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 18/);
+    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 19/);
     expect(describeMigrationMismatch(expected, [...recorded, { hash: "x", created_at: "1" }])).toMatch(/ahead or foreign/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 2 ? { ...r, hash: "0".repeat(64) } : r)))).toMatch(/different content/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 7 ? { ...r, created_at: "1" } : r)))).toMatch(/timestamp/);

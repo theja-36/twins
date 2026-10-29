@@ -257,9 +257,9 @@ describe("a decision without a valid size can never be approval-eligible", () =>
     const attempts: Array<Partial<RiskDecisionInput>> = [
       {}, // nothing
       { ...sized }, // planned values but no sizing proof
-      { ...sized, outputSnapshot: { sizing: { status: "REJECTED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" } } },
-      { plannedQuantity: 0, plannedNotional: 0, plannedMaxLossAmount: 0, plannedMaxLossPercent: 0, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" } } }, // zero size
-      { ...sized, plannedMaxLossAmount: null, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" } } },
+      { ...sized, outputSnapshot: { sizing: { status: "REJECTED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } } },
+      { plannedQuantity: 0, plannedNotional: 0, plannedMaxLossAmount: 0, plannedMaxLossPercent: 0, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } } }, // zero size
+      { ...sized, plannedMaxLossAmount: null, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } } },
     ];
     for (const [i, a] of attempts.entries()) {
       const e = await err(supersedeRiskDecision(db(), v1.id, { ...approved({ signalId: signal.id }, ev.id, { idempotencyKey: `sz-approve:${randomUUID()}`, ...a }), subject: undefined } as never));
@@ -276,7 +276,7 @@ describe("a decision without a valid size can never be approval-eligible", () =>
     const v2 = await sizeRiskDecision(db(), v1.id, { capital: CAPITAL });
     const sized = must(await getRiskDecision(db(), v2.id));
     const out = await supersedeRiskDecision(db(), v2.id, {
-      ...approved({ signalId: signal.id }, ev.id, { plannedQuantity: Number(sized.plannedQuantity), plannedNotional: Number(sized.plannedNotional), plannedMaxLossAmount: Number(sized.plannedMaxLossAmount), plannedMaxLossPercent: Number(sized.plannedMaxLossPercent), outputSnapshot: { ...(sized.outputSnapshot as Record<string, unknown>), portfolio: { outcome: "APPROVED_FOR_REVIEW" } } }),
+      ...approved({ signalId: signal.id }, ev.id, { plannedQuantity: Number(sized.plannedQuantity), plannedNotional: Number(sized.plannedNotional), plannedMaxLossAmount: Number(sized.plannedMaxLossAmount), plannedMaxLossPercent: Number(sized.plannedMaxLossPercent), outputSnapshot: { ...(sized.outputSnapshot as Record<string, unknown>), portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } } }),
       idempotencyKey: `sz-approve-ok:${randomUUID()}`,
     } as never);
     expect(out).toMatchObject({ created: true, decisionVersion: 3, status: "APPROVED_FOR_REVIEW" });

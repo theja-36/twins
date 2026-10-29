@@ -112,6 +112,15 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     ],
     triggers: [...guards("circuit_breaker_events"), "circuit_breaker_events_a_integrity_before_insert"],
   },
+  {
+    chain: "event_blackout_windows",
+    table: "event_blackout_windows",
+    fields: [
+      txt("t.id"), plain("t.entry_type"), plain("t.market"), plain("t.scope"), plain("t.scope_value"), plain("t.severity"), ts("t.starts_at"), ts("t.ends_at"), plain("t.reason_code"), plain("t.reason"),
+      txt("t.cancels_id"), plain("t.idempotency_key"), plain("t.created_by"), ts("t.created_at"),
+    ],
+    triggers: [...guards("event_blackout_windows"), "event_blackout_windows_a_integrity_before_insert"],
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */

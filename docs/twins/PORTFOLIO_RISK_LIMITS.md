@@ -29,7 +29,7 @@ Interface for later stages: `OpenPositionSource.listOpenExposures(): Promise<Exp
 Percentages are of the capital the candidate was sized with (override: `opts.capital`). A malformed value throws (no fallback). Sitting exactly on a limit passes; above it fails. The stored evaluation records the limits used.
 
 ## 5. Outcomes
-`APPROVED_FOR_REVIEW` only if **every** limit passes (reason `portfolio_within_limits`). Otherwise `REJECTED` with the first failing reason by fixed precedence, all failures listed:
+**Passing is not an approval (changed in Task 5):** if **every** limit passes the new version is `PENDING` (reason `portfolio_within_limits`; the snapshot outcome `APPROVED_FOR_REVIEW` means "passed") and the [market-risk gates](MARKET_RISK_GATES.md) decide whether it becomes `APPROVED_FOR_REVIEW`. Otherwise `REJECTED` with the first failing reason by fixed precedence, all failures listed:
 `PORTFOLIO_RISK_LIMIT_EXCEEDED` (total risk / absolute cap) › `MARKET_RISK_LIMIT_EXCEEDED` › `CORRELATION_GROUP_LIMIT_EXCEEDED` (group risk or count) › `UNDERLYING_CONCENTRATION_LIMIT_EXCEEDED` (underlying risk or count) › `CANDIDATE_CONCENTRATION_LIMIT_EXCEEDED` (underlying+expiry risk or count) › `MAX_ACTIVE_DECISIONS_EXCEEDED`. The stored reason code is `portfolio_<reason lowercase>`.
 Invalid input is **not evaluated**: no/zero planned loss (`portfolio_sizing_missing`), bad capital, missing market/underlying, unknown direction, malformed active exposure.
 

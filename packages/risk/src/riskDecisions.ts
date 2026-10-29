@@ -29,7 +29,10 @@ export type RiskErrorCode =
   | "sizing_missing"
   | "not_evaluable"
   | "decision_expired"
-  | "circuit_breaker_unavailable";
+  | "circuit_breaker_unavailable"
+  | "portfolio_missing"
+  | "market_data_unavailable"
+  | "event_windows_unavailable";
 
 /** Fixed code + message naming the rule, never a driver message or a value. `cause` keeps the safety refusal for callers that must map it. */
 export class RiskDecisionError extends Error {

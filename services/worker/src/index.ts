@@ -24,8 +24,8 @@ import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
-import { observe, recordProcessStart } from "@twins/alerting";
-import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk } from "@twins/risk";
+import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
+import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
@@ -322,12 +322,29 @@ export async function processSignalQueueJob(
  * here. Fail closed: a database or runtime-state error propagates (the intake outbox retries; the creation is idempotent per subject). A safety refusal
  * keeps its identity so the intake gate pauses the job instead of consuming an attempt.
  */
+/**
+ * The market-data seam for the market-risk gates (Stage 3 / Task 5). NO live market-data provider exists (Zerodha / vendor feeds are out of scope), so this is
+ * unset in every real process: a portfolio-passed decision then stays PENDING and can never become approval-eligible (fail closed). Tests inject synthetic ones.
+ */
+let marketDataProvider: MarketDataProvider | undefined;
+export function configureMarketDataProvider(provider: MarketDataProvider | undefined): void {
+  marketDataProvider = provider;
+}
+let marketAlerter: Alerter | null | undefined;
+function alertMarket(log: StructuredLogger, a: MarketAlert): void {
+  if (marketAlerter === undefined) {
+    try { marketAlerter = alerterFromEnv(process.env, "worker", log); } catch { marketAlerter = null; }
+  }
+  marketAlerter?.alert({ ...a, dedupeKey: `${a.code}:${a.details.reason}:${a.details.kind}` });
+}
+
 async function recordPendingRiskDecision(
   log: StructuredLogger,
   create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
   subject: { signalId?: string; optionsClaimId?: string },
   size?: () => ReturnType<typeof sizeLatestRiskDecisionForSignal>,
   evaluate?: (decisionId: string) => ReturnType<typeof evaluatePortfolioRisk>,
+  db?: Db,
 ): Promise<void> {
   try {
     const r = await create();
@@ -345,6 +362,20 @@ async function recordPendingRiskDecision(
     if (evaluate && !("skipped" in sz) && sz.sizingStatus === "SIZED" && sz.status === "PENDING") {
       const pf = await evaluate(sz.id);
       log.info("worker.risk_portfolio.recorded", { riskDecisionId: pf.id, created: pf.created, portfolioOutcome: pf.portfolioOutcome, reasonCode: pf.reasonCode, decisionVersion: pf.decisionVersion, ...subject });
+      // Stage 3 / Task 5: a portfolio-passed decision is evaluated against the market-risk gates. Only a PASS becomes APPROVED_FOR_REVIEW (review state: no order, card or broker call).
+      if (db && pf.portfolioOutcome === "APPROVED_FOR_REVIEW" && pf.status === "PENDING") {
+        if (!marketDataProvider) log.info("worker.risk_market.skipped", { reason: "no_market_data_provider", riskDecisionId: pf.id, ...subject });
+        else {
+          try {
+            const mk = await evaluateMarketRisk(db, pf.id, { provider: marketDataProvider, onMarketAlert: (a) => alertMarket(log, a) });
+            log.info("worker.risk_market.recorded", { riskDecisionId: mk.id, created: mk.created, marketOutcome: mk.marketOutcome, reasonCode: mk.reasonCode, decisionVersion: mk.decisionVersion, ...subject });
+          } catch (error) {
+            // missing market data / event windows is not a job failure: the decision simply stays PENDING (never approved)
+            if (error instanceof RiskDecisionError && (error.code === "market_data_unavailable" || error.code === "event_windows_unavailable")) log.warn("worker.risk_market.skipped", { reason: error.code, riskDecisionId: pf.id, ...subject });
+            else throw error;
+          }
+        }
+      }
     }
   } catch (error) {
     if (error instanceof RiskDecisionError && error.cause instanceof SafetyRefusalError) throw error.cause;
@@ -560,7 +591,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
-    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id), (id) => evaluatePortfolioRisk(db, id));
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id), (id) => evaluatePortfolioRisk(db, id), db);
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -598,7 +629,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
-    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id)); // resume: a crash after validation must not leave the signal without its risk decision
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id), db); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -674,7 +705,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
-  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id));
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id), db);
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,
