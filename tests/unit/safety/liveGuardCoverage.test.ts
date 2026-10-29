@@ -19,7 +19,7 @@ function composeEntries(): Record<string, string> {
   const result: Record<string, string> = {};
   for (const m of compose.matchAll(/\n  ([a-z-]+):\n((?:(?!\n  [a-z_-]+:\n|\nnetworks:)[\s\S])*)/g)) {
     const body = (m[2] ?? "").split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
-    const cmd = /command: \[(.*)\]/.exec(body)?.[1];
+    const cmd = /(?:command|entrypoint): \[(.*)\]/.exec(body)?.[1]; // ops one-shots use entrypoint so `compose run` arguments are appended
     if (!cmd) continue;
     const file = /\/app\/((?:apps|services|packages|scripts)\/[^"]+\.(?:ts|py))/.exec(cmd)?.[1];
     if (file) result[must(m[1])] = file;

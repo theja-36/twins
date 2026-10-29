@@ -97,3 +97,14 @@ describe("scheduled and CI verification", () => {
     expect(v).toContain("tgenabled !== \"A\"");
   });
 });
+
+describe("ops one-shot services accept arguments (found in the first real staging run)", () => {
+  const compose = readFileSync(new URL("../../../infrastructure/staging/docker-compose.staging.yml", import.meta.url), "utf8");
+  it("safety-control and audit-verify use `entrypoint`, so `compose run <service> <args>` appends arguments instead of replacing the CLI", () => {
+    for (const [service, script] of [["safety-control", "safety-control.ts"], ["audit-verify", "verify-audit-chain.ts"]] as const) {
+      const block = compose.slice(compose.indexOf(`\n  ${service}:`), compose.indexOf("\n  ", compose.indexOf(`\n  ${service}:`) + 5 + 400) );
+      expect(block, service).toMatch(new RegExp(`entrypoint: \\["node", "--import", "tsx", "/app/scripts/ops/${script.replace(".", "\\.")}"\\]`));
+      expect(block, service).not.toMatch(/\n    command:/);
+    }
+  });
+});
