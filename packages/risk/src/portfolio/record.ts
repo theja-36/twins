@@ -17,7 +17,7 @@ function blockedVariant(result: PortfolioResult, gate: CircuitBreakerStatus): Po
 
 /**
  * Records a portfolio evaluation on a sized risk decision (Stage 3 / Task 3). Append-only: the evaluation is a NEW version that supersedes the sized one
- * (APPROVED_FOR_REVIEW if every limit passes, otherwise REJECTED with the machine-readable reason), carrying the evaluated limits, current / proposed /
+ * (PENDING - passed, awaiting the market-risk gates - if every limit passes, otherwise REJECTED with the machine-readable reason), carrying the evaluated limits, current / proposed /
  * resulting exposure and the pass/fail reason. Nothing here places an order, calls a broker, sends an approval card or creates executable state.
  * Evaluations are serialized by a transaction-scoped advisory lock so two candidates cannot both pass against the same headroom.
  */
@@ -82,7 +82,7 @@ export async function evaluatePortfolioRisk(db: Db, decisionId: string, opts: Po
     await tx.execute(sql`select pg_advisory_xact_lock(${LOCK_KEY}, hashtext('risk_portfolio'))`);
     const prev = await getRiskDecision(tx, decisionId);
     if (!prev) throw new RiskDecisionError("not_found", "the risk decision does not exist");
-    const evaluable = (prev.status === "PENDING" && prev.createdBy === SIZING_ACTOR) || (isPortfolioRevision(prev) && (prev.status === "REJECTED" || prev.status === "APPROVED_FOR_REVIEW"));
+    const evaluable = (prev.status === "PENDING" && prev.createdBy === SIZING_ACTOR) || (isPortfolioRevision(prev) && (prev.status === "REJECTED" || prev.status === "PENDING"));
     if (!evaluable) {
       if (prev.status === "PENDING") throw new RiskDecisionError("sizing_missing", "the decision has not been sized; the portfolio is not evaluated");
       throw new RiskDecisionError("not_evaluable", `a ${prev.status} decision is not evaluated`);
@@ -131,7 +131,7 @@ async function recordResult(tx: Db, prev: RiskDecisionRecord, evidenceId: string
   const base = isPortfolioRevision(prev) ? ((prev.inputSnapshot as Snap)?.base ?? prev.inputSnapshot) : prev.inputSnapshot;
   const out = await supersedeRiskDecision(tx, prev.id, {
     stopLossValidationId: evidenceId,
-    status: approved ? "APPROVED_FOR_REVIEW" : "REJECTED",
+    status: approved ? "PENDING" : "REJECTED", // passing the portfolio limits is not an approval: the market-risk gates (Task 5) come next; the snapshot outcome APPROVED_FOR_REVIEW means "passed"
     idempotencyKey: `risk-portfolio:${prev.id}:${hash.slice(0, 32)}`,
     createdBy: PORTFOLIO_ACTOR,
     instrumentType: prev.instrumentType,
@@ -154,7 +154,7 @@ async function recordResult(tx: Db, prev: RiskDecisionRecord, evidenceId: string
     confidenceScore: asNum(prev.confidenceScore),
     sourceTrustTier: prev.sourceTrustTier,
     decisionReasonCode: approved ? "portfolio_within_limits" : `portfolio_${String(result.reasonCode).toLowerCase()}`.slice(0, 60),
-    decisionReason: approved ? `${result.explanation} Approved for review only: further risk gates (circuit breakers, market checks) are not part of this stage.` : result.explanation,
+    decisionReason: approved ? `${result.explanation} Passed the portfolio limits; awaiting the market-risk gates before it can become approval-eligible.` : result.explanation,
     inputSnapshot: { portfolio: result.snapshot, previousDecisionId: prev.id, previousVersion: prev.decisionVersion, base },
     outputSnapshot: { ...((prev.outputSnapshot as Record<string, unknown> | null) ?? {}), stage: "portfolio_risk", limitsApplied: true, portfolio: { ...result.snapshot, engineVersion: PORTFOLIO_ENGINE_VERSION, capital } },
     evidenceReferences: { ...((prev.evidenceReferences as Record<string, unknown> | null) ?? {}), previousDecisionId: prev.id, portfolioInputHash: hash, activeExposureIds: active.map((a) => a.id) },

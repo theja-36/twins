@@ -5,6 +5,9 @@
  *   risk-control expiry run     [--dry-run] [--as-of <ISO>] [--limit N]
  *   risk-control breakers status   [--capital N] [--as-of <ISO>]
  *   risk-control breakers evaluate [--capital N] [--as-of <ISO>]
+ *   risk-control blackout add --market <CODE|ALL> --scope MARKET|SYMBOL [--symbol S] --severity WARNING|CRITICAL --starts <ISO> --ends <ISO> --reason-code <code> --created-by operator:<name> [--reason <text>]
+ *   risk-control blackout cancel --id <uuid> --created-by operator:<name> [--reason <text>]
+ *   risk-control blackout list [--at <ISO>] [--include-cancelled]
  *   risk-control breakers record-loss --amount N --source-ref <ref> --created-by operator:<name> [--source manual_adjustment|synthetic] [--occurred-at <ISO>]
  *
  * Expiry only APPENDS EXPIRED versions (never updates) and is allowed under the kill switch (it removes exposure). Breaker `status` is read-only. Nothing here
@@ -16,7 +19,7 @@ import { pathToFileURL } from "node:url";
 import { createBoundedDb, type Db } from "../../packages/database/src/index";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
 import {
-  evaluateCircuitBreakers, expireStaleRiskDecisions, getCircuitBreakerStatus, listStaleRiskDecisions, loadBreakerConfig, loadExpiryConfig, loadSizingConfig, recordLossEvent, RiskDecisionError, type LossSource,
+  addEventWindow, cancelEventWindow, evaluateCircuitBreakers, expireStaleRiskDecisions, listEventWindows, getCircuitBreakerStatus, listStaleRiskDecisions, loadBreakerConfig, loadExpiryConfig, loadSizingConfig, recordLossEvent, RiskDecisionError, type LossSource,
 } from "../../packages/risk/src/index";
 
 export interface CliDeps {
@@ -31,6 +34,7 @@ const USAGE = [
   "usage:",
   "  risk-control expiry list|run [--dry-run] [--as-of <ISO>] [--limit N]",
   "  risk-control breakers status|evaluate [--capital N] [--as-of <ISO>]",
+  "  risk-control blackout add|cancel|list (see the header of scripts/ops/risk-control.ts)",
   "  risk-control breakers record-loss --amount N --source-ref <ref> --created-by operator:<name> [--source manual_adjustment|synthetic] [--occurred-at <ISO>]",
 ].join("\n");
 
@@ -39,7 +43,7 @@ function flags(args: string[]): { values: Map<string, string>; bare: Set<string>
   for (let i = 0; i < args.length; i++) {
     const a = args[i] as string;
     if (!a.startsWith("--")) return null;
-    if (a === "--dry-run") { bare.add("dry-run"); continue; }
+    if (a === "--dry-run" || a === "--include-cancelled") { bare.add(a.slice(2)); continue; }
     const v = args[i + 1];
     if (v === undefined || v.startsWith("--")) return null;
     values.set(a.slice(2), v);
@@ -81,6 +85,28 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
       const breakers = loadBreakerConfig(deps.env);
       const r = cmd === "status" ? { status: await getCircuitBreakerStatus(handle.db, { capital, breakers, ...common }), events: [] } : await evaluateCircuitBreakers(handle.db, { capital, breakers, ...common });
       deps.out(json({ blocked: r.status.blocked, blockedBy: r.status.blockedBy, scopes: r.status.scopes, createdEvents: r.events.filter((e) => e.created).map((e) => ({ scope: e.scope, type: e.eventType })) }));
+      return 0;
+    }
+    if (group === "blackout" && (cmd === "add" || cmd === "cancel" || cmd === "list")) {
+      const by = f.values.get("created-by");
+      if (cmd === "list") {
+        const at = date(f.values.get("at"));
+        if (at === "invalid") { deps.err("--at must be an ISO date-time"); return 2; }
+        const rows = await listEventWindows(handle.db, { ...(at ? { at } : {}), includeCancelled: f.bare.has("include-cancelled") });
+        deps.out(json(rows.map((w) => ({ id: w.id, market: w.market, scope: w.scope, scopeValue: w.scopeValue, severity: w.severity, startsAt: w.startsAt.toISOString(), endsAt: w.endsAt.toISOString(), reasonCode: w.reasonCode, cancelled: w.cancelled }))));
+        return 0;
+      }
+      if (!by) { deps.err(USAGE); return 2; }
+      if (cmd === "cancel") {
+        const id = f.values.get("id");
+        if (!id) { deps.err(USAGE); return 2; }
+        deps.out(json(await cancelEventWindow(handle.db, id, { createdBy: by, ...(f.values.get("reason") ? { reason: f.values.get("reason") as string } : {}) })));
+        return 0;
+      }
+      const starts = date(f.values.get("starts")), ends = date(f.values.get("ends"));
+      const market = f.values.get("market"), scope = f.values.get("scope"), severity = f.values.get("severity"), reasonCode = f.values.get("reason-code");
+      if (!market || !scope || !severity || !reasonCode || !starts || !ends || starts === "invalid" || ends === "invalid") { deps.err(USAGE); return 2; }
+      deps.out(json(await addEventWindow(handle.db, { market, scope: scope as "MARKET" | "SYMBOL", scopeValue: f.values.get("symbol") ?? null, severity: severity as "WARNING" | "CRITICAL", startsAt: starts, endsAt: ends, reasonCode, reason: f.values.get("reason") ?? null, createdBy: by })));
       return 0;
     }
     if (group === "breakers" && cmd === "record-loss") {
