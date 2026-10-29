@@ -1,7 +1,4 @@
 import {
-  boolean,
-  jsonb,
-  numeric,
   pgTable,
   text,
   timestamp,
@@ -30,23 +27,5 @@ export const decisions = pgTable("decisions", {
   decidedAt: timestamp("decided_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-  createdAt: createdAtColumn(),
-});
-
-/**
- * The Risk Engine's authorization result for a decision (spec section 31).
- * The Risk Engine can override the Decision Engine; the reverse is never
- * permitted, which is why `approved` here - not `decisions.outcome` -
- * is what execution is allowed to key off of.
- */
-export const riskDecisions = pgTable("risk_decisions", {
-  id: idColumn(),
-  decisionId: uuid("decision_id")
-    .notNull()
-    .references(() => decisions.id, { onDelete: "cascade" }),
-  approved: boolean("approved").notNull(),
-  reasons: jsonb("reasons"), // list of {check, passed, detail}
-  maxPositionSize: numeric("max_position_size"),
-  riskPerTrade: numeric("risk_per_trade"),
   createdAt: createdAtColumn(),
 });

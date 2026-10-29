@@ -75,7 +75,7 @@ try {
     if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
   }
   const heads = await client.query("select count(*)::int as n from audit_chain_heads");
-  if (heads.rows[0].n !== 6) throw new Error(`audit_chain_heads must hold 6 chains, found ${heads.rows[0].n}`);
+  if (heads.rows[0].n !== 7) throw new Error(`audit_chain_heads must hold 7 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
   // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
@@ -100,7 +100,17 @@ try {
   if (rn !== "telegram_intake_outbox_replays_no_truncate,telegram_intake_outbox_replays_no_update_delete" || replays.rows.some((r) => r.tgenabled !== "A")) throw new Error(`telegram_intake_outbox_replays triggers missing or not ENABLE ALWAYS: [${rn}]`);
   const guard = await client.query("select pg_get_functiondef('telegram_intake_outbox_guard'::regproc) as d");
   if (!/only an audited operator replay/.test(guard.rows[0].d)) throw new Error("telegram_intake_outbox_guard (0013 replay rule) is missing");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present`);
+  // 0014: immutable risk decisions: chain + integrity triggers ENABLE ALWAYS, the derived view, the orders guard, and no legacy rows reinterpreted.
+  const rd = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.risk_decisions'::regclass and not tgisinternal order by tgname");
+  const rdNames = rd.rows.map((r) => r.tgname).join(",");
+  if (rdNames !== "risk_decisions_a_integrity_before_insert,risk_decisions_chain_after_insert,risk_decisions_chain_before_insert,risk_decisions_no_truncate,risk_decisions_no_update_delete" || rd.rows.some((r) => r.tgenabled !== "A")) throw new Error(`risk_decisions triggers missing or not ENABLE ALWAYS: [${rdNames}]`);
+  const rdView = await client.query("select to_regclass('public.risk_decisions_effective') is not null as ok");
+  if (!rdView.rows[0].ok) throw new Error("risk_decisions_effective (0014) is missing");
+  const ordersGuard = await client.query("select tgenabled from pg_trigger where tgrelid = 'public.orders'::regclass and tgname = 'orders_require_risk_decision'");
+  if (ordersGuard.rowCount !== 1 || ordersGuard.rows[0].tgenabled !== "A") throw new Error("orders_require_risk_decision (0014) is missing or not ENABLE ALWAYS");
+  const rdCols = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'risk_decisions' and column_name in ('stop_loss_validation_id','supersedes_id','decision_version','status','input_snapshot','evidence_references','event_hash','chain_index')");
+  if (rdCols.rows[0].n !== 8) throw new Error("risk_decisions (0014) is missing required columns");
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present`);
 } finally {
   await client.end();
 }
