@@ -8,3 +8,4 @@ export * from "./dryRun";
 export * from "./importer";
 export * from "./report";
 export * from "./outcomes/index";
+export * from "./scorecards/index";
