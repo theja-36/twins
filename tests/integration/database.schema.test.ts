@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { createDb, schema } from "../../packages/database/src/index";
+import { createRiskDecision } from "../../packages/risk/src/index";
 
 /**
  * Integration tests run against a real PostgreSQL instance (spec section
@@ -242,10 +243,18 @@ describe("database schema (integration)", () => {
     const instrument = await insertInstrument();
     if (!account) throw new Error("insert did not return a row");
 
+    // Stage 3: an order requires a risk decision that is currently APPROVED_FOR_REVIEW (database guard); build the minimal valid chain for it.
+    const [sig] = await db.insert(schema.signals).values({ sourceType: "synthetic", instrumentId: instrument.id, parserVersion: "schema-test", direction: "buy", entryPrice: "100", stopLoss: "95", signalTimestamp: new Date() }).returning();
+    if (!sig) throw new Error("insert did not return a row");
+    const [stop] = await db.insert(schema.stopLossValidations).values({ subjectKind: "signal", signalId: sig.id, ruleVersion: "stop-loss-v1", result: "VALID", levelBasis: "price", normalizedStopLoss: "95", entryPrice: "100", riskDistance: "5", riskPct: "5", maxRiskPct: "10" }).returning();
+    if (!stop) throw new Error("insert did not return a row");
+    const risk = await createRiskDecision(db, { subject: { kind: "signal", signalId: sig.id }, stopLossValidationId: stop.id, status: "APPROVED_FOR_REVIEW", idempotencyKey: `schema-test:${randomUUID()}`, createdBy: "service:schema-test", instrumentType: "equity", symbol: instrument.symbol, entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "schema_test", inputSnapshot: { synthetic: true } });
+
     const idempotencyKey = `order-${randomUUID()}`;
     await db.insert(schema.orders).values({
       accountId: account.id,
       instrumentId: instrument.id,
+      riskDecisionId: risk.id,
       tradingMode: "paper",
       side: "buy",
       orderType: "market",
@@ -257,6 +266,7 @@ describe("database schema (integration)", () => {
       db.insert(schema.orders).values({
         accountId: account.id,
         instrumentId: instrument.id,
+        riskDecisionId: risk.id,
         tradingMode: "paper",
         side: "buy",
         orderType: "market",

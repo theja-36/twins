@@ -17,6 +17,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq } from "drizzle-orm";
 import { schema } from "../../../packages/database/src/index";
+import { listRiskDecisions } from "../../../packages/risk/src/index";
 import {
   createHarness,
   telegramWebhookPayload,
@@ -115,5 +116,13 @@ describe("Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0
       .from(schema.marketObservations)
       .where(eq(schema.marketObservations.instrumentId, must(persistedSignal).instrumentId));
     expect(obs.some((o) => o.source === "r0b-synthetic" && Number(o.close) === 2810)).toBe(true);
+
+    // H. Stage 3 / Task 1: the worker created exactly one PENDING risk decision, linked to the signal and its stop-loss evidence, and nothing else downstream.
+    const riskRows = await listRiskDecisions(dbHandle.db, { signalId: must(persistedSignal).id });
+    expect(riskRows).toHaveLength(1);
+    const [stop] = await dbHandle.db.select().from(schema.stopLossValidations).where(eq(schema.stopLossValidations.signalId, must(persistedSignal).id));
+    expect(riskRows[0]).toMatchObject({ status: "PENDING", effectiveStatus: "PENDING", decisionVersion: 1, createdBy: "service:risk-decision", stopLossValidationId: must(stop).id, plannedQuantity: null, plannedNotional: null });
+    expect(riskRows[0]?.evidenceReferences).toMatchObject({ signalValidationId: must(persistedValidation).id, stopLossValidationId: must(stop).id });
+    expect(await dbHandle.db.select().from(schema.decisions).where(eq(schema.decisions.signalId, must(persistedSignal).id))).toEqual([]); // nothing in the legacy decisions table
   });
 });

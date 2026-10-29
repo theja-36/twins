@@ -30,6 +30,8 @@ function fakeDb(data: Record<string, Row[]>, opts: FakeOptions = {}): Queryable 
   const allTriggers = (table: string): Array<[string, string]> => {
     const spec = CHAIN_SPECS.find((s) => s.table === table);
     if (spec) return [...spec.triggers, ...INVARIANT_TRIGGERS.filter(([t]) => t === table).map(([, n]) => n)].map((t) => [t, "A"]);
+    const invariantOnly = INVARIANT_TRIGGERS.filter(([t]) => t === table); // e.g. the orders guard (a table that is not a chain)
+    if (invariantOnly.length) return invariantOnly.map(([, n]) => [n, "A"]);
     if (table === "system_controls") return ["system_controls_before_update", "system_controls_audit_insert", "system_controls_audit_update", "system_controls_no_delete", "system_controls_no_truncate"].map((t) => [t, "A"]);
     return [["audit_chain_heads_guard", "A"], ["audit_chain_heads_no_truncate", "A"]];
   };
@@ -86,10 +88,12 @@ describe("canonical serialization and hashing", () => {
     expect(computeEventHash("audit_events", 1, "1".repeat(64), base)).not.toBe(ev);
   });
   it("every chain spec lists its content fields and its guard triggers", () => {
-    expect(CHAIN_SPECS.map((s) => s.chain).sort()).toEqual(["audit_events", "options_claims", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
+    expect(CHAIN_SPECS.map((s) => s.chain).sort()).toEqual(["audit_events", "options_claims", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
     for (const s of CHAIN_SPECS) {
       expect(s.fields.length).toBeGreaterThan(8);
-      expect(s.triggers).toEqual([`${s.table}_chain_before_insert`, `${s.table}_chain_after_insert`, `${s.table}_no_update_delete`, `${s.table}_no_truncate`]);
+      // the four chain/append-only guards, in this order; risk_decisions additionally has its integrity trigger (evidence, subject and version rules)
+      const guards = [`${s.table}_chain_before_insert`, `${s.table}_chain_after_insert`, `${s.table}_no_update_delete`, `${s.table}_no_truncate`];
+      expect(s.triggers).toEqual(s.table === "risk_decisions" ? [...guards, "risk_decisions_a_integrity_before_insert"] : guards);
     }
   });
 });

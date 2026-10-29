@@ -94,9 +94,15 @@ describe("the database enforces the same invariant, for every execution-eligible
 });
 
 describe("nothing can reach an executable decision, risk decision or order today (future paths must be added consciously)", () => {
-  it("no production code inserts into decisions, risk_decisions, orders, fills or positions", () => {
-    const offenders = ALL.filter((f) => /\.insert\(\s*schema\.(decisions|riskDecisions|orders|fills|positions)\b/.test(strip(read(f))) || /insert into (decisions|risk_decisions|orders|fills|positions)\b/i.test(strip(read(f))));
+  // Stage 3 / Task 1: risk_decisions now has exactly ONE writer, the risk-decision module. Everything else stays forbidden.
+  const RISK_DECISION_WRITER = "packages/risk/src/riskDecisions.ts";
+  it("no production code inserts into decisions, orders, fills or positions", () => {
+    const offenders = ALL.filter((f) => /\.insert\(\s*schema\.(decisions|orders|fills|positions)\b/.test(strip(read(f))) || /insert into (decisions|orders|fills|positions)\b/i.test(strip(read(f))));
     expect(offenders).toEqual([]);
+  });
+  it("only the risk-decision module writes risk_decisions (and it is the one file that does)", () => {
+    const writers = ALL.filter((f) => /\.insert\(\s*schema\.riskDecisions\b/.test(strip(read(f))) || /insert into risk_decisions\b/i.test(strip(read(f))));
+    expect(writers.map((f) => f.replace(/\\/g, "/").replace(/^.*?(packages\/risk\/src\/riskDecisions\.ts)$/, "$1"))).toEqual([RISK_DECISION_WRITER]);
   });
   it("the shared rule package has no dependencies and no I/O", () => {
     const pkg = JSON.parse(read("packages/stop-loss/package.json")) as { dependencies?: unknown };
