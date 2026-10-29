@@ -36,6 +36,8 @@ describe("no approval-class state is produced outside the audited places", () =>
     "packages/decision-intelligence/src/types.ts": "the outcome type",
     "packages/decision-intelligence/src/decide.ts": "the single producer of APPROVE (guarded by assertStopLossAllowsEligibility)",
     "packages/stop-loss/src/eligibility.ts": "the eligibility lists and the invariant",
+    "packages/risk/src/market/engine.ts": "the market-gate outcome CONDITIONAL (a WARNING event window): it maps to a PENDING version and never to an approval (Stage 3 / Task 5)",
+    "packages/risk/src/market/record.ts": "maps the market-gate CONDITIONAL outcome to a PENDING version; APPROVED_FOR_REVIEW additionally needs the database sized/portfolio/market checks",
   };
   it("only the allow-listed files contain APPROVE / QUALIFIED / CONDITIONAL as a state", () => {
     const hits = ALL.filter((f) => STATES.test(strip(read(f))));

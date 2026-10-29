@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
-import { createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent } from "../../../packages/risk/src/index";
+import { addEventWindow, createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent } from "../../../packages/risk/src/index";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq } from "drizzle-orm";
@@ -40,11 +40,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -109,6 +109,20 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
        values ($1, 'DAILY', 'WARNED', '1960-01-04T00:00:00Z', '1960-01-05T00:00:00Z', 15, 20, 1000, 1.5, 0, $2, $3, '{}', 'service:itest')`,
       [randomUUID(), `daily_loss_warning_${suffix}_${i}`, `itest-breaker-${suffix}-${i}`],
     );
+    // event blackout windows (Stage 3 / Task 5): a WINDOW (far past, so it never matters to anything) and its CANCELLATION
+    const windowId = randomUUID();
+    await c.query(
+      `insert into event_blackout_windows (id, entry_type, market, scope, severity, starts_at, ends_at, reason_code, reason, idempotency_key, created_by)
+       values ($1, 'WINDOW', 'NSE', 'MARKET', 'WARNING', '1960-01-04T00:00:00Z', '1960-01-05T00:00:00Z', $2, 'itest window reason', $3, 'operator:itest')`,
+      [windowId, `itest_window_${suffix}_${i}`, `itest-window-${suffix}-${i}`],
+    );
+    if (i === 0) {
+      await c.query(
+        `insert into event_blackout_windows (id, entry_type, market, scope, severity, starts_at, ends_at, reason_code, cancels_id, idempotency_key, created_by)
+         values (gen_random_uuid(), 'CANCELLATION', 'NSE', 'MARKET', 'WARNING', '1960-01-04T00:00:00Z', '1960-01-05T00:00:00Z', $1, $2, $3, 'operator:itest')`,
+        [`itest_window_${suffix}_${i}`, windowId, `itest-window-cancel-${suffix}-${i}`],
+      );
+    }
     await c.query("insert into audit_events (id, event_type, entity_type, actor_type, metadata) values ($1, $2, 'itest', 'system', $3::jsonb)", [randomUUID(), `itest.${suffix}.${i}`, JSON.stringify({ b: 2, a: [1, null, "x"] })]);
   }
   return { sourceId, messageIds, signalId };
@@ -232,6 +246,7 @@ describe("valid append flows still work and extend the chain", () => {
     expect(breached.events.filter((e) => e.created).map((e) => e.eventType)).toContain("BREACHED");
     const reset = await evaluateCircuitBreakers(handle.db, { capital: 1_000_000, asOf: new Date(when.getTime() + 10 * 86_400_000) });
     expect(reset.events.filter((e) => e.created).map((e) => e.eventType)).toContain("RESET");
+    expect(await addEventWindow(handle.db, { market: "NSE", scope: "MARKET", severity: "WARNING", startsAt: new Date("1960-03-07T00:00:00Z"), endsAt: new Date("1960-03-08T00:00:00Z"), reasonCode: `itest_${suffix}`, createdBy: "operator:itest" })).toMatchObject({ created: true });
     await handle.db.insert(schema.auditEvents).values({ eventType: `itest.valid.${suffix}`, entityType: "itest", actorType: "system", metadata: { suffix } });
     const report = await verifyAuditChainsWithPool(pool);
     expect(report.failures).toEqual([]);

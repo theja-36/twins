@@ -16,6 +16,7 @@ import {
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { runCli } from "../../../scripts/ops/risk-control";
+import { approveThroughGates } from "./gates";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
 
@@ -97,13 +98,13 @@ describe("risk decision expiry", () => {
   });
   it("a stale APPROVED_FOR_REVIEW decision expires after 15 minutes, with its own reason", async () => {
     const m = await makeSized();
-    const approved = await evaluatePortfolioRisk(db(), m.decisionId, pf());
+    const approved = must((await approveThroughGates(db(), m.decisionId, pf())).market);
     expect(approved).toMatchObject({ status: "APPROVED_FOR_REVIEW" });
     const now = Date.now();
     expect(await expireRiskDecision(db(), approved.id, { asOf: new Date(now + 14 * MIN) })).toMatchObject({ result: "not_yet_stale" });
     const out = await expireRiskDecision(db(), approved.id, { asOf: new Date(now + 16 * MIN) });
     expect(out.result).toBe("expired");
-    expect(must(await getRiskDecision(db(), must(out.expiredId)))).toMatchObject({ status: "EXPIRED", decisionReasonCode: "expired_approved_for_review", decisionVersion: 4 });
+    expect(must(await getRiskDecision(db(), must(out.expiredId)))).toMatchObject({ status: "EXPIRED", decisionReasonCode: "expired_approved_for_review", decisionVersion: 5 });
   });
   it("other statuses and superseded versions are not expirable; unknown ids are reported", async () => {
     const m = await makeSized();
@@ -118,7 +119,7 @@ describe("risk decision expiry", () => {
     const s = sym();
     const cfg = loadPortfolioConfig({ TWINS_PORTFOLIO_MAX_TOTAL_RISK_PCT: "100", TWINS_PORTFOLIO_MAX_MARKET_RISK_PCT: "100", TWINS_PORTFOLIO_MAX_GROUP_RISK_PCT: "100", TWINS_PORTFOLIO_MAX_UNDERLYING_RISK_PCT: "0.0015", TWINS_PORTFOLIO_MAX_EXPIRY_RISK_PCT: "100", TWINS_PORTFOLIO_MAX_ACTIVE: "9999", TWINS_PORTFOLIO_MAX_ACTIVE_PER_GROUP: "9999", TWINS_PORTFOLIO_MAX_ACTIVE_PER_UNDERLYING: "9999", TWINS_PORTFOLIO_MAX_ACTIVE_PER_EXPIRY: "9999", TWINS_PORTFOLIO_CORRELATION_GROUPS: "NONE" });
     const first = await makeSized(s);
-    expect(await evaluatePortfolioRisk(db(), first.decisionId, pf({ config: cfg }))).toMatchObject({ status: "APPROVED_FOR_REVIEW" }); // 10,000 active on s
+    expect(must((await approveThroughGates(db(), first.decisionId, pf({ config: cfg }))).market)).toMatchObject({ status: "APPROVED_FOR_REVIEW" }); // 10,000 active on s (approval window 15 minutes)
     const second = await makeSized(s);
     // at the real clock the first decision (10,000) still counts: 10,000 + 10,000 > 15,000
     expect(await evaluatePortfolioRisk(db(), second.decisionId, pf({ config: cfg }))).toMatchObject({ status: "REJECTED", reasonCode: "UNDERLYING_CONCENTRATION_LIMIT_EXCEEDED" });
@@ -127,7 +128,7 @@ describe("risk decision expiry", () => {
     const later = new Date(Date.now() + 20 * MIN);
     const stale = await listStaleRiskDecisions(db(), { asOf: later });
     expect(stale.map((d) => d.signalId)).toContain(first.signalId);
-    expect(await evaluatePortfolioRisk(db(), third.decisionId, pf({ config: cfg, asOf: later }))).toMatchObject({ status: "APPROVED_FOR_REVIEW" });
+    expect(await evaluatePortfolioRisk(db(), third.decisionId, pf({ config: cfg, asOf: later }))).toMatchObject({ status: "PENDING", portfolioOutcome: "APPROVED_FOR_REVIEW" }); // admitted: the lapsed approval no longer counts
   });
   it("a candidate past its own window is expired, not sized or evaluated", async () => {
     const m = await makeSized();
@@ -308,7 +309,7 @@ describe("daily circuit breaker", () => {
     const resized = await sizeRiskDecision(db(), blockedSize.id, { capital: CAPITAL, asOf: wed });
     expect(resized).toMatchObject({ sizingStatus: "SIZED", status: "PENDING", decisionVersion: 3 });
     const reevaluated = await evaluatePortfolioRisk(db(), blockedEval.id, pf({ asOf: wed }));
-    expect(reevaluated).toMatchObject({ status: "APPROVED_FOR_REVIEW", decisionVersion: 4 });
+    expect(reevaluated).toMatchObject({ status: "PENDING", portfolioOutcome: "APPROVED_FOR_REVIEW", decisionVersion: 4 });
   });
   it("a Friday breach lasts through the weekend and resets on Monday (the next trading day)", async () => {
     const monday = privateWeek(), fri = at(monday, 4), sat = at(monday, 5), sun = at(monday, 6), nextMon = at(monday, 7, 5);
@@ -414,7 +415,7 @@ describe("the database itself refuses approvals and orders while a breaker is op
     const m = await makeSized();
     const approve = (c: pg.PoolClient) => c.query(
       `insert into risk_decisions (id, signal_id, stop_loss_validation_id, supersedes_id, decision_version, status, idempotency_key, instrument_type, symbol, decision_reason_code, input_snapshot, output_snapshot, evidence_references, created_by, entry_price, stop_loss, stop_loss_basis, planned_quantity, planned_notional, planned_max_loss_amount, planned_max_loss_percent)
-       select gen_random_uuid(), signal_id, stop_loss_validation_id, id, decision_version + 1, 'APPROVED_FOR_REVIEW', $2, instrument_type, symbol, 'raw_sql', '{"a":1}', '{"sizing":{"status":"SIZED"},"portfolio":{"outcome":"APPROVED_FOR_REVIEW"}}', '{}', 'service:itest', entry_price, stop_loss, stop_loss_basis, planned_quantity, planned_notional, planned_max_loss_amount, planned_max_loss_percent from risk_decisions where id = $1`,
+       select gen_random_uuid(), signal_id, stop_loss_validation_id, id, decision_version + 1, 'APPROVED_FOR_REVIEW', $2, instrument_type, symbol, 'raw_sql', '{"a":1}', '{"sizing":{"status":"SIZED"},"portfolio":{"outcome":"APPROVED_FOR_REVIEW"},"market":{"outcome":"PASSED"}}', '{}', 'service:itest', entry_price, stop_loss, stop_loss_basis, planned_quantity, planned_notional, planned_max_loss_amount, planned_max_loss_percent from risk_decisions where id = $1`,
       [m.decisionId, `gate-ap-${randomUUID()}`]).then(() => "inserted", (e: { code?: string; message?: string }) => `${e.code}:${e.message}`);
     expect(await inTx(async (c) => { await insertBreach(c, "now() + interval '6 hours'"); return approve(c); })).toMatch(/23514:risk_decisions: a loss circuit breaker is open/);
     expect(await inTx(async (c) => { await insertBreach(c, "now() - interval '1 minute'"); return approve(c); })).toBe("inserted"); // its reset time has passed
@@ -427,7 +428,7 @@ describe("the database itself refuses approvals and orders while a breaker is op
   });
   it("orders are refused while a breaker is open (even for an approved decision), and a RESET must reference a BREACHED event of its own scope", async () => {
     const m = await makeSized();
-    const approved = await evaluatePortfolioRisk(db(), m.decisionId, pf());
+    const approved = must((await approveThroughGates(db(), m.decisionId, pf())).market);
     expect(approved.status).toBe("APPROVED_FOR_REVIEW");
     const order = (c: pg.PoolClient) => c.query(`insert into orders (id, account_id, instrument_id, risk_decision_id, trading_mode, side, order_type, quantity, idempotency_key) values (gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), $1, 'paper', 'buy', 'limit', 1, $2)`, [approved.id, `ord-${randomUUID()}`]).then(() => "inserted", (e: { code?: string; message?: string }) => `${e.code}:${e.message}`);
     expect(await inTx(async (c) => { await insertBreach(c, "now() + interval '6 hours'"); return order(c); })).toMatch(/orders: a loss circuit breaker is open/);
