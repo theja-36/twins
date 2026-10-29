@@ -1,0 +1,7 @@
+-- HAND-WRITTEN. Stage 5 / Task 2: agent ids may contain hyphens (signal-integrity-v1, instrument-verification-v1). Only the id pattern of the two value checks changes; both tables stay append-only
+-- and hash-chained (a CHECK is not part of the audited payload). Existing rows (none use hyphens) are still valid, so the constraints are re-added VALID.
+
+ALTER TABLE "agent_definitions" DROP CONSTRAINT "agent_definitions_value_check";--> statement-breakpoint
+ALTER TABLE "agent_definitions" ADD CONSTRAINT "agent_definitions_value_check" CHECK ("agent_definitions"."agent_id" ~ '^[a-z][a-z0-9_-]{2,40}$' and "agent_definitions"."agent_version" ~ '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$' and "agent_definitions"."contract_sha256" ~ '^[0-9a-f]{64}$' and octet_length("agent_definitions"."contract"::text) <= 16384);--> statement-breakpoint
+ALTER TABLE "agent_runs" DROP CONSTRAINT "agent_runs_value_check";--> statement-breakpoint
+ALTER TABLE "agent_runs" ADD CONSTRAINT "agent_runs_value_check" CHECK ("agent_runs"."agent_id" ~ '^[a-z][a-z0-9_-]{2,40}$' and "agent_runs"."input_snapshot_ref" ~ '^[0-9a-f]{64}$' and ("agent_runs"."error_code" is null or "agent_runs"."error_code" ~ '^[A-Z][A-Z0-9_]{2,60}$') and ("agent_runs"."error_message" is null or char_length("agent_runs"."error_message") <= 300) and octet_length("agent_runs"."input_snapshot"::text) <= 65536 and octet_length("agent_runs"."output_snapshot"::text) <= 16384);--> statement-breakpoint
