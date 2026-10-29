@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "Bundler"
+  },
+  "references": [{ "path": "../database" }, { "path": "../signals" }, { "path": "../stop-loss" }],
+  "include": ["src"]
+}
