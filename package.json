@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "scan:secrets": "node scripts/ci/secret-scan.mjs",
     "audit:verify": "tsx scripts/ops/verify-audit-chain.ts",
     "safety:control": "tsx scripts/ops/safety-control.ts",
     "options:preview": "tsx scripts/options-preview.ts",
