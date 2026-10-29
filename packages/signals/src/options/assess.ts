@@ -1,5 +1,6 @@
 import { unavailablePremiumProvider, type OptionsPremiumProvider, type PremiumLookup } from "./premium";
 import { unconfiguredContractMaster, type ContractVerification, type OptionsContractMaster } from "./master";
+import { validateOptionsClaimStopLoss, type StopLossConfig, type StopLossValidation } from "@twins/stop-loss";
 import type { OptionsClaim } from "./types";
 
 export interface AssessmentReason {
@@ -22,6 +23,8 @@ export interface OptionsAssessment {
   /** Premium-data lookup; only attempted when the contract was FOUND (verified). */
   premium: PremiumLookup;
   levelChecks: "applied" | "skipped";
+  /** The mandatory stop-loss validation (shared rule, @twins/stop-loss). Only a VALID result lets a human APPROVE the claim in the review bot. */
+  stopLoss: StopLossValidation;
 }
 
 const r = (code: string, description: string, severity: AssessmentReason["severity"] = "insufficient"): AssessmentReason => ({ code, description, severity });
@@ -69,6 +72,7 @@ export async function assessOptionsClaim(
   claim: OptionsClaim,
   master: OptionsContractMaster = unconfiguredContractMaster,
   premiumProvider: OptionsPremiumProvider = unavailablePremiumProvider,
+  stopLossConfig?: StopLossConfig,
 ): Promise<OptionsAssessment> {
   const reasons: AssessmentReason[] = [];
 
@@ -99,6 +103,13 @@ export async function assessOptionsClaim(
 
   const levels = checkLevels(claim);
   reasons.push(...levels.reasons);
+
+  // Mandatory stop-loss (Stage 1 / Task 4): the shared rule. A missing or ambiguous stop-loss flags the claim (INSUFFICIENT_EVIDENCE, never approvable);
+  // an invalid one (zero, negative, non-numeric, equal to the entry, wrong side, too far) rejects it. A VALID result adds no reason.
+  const stopLoss = validateOptionsClaimStopLoss(claim, stopLossConfig);
+  if (stopLoss.result !== "VALID" && stopLoss.reasonCode) {
+    reasons.push(r(`stop_loss.${stopLoss.reasonCode.toLowerCase()}`, `mandatory stop-loss check failed: ${stopLoss.reasonCode}${stopLoss.detail ? ` (${stopLoss.detail})` : ""}`, stopLoss.result === "INVALID" ? "reject" : "insufficient"));
+  }
 
   let verification: ContractVerification;
   if (claim.strike !== null && claim.optionType !== null && claim.expiry.status === "full") {
@@ -147,5 +158,6 @@ export async function assessOptionsClaim(
     verification,
     premium,
     levelChecks: levels.applied ? "applied" : "skipped",
+    stopLoss,
   };
 }

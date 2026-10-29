@@ -177,7 +177,7 @@ describe("the command surface", () => {
     expect(src).toMatch(/await new Promise<void>\(\(\) => undefined\);/); // interactive mode still waits for Ctrl+C
     expect(src).toContain('if (argv.includes("--check"))');
     const imports = [...src.matchAll(/^import .* from "([^"]+)";$/gm)].map((m) => m[1]);
-    expect(imports.sort()).toEqual(["../tests/integration/migrationState", "../tests/integration/targetConfig", "../tests/support/networkGuard", "ioredis", "node:child_process", "node:crypto", "node:fs", "node:net", "node:os", "node:path", "node:url", "pg"].sort());
+    expect(imports.sort()).toEqual(["../packages/config/src/liveGuard", "../tests/integration/migrationState", "../tests/integration/targetConfig", "../tests/support/networkGuard", "ioredis", "node:child_process", "node:crypto", "node:fs", "node:net", "node:os", "node:path", "node:url", "pg"].sort());
     expect(src).not.toMatch(/\bmigrate\(|DROP |TRUNCATE|DELETE FROM|FLUSH|obliterate/i);
     expect(src).not.toMatch(/console\.log\([^)]*(apiKey|webhookSecret|TWINS_API_KEY|DATABASE_URL)/);
   });

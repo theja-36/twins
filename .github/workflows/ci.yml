@@ -1,30 +1,94 @@
 # TWINS CI: verification only. No deployment, no secrets, no external services or market data.
-# All values below are CI-only test values for throwaway service containers.
+# Everything below runs on every push (except dependabot branches, which get their pull_request run) and every pull request.
+# Required checks for branch protection: "ci-gate" (it fails when any job below fails). See docs/twins/CI.md.
+# All values in this file are CI-only values for throwaway service containers; nothing here is a secret.
 name: ci
 
 on:
-  pull_request:
   push:
-    branches: [main]
+    branches-ignore: ["dependabot/**"]
+  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CI: "true"
+  TWINS_CI: "1" # activates tests/integration/runtime/ciGuard.test.ts and the CI test-target rules
+  APP_ENV: development
+  TRADING_MODE: paper
+  LIVE_TRADING: "false"
+
 jobs:
-  verify:
-    name: verify (node ${{ matrix.node }})
-    runs-on: ubuntu-latest
+  static:
+    name: static (lint, typecheck, build, secret scan)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc # 22: the version of the deployed image (infrastructure/staging/Dockerfile); engines >=20 is covered by the unit/integration matrix
+          cache: npm
+      - name: Install (lockfile, clean)
+        run: npm ci
+      - name: Secret scan (tracked files)
+        run: npm run scan:secrets
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Workspace builds
+        run: npm run build --workspaces --if-present
+
+  unit:
+    name: unit (node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22] # package.json engines: ">=20"
+    env:
+      NODE_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - name: Install (lockfile, clean)
+        run: npm ci
+      - name: Unit tests (includes the Python capture and T1 suites, run by vitest)
+        run: |
+          mkdir -p reports
+          npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/unit-junit.xml
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-reports-node-${{ matrix.node }}
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  integration:
+    name: integration (node ${{ matrix.node }}, postgres 16, redis 7)
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        node: [20, 22] # package.json engines: ">=20"; @types/node ^20
-
+        node: [20, 22]
     services:
       postgres:
         image: postgres:16-alpine
@@ -42,57 +106,106 @@ jobs:
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 2s --health-timeout 3s --health-retries 30
-
     env:
-      CI: "true"
-      TWINS_CI: "1" # activates tests/integration/runtime/ciGuard.test.ts
       NODE_ENV: test
-      APP_ENV: development
-      TRADING_MODE: paper
-      LIVE_TRADING: "false"
       DATABASE_URL: postgresql://twins_ci:ci_only_not_a_secret@127.0.0.1:5432/twins_ci
       REDIS_URL: redis://127.0.0.1:6379
-
     steps:
       - uses: actions/checkout@v4
-
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
           cache: npm
-
       - name: Install (lockfile, clean)
         run: npm ci
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Unit tests
-        run: npm test -- --reporter=default --reporter=junit --outputFile.junit=reports/unit-junit.xml
-
-      - name: Workspace builds
-        run: npm run build --workspaces --if-present
-
       - name: CI target guard (must pass before anything touches the databases)
         run: npx vitest run --config vitest.integration.config.ts tests/integration/runtime/ciGuard.test.ts
-
-      - name: Fresh migration chain
+      - name: Database migration (fresh chain)
         run: |
           mkdir -p reports
           npm run db:migrate -w @twins/database 2>&1 | tee reports/migrate.txt
-          node scripts/ci/verify-migrations.mjs 2>&1 | tee -a reports/migrate.txt
-
+      - name: Migration verification
+        run: node scripts/ci/verify-migrations.mjs 2>&1 | tee -a reports/migrate.txt
       - name: Integration tests (real PostgreSQL + Redis, synthetic data only)
         run: npm run test:integration -- --reporter=default --reporter=junit --outputFile.junit=reports/integration-junit.xml
-
-      - name: Upload test results and logs
-        if: always()
+      - name: Audit chain integrity (the integration run above appended real rows to every chain)
+        run: npm run audit:verify -- --require-ddl-watch --status-file reports/audit-verify-status.json 2>&1 | tee reports/audit-verify.txt; exit "${PIPESTATUS[0]}"
+      - name: Upload test reports and logs on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: ci-reports-node-${{ matrix.node }}
+          name: integration-reports-node-${{ matrix.node }}
           path: reports/
           if-no-files-found: ignore
           retention-days: 14
+
+  crash-recovery:
+    name: crash recovery (real SIGKILL, node 22)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # The crash test's child worker refuses any Redis other than the dedicated test Redis on 127.0.0.1:16379, so this job maps its Redis service there.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: twins_ci
+          POSTGRES_PASSWORD: ci_only_not_a_secret
+          POSTGRES_DB: twins_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U twins_ci -d twins_ci"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+      redis:
+        image: redis:7-alpine
+        ports: ["16379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s --health-timeout 3s --health-retries 30
+    env:
+      NODE_ENV: test
+      TWINS_CRASH_TEST: "1"
+      DATABASE_URL: postgresql://twins_ci:ci_only_not_a_secret@127.0.0.1:5432/twins_ci
+      REDIS_URL: redis://127.0.0.1:16379
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install (lockfile, clean)
+        run: npm ci
+      - name: Database migration (fresh chain)
+        run: npm run db:migrate -w @twins/database
+      - name: Worker crash and recovery (SIGKILL after the message commit; replacement worker recovers the same job)
+        run: |
+          mkdir -p reports
+          npx vitest run --config vitest.integration.config.ts tests/integration/runtime/crashRecovery.test.ts --reporter=default --reporter=junit --outputFile.junit=reports/crash-junit.xml
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: crash-reports
+          path: reports/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The single status to require in branch protection: red if ANY job above failed, was cancelled or was skipped.
+  ci-gate:
+    name: ci-gate
+    if: always()
+    needs: [static, unit, integration, crash-recovery]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: All required jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != "success" ]; then echo "a required job did not succeed ($r)"; exit 1; fi
+          done

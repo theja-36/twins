@@ -5,6 +5,8 @@
     "rootDir": "src"
   },
   "references": [
+    { "path": "../../packages/audit-chain" },
+    { "path": "../../packages/runtime-state" },
     { "path": "../../packages/config" },
     { "path": "../../packages/database" },
     { "path": "../../packages/types" },

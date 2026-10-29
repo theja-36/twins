@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema } from "@twins/database";
+import { recordStopLossEvidence } from "@twins/signals";
+import { assertStopLossAllowsEligibility } from "@twins/stop-loss";
 import type { Db } from "./db";
 import type { DecisionIntelligenceResult } from "./types";
 
@@ -23,6 +25,10 @@ export async function persistDecisionIntelligence(
   result: DecisionIntelligenceResult,
   idempotencyKey?: string,
 ): Promise<PersistOutcome> {
+  // Mandatory stop-loss (Stage 1 / Task 4). Layer 2 of 3 (decide() is layer 1, the signal_validations trigger of migration 0011 is layer 3):
+  // an execution-eligible outcome is refused here unless its stop-loss validation is VALID, and the validation is appended to the audit trail BEFORE the verdict.
+  assertStopLossAllowsEligibility(result.outcome, result.stopLoss);
+  if (result.stopLoss) await recordStopLossEvidence(db, { kind: "signal", signalId: result.signalId }, result.stopLoss, idempotencyKey ? `signal-validation:${idempotencyKey}` : undefined);
   const [row] = await db
     .insert(schema.signalValidations)
     .values({

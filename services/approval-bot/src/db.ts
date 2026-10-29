@@ -56,7 +56,7 @@ export interface BotDb {
 /** Tables the bot may write. A static test pins this list and checks that no other table appears in an INSERT/UPDATE/DELETE statement. */
 export const WRITE_TABLES = ["claim_review_cards", "claim_reviews", "approval_bot_events", "approval_bot_state"] as const;
 /** Everything the role may read, with the column lists granted (raw_text and raw_payload are NOT among them). */
-const READABLE = ["options_claims", "telegram_messages", "telegram_sources", ...WRITE_TABLES];
+const READABLE = ["options_claims", "telegram_messages", "telegram_sources", "system_controls", ...WRITE_TABLES];
 
 const CARD_COLUMNS = "id, kind, claim_id, state, nonce, telegram_message_id, card_text_sha256, expires_at";
 
@@ -98,6 +98,11 @@ export class PgBotDb implements BotDb {
     this.pool = pool ?? new pg.Pool({ connectionString, max: 3, idleTimeoutMillis: 30_000, connectionTimeoutMillis: 10_000, application_name: "twins-approval-bot" });
   }
 
+  /** The bot's own pool as a read handle for the shared runtime-state reader (the role may only SELECT three columns of system_controls). */
+  queryable(): { query(text: string): Promise<{ rows: unknown[] }> } {
+    return this.pool;
+  }
+
   async checkPrivileges(): Promise<string[]> {
     const problems: string[] = [];
     const q = async (sql: string, params: unknown[] = []): Promise<Record<string, unknown>[]> => (await this.pool.query(sql, params)).rows;
@@ -122,6 +127,15 @@ export class PgBotDb implements BotDb {
          and (has_any_column_privilege(c.oid,'UPDATE') or has_table_privilege(c.oid,'DELETE') or has_table_privilege(c.oid,'TRUNCATE'))`,
     );
     for (const r of append) problems.push(`can_modify_append_only:${String(r["relname"])}`);
+    // Runtime safety state: the bot must be able to READ the three control values (fail closed otherwise) and must never be able to change them.
+    const controls = (await q(
+      `select has_column_privilege('system_controls','control_name','SELECT') and has_column_privilege('system_controls','value','SELECT') and has_column_privilege('system_controls','version','SELECT') as r,
+              has_any_column_privilege('system_controls','INSERT') or has_any_column_privilege('system_controls','UPDATE') or has_table_privilege('system_controls','DELETE') or has_table_privilege('system_controls','TRUNCATE') as w,
+              has_column_privilege('system_controls','reason','SELECT') or has_column_privilege('system_controls','changed_by','SELECT') as extra`,
+    ))[0];
+    if (controls?.["r"] !== true) problems.push("cannot_read:system_controls");
+    if (controls?.["w"] === true) problems.push("can_write:system_controls");
+    if (controls?.["extra"] === true) problems.push("can_read_beyond_values:system_controls");
     const others = await q(
       `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
         where n.nspname = 'public' and c.relkind in ('r','v','m','p','f') and c.relname <> all($1)

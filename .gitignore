@@ -26,3 +26,26 @@ data/options-snapshots/
 infrastructure/staging/staging.env
 infrastructure/staging/bot.env
 infrastructure/staging/backups/
+
+# Stage 2 / Task 1 hygiene: credentials, key material, dumps and local artifacts that must never be committed
+*.pem
+*.key
+*.p12
+*.pfx
+*.dump
+*.dump.enc
+*.sqlite
+*.sqlite3
+*.db
+*.sql.gz
+# test/CI artifacts and temporary output
+reports/
+tmp/
+.tmp/
+junit*.xml
+*.tgz
+# local-only state of the operational jobs (anchor/status files belong OUTSIDE the repository)
+audit-anchor.json
+audit-verify.json
+backup.json
+

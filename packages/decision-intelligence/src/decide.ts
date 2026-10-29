@@ -1,4 +1,5 @@
 import type { schema } from "@twins/database";
+import { assertStopLossAllowsEligibility } from "@twins/stop-loss";
 import type { SignalIntelligenceReport } from "@twins/signals";
 import { buildCounterThesis } from "./counterThesis";
 import { assessSourceReliability } from "./sourceReliability";
@@ -54,6 +55,8 @@ export function decide(
     return {
       signalId: signal.id,
       outcome: "REJECT",
+      stopLoss: structural.stopLoss,
+      ...(structural.stopLoss.reasonCode ? { stopLossReasonCode: structural.stopLoss.reasonCode } : {}),
       // Deterministic by rule (a structurally invalid claim is rejected outright); not derived from any
       // evidence-based or possibly non-finite input.
       decisionConfidence: 1,
@@ -86,7 +89,12 @@ export function decide(
   let confidenceUnavailable = false;
   let rationale: string;
 
-  if (counterThesis.severity === "high") {
+  if (structural.stopLoss.result !== "VALID") {
+    // Not blocking-structural (AMBIGUOUS: no usable reference price, unsupported instrument or side): never approvable. Flagged, not silently passed.
+    outcome = "INSUFFICIENT_EVIDENCE";
+    decisionConfidence = 0;
+    rationale = `Insufficient evidence: the mandatory stop-loss could not be validated (${structural.stopLoss.reasonCode}${structural.stopLoss.detail ? `: ${structural.stopLoss.detail}` : ""}); a signal without a valid stop-loss is never eligible.`;
+  } else if (counterThesis.severity === "high") {
     outcome = "REJECT";
     const rawConfidence = counterThesis.confidence;
     if (Number.isFinite(rawConfidence)) {
@@ -129,9 +137,14 @@ export function decide(
       "Approved: no blocking or high-severity contradiction was found, and available evidence does not materially oppose the signal's direction.";
   }
 
+  // Defence in depth: whatever the branches above decided, an execution-eligible state (APPROVE today) cannot leave this function without a VALID stop-loss.
+  assertStopLossAllowsEligibility(outcome, structural.stopLoss);
+
   return {
     signalId: signal.id,
     outcome,
+    stopLoss: structural.stopLoss,
+    ...(structural.stopLoss.reasonCode ? { stopLossReasonCode: structural.stopLoss.reasonCode } : {}),
     decisionConfidence,
     confidenceLabel: confidenceUnavailable ? `${CONFIDENCE_LABEL} ${CONFIDENCE_UNAVAILABLE_NOTE}` : CONFIDENCE_LABEL,
     ...(confidenceUnavailable ? { confidenceUnavailable: true } : {}),

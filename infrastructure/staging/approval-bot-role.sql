@@ -17,6 +17,9 @@ GRANT SELECT (id, telegram_message_id, parser_version, result_kind, claim, asses
 -- read: only what a card needs about the source message - NOT raw_text, NOT raw_payload
 GRANT SELECT (id, external_message_id, message_timestamp, telegram_source_id, capture_method) ON telegram_messages TO :"bot_role";
 GRANT SELECT (id, channel_identifier) ON telegram_sources TO :"bot_role";
+-- read: the three runtime safety control values (kill switch / intake / trading), nothing else about them; no write of any kind.
+-- system_control_events (the audit) is not granted at all.
+GRANT SELECT (control_name, value, version) ON system_controls TO :"bot_role";
 -- write: the bot's own tables only
 GRANT SELECT, INSERT ON claim_reviews TO :"bot_role";
 GRANT SELECT, INSERT ON approval_bot_events TO :"bot_role";

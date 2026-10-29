@@ -58,20 +58,23 @@ describe("integration test target resolution (no defaults, exact contexts)", () 
 describe("migration state comparison (repository journal/hash convention)", () => {
   const expected = loadExpectedMigrations();
   const recorded = expected.map((m) => ({ hash: m.hash, created_at: String(m.when) }));
-  it("matches the repository chain exactly (9 migrations)", () => {
-    expect(expected).toHaveLength(9);
+  it("matches the repository chain exactly (12 migrations)", () => {
+    expect(expected).toHaveLength(12);
     expect(describeMigrationMismatch(expected, recorded)).toBeNull();
   });
   it("reports a target that is behind, naming the missing migrations", () => {
     const msg = describeMigrationMismatch(expected, recorded.slice(0, 4));
-    expect(msg).toMatch(/behind: 4 of 9/);
+    expect(msg).toMatch(/behind: 4 of 12/);
     expect(msg).toContain("0005_r0b_signal_evidence_unique_links");
     expect(msg).toContain("0006_options_claims_unverified");
     expect(msg).toContain("0007_telegram_user_capture_provenance");
     expect(msg).toContain("0008_approval_bot_review_log");
+    expect(msg).toContain("0009_system_controls_kill_switch");
+    expect(msg).toContain("0010_audit_immutability_hash_chain");
+    expect(msg).toContain("0011_stop_loss_validations");
   });
   it("reports an empty history, extra history, and altered content or timestamp", () => {
-    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 9/);
+    expect(describeMigrationMismatch(expected, [])).toMatch(/behind: 0 of 12/);
     expect(describeMigrationMismatch(expected, [...recorded, { hash: "x", created_at: "1" }])).toMatch(/ahead or foreign/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 2 ? { ...r, hash: "0".repeat(64) } : r)))).toMatch(/different content/);
     expect(describeMigrationMismatch(expected, recorded.map((r, i) => (i === 7 ? { ...r, created_at: "1" } : r)))).toMatch(/timestamp/);

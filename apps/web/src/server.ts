@@ -9,6 +9,7 @@
  * to a loopback API, checks the Host header, sends no CORS headers, and never reparses or reassesses anything.
  */
 import http from "node:http";
+import { enforceLiveTradingGuard } from "@twins/config";
 import { PAGE_CSS, PAGE_HTML, PAGE_JS } from "./page";
 import { buildView } from "./view";
 
@@ -120,6 +121,7 @@ export function createViewerServer(options: ViewerOptions = {}): { server: http.
 }
 
 async function main(): Promise<void> {
+  enforceLiveTradingGuard("options-viewer");
   const argv = process.argv.slice(2);
   const opt = (name: string) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : undefined; };
   const portArg = opt("--port");

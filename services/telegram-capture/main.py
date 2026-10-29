@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from twins_capture.config import ConfigError, load_config  # noqa: E402
 from twins_capture.history import run_history  # noqa: E402
+from twins_capture.liveguard import enforce_live_trading_guard  # noqa: E402
 from twins_capture.ingest import HttpPoster, Sink, egress_is_restricted  # noqa: E402
 from twins_capture.safelog import SafeLogger  # noqa: E402
 from twins_capture.service import EXIT_AUTH, EXIT_CONFIG, EXIT_OK, prepare_transport, run_service  # noqa: E402
@@ -68,6 +69,7 @@ def history_main(argv, env, log):
 
 
 def main(argv, env):
+    enforce_live_trading_guard("capture", env)  # first statement of every command, before configuration is even read
     log = SafeLogger()
     if argv and argv[0] == "history":
         return history_main(argv[1:], env, log)

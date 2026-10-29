@@ -94,11 +94,13 @@ describe("validateSignalStructure (R0A / LOG-02)", () => {
     expect(beyondResult.issues.some((i) => i.ruleId === "structural.stale_signal")).toBe(true);
   });
 
-  it("flags (non-blocking) a bare signal with no entry/stop/targets", () => {
+  it("flags a bare signal with no entry/stop/targets - and since Stage 1 / Task 4 it BLOCKS it: without a stop-loss there is nothing to approve (it used to be non-blocking)", () => {
     const bare = { ...baseSignal, entryPrice: null, stopLoss: null, targets: [] };
     const now = new Date(baseSignal.signalTimestamp.getTime() + 1000 * 60);
     const result = validateSignalStructure(bare, instrument, now);
-    expect(result.blocking).toBe(false);
+    expect(result.blocking).toBe(true);
     expect(result.issues.some((i) => i.ruleId === "structural.bare_signal")).toBe(true);
+    expect(result.issues.some((i) => i.ruleId === "structural.stop_loss.missing_stop_loss")).toBe(true);
+    expect(result.stopLoss).toMatchObject({ result: "MISSING", reasonCode: "MISSING_STOP_LOSS" });
   });
 });

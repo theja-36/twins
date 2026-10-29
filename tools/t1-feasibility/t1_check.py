@@ -700,7 +700,23 @@ def run(args, transport, io, home):
         return 2
 
 
+def _enforce_live_guard():
+    """Run the SAME shared LIVE_TRADING guard as the capture client (services/telegram-capture/twins_capture/liveguard.py), loaded by file path
+    from the repository. If that file cannot be loaded the tool refuses to run (fail closed) with the same exit code (81)."""
+    import importlib.util
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "services", "telegram-capture", "twins_capture", "liveguard.py")
+    try:
+        spec = importlib.util.spec_from_file_location("twins_liveguard", path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    except Exception:
+        TerminalIO().err('{"level":"fatal","event":"live_guard.refused","process":"t1-check","reasons":["guard_unavailable"]}')
+        sys.exit(81)
+    module.enforce_live_trading_guard("t1-check", os.environ)
+
+
 def main(argv=None):
+    _enforce_live_guard()  # first statement: nothing is read or created before the guard passes
     os.umask(0o077)
     args = parse_args(sys.argv[1:] if argv is None else argv)
     io = TerminalIO()

@@ -1,0 +1,160 @@
+{
+  "exitCode": 81,
+  "cases": [
+    {
+      "name": "empty environment",
+      "env": {},
+      "ok": true,
+      "reasons": []
+    },
+    {
+      "name": "explicit false",
+      "env": {
+        "LIVE_TRADING": "false"
+      },
+      "ok": true,
+      "reasons": []
+    },
+    {
+      "name": "paper mode",
+      "env": {
+        "LIVE_TRADING": "false",
+        "TRADING_MODE": "paper"
+      },
+      "ok": true,
+      "reasons": []
+    },
+    {
+      "name": "shadow mode",
+      "env": {
+        "TRADING_MODE": "shadow"
+      },
+      "ok": true,
+      "reasons": []
+    },
+    {
+      "name": "LIVE_TRADING=true",
+      "env": {
+        "LIVE_TRADING": "true"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "LIVE_TRADING=true with live mode (a fully 'consistent' live request)",
+      "env": {
+        "LIVE_TRADING": "true",
+        "TRADING_MODE": "live"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false",
+        "trading_mode_not_permitted"
+      ]
+    },
+    {
+      "name": "TRADING_MODE=live alone",
+      "env": {
+        "TRADING_MODE": "live"
+      },
+      "ok": false,
+      "reasons": [
+        "trading_mode_not_permitted"
+      ]
+    },
+    {
+      "name": "uppercase TRUE",
+      "env": {
+        "LIVE_TRADING": "TRUE"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "numeric 1",
+      "env": {
+        "LIVE_TRADING": "1"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "yes",
+      "env": {
+        "LIVE_TRADING": "yes"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "empty string is ambiguous",
+      "env": {
+        "LIVE_TRADING": ""
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "padded false is ambiguous",
+      "env": {
+        "LIVE_TRADING": " false"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "uppercase FALSE is ambiguous",
+      "env": {
+        "LIVE_TRADING": "FALSE"
+      },
+      "ok": false,
+      "reasons": [
+        "live_trading_not_false"
+      ]
+    },
+    {
+      "name": "unrecognised trading mode",
+      "env": {
+        "TRADING_MODE": "production"
+      },
+      "ok": false,
+      "reasons": [
+        "trading_mode_not_permitted"
+      ]
+    },
+    {
+      "name": "empty trading mode",
+      "env": {
+        "TRADING_MODE": ""
+      },
+      "ok": false,
+      "reasons": [
+        "trading_mode_not_permitted"
+      ]
+    }
+  ],
+  "failureContract": {
+    "exitCode": 81,
+    "event": "live_guard.refused",
+    "stream": "stderr",
+    "lines": 1,
+    "unavailableReason": "guard_unavailable",
+    "note": "One JSON line with reason codes only, never a value. guard_unavailable = the shared guard could not be loaded; the process refuses to run."
+  },
+  "implementations": [
+    "packages/config/src/liveGuard.ts",
+    "services/telegram-capture/twins_capture/liveguard.py (also loaded by tools/t1-feasibility/t1_check.py)"
+  ]
+}

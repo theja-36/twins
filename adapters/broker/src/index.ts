@@ -1,4 +1,5 @@
-import { createAdapterRegistry } from "@twins/shared";
+import { createAdapterRegistry, type AdapterRegistry } from "@twins/shared";
+import { assertOrderIntentAllowed } from "@twins/runtime-state";
 import type { BrokerProvider, ExecutionProvider } from "@twins/types";
 
 /**
@@ -18,9 +19,39 @@ export const brokerConnections = createAdapterRegistry<BrokerProvider>(
   "broker connection",
 );
 
-export const executionProviders = createAdapterRegistry<ExecutionProvider>(
-  "execution",
-);
+/**
+ * Wraps an ExecutionProvider so that creating an order (the order-intent / broker-call boundary) first passes
+ * assertOrderIntentAllowed: the shared live-trading guard, then the database-backed state (TRADING_ENABLED true AND kill switch inactive).
+ * An unreadable state refuses. cancelOrder, getOrderStatus and getHealth are deliberately NOT gated: cancelling is risk-reducing and
+ * must keep working while the kill switch is active; the rest are read-only.
+ */
+export function guardExecutionProvider(provider: ExecutionProvider): ExecutionProvider {
+  return {
+    get providerName() {
+      return provider.providerName;
+    },
+    placeOrder: async (request) => {
+      await assertOrderIntentAllowed(`broker.${provider.providerName}.placeOrder`);
+      return provider.placeOrder(request);
+    },
+    cancelOrder: (brokerOrderId) => provider.cancelOrder(brokerOrderId),
+    getOrderStatus: (brokerOrderId) => provider.getOrderStatus(brokerOrderId),
+    getHealth: () => provider.getHealth(),
+  };
+}
+
+const baseExecutionProviders = createAdapterRegistry<ExecutionProvider>("execution");
+
+/**
+ * The execution registry. Every provider registered here is wrapped by guardExecutionProvider automatically, so there is no way to
+ * obtain an un-gated placeOrder through the registry. (No concrete broker adapter exists yet.)
+ */
+export const executionProviders: AdapterRegistry<ExecutionProvider> = {
+  ...baseExecutionProviders,
+  register(providerName, adapter) {
+    baseExecutionProviders.register(providerName, guardExecutionProvider(adapter));
+  },
+};
 
 export type {
   BrokerProvider,

@@ -27,12 +27,26 @@ describe("approval bot static guarantees", () => {
       expect(lines.join("\n"), f).not.toMatch(/raw_text|raw_payload|rawText|rawPayload/);
     }
   });
-  it("has no broker, execution or live-trading code", () => {
+  it("has no broker, execution or live-trading code (the only allowed link is the shared refuse-to-start guard, in index.ts)", () => {
     for (const f of files) {
       const t = text(f);
       expect(t, f).not.toMatch(/LIVE_TRADING|@twins\/(?:execution|broker)|adapters\/(?:broker|dhan|zerodha)|placeOrder/i);
       expect(t, f).not.toMatch(/from\s+["']@twins\/(?:execution|broker)/);
+      // The only @twins imports allowed: the refuse-to-start guard (config, index.ts only) and the runtime safety state reader/gate
+      // (runtime-state, which can only READ the three control values through the bot's own role; no loadConfig, no database url, no broker).
+      for (const m of t.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']@twins\/([a-z-]+)["']/g)) {
+        const names = m[1]!.split(",").map((x) => x.trim()).sort().join(",");
+        if (m[2] === "config") {
+          expect(names, f).toBe("enforceLiveTradingGuard");
+          expect(f).toBe("index.ts");
+        } else {
+          // runtime-state (reader/gate only) and stop-loss (the pure shared validation rule, no I/O)
+          expect(["runtime-state", "stop-loss"], f).toContain(m[2]);
+          expect(["configureRuntimeState,pgStateSource", "evaluateSafety", "validateOptionsClaimStopLoss"], f).toContain(names);
+        }
+      }
     }
+    expect(text("index.ts")).toMatch(/^enforceLiveTradingGuard\("approval-bot"\);$/m);
   });
   it("reads process.env only in config and the entry point", () => {
     for (const f of files) if (!["config.ts", "index.ts"].includes(f)) expect(text(f), f).not.toMatch(/process\.env/);

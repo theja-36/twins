@@ -14,6 +14,7 @@
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { enforceLiveTradingGuard } from "../packages/config/src/liveGuard";
 import { installNetworkGuard } from "../tests/support/networkGuard";
 import { buildDhanSnapshot, DhanImportError } from "../packages/signals/src/options/dhanImport";
 
@@ -55,4 +56,5 @@ function main(argv: string[]): number {
   }
 }
 
+enforceLiveTradingGuard("options-import-dhan");
 process.exit(main(process.argv.slice(2)));

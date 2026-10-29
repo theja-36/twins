@@ -826,5 +826,56 @@ class GuardTests(unittest.TestCase):
         self.assertEqual(oct(stat.S_IMODE(os.stat(os.path.join(HERE, "t1_check.py")).st_mode) & 0o022), "0o0")
 
 
+class LiveTradingGuard(unittest.TestCase):
+    """The shared LIVE_TRADING guard (same contract as the TypeScript and capture-client guards: tests/fixtures/liveGuard/contract.json)."""
+
+    CONTRACT = os.path.join(HERE, "..", "..", "tests", "fixtures", "liveGuard", "contract.json")
+
+    def _run(self, env):
+        fake_stdin = mock.Mock()
+        fake_stdin.isatty.return_value = False
+        with mock.patch.dict(os.environ, env, clear=True), mock.patch("sys.stdin", fake_stdin), mock.patch("sys.stderr", new=stdio.StringIO()) as captured:
+            try:
+                code = t1.main(["--mode", "check"])
+            except SystemExit as exit_:
+                return exit_.code, captured.getvalue()
+        return code, captured.getvalue()
+
+    def test_every_contract_case(self):
+        with open(self.CONTRACT) as handle:
+            contract = json.load(handle)
+        self.assertEqual(contract["failureContract"]["exitCode"], 81)
+        for case in contract["cases"]:
+            code, err = self._run(case["env"])
+            if case["ok"]:
+                self.assertEqual(code, 2, case["name"])  # past the guard: the ordinary no-terminal refusal
+                self.assertNotIn("live_guard", err, case["name"])
+            else:
+                self.assertEqual(code, 81, case["name"])
+                line = json.loads(err.strip())
+                self.assertEqual(line["event"], "live_guard.refused", case["name"])
+                self.assertEqual(line["process"], "t1-check", case["name"])
+                self.assertEqual(line["reasons"], case["reasons"], case["name"])
+                for value in case["env"].values():
+                    if value:
+                        self.assertNotIn('"%s"' % value, err, case["name"])
+
+    def test_refuses_before_anything_else_happens(self):
+        with mock.patch.object(t1, "TdTransport", side_effect=AssertionError("must not be constructed")):
+            code, _ = self._run({"LIVE_TRADING": "true"})
+        self.assertEqual(code, 81)
+
+    def test_fails_closed_when_the_shared_guard_cannot_be_loaded(self):
+        with mock.patch("importlib.util.spec_from_file_location", side_effect=OSError("missing")):
+            code, err = self._run({})
+        self.assertEqual(code, 81)
+        self.assertEqual(json.loads(err.strip())["reasons"], [contract_unavailable()])
+
+
+def contract_unavailable():
+    with open(LiveTradingGuard.CONTRACT) as handle:
+        return json.load(handle)["failureContract"]["unavailableReason"]
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

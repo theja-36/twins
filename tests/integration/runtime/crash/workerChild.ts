@@ -17,6 +17,7 @@ import { Redis } from "ioredis";
 import { getTableName } from "drizzle-orm";
 import { createBoundedDb, type Db } from "../../../../packages/database/src/index";
 import { createStructuredLogger } from "../../../../packages/shared/src/index";
+import { configureRuntimeState, pgStateSource } from "../../../../packages/runtime-state/src/index";
 import { type TelegramJobPayload } from "../../../../services/worker/src/index";
 import { processTelegramQueueJob } from "../../../support/workerWithTestPolicy";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../../adapters/market/src/index";
@@ -83,6 +84,8 @@ async function main(): Promise<void> {
 
   marketDataProviders.register(YAHOO_PROVIDER_NAME, syntheticMarketProvider);
   const dbHandle = createBoundedDb({ url: process.env.DATABASE_URL ?? "", max: 5, idleTimeoutMillis: 10000 });
+  // Like the production worker, this process reads the REAL database-backed safety state (fail closed if it cannot): an unconfigured process would refuse every job.
+  configureRuntimeState({ source: pgStateSource(dbHandle.pool) });
   const logger = createStructuredLogger((r) => process.stdout.write(JSON.stringify({ ...r, childMode: mode, childPid: process.pid }) + "\n"));
   const db =
     mode === "crash"

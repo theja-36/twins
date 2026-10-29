@@ -8,6 +8,7 @@ import {
   executionProviders,
 } from "../../../adapters/broker/src/index";
 import { aiProviders } from "../../../packages/ai/src/index";
+import { configureRuntimeState, inMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import type {
   AIAnalysisRequest,
   AIAnalysisResponse,
@@ -240,6 +241,9 @@ describe("provider contracts wire through their registries", () => {
     expect(brokerConnections.has(execution.providerName)).toBe(false);
     expect(executionProviders.has(broker.providerName)).toBe(false);
 
+    // Order creation is behind the runtime safety boundary: this test turns trading ON in its own explicit in-memory state
+    // (the seeded default is OFF); refusal behaviour is covered in tests/unit/safety/executionBoundary.test.ts.
+    configureRuntimeState({ source: inMemoryStateSource({ TRADING_ENABLED: true }), ttlMs: 0, failureTtlMs: 0 });
     const ack = await executionProviders.get(execution.providerName).placeOrder({
       instrument: { symbol: "RELIANCE", exchange: "NSE" },
       side: "buy",

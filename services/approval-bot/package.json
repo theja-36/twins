@@ -7,6 +7,9 @@
     "start": "node --import tsx src/index.ts"
   },
   "dependencies": {
+    "@twins/stop-loss": "*",
+    "@twins/runtime-state": "*",
+    "@twins/config": "*",
     "pg": "^8.12.0"
   },
   "devDependencies": {

@@ -9,7 +9,7 @@
  *   market_queue   — standalone market-bar ingestion (driven by scheduler)
  *
  * Safety invariants (spec section 2/45/47):
- * - LIVE_TRADING is verified false at startup; the process exits if true.
+ * - The shared live-trading guard (@twins/config) runs first; the process exits if live trading is configured.
  * - All database writes go through Drizzle (PostgreSQL is the source of
  *   record; Redis is ephemeral queue transport only, spec section 47).
  * - A failed job is recorded in the `jobs` table (via runIngestionJob) and
@@ -21,6 +21,10 @@
  */
 
 import { UnrecoverableError, Worker, type Job } from "bullmq";
+import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
+import { loadStopLossConfig } from "@twins/stop-loss";
+import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
+import { withIntakeGate } from "./safetyGate.js";
 import { Redis } from "ioredis";
 import { createStructuredLogger, describeErrorSafely, type StructuredLogger } from "@twins/shared";
 import { buildJobLogContext } from "./correlationLog.js";
@@ -28,7 +32,7 @@ import { InvalidJobInputError, ReconciliationRequiredError } from "./jobErrors.j
 import { parseJobTimestamp } from "./jobTimestamp.js";
 import { parseCapture, processTelegramEventsJob, type CapturePayload, type TelegramEventsJobPayload } from "./telegramEvents.js";
 import { randomUUID } from "node:crypto";
-import { loadConfig } from "@twins/config";
+import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { createBoundedDb, type Db } from "@twins/database";
 import {
   getRevisionStates,
@@ -61,14 +65,8 @@ import type { MarketBarRequest } from "@twins/types";
 
 // ─── Config & safety gate ──────────────────────────────────────────────────
 
+enforceLiveTradingGuard("worker");
 const config = loadConfig();
-
-if (config.liveTradingEnabled) {
-  // This should be unreachable given loadConfig()'s own guard, but belts
-  // and braces: a worker must never start in live-trading mode (spec section 40).
-  console.error("[worker] FATAL: LIVE_TRADING=true is not permitted in the worker process.");
-  process.exit(1);
-}
 
 console.log(
   `[worker] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,
@@ -81,6 +79,15 @@ export const workerDb = createBoundedDb({
   max: 10,
   idleTimeoutMillis: 30000,
 });
+
+// ─── Runtime safety state (Stage 1 / Task 2) ───────────────────────────────
+// Every critical loop reads the database-backed controls (kill switch, intake, trading) through this one per-process instance. Fail closed:
+// an unreadable state refuses. Not configured under NODE_ENV=test, where the vitest setup installs an explicit test source instead.
+if (process.env["NODE_ENV"] !== "test") {
+  configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: createStructuredLogger(undefined, { service: "worker" }) });
+  // Role separation (Stage 1 / Task 3): outside local development the worker must run as the least-privilege role, or it refuses to start (exit 82).
+  if (config.appEnv !== "development") await enforceRuntimeRoleSeparation("worker", workerDb.pool);
+}
 
 // ─── Register concrete adapters ────────────────────────────────────────────
 
@@ -202,6 +209,9 @@ export const configuredOptionsMaster: OptionsContractMaster | null = optionsRefe
 
 const defaultWorkerLogger = createStructuredLogger(undefined, { service: "worker" });
 
+/** Mandatory stop-loss sanity bounds (TWINS_STOPLOSS_MAX_RISK_PCT_*); a malformed override makes the worker refuse to start. */
+const stopLossConfig = loadStopLossConfig();
+
 /**
  * Fail-closed intake policy for this process: TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty approves NO chat; malformed
  * throws here, so the worker does not start) and TWINS_TELEGRAM_OPTIONS_ONLY ("true"/"false"; anything else throws).
@@ -214,6 +224,8 @@ export async function processTelegramQueueJob(
   db: Db = workerDb.db,
   options: TelegramJobOptions = {},
 ): Promise<void> {
+  // Runtime safety boundary: before ANYTHING is read, written or logged as started. A refusal is not a job failure (see safetyGate.ts).
+  await assertIntakeEnabled("worker.telegram_job");
   const log = (options.logger ?? defaultWorkerLogger).child(buildJobLogContext(job, correlationId));
   const startedAt = Date.now();
   log.info("worker.job.started");
@@ -253,6 +265,7 @@ export async function processTelegramEventsQueueJob(
   db: Db = workerDb.db,
   options: TelegramJobOptions = {},
 ): Promise<void> {
+  await assertIntakeEnabled("worker.telegram_events_job");
   const log = (options.logger ?? defaultWorkerLogger).child(buildJobLogContext(job, correlationId));
   const startedAt = Date.now();
   log.info("worker.job.started");
@@ -482,7 +495,7 @@ export async function processTelegramJob(
     // equity signal, instrument, approval or order. Only a master that was explicitly configured is used (and recorded).
     const intake = signalOutcome.optionsIntake;
     const master = options.optionsMaster ?? configuredOptionsMaster;
-    const assessment = intake.kind === "claim" ? await assessOptionsClaim(intake.claim, master ?? unconfiguredContractMaster, unavailablePremiumProvider) : undefined;
+    const assessment = intake.kind === "claim" ? await assessOptionsClaim(intake.claim, master ?? unconfiguredContractMaster, unavailablePremiumProvider, stopLossConfig) : undefined;
     const record = await recordOptionsIntake(db, {
       telegramMessageId: telegramRow.id,
       parserVersion: signalOutcome.parserVersion ?? TELEGRAM_PARSER_VERSION,
@@ -663,14 +676,14 @@ const createWorkerRedis = (): Redis => {
 };
 
 // In test environment, do not start active BullMQ worker event loops unless explicitly triggered
-export const signalWorker =
+export const signalWorker: Worker<SignalQueueJobPayload> =
   process.env["NODE_ENV"] === "test"
     ? (null as unknown as Worker<SignalQueueJobPayload>)
     : new Worker<SignalQueueJobPayload>(
         "signal_queue",
-        async (job: Job<SignalQueueJobPayload>) => {
-          await processSignalQueueJob(job);
-        },
+        // Intake gate (Stage 1 / Task 2): while intake is disabled, the kill switch is active or the state is unreadable the job goes back to
+        // the queue untouched (no attempt consumed, nothing lost) and the worker pauses; see ./safetyGate.ts.
+        withIntakeGate((job: Job<SignalQueueJobPayload>) => processSignalQueueJob(job), () => signalWorker, { logger: defaultWorkerLogger }),
         {
           connection: createWorkerRedis(),
           concurrency: 2,

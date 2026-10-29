@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import { schema } from "@twins/database";
+import { assertIntakeEnabled } from "@twins/runtime-state";
+import { recordStopLossEvidence } from "../stopLossEvidence";
 import type { Db } from "../db";
 import type { AssessmentReason, OptionsAssessment } from "./assess";
 import type { OptionsContractMaster } from "./master";
@@ -46,6 +48,8 @@ const NOT_ASSESSED: Record<"ambiguous" | "unsupported", AssessmentReason> = {
  * Never creates a signal, instrument, approval or order.
  */
 export async function recordOptionsIntake(db: Db, input: RecordOptionsIntakeInput): Promise<RecordOptionsIntakeResult> {
+  // Runtime safety boundary (Stage 1 / Task 2): no new claim row while intake is disabled, the kill switch is active, or the state is unreadable.
+  await assertIntakeEnabled("signals.recordOptionsIntake");
   const { intake } = input;
   const assessed = intake.kind === "claim" ? input.assessment : undefined;
   if (intake.kind === "claim" && !assessed) throw new Error("recordOptionsIntake: a claim requires its assessment");
@@ -78,7 +82,11 @@ export async function recordOptionsIntake(db: Db, input: RecordOptionsIntakeInpu
     .values(row)
     .onConflictDoNothing({ target: [schema.optionsClaims.telegramMessageId, schema.optionsClaims.parserVersion] })
     .returning({ id: schema.optionsClaims.id });
-  if (inserted) return { id: inserted.id, created: true, differsFromStored: false };
+  if (inserted) {
+    // Stop-loss evidence for the claim (immutable, hash-chained). Idempotent per claim; a claim that was not assessed has none and is therefore unverified.
+    if (assessed) await recordStopLossEvidence(db, { kind: "options_claim", optionsClaimId: inserted.id }, assessed.stopLoss, `options-claim:${inserted.id}`);
+    return { id: inserted.id, created: true, differsFromStored: false };
+  }
 
   const [existing] = await db
     .select()

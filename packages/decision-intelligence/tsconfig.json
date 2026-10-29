@@ -6,6 +6,12 @@
     "module": "ESNext",
     "moduleResolution": "Bundler"
   },
-  "references": [{ "path": "../database" }, { "path": "../dataquality" }, { "path": "../signals" }],
+  "references": [
+    { "path": "../database" },
+    { "path": "../dataquality" },
+    { "path": "../signals" },
+    { "path": "../runtime-state" },
+    { "path": "../stop-loss" }
+  ],
   "include": ["src"]
 }

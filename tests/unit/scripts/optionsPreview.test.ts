@@ -414,7 +414,7 @@ describe("options-preview command", () => {
     const src = readFileSync("scripts/options-preview.ts", "utf8");
     const imports = [...src.matchAll(/from\s+"([^"]+)"/g)].map((m) => m[1]);
     expect(imports.sort()).toEqual(
-      ["node:fs", "node:path", "node:url", "../packages/signals/src/extract", "../packages/signals/src/options/assess", "../packages/signals/src/options/master", "../packages/signals/src/options/premium", "../packages/signals/src/options/providerSnapshot", "../packages/signals/src/options/referenceMaster", "../packages/signals/src/options/samplePremium", "../packages/signals/src/options/types"].sort(),
+      ["node:fs", "node:path", "node:url", "../packages/config/src/liveGuard", "../packages/signals/src/extract", "../packages/signals/src/options/assess", "../packages/signals/src/options/master", "../packages/signals/src/options/premium", "../packages/signals/src/options/providerSnapshot", "../packages/signals/src/options/referenceMaster", "../packages/signals/src/options/samplePremium", "../packages/signals/src/options/types"].sort(),
     );
     expect(src).not.toMatch(/fixtureMaster|process\.env|fetch\(|node:net|node:http|bullmq|ioredis|from "pg"|drizzle/);
   });

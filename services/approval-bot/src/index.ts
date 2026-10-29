@@ -1,3 +1,5 @@
+import { enforceLiveTradingGuard } from "@twins/config";
+import { configureRuntimeState, pgStateSource } from "@twins/runtime-state";
 import { ApprovalBot, FatalBotError } from "./bot";
 import { BotConfigError, loadBotConfig } from "./config";
 import { PgBotDb } from "./db";
@@ -13,6 +15,7 @@ import { BotApi } from "./telegramApi";
  *   check-config     validates the environment; no network.
  *   check-privileges connects to the database only (needs TWINS_BOT_DATABASE_URL only) and prints the privilege report.
  */
+enforceLiveTradingGuard("approval-bot");
 const FATAL_HOLD_SECONDS = 900;
 const log = createLogger();
 let stopping = false;
@@ -62,6 +65,8 @@ async function main(command: string | undefined): Promise<number> {
     return 3;
   }
   const db = new PgBotDb(cfg.databaseUrl);
+  // Runtime safety state (Stage 1 / Task 2), read through the bot's restricted role. Unreadable state fails closed (no cards, no approvals).
+  configureRuntimeState({ source: pgStateSource(db.queryable()) });
   const bot = new ApprovalBot({ cfg, api: new BotApi(cfg.token, cfg.apiBase), db, log, now: () => new Date(), sleep: (ms) => new Promise((r) => setTimeout(r, ms)) });
   try {
     await bot.startup(() => egressIsRestricted(), command === "run");

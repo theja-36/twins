@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PgBotDb } from "../../../services/approval-bot/src/db";
+import { READ_CONTROLS_SQL } from "../../../packages/runtime-state/src/index";
 import { requireTestDatabaseUrl } from "../targetConfig";
 
 /**
@@ -117,6 +118,36 @@ describe("restricted role twins_bot (real database)", () => {
       await client.query("rollback to savepoint o");
       expect(err, `owner: ${sql}`).toBe("23001");
     }
+  });
+  it("can read the three runtime safety control values (and only those columns) but can never change a control or see its audit", async () => {
+    expect(await code("select control_name, value, version from system_controls")).toBe("ok");
+    expect(await code(READ_CONTROLS_SQL)).toBe("ok"); // the exact statement the shared reader runs
+    expect(await code("select * from system_controls")).toBe("42501");
+    expect(await code("select reason from system_controls")).toBe("42501");
+    expect(await code("select changed_by from system_controls")).toBe("42501");
+    for (const sql of [
+      "update system_controls set value = false",
+      "update system_controls set value = true, version = version + 1, reason = 'bot trying to change a control'",
+      "insert into system_controls (control_name, value, reason, changed_by) values ('KILL_SWITCH_ACTIVE', false, 'bot insert attempt', 'twins_bot')",
+      "delete from system_controls",
+      "truncate system_controls",
+      "select 1 from system_control_events",
+      "insert into system_control_events (control_name, new_value, reason, changed_by, changed_at, version, event_type) values ('KILL_SWITCH_ACTIVE', false, 'bot audit forgery', 'twins_bot', now(), 99, 'change')",
+    ]) expect(await code(sql), sql).toBe("42501");
+  });
+  it("cannot read the audit hash-chain columns or the chain heads, and cannot touch the other audit tables (Task 3)", async () => {
+    for (const sql of [
+      "select event_hash from telegram_messages",
+      "select chain_index from options_claims",
+      "select payload_hash from options_claims",
+      "select 1 from audit_events",
+      "select 1 from signal_validations",
+      "select 1 from audit_chain_heads",
+      "update telegram_messages set raw_text = 'x'",
+      "delete from audit_events",
+      "truncate audit_events",
+    ]) expect(await code(sql), sql).toBe("42501");
+    expect(await code("select id, external_message_id, message_timestamp, telegram_source_id from telegram_messages")).toBe("ok");
   });
   it("can run the single bot state row, but only change the pause flag and offset", async () => {
     expect(await code(`insert into approval_bot_state (id, activated_at) values ('bot', now())`)).toBe("ok");

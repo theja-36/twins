@@ -273,9 +273,11 @@ describe("database rules (each probe runs in a transaction that is rolled back)"
     const rows = (await db.execute(sql`select column_name from information_schema.columns where table_name = 'telegram_message_events'`)).rows as Array<{ column_name: string }>;
     expect(rows.map((r) => r.column_name).sort()).toEqual(["capture_method", "content_sha256", "created_at", "event_type", "external_message_id", "id", "idempotency_key", "observed_at", "raw_meta", "source_edit_date", "telegram_message_id", "telegram_source_id"]);
   });
-  it("a stored message cannot be removed while events reference it (ON DELETE RESTRICT)", async () => {
+  it("a stored message cannot be removed while events reference it: the append-only guard (Stage 1 / Task 3, 23001) refuses first, and the ON DELETE RESTRICT foreign key remains as the second layer", async () => {
     const { chat, row } = await existingMessage();
     expect((await eventsOf(chat)).length).toBeGreaterThan(0);
-    expect(await sqlstateOf((tx) => tx.delete(schema.telegramMessages).where(and(eq(schema.telegramMessages.id, row.id)))  )).toBe("23503");
+    expect(await sqlstateOf((tx) => tx.delete(schema.telegramMessages).where(and(eq(schema.telegramMessages.id, row.id)))  )).toBe("23001");
+    const fk = (await db.execute(sql`select confdeltype from pg_constraint where conrelid = 'telegram_message_events'::regclass and confrelid = 'telegram_messages'::regclass and contype = 'f'`)).rows as Array<{ confdeltype: string }>;
+    expect(fk.map((r) => r.confdeltype)).toEqual(["r"]); // 'r' = RESTRICT
   });
 });

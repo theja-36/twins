@@ -10,8 +10,8 @@ import { eq, inArray } from "drizzle-orm";
 import { createBoundedDb, schema, type BoundedDbHandle, type Db } from "../../../packages/database/src/index";
 import { processTelegramJob, processTelegramQueueJob } from "../../support/workerWithTestPolicy";
 import { UnrecoverableError } from "bullmq";
-import { getRevisionStates, resolveTelegramSource } from "../../../packages/ingestion/src/index";
-import { analyzeTelegramText, reparseTelegramMessage, TELEGRAM_PARSER_VERSION } from "../../../packages/signals/src/index";
+import { getRevisionStates, ingestTelegramMessages, resolveTelegramSource } from "../../../packages/ingestion/src/index";
+import { analyzeTelegramText, createSignalFromTelegramMessage, reparseTelegramMessage, TELEGRAM_PARSER_VERSION } from "../../../packages/signals/src/index";
 import { normalizeRawUpdate } from "../../../adapters/telegram/src/index";
 import { validateSignal } from "../../../packages/decision-intelligence/src/index";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../adapters/market/src/index";
@@ -165,12 +165,22 @@ describe("R0B edit revisions (real adapter -> worker -> PostgreSQL)", () => {
     const user = `r0b_legacyval_${rand()}`;
     const chatId = uniqueChatId();
     const upd = original(user, chatId, rand(), BUY(2800));
-    await processTelegramJob(jobFromUpdate(upd), "c", handle.db);
+    // Build the pre-migration state (a signal whose only validation has no idempotency key) with APPENDS only: signal_validations is append-only
+    // (Stage 1 / Task 3), so the previous way of getting there - UPDATE ... SET idempotency_key = NULL - is no longer possible. This does what the
+    // pipeline does (ingest the message, create the signal, validate) but appends the validation WITHOUT an idempotency key, like a legacy row.
+    const normalized = must(normalizeRawUpdate(upd));
+    await ingestTelegramMessages(
+      handle.db,
+      { providerName: "telegram-bot-webhook", fetchMessages: async () => [normalized], getHealth: async () => ({ providerName: "telegram-bot-webhook", providerType: "telegram", status: "healthy", checkedAt: new Date() }) } as never,
+      { channelIdentifier: normalized.channelIdentifier },
+    );
     let rows = await chain(handle.db, chatId);
+    const created = await createSignalFromTelegramMessage(handle.db, must(rows.messages[0]).id, { exchange: "NSE", instrumentType: "equity" });
+    await validateSignal(handle.db, must(created.signalId), { asOf: new Date() }); // no idempotencyKey: a keyless (legacy-shaped) validation
+    rows = await chain(handle.db, chatId);
     const signal = must(rows.signals[0]);
     const legacyValidation = must(rows.validations[0]);
-    // Simulate the pre-migration state: the validation has no idempotency key.
-    await handle.db.update(schema.signalValidations).set({ idempotencyKey: null }).where(eq(schema.signalValidations.id, legacyValidation.id));
+    expect(legacyValidation.idempotencyKey).toBeNull();
 
     await processTelegramJob(jobFromUpdate(upd), "c", handle.db); // retry
     rows = await chain(handle.db, chatId);

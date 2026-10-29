@@ -107,11 +107,16 @@ describe("staging packaging (static)", () => {
     expect(urlHosts(service("api")).sort()).toEqual(["twins-staging-postgres-1", "twins-staging-redis-1"]);
     for (const h of urlHosts(service("api"))) expect(h).toMatch(/^twins-staging-/);
     // credentials/database name are still the required variables, not literals
-    expect(service("api")).toMatch(/DATABASE_URL: postgresql:\/\/\$\{POSTGRES_USER:\?[^}]*\}:\$\{POSTGRES_PASSWORD:\?[^}]*\}@twins-staging-postgres-1:5432\/\$\{POSTGRES_DB:\?[^}]*\}/);
+    // (Task 3: the runtime services connect as the least-privilege role twins_app, whose password is a required variable; the owner credential is for migrate / safety-control / audit-verify)
+    expect(service("api")).toMatch(/DATABASE_URL: postgresql:\/\/twins_app:\$\{TWINS_APP_DB_PASSWORD:\?[^}]*\}@twins-staging-postgres-1:5432\/\$\{POSTGRES_DB:\?[^}]*\}/);
     expect(service("api")).toMatch(/REDIS_URL: redis:\/\/:\$\{REDIS_PASSWORD:\?[^}]*\}@twins-staging-redis-1:6379/);
     // services that are NOT on the shared network keep the shared anchor (bare names are unambiguous on twins_data only)
     expect(compose).toMatch(/x-app-env: &app-env[\s\S]*?@postgres:5432[\s\S]*?@redis:6379/);
-    for (const n of ["worker", "scheduler", "migrate"]) expect(service(n), n).not.toMatch(/DATABASE_URL|REDIS_URL/);
+    for (const n of ["worker", "scheduler"]) {
+      expect(service(n), n).toMatch(/DATABASE_URL: postgresql:\/\/twins_app:\$\{TWINS_APP_DB_PASSWORD:\?[^}]*\}@postgres:5432\/\$\{POSTGRES_DB:\?[^}]*\}/);
+      expect(service(n), n).not.toMatch(/REDIS_URL/);
+    }
+    for (const n of ["migrate", "safety-control", "audit-verify"]) expect(service(n), n).not.toMatch(/DATABASE_URL|REDIS_URL|twins_app/); // owner credential via the shared anchor
   });
   it("passes the Telegram intake guards explicitly to BOTH the API and the worker, deny-by-default and options-only", () => {
     for (const name of ["api", "worker"]) {
@@ -161,11 +166,11 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the four shared app services use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(4);
+  it("a new image gets its own tag and never overwrites the running one: the six shared app services (migrate, safety-control, audit-verify, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(6);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(6); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(8); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -225,7 +230,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(6);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(8);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

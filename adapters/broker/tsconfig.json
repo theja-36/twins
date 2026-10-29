@@ -6,6 +6,6 @@
     "module": "ESNext",
     "moduleResolution": "Bundler"
   },
-  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/types" }],
+  "references": [{ "path": "../../packages/runtime-state" }, { "path": "../../packages/shared" }, { "path": "../../packages/types" }],
   "include": ["src"]
 }
