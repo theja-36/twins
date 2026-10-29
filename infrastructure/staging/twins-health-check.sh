@@ -44,4 +44,12 @@ export_status "$MONITOR_DIR/backup.json" backup.json
 export_status "$MONITOR_DIR/audit/audit-verify.json" audit-verify.json
 check "backup" "$MONITOR_DIR/backup.json" "$BACKUP_MAX_AGE_SECONDS" backup.delayed backup.failed twins-backup
 check "audit verification" "$MONITOR_DIR/audit/audit-verify.json" "$AUDIT_MAX_AGE_SECONDS" audit.verification_delayed audit.verification_failed twins-audit-verify
+# alert relay: CRITICAL alerts that no destination accepted (pending or dropped) are an alerting failure in their own right
+RELAY="$MONITOR_DIR/alert-relay/alert-relay.json"
+if [ -r "$RELAY" ]; then
+  pend="$(field "$RELAY" pendingCritical)"; drop="$(field "$RELAY" droppedCritical)"
+  if [[ "$pend" =~ ^[0-9]+$ && "$pend" -gt 0 ]] || [[ "$drop" =~ ^[0-9]+$ && "$drop" -gt 0 ]]; then
+    "$ALERT_BIN" --throttle "$THROTTLE" --detail "count=${pend:-0}" alert.undelivered_critical CRITICAL alert-relay undelivered_critical "CRITICAL alerts could not be delivered to any destination."
+  fi
+fi
 exit 0

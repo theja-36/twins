@@ -5,3 +5,4 @@ export * from "./rules";
 export * from "./observe";
 export * from "./restartLoop";
 export * from "./relay";
+export * from "./telegram";
