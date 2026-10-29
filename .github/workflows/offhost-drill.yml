@@ -1,0 +1,76 @@
+# Manual cross-host restore drill (Stage 2 / Task 3). A GitHub-hosted runner is a machine that has never seen the source host, the database volume or the
+# backup spool: it downloads the newest encrypted backup from the off-host bucket, decrypts it with the recovery key, restores into a disposable PostgreSQL
+# container and verifies row counts, chain heads and the audit chains. Manual only (workflow_dispatch), never on push or pull_request, and NOT part of ci-gate.
+# Secrets (repository secrets, never in code): TWINS_DRILL_S3_ENDPOINT / _BUCKET / _ACCESS_KEY_ID / _SECRET_ACCESS_KEY (READ-ONLY credential) and
+# TWINS_DRILL_AGE_IDENTITY (the age private key used for the drill backups). Use a drill-only key for drill data; the production key stays offline.
+name: offhost-drill
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment_name:
+        description: "Backup environment name (object prefix), e.g. drill or staging"
+        required: true
+        default: "drill"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: offhost-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: restore drill (recovery host = GitHub-hosted runner)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      LIVE_TRADING: "false"
+      TWINS_BACKUP_ENV_NAME: ${{ inputs.environment_name }}
+      TWINS_BACKUP_S3_ENDPOINT: ${{ secrets.TWINS_DRILL_S3_ENDPOINT }}
+      TWINS_BACKUP_S3_BUCKET: ${{ secrets.TWINS_DRILL_S3_BUCKET }}
+      TWINS_BACKUP_S3_ACCESS_KEY_ID: ${{ secrets.TWINS_DRILL_S3_ACCESS_KEY_ID }}
+      TWINS_BACKUP_S3_SECRET_ACCESS_KEY: ${{ secrets.TWINS_DRILL_S3_SECRET_ACCESS_KEY }}
+      TWINS_BACKUP_RUNNER_LABEL: github-hosted-runner
+      TWINS_BACKUP_STATUS_DIR: ${{ runner.temp }}/status
+      TWINS_BACKUP_DRILL_WORK_DIR: ${{ runner.temp }}/drill
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: PostgreSQL client tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+      - name: Place the recovery key (runner is ephemeral; the file is mode 0400 and masked)
+        env:
+          AGE_IDENTITY: ${{ secrets.TWINS_DRILL_AGE_IDENTITY }}
+        run: |
+          umask 077
+          printf '%s\n' "$AGE_IDENTITY" > "$RUNNER_TEMP/age-identity.txt"
+          chmod 400 "$RUNNER_TEMP/age-identity.txt"
+          echo "TWINS_BACKUP_AGE_IDENTITY_FILE=$RUNNER_TEMP/age-identity.txt" >> "$GITHUB_ENV"
+      - name: Restore drill
+        run: npm run offhost -- drill 2>&1 | tee "$RUNNER_TEMP/drill.log"
+      - name: Evidence (status file and log contain no secret)
+        if: always()
+        run: |
+          cat "$RUNNER_TEMP/status/offhost-drill.json" || true
+          shred -u "$RUNNER_TEMP/age-identity.txt" 2>/dev/null || rm -f "$RUNNER_TEMP/age-identity.txt"
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: offhost-drill-evidence
+          path: |
+            ${{ runner.temp }}/status/offhost-drill.json
+            ${{ runner.temp }}/drill.log
+          if-no-files-found: ignore
+          retention-days: 30

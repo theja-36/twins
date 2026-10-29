@@ -1,0 +1,12 @@
+# Weekly, Sundays 04:00 UTC. Configurable with a drop-in (systemctl edit).
+[Unit]
+Description=TWINS off-host backup checksum verification timer
+
+[Timer]
+OnCalendar=Sun *-*-* 04:00:00 UTC
+Persistent=true
+RandomizedDelaySec=600
+Unit=twins-offhost-verify.service
+
+[Install]
+WantedBy=timers.target

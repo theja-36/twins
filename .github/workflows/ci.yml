@@ -120,6 +120,11 @@ jobs:
           cache: npm
       - name: Install (lockfile, clean)
         run: npm ci
+      - name: PostgreSQL client tools (pg_dump / pg_restore for the backup and restore-drill tests)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+          pg_dump --version && pg_restore --version
       - name: CI target guard (must pass before anything touches the databases)
         run: npx vitest run --config vitest.integration.config.ts tests/integration/runtime/ciGuard.test.ts
       - name: Database migration (fresh chain)

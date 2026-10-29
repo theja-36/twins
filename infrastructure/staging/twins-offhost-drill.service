@@ -1,0 +1,19 @@
+# Monthly FULL restore drill. Install on the RECOVERY host (a different machine from the backup host) - NEVER on the backup host: it needs the private
+# recovery key and a read credential. It restores into a disposable PostgreSQL container, compares, verifies the audit chains and removes everything.
+[Unit]
+Description=TWINS off-host backup restore drill (recovery host)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=twins-recovery
+Group=twins-recovery
+WorkingDirectory=/opt/twins-recovery
+EnvironmentFile=/etc/twins-recovery/drill.env
+ExecStart=/usr/bin/npx --no-install tsx scripts/ops/offhost-backup.ts drill
+TimeoutStartSec=7200
+NoNewPrivileges=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/twins-backup /var/lib/twins-monitor

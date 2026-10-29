@@ -1,0 +1,12 @@
+# Monthly, the 2nd at 05:00 UTC (after the first-of-month backup exists). Configurable with a drop-in (systemctl edit).
+[Unit]
+Description=TWINS off-host backup restore drill timer
+
+[Timer]
+OnCalendar=*-*-02 05:00:00 UTC
+Persistent=true
+RandomizedDelaySec=900
+Unit=twins-offhost-drill.service
+
+[Install]
+WantedBy=timers.target

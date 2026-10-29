@@ -26,7 +26,8 @@
     "options:viewer": "tsx apps/web/src/server.ts",
     "options:demo": "tsx scripts/options-demo.ts",
     "options:import-dhan": "tsx scripts/options-import-dhan.ts",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "offhost": "tsx scripts/ops/offhost-backup.ts"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

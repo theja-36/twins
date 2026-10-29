@@ -1,0 +1,12 @@
+# Daily at 03:15 UTC, after the local backup (02:30). Change the schedule with `systemctl edit twins-offhost-backup.timer` (a drop-in that sets OnCalendar= to empty and then a new value).
+[Unit]
+Description=TWINS encrypted off-host backup timer
+
+[Timer]
+OnCalendar=*-*-* 03:15:00 UTC
+Persistent=true
+RandomizedDelaySec=300
+Unit=twins-offhost-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,22 @@
+# Encrypted off-host backup (design: docs/twins/OFF_HOST_BACKUP_AND_RECOVERY.md). Runs on the BACKUP host only. It holds the PUBLIC age recipient and the
+# bucket credential; it never holds the private recovery key. The credential file is read by systemd and is not part of the application's environment.
+[Unit]
+Description=TWINS encrypted off-host backup (snapshot, encrypt, upload, verify)
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=twins-backup
+Group=twins-backup
+WorkingDirectory=/opt/twins-staging
+EnvironmentFile=/etc/twins-backup/offhost.env
+ExecStart=/usr/bin/npx --no-install tsx scripts/ops/offhost-backup.ts backup
+TimeoutStartSec=3600
+Nice=10
+IOSchedulingClass=idle
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/twins-backup /var/lib/twins-monitor
