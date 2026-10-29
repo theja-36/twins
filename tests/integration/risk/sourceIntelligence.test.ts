@@ -14,7 +14,7 @@ import {
 } from "../../../packages/historical/src/index";
 import {
   assessApprovalEligibility, createPendingRiskDecisionForSignal, createRiskDecision, getRiskDecision, intelligenceOf, listRiskDecisions, loadPortfolioConfig, recordIntelligenceForSignal, recordRiskApproval,
-  recordSourceIntelligence, RiskDecisionError, sizeLatestRiskDecisionForSignal, sizeRiskDecision, type IntelligenceResolver, type RiskDecisionInput,
+  recordSourceIntelligence, sizeLatestRiskDecisionForSignal, sizeRiskDecision, type IntelligenceResolver,
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { registerIntelligenceRoutes } from "../../../apps/api/src/intelligenceApi";
