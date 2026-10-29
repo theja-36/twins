@@ -51,7 +51,9 @@ describe("staging packaging (static)", () => {
     expect(service("redis")).toMatch(/networks: \[twins_data\]/);
   });
   it("has placeholders only and requires every secret", () => {
-    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l) && !/^TWINS_TELEGRAM_SESSION_DB_KEY=$/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    for (const line of env.split("\n").filter((l) => /(PASSWORD|KEY|SECRET)=/.test(l) && !/^TWINS_TELEGRAM_SESSION_DB_KEY=$/.test(l) && !/^TWINS_ALERT_WEBHOOK_SECRET=$/.test(l))) expect(line, line).toMatch(/=CHANGE_ME_/);
+    expect(env).toMatch(/^TWINS_ALERT_WEBHOOK_URL=$/m); // the alert destination is optional and EMPTY in the template (empty = alerts are logged as undelivered)
+    expect(env).toMatch(/^TWINS_ALERT_RELAY_TOKEN=CHANGE_ME_/m);
     for (const name of ["TWINS_TELEGRAM_API_ID", "TWINS_TELEGRAM_API_HASH", "TWINS_TELEGRAM_SESSION_DB_KEY"]) expect(env, name).toMatch(new RegExp(`^${name}=$`, "m")); // owner-supplied later: EMPTY in the template
     for (const v of ["POSTGRES_PASSWORD", "REDIS_PASSWORD", "TWINS_API_KEY", "TELEGRAM_WEBHOOK_SECRET"]) expect(compose).toContain(`\${${v}:?`);
     expect(existsSync("infrastructure/staging/staging.env")).toBe(false);

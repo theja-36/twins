@@ -28,7 +28,9 @@ for f in "${FILES[@]}"; do
   if ! ( cd "$BACKUP_DIR" && sha256sum -c --status "$(basename "$f").sha256" ); then problems=$((problems + 1)); mismatch=$((mismatch + 1)); detail="checksum_mismatch"; fi
 done
 newest="$(printf '%s\n' "${FILES[@]}" | sort | tail -1)"
-tmp="$(mktemp "$STATUS_DIR/.verify-plain.XXXXXX")"
+# the encryption tool refuses to overwrite: give it a path that does not exist yet, inside a private directory
+work="$(mktemp -d "$STATUS_DIR/.verify-plain.XXXXXX")"
+tmp="$work/plain"
 if "$PYTHON" "$ENC_TOOL" decrypt "$KEY_FILE" "$newest" "$tmp" >/dev/null 2>&1; then
   got="$(sha256sum "$tmp" | cut -c1-64)"
   want="$(sed -n 's/.*"plain_sha256":"\([0-9a-f]\{64\}\)".*/\1/p' "$STATUS_DIR/backup.json" 2>/dev/null | head -1)"
@@ -39,6 +41,7 @@ else
   problems=$((problems + 1)); detail="decrypt_failed"
 fi
 shred -u "$tmp" 2>/dev/null || rm -f "$tmp"
+rmdir "$work" 2>/dev/null || rm -rf "$work"
 if [ "$problems" -gt 0 ]; then
   write_status false "$checked" "$problems" "$detail"
   if [ "$mismatch" -gt 0 ]; then "$ALERT_BIN" --detail "count=$mismatch" backup.checksum_mismatch CRITICAL twins-backup-verify "$detail" "A local backup does not match its recorded checksum."

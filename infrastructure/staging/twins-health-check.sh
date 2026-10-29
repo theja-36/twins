@@ -13,6 +13,7 @@ BACKUP_MAX_AGE_SECONDS="${BACKUP_MAX_AGE_SECONDS:-108000}"
 AUDIT_MAX_AGE_SECONDS="${AUDIT_MAX_AGE_SECONDS:-10800}"
 THROTTLE="${HEALTH_ALERT_THROTTLE_SECONDS:-21600}"
 now="$(date +%s)"
+EXPORT_DIR="${EXPORT_DIR:-$MONITOR_DIR/export}"
 field() { sed -n "s/.*\"$2\":\([^,}]*\).*/\1/p" "$1" 2>/dev/null | head -1 | tr -d '"'; }
 
 check() { # $1 label  $2 file  $3 max-age  $4 delayed-event  $5 failed-event  $6 service
@@ -28,6 +29,19 @@ check() { # $1 label  $2 file  $3 max-age  $4 delayed-event  $5 failed-event  $6
     "$ALERT_BIN" --throttle "$THROTTLE" "$4" WARNING "$6" never_succeeded "No successful $1 has been recorded."
   fi
 }
+# Export a minimal, non-sensitive copy of the two statuses for GET /health/status (the API container mounts ONLY this directory, read-only; the monitor directory itself is root-private).
+export_status() { # $1 source file  $2 export name
+  local f="$1" ok epoch last
+  [ -r "$f" ] || return 0
+  ok="$(field "$f" ok)"; epoch="$(field "$f" epoch)"; last="$(field "$f" last_ok_epoch)"
+  [[ "$epoch" =~ ^[0-9]+$ ]] || return 0
+  [[ "$last" =~ ^[0-9]+$ ]] || { [ "$ok" = true ] && last="$epoch" || last="null"; }
+  [ "$ok" = true ] || ok=false
+  mkdir -p "$EXPORT_DIR" && chmod 755 "$EXPORT_DIR"
+  local tmp; tmp="$(mktemp "$EXPORT_DIR/.x.XXXXXX")" && printf '{"ok":%s,"epoch":%s,"last_ok_epoch":%s}\n' "$ok" "$epoch" "$last" > "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$EXPORT_DIR/$2"
+}
+export_status "$MONITOR_DIR/backup.json" backup.json
+export_status "$MONITOR_DIR/audit/audit-verify.json" audit-verify.json
 check "backup" "$MONITOR_DIR/backup.json" "$BACKUP_MAX_AGE_SECONDS" backup.delayed backup.failed twins-backup
 check "audit verification" "$MONITOR_DIR/audit/audit-verify.json" "$AUDIT_MAX_AGE_SECONDS" audit.verification_delayed audit.verification_failed twins-audit-verify
 exit 0

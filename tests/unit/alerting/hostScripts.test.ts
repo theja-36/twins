@@ -130,6 +130,11 @@ describe("twins-health-check.sh", () => {
     writeFileSync(join(mon, "backup.json"), JSON.stringify({ ok: false, epoch: now - 60 }));
     await run(HEALTH, [], env);
     expect(calls(log).join("\n")).toMatch(/backup\.failed CRITICAL twins-backup last_run_failed/);
+    // the exported copy carries only ok/epoch/last_ok_epoch (what the API container may see)
+    const exported = JSON.parse(readFileSync(join(mon, "export", "audit-verify.json"), "utf8")) as Record<string, unknown>;
+    expect(Object.keys(exported).sort()).toEqual(["epoch", "last_ok_epoch", "ok"]);
+    expect(exported).toMatchObject({ ok: false, last_ok_epoch: now - 5 * 3600 });
+    expect(JSON.parse(readFileSync(join(mon, "export", "backup.json"), "utf8"))).toMatchObject({ ok: false, last_ok_epoch: "null" === "x" ? 0 : null });
     expect((await run(HEALTH, [], { MONITOR_DIR: join(dir, "missing"), ALERT_BIN: bin })).code).toBe(0); // never fails its unit
     expect(calls(log).join("\n")).toMatch(/no_status_file/);
   });
@@ -147,7 +152,8 @@ describe("twins-backup-verify.sh (weekly local verification)", () => {
     writeFileSync(join(backups, `${name}.sha256`), `${createHash("sha256").update(enc).digest("hex")}  ${name}\n`);
     writeFileSync(join(status, "backup.json"), JSON.stringify({ ok: true, epoch: 1, detail: name, plain_sha256: plainSha }));
     const tool = join(dir, "enc.py");
-    writeFileSync(tool, `import sys\nopen(sys.argv[4],'wb').write(open(sys.argv[3],'rb').read() and b'${plain.toString()}')\n`);
+    // like the real twinsenc.py: refuses to overwrite an existing output file
+    writeFileSync(tool, `import sys, os\nif os.path.exists(sys.argv[4]): sys.exit(9)\nopen(sys.argv[4],'wb').write(open(sys.argv[3],'rb').read() and b'${plain.toString()}')\n`);
     const key = join(dir, "key"); writeFileSync(key, "k");
     const alertBin = join(dir, "alert.sh"); const alertLog = join(dir, "alerts.log");
     writeFileSync(alertBin, `#!/usr/bin/env bash\nprintf '%s\\n' "$*" >> '${alertLog}'\n`); chmodSync(alertBin, 0o755);

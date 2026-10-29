@@ -197,9 +197,10 @@ services:
       context: ../../src
       dockerfile: infrastructure/staging/Dockerfile
     command: ["node", "--import", "tsx", "/app/apps/api/src/index.ts"]
-    # read-only view of the monitor status files (backup / audit verification results) for GET /health/status
+    # read-only view of the EXPORTED status files (ok/epoch/last_ok_epoch of the backup and audit verification, written by twins-health-check.sh) for
+    # GET /health/status. The monitor directory itself stays root-private; only this export directory is mounted.
     volumes:
-      - /var/lib/twins-monitor:/monitor:ro
+      - /var/lib/twins-monitor/export:/monitor:ro
     environment:
       <<: *app-env
       TWINS_STATUS_DIR: /monitor
