@@ -130,6 +130,15 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     ],
     triggers: [...guards("risk_approvals"), "risk_approvals_a_integrity_before_insert"],
   },
+  {
+    chain: "historical_source_records",
+    table: "historical_source_records",
+    fields: [
+      txt("t.id"), txt("t.batch_id"), plain("t.identity_key"), plain("t.channel_label"), plain("t.original_message_id"), ts("t.message_timestamp"), plain("t.author"), plain("t.raw_text"), plain("t.content_sha256"), plain("t.raw_text_redacted"),
+      txt("t.media_refs"), txt("t.edit_of_id"), txt("t.revision_no"), ts("t.edited_at"), plain("t.source_file"), plain("t.source_file_sha256"), txt("t.source_line"), txt("t.provenance"), plain("t.created_by"), ts("t.created_at"),
+    ],
+    triggers: [...guards("historical_source_records"), "historical_source_records_a_integrity_before_insert"],
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */
