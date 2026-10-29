@@ -36,6 +36,10 @@ describe("no approval-class state is produced outside the audited places", () =>
     "packages/decision-intelligence/src/types.ts": "the outcome type",
     "packages/decision-intelligence/src/decide.ts": "the single producer of APPROVE (guarded by assertStopLossAllowsEligibility)",
     "packages/stop-loss/src/eligibility.ts": "the eligibility lists and the invariant",
+    "apps/api/src/riskApi.ts": "validates the human APPROVE / REJECT ACTION of the approval API (an action recorded by the database function, which re-checks every gate; Stage 3 / Task 6) - not a decision outcome",
+    "packages/risk/src/approval/service.ts": "passes the human APPROVE / REJECT action to twins_record_risk_approval; it never produces an approval-class decision outcome (Stage 3 / Task 6)",
+    "packages/database/src/schema/riskApprovals.ts": "the check constraint on the recorded APPROVE / REJECT action of risk_approvals (Stage 3 / Task 6)",
+    "services/approval-bot/src/db.ts": "maps the approver's tap to the APPROVE / REJECT action argument of the database function; it grants nothing itself (Stage 3 / Task 6)",
     "packages/risk/src/market/engine.ts": "the market-gate outcome CONDITIONAL (a WARNING event window): it maps to a PENDING version and never to an approval (Stage 3 / Task 5)",
     "packages/risk/src/market/record.ts": "maps the market-gate CONDITIONAL outcome to a PENDING version; APPROVED_FOR_REVIEW additionally needs the database sized/portfolio/market checks",
   };

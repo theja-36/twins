@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
-import { addEventWindow, createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent } from "../../../packages/risk/src/index";
+import { addEventWindow, createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent, recordRiskApproval } from "../../../packages/risk/src/index";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq } from "drizzle-orm";
@@ -40,11 +40,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows", "risk_approvals"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason", risk_approvals: "reason" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -99,6 +99,11 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
       [riskId, signalId, stopLossId, i === 0 ? null : lastRiskId, i + 1, `itest-risk-${suffix}-${i}`, `T${suffix}`.toUpperCase(), `risk reason ${suffix} ${i}`],
     );
     lastRiskId = riskId;
+    // a risk approval (Stage 3 / Task 6): a REJECT of the decision above (the table guard allows it for any existing decision version)
+    await c.query(
+      `insert into risk_approvals (id, risk_decision_id, decision_version, action, actor, actor_context, reason, decision_snapshot, evidence_references) values (gen_random_uuid(), $1, $2, 'REJECT', 'operator:itest', '{}', $3, '{"itest":true}', '{}')`,
+      [riskId, i + 1, `approval reason ${suffix} ${i}`],
+    );
     // loss events and circuit-breaker events (Stage 3 / Task 4); WARNED rows only, so no breaker is ever left open
     await c.query(
       "insert into loss_events (id, amount, occurred_at, source, source_ref, idempotency_key, created_by) values ($1, 10, '1960-01-04T10:00:00Z', 'synthetic', $2, $3, 'service:itest')",
@@ -238,7 +243,9 @@ describe("valid append flows still work and extend the chain", () => {
     expect(validation.reused).toBe(false);
     const claim = await recordOptionsIntake(handle.db, { telegramMessageId: must(msg).id, parserVersion: `itest-${suffix}`, intake: { kind: "ambiguous", directives: [] } as never, assessment: undefined, master: null, premium: null });
     expect(claim.created).toBe(true);
-    expect(await createPendingRiskDecisionForSignal(handle.db, must(signal).id)).toMatchObject({ created: true, status: "PENDING" }); // the real writer of risk decisions (evidence recorded by the validation above)
+    const pendingDecision = await createPendingRiskDecisionForSignal(handle.db, must(signal).id);
+    expect(pendingDecision).toMatchObject({ created: true, status: "PENDING" });
+    expect(await recordRiskApproval(handle.db, { decisionId: (pendingDecision as { id: string }).id, action: "REJECT", actor: "operator:itest", reason: "itest real writer" })).toMatchObject({ outcome: "recorded" }); // the real approval writer (Task 6) // the real writer of risk decisions (evidence recorded by the validation above)
     // Task 4 real writers: a loss event, then the breaker records the breach (and, a week later, the automatic reset); a far-past date keeps every breaker closed at the database clock
     const when = new Date(Date.UTC(1800 + Math.floor(Math.random() * 100), Math.floor(Math.random() * 12), 1 + Math.floor(Math.random() * 28), 10)); // a random far-past day per run, so repeated runs on one database do not share a period
     expect(await recordLossEvent(handle.db, { amount: 25_000, occurredAt: when, source: "synthetic", sourceRef: `itest-${suffix}`, createdBy: "service:itest" })).toMatchObject({ created: true });

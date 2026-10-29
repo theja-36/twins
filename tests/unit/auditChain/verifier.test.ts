@@ -88,12 +88,12 @@ describe("canonical serialization and hashing", () => {
     expect(computeEventHash("audit_events", 1, "1".repeat(64), base)).not.toBe(ev);
   });
   it("every chain spec lists its content fields and its guard triggers", () => {
-    expect(CHAIN_SPECS.map((s) => s.chain).sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "loss_events", "options_claims", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
+    expect(CHAIN_SPECS.map((s) => s.chain).sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
     for (const s of CHAIN_SPECS) {
       expect(s.fields.length).toBeGreaterThan(8);
       // the four chain/append-only guards, in this order; risk_decisions additionally has its integrity trigger (evidence, subject and version rules)
       const guards = [`${s.table}_chain_before_insert`, `${s.table}_chain_after_insert`, `${s.table}_no_update_delete`, `${s.table}_no_truncate`];
-      expect(s.triggers).toEqual(s.table === "risk_decisions" ? [...guards, "risk_decisions_a_integrity_before_insert", "risk_decisions_b_breaker_before_insert"] : s.table === "circuit_breaker_events" || s.table === "event_blackout_windows" ? [...guards, `${s.table}_a_integrity_before_insert`] : guards);
+      expect(s.triggers).toEqual(s.table === "risk_decisions" ? [...guards, "risk_decisions_a_integrity_before_insert", "risk_decisions_b_breaker_before_insert"] : s.table === "circuit_breaker_events" || s.table === "event_blackout_windows" || s.table === "risk_approvals" ? [...guards, `${s.table}_a_integrity_before_insert`] : guards);
     }
   });
 });

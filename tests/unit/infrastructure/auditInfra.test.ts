@@ -10,7 +10,7 @@ const service = (name: string) => {
   if (!m) throw new Error(`service ${name} not found`);
   return must(m[1]).split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
 };
-const migration = read("packages/database/drizzle/0010_audit_immutability_hash_chain.sql") + read("packages/database/drizzle/0011_stop_loss_validations.sql") + read("packages/database/drizzle/0014_risk_decisions_foundation.sql") + read("packages/database/drizzle/0017_circuit_breakers.sql") + read("packages/database/drizzle/0018_market_risk_gates.sql");
+const migration = read("packages/database/drizzle/0010_audit_immutability_hash_chain.sql") + read("packages/database/drizzle/0011_stop_loss_validations.sql") + read("packages/database/drizzle/0014_risk_decisions_foundation.sql") + read("packages/database/drizzle/0017_circuit_breakers.sql") + read("packages/database/drizzle/0018_market_risk_gates.sql") + read("packages/database/drizzle/0019_risk_approvals.sql");
 const migration0009 = read("packages/database/drizzle/0009_system_controls_kill_switch.sql");
 
 describe("migration 0010 and the verifier specification agree", () => {
@@ -43,8 +43,8 @@ describe("migration 0010 and the verifier specification agree", () => {
     expect(migration).toMatch(/ORDER BY chain_index DESC LIMIT 1/);
     expect(migration).toMatch(/AFTER INSERT ON "audit_events" FOR EACH ROW EXECUTE FUNCTION "twins_audit_chain_after_insert"/);
   });
-  it("the protected tables are the five of Task 3, the stop-loss evidence table of Task 4 and the risk decisions of Stage 3 the loss / breaker events of Task 4 and the event blackout windows of Task 5", () => {
-    expect([...PROTECTED_TABLES].sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "loss_events", "options_claims", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
+  it("the protected tables are the five of Task 3, the stop-loss evidence table of Task 4 and the risk decisions of Stage 3 the loss / breaker events of Task 4 the event blackout windows of Task 5 and the risk approvals of Task 6", () => {
+    expect([...PROTECTED_TABLES].sort()).toEqual(["audit_events", "circuit_breaker_events", "event_blackout_windows", "loss_events", "options_claims", "risk_approvals", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
   });
 });
 
