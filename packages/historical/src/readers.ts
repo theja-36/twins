@@ -23,14 +23,14 @@ export class InputError extends Error {
 export interface InputFile { path: string; name: string; format: InputFormat; sha256: string; bytes: number }
 export interface RawRecord { file: number; line: number; value?: unknown; error?: string }
 
-function hashFile(path: string): Promise<string> {
+export function hashFile(path: string): Promise<string> {
   return new Promise((resolveHash, reject) => {
     const h = createHash("sha256");
     createReadStream(path).on("data", (c) => h.update(c)).on("error", reject).on("end", () => resolveHash(h.digest("hex")));
   });
 }
 
-function checkFile(path: string): { bytes: number; format: InputFormat } {
+export function checkFile(path: string): { bytes: number; format: InputFormat } {
   const st = lstatSync(path);
   const name = basename(path);
   if (st.isSymbolicLink()) throw new InputError("symlink_not_allowed", name);

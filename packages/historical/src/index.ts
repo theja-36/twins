@@ -7,3 +7,4 @@ export * from "./prepare";
 export * from "./dryRun";
 export * from "./importer";
 export * from "./report";
+export * from "./outcomes/index";
