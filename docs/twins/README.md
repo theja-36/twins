@@ -15,6 +15,7 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Baseline state, phase states, release readiness | [STATUS.md](STATUS.md) |
 | Runtime safety state, kill switch, fail-closed rules, integration points (Stage 1 / Task 2) | [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md) |
 | Immutable audit trail, hash chains, verifier, role separation, operator identity (Stage 1 / Task 3) | [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md) |
+| Durable Telegram intake outbox: flow, statuses, retry, reconciliation, idempotency, failure behaviour (Stage 2 / Task 2) | [DURABLE_INTAKE_OUTBOX.md](DURABLE_INTAKE_OUTBOX.md) |
 | Hosted CI workflow, required checks, failure guide, branch-protection policy (Stage 2 / Task 1) | [CI.md](CI.md) |
 | Mandatory stop-loss rule, reason codes, options rules, evidence, enforcement layers (Stage 1 / Task 4) | [MANDATORY_STOP_LOSS.md](MANDATORY_STOP_LOSS.md) |
 | Phase order, dependencies, gates | [roadmap/](roadmap/MASTER_ROADMAP.md) |
