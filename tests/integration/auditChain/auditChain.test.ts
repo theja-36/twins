@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
-import { inspectInput, memoryProvider, rebuildScorecard, registerSources, resolveSource, runEvaluation, runImport } from "../../../packages/historical/src/index";
+import { inspectInput, memoryProvider, rebuildPatternLibrary, rebuildPatternMetrics, rebuildScorecard, runConfidenceEstimation, registerSources, resolveSource, runEvaluation, runImport } from "../../../packages/historical/src/index";
 import { dailyBars, datasetOf, equitySeries } from "../../support/outcomeFixtures";
 import { makeRecords, tempDir, writeJsonl } from "../../support/historicalFixtures";
 import { addEventWindow, createPendingRiskDecisionForSignal, evaluateCircuitBreakers, recordLossEvent, recordRiskApproval } from "../../../packages/risk/src/index";
@@ -43,11 +43,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows", "risk_approvals", "historical_source_records", "historical_datasets", "historical_evaluation_runs", "historical_outcome_labels", "historical_evaluation_events", "historical_source_registry", "historical_scorecard_runs", "historical_scorecard_metrics", "historical_trust_tiers", "historical_scorecard_events"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions", "loss_events", "circuit_breaker_events", "event_blackout_windows", "risk_approvals", "historical_source_records", "historical_datasets", "historical_evaluation_runs", "historical_outcome_labels", "historical_evaluation_events", "historical_source_registry", "historical_scorecard_runs", "historical_scorecard_metrics", "historical_trust_tiers", "historical_scorecard_events", "historical_pattern_definitions", "historical_pattern_runs", "historical_pattern_snapshots", "historical_confidence_runs", "historical_confidence_estimates"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason", risk_approvals: "reason", historical_source_records: "raw_text", historical_datasets: "dataset_version", historical_evaluation_runs: "algorithm_version", historical_outcome_labels: "algorithm_version", historical_evaluation_events: "created_by", historical_source_registry: "channel_label", historical_scorecard_runs: "algorithm_version", historical_scorecard_metrics: "created_by", historical_trust_tiers: "created_by", historical_scorecard_events: "created_by" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason", loss_events: "source_ref", circuit_breaker_events: "reason_code", event_blackout_windows: "reason", risk_approvals: "reason", historical_source_records: "raw_text", historical_datasets: "dataset_version", historical_evaluation_runs: "algorithm_version", historical_outcome_labels: "algorithm_version", historical_evaluation_events: "created_by", historical_source_registry: "channel_label", historical_scorecard_runs: "algorithm_version", historical_scorecard_metrics: "created_by", historical_trust_tiers: "created_by", historical_scorecard_events: "created_by", historical_pattern_definitions: "definition_version", historical_pattern_runs: "algorithm_version", historical_pattern_snapshots: "created_by", historical_confidence_runs: "algorithm_version", historical_confidence_estimates: "created_by" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -137,6 +137,14 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
     await c.query(`insert into historical_scorecard_metrics (run_id, window_type, window_start, window_end, sample_size, metrics, caveats, created_by) values ($1, 'ALL_TIME', to_timestamp(0), now(), 0, '{}', '[]', 'service:itest')`, [scRunId]);
     await c.query(`insert into historical_trust_tiers (run_id, source_id, tier, tier_label, as_of, explanation, metric_snapshot, threshold_config, evidence_references, created_by) values ($1, $2, 'UNKNOWN', 'INSUFFICIENT_EVIDENCE', now(), '[]', '{}', '{}', '{}', 'service:itest')`, [scRunId, srcId]);
     await c.query(`insert into historical_scorecard_events (run_id, event_type, sequence, detail, created_by) values ($1, 'RUN_STARTED', 1, '{}', 'service:itest'), ($1, 'RUN_COMPLETED', 2, '{}', 'service:itest')`, [scRunId]);
+    // pattern library and confidence (Stage 4 / Task 4): a definition, a pattern run, a snapshot, a confidence run and an estimate (reusing the batch and normalized record above)
+    const patId = randomUUID(), patRunId = randomUUID(), confRunId = randomUUID();
+    const hex64 = (): string => (randomUUID() + randomUUID()).replace(/-/g, "").slice(0, 64);
+    await c.query(`insert into historical_pattern_definitions (id, pattern_key, key_text, level, features, definition_version, created_by) values ($1, $2, $3, 1, '{}', 'pattern-features-v1', 'service:itest')`, [patId, hex64(), `L1|itest=${suffix}-${i}`]);
+    await c.query(`insert into historical_pattern_runs (id, run_key, algorithm_version, config, config_sha256, as_of, embargo_cutoff, label_set_sha256, input_summary, pattern_count, created_by) values ($1, $2, 'pattern-metrics-v1', '{}', $3, now(), now(), $3, '{}', 1, 'service:itest')`, [patRunId, hex64(), "f".repeat(64)]);
+    await c.query(`insert into historical_pattern_snapshots (run_id, pattern_id, level, evidence_status, flags, sample_size, metrics, mixes, created_by) values ($1, $2, 1, 'INSUFFICIENT_EVIDENCE', '[]', 0, '{}', '{}', 'service:itest')`, [patRunId, patId]);
+    await c.query(`insert into historical_confidence_runs (id, run_key, pattern_run_id, scope, import_batch_id, algorithm_version, config, config_sha256, trust_mode, lookahead, input_summary, created_by) values ($1, $2, $3, 'BATCH', $4, 'pattern-confidence-v1', '{}', $5, 'point_in_time', false, '{}', 'service:itest')`, [confRunId, hex64(), patRunId, batchId, "f".repeat(64)]);
+    await c.query(`insert into historical_confidence_estimates (run_id, normalized_record_id, source_record_id, score, tier, evidence_quality, sample_size, pattern_refs, inputs, explanation, limitations, evidence_references, created_by) values ($1, $2, $3, 10, 'LOW', 'SUFFICIENT', 30, '[]', '{}', '[]', '[]', '{}', 'service:itest')`, [confRunId, normId, origId]);
     // a risk approval (Stage 3 / Task 6): a REJECT of the decision above (the table guard allows it for any existing decision version)
     await c.query(
       `insert into risk_approvals (id, risk_decision_id, decision_version, action, actor, actor_context, reason, decision_snapshot, evidence_references) values (gen_random_uuid(), $1, $2, 'REJECT', 'operator:itest', '{}', $3, '{"itest":true}', '{}')`,
@@ -291,6 +299,11 @@ describe("valid append flows still work and extend the chain", () => {
     await registerSources(handle.db, "service:itest");
     const histSource = must(await resolveSource(handle.db, `itest-hist-${suffix}`));
     expect(await rebuildScorecard(handle.db, histSource, { asOf: new Date("2026-06-01T00:00:00Z"), createdBy: "service:itest" })).toMatchObject({ created: true, tier: "UNKNOWN" });
+    // Stage 4 / Task 4 real writers: pattern library, pattern metrics and an in-sample confidence estimate for that batch
+    await rebuildPatternLibrary(handle.db, "service:itest");
+    const histPatterns = await rebuildPatternMetrics(handle.db, { asOf: new Date("2026-06-01T00:00:00Z"), createdBy: "service:itest" });
+    expect(histPatterns.created).toBe(true);
+    expect(await runConfidenceEstimation(handle.db, { scope: { kind: "BATCH", batchId: histImport.batchId }, patternRunId: histPatterns.runId, createdBy: "service:itest", allowInSample: true })).toMatchObject({ created: true });
     const claim = await recordOptionsIntake(handle.db, { telegramMessageId: must(msg).id, parserVersion: `itest-${suffix}`, intake: { kind: "ambiguous", directives: [] } as never, assessment: undefined, master: null, premium: null });
     expect(claim.created).toBe(true);
     const pendingDecision = await createPendingRiskDecisionForSignal(handle.db, must(signal).id);

@@ -211,8 +211,8 @@ describe("architecture: research storage only", () => {
       expect(code, f).not.toMatch(/schema\.(telegramMessages|signals|optionsClaims|riskDecisions|riskApprovals|riskApprovalCards|orders|fills|positions|decisions|claimReviewCards|claimReviews|telegramIntakeOutbox|auditEvents)\b/);
       expect(code, f).not.toMatch(/@twins\/(risk|runtime-state|adapter|ingestion)|zerodha|kite|broker|api\.telegram\.org|fetch\(|node:https?|node:net|console\./i);
     }
-    // Task 1 import code only: the Task 2 outcome engine (src/outcomes/) writes the four outcome tables and the Task 3 scorecards (src/scorecards/) write only their five tables; both have their own, stricter boundary tests (outcomeDataset.test.ts, scorecards.test.ts); the live-table and network checks above still cover it
-    const inserts = src.filter((f) => !f.includes("/outcomes/") && !f.includes("/scorecards/")).flatMap((f) => [...strip(read(f)).matchAll(/\.insert\(\s*schema\.(\w+)\)/g)].map((m) => m[1]));
+    // Task 1 import code only: the Task 2 outcome engine (src/outcomes/) writes the four outcome tables and the Task 3 scorecards (src/scorecards/) and Task 4 patterns (src/patterns/) write only their own five tables each; both have their own, stricter boundary tests (outcomeDataset.test.ts, scorecards.test.ts, patterns.test.ts); the live-table and network checks above still cover it
+    const inserts = src.filter((f) => !f.includes("/outcomes/") && !f.includes("/scorecards/") && !f.includes("/patterns/")).flatMap((f) => [...strip(read(f)).matchAll(/\.insert\(\s*schema\.(\w+)\)/g)].map((m) => m[1]));
     expect([...new Set(inserts)].sort()).toEqual(["historicalImportBatches", "historicalImportCheckpoints", "historicalImportIssues", "historicalNormalizedRecords", "historicalSourceRecords"]);
   });
   it("the CLI prints counts, codes and ids only (no message field is ever passed to an output call) and has no compose service", () => {

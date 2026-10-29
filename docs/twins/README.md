@@ -18,6 +18,7 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Historical archive import: input contract, identity, dedup, normalization, commands, report (Stage 4 / Task 1) | [HISTORICAL_ARCHIVE_IMPORT.md](HISTORICAL_ARCHIVE_IMPORT.md) |
 | Historical outcome evaluation: data contract, rules, outcome taxonomy, options, evidence, commands (Stage 4 / Task 2) | [HISTORICAL_OUTCOME_EVALUATION.md](HISTORICAL_OUTCOME_EVALUATION.md) |
 | Source scorecards and trust tiers: identity, metrics, formulas, tiers, thresholds, commands (Stage 4 / Task 3) | [SOURCE_SCORECARDS.md](SOURCE_SCORECARDS.md) |
+| Pattern library and calibrated confidence: features, levels, metrics, uncertainty, caps, commands (Stage 4 / Task 4) | [PATTERN_LIBRARY_AND_CONFIDENCE.md](PATTERN_LIBRARY_AND_CONFIDENCE.md) |
 | Risk decision API, approval cards, approval persistence and security boundaries (Stage 3 / Task 6) | [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md) |
 | Market, liquidity and event-risk gates: sessions, expiry, blackouts, thresholds, outcomes (Stage 3 / Task 5) | [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md) |
 | Risk-decision expiry and loss circuit breakers, loss accounting, enforcement, alerts, operations (Stage 3 / Task 4) | [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md) |

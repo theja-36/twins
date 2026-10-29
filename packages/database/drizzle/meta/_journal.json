@@ -162,6 +162,13 @@
       "when": 1793309620670,
       "tag": "0022_historical_scorecards",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1793311299609,
+      "tag": "0023_historical_patterns",
+      "breakpoints": true
     }
   ]
 }
