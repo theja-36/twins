@@ -64,6 +64,13 @@
       "when": 1792856153526,
       "tag": "0008_approval_bot_review_log",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793262482798,
+      "tag": "0009_system_controls_kill_switch",
+      "breakpoints": true
     }
   ]
 }

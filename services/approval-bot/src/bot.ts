@@ -1,4 +1,5 @@
 import { randomBytes, randomUUID } from "node:crypto";
+import { evaluateSafety } from "@twins/runtime-state";
 import { buildCallbackData, parseCallbackData, verifyCallback } from "./callback";
 import { renderClaimCard, renderExpired, renderOutcome, renderTestCard, type CardContext, type ClaimRow } from "./card";
 import type { BotConfig } from "./config";
@@ -115,6 +116,13 @@ export class ApprovalBot {
   private async sendNew(state: { activatedAt: Date; paused: boolean }): Promise<number> {
     const now = this.d.now();
     if (state.paused || now.getTime() < this.sendBlockedUntil) return 0;
+    // Runtime safety boundary (Stage 1 / Task 2): creating or sending an approval card is creating a proposal for a human to act on. While the
+    // kill switch is active, or the safety state is unreadable, no card is created or sent (existing cards and records stay readable).
+    const refusal = await evaluateSafety("kill_switch_inactive", "approval_bot.card_creation");
+    if (refusal) {
+      await this.noteRejected(`safety_refused:card_creation:${refusal.reason}`);
+      return 0;
+    }
     const hour = await this.d.db.countSentSince(new Date(now.getTime() - 3600_000));
     const day = await this.d.db.countSentSince(new Date(now.getTime() - 86400_000));
     let budget = Math.min(this.d.cfg.maxPerCycle, this.d.cfg.maxPerHour - hour, this.d.cfg.maxPerDay - day);
@@ -194,6 +202,16 @@ export class ApprovalBot {
       return { kind: "rejected", reason: "wrong_message" };
     }
     const action = parsed.action === "a" ? "approve" : "reject";
+    if (action === "approve") {
+      // Runtime safety boundary (Stage 1 / Task 2): an approval is the step that leads toward an order, so it is never persisted while the
+      // kill switch is active or the safety state is unreadable. A REJECTION is risk-reducing and is still recorded.
+      const refusal = await evaluateSafety("kill_switch_inactive", "approval_bot.approval_decision");
+      if (refusal) {
+        await this.noteRejected(`safety_refused:approval:${refusal.reason}`, card.id);
+        await this.answer(cq.id, "System halted: approvals are blocked right now.");
+        return { kind: "rejected", reason: "safety_halt" };
+      }
+    }
     const result = await this.d.db.decide({ cardId: card.id, action, approverId, updateId, cardMessageId: cq.message.message_id });
     if (result.outcome !== "recorded") {
       await this.noteRejected(`callback_stale:${result.outcome}`, card.id);

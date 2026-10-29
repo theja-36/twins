@@ -9,7 +9,8 @@
   "references": [
     { "path": "../database" },
     { "path": "../dataquality" },
-    { "path": "../signals" }
+    { "path": "../signals" },
+    { "path": "../runtime-state" }
   ],
   "include": ["src"]
 }

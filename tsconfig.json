@@ -5,6 +5,7 @@
     { "path": "packages/database" },
     { "path": "packages/types" },
     { "path": "packages/shared" },
+    { "path": "packages/runtime-state" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },
     { "path": "packages/dataquality" },

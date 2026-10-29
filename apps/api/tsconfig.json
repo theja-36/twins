@@ -5,6 +5,7 @@
     "rootDir": "src"
   },
   "references": [
+    { "path": "../../packages/runtime-state" },
     { "path": "../../packages/config" },
     { "path": "../../packages/database" },
     { "path": "../../packages/types" },

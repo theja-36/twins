@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { assertIntakeEnabled } from "@twins/runtime-state";
 import { schema } from "@twins/database";
 import { resolveInstrument } from "@twins/ingestion";
 import type { Db } from "./db";
@@ -171,6 +172,8 @@ export async function createSignalFromTelegramMessage(
   telegramMessageId: string,
   options: CreateSignalOptions,
 ): Promise<CreateSignalOutcome> {
+  // Runtime safety boundary (Stage 1 / Task 2): no new signal row while intake is disabled, the kill switch is active, or the state is unreadable.
+  await assertIntakeEnabled("signals.createSignalFromTelegramMessage");
   const message = await loadMessage(db, telegramMessageId);
 
   const existing = await db
@@ -209,6 +212,7 @@ export async function reparseTelegramMessage(
   telegramMessageId: string,
   options: ReparseOptions,
 ): Promise<CreateSignalOutcome> {
+  await assertIntakeEnabled("signals.reparseTelegramMessage");
   const parsers = options.parsers ?? SHIPPED_TELEGRAM_PARSERS;
   const parser = parsers[options.parserVersion];
   if (!parser) throw new Error(`unknown parser version: ${options.parserVersion}`);

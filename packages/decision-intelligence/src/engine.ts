@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { assertKillSwitchInactive } from "@twins/runtime-state";
 import { schema } from "@twins/database";
 import { assembleSignalIntelligence, type AssembleSignalIntelligenceOptions } from "@twins/signals";
 import type { Db } from "./db";
@@ -69,6 +70,8 @@ export async function validateSignal(
   signalId: string,
   options: ValidateSignalOptions = {},
 ): Promise<ValidateSignalOutcome> {
+  // Runtime safety boundary (Stage 1 / Task 2): no new decision/validation record while the kill switch is active or the state is unreadable.
+  await assertKillSwitchInactive("decision.validateSignal");
   if (options.idempotencyKey) {
     const existingId = await findValidationByKey(db, options.idempotencyKey);
     if (existingId) return { validationId: existingId, reused: true };

@@ -21,6 +21,8 @@
  */
 
 import { UnrecoverableError, Worker, type Job } from "bullmq";
+import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
+import { withIntakeGate } from "./safetyGate.js";
 import { Redis } from "ioredis";
 import { createStructuredLogger, describeErrorSafely, type StructuredLogger } from "@twins/shared";
 import { buildJobLogContext } from "./correlationLog.js";
@@ -76,6 +78,12 @@ export const workerDb = createBoundedDb({
   idleTimeoutMillis: 30000,
 });
 
+// ─── Runtime safety state (Stage 1 / Task 2) ───────────────────────────────
+// Every critical loop reads the database-backed controls (kill switch, intake, trading) through this one per-process instance. Fail closed:
+// an unreadable state refuses. Not configured under NODE_ENV=test, where the vitest setup installs an explicit test source instead.
+if (process.env["NODE_ENV"] !== "test") {
+  configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: createStructuredLogger(undefined, { service: "worker" }) });
+}
 // ─── Register concrete adapters ────────────────────────────────────────────
 
 marketDataProviders.register(YAHOO_PROVIDER_NAME, new YahooFinanceAdapter());
@@ -208,6 +216,8 @@ export async function processTelegramQueueJob(
   db: Db = workerDb.db,
   options: TelegramJobOptions = {},
 ): Promise<void> {
+  // Runtime safety boundary: before ANYTHING is read, written or logged as started. A refusal is not a job failure (see safetyGate.ts).
+  await assertIntakeEnabled("worker.telegram_job");
   const log = (options.logger ?? defaultWorkerLogger).child(buildJobLogContext(job, correlationId));
   const startedAt = Date.now();
   log.info("worker.job.started");
@@ -247,6 +257,7 @@ export async function processTelegramEventsQueueJob(
   db: Db = workerDb.db,
   options: TelegramJobOptions = {},
 ): Promise<void> {
+  await assertIntakeEnabled("worker.telegram_events_job");
   const log = (options.logger ?? defaultWorkerLogger).child(buildJobLogContext(job, correlationId));
   const startedAt = Date.now();
   log.info("worker.job.started");
@@ -657,14 +668,14 @@ const createWorkerRedis = (): Redis => {
 };
 
 // In test environment, do not start active BullMQ worker event loops unless explicitly triggered
-export const signalWorker =
+export const signalWorker: Worker<SignalQueueJobPayload> =
   process.env["NODE_ENV"] === "test"
     ? (null as unknown as Worker<SignalQueueJobPayload>)
     : new Worker<SignalQueueJobPayload>(
         "signal_queue",
-        async (job: Job<SignalQueueJobPayload>) => {
-          await processSignalQueueJob(job);
-        },
+        // Intake gate (Stage 1 / Task 2): while intake is disabled, the kill switch is active or the state is unreadable the job goes back to
+        // the queue untouched (no attempt consumed, nothing lost) and the worker pauses; see ./safetyGate.ts.
+        withIntakeGate((job: Job<SignalQueueJobPayload>) => processSignalQueueJob(job), () => signalWorker, { logger: defaultWorkerLogger }),
         {
           connection: createWorkerRedis(),
           concurrency: 2,

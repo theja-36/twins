@@ -99,6 +99,27 @@ services:
     mem_limit: 384m
     cpus: 0.5
 
+  # EXPLICIT one-shot operations CLI for the runtime safety controls (kill switch / intake / trading). Not part of `up`; an operator action, e.g.
+  #   docker compose ... --profile ops run --rm safety-control status
+  #   docker compose ... --profile ops run --rm safety-control set --control KILL_SWITCH_ACTIVE --value true --reason "..." --changed-by <you>
+  # Authorization = holding this stack's database credential (same boundary as `migrate`). There is no HTTP endpoint for these controls.
+  safety-control:
+    <<: *hardening
+    restart: "no"
+    profiles: ["ops"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    command: ["node", "--import", "tsx", "/app/scripts/ops/safety-control.ts"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
+    mem_limit: 256m
+    cpus: 0.25
+
+    profiles: ["ops"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
   api:
     <<: *hardening
     image: twins-staging:${TWINS_IMAGE_TAG:-local}
@@ -119,6 +140,7 @@ services:
       # API uses the unique container names, which resolve only to the TWINS containers on twins_data. Only the API
       # overrides these; the shared anchor (worker, migrate, scheduler: single private network) is unchanged.
       DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@twins-staging-postgres-1:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      # The owner credential (POSTGRES_USER) is used only by migrate, safety-control and audit-verify.
       REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@twins-staging-redis-1:6379
       HOST: 0.0.0.0              # inside the container only; the host publish below is loopback-only
       PORT: "4000"

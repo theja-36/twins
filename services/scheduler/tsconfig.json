@@ -7,6 +7,7 @@
     "moduleResolution": "Bundler"
   },
   "references": [
+    { "path": "../../packages/runtime-state" },
     { "path": "../../packages/config" },
     { "path": "../../adapters/market" }
   ],

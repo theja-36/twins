@@ -28,6 +28,8 @@ import { Queue } from "bullmq";
 import { Redis } from "ioredis";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { YAHOO_PROVIDER_NAME } from "@twins/adapter-market";
+import { configureRuntimeState, createPooledStateSource } from "@twins/runtime-state";
+import { runScheduledJob } from "./scheduledJob.js";
 
 enforceLiveTradingGuard("scheduler");
 const config = loadConfig();
@@ -35,6 +37,12 @@ const config = loadConfig();
 console.log(
   `[scheduler] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,
 );
+
+// ─── Runtime safety state (Stage 1 / Task 2) ───────────────────────────────
+// The scheduler reads the database-backed controls through its own small lazy pool; an unreadable state fails closed for every
+// trade_state job (see ./scheduledJob.ts). Not configured under NODE_ENV=test, where the vitest setup installs an explicit test source.
+const runtimeStatePool = process.env["NODE_ENV"] === "test" ? undefined : createPooledStateSource(config.databaseUrl);
+if (runtimeStatePool) configureRuntimeState({ source: runtimeStatePool.source });
 
 // ─── Watchlist parsing ──────────────────────────────────────────────────────
 
@@ -128,7 +136,9 @@ async function enqueueMarketBarsForWatchlist(): Promise<void> {
 // ─── Cron schedule ──────────────────────────────────────────────────────────
 
 cron.schedule(cronExpression, () => {
-  void enqueueMarketBarsForWatchlist().catch((err: unknown) => {
+  void runScheduledJob({ name: "market_bars_enqueue", effect: "market_data" }, enqueueMarketBarsForWatchlist, {
+    log: (event, fields) => console.warn(`[scheduler] ${event} ${JSON.stringify(fields)}`),
+  }).catch((err: unknown) => {
     console.error(
       `[scheduler] failed to enqueue market_bars jobs: ${err instanceof Error ? err.message : String(err)}`,
     );
@@ -145,6 +155,7 @@ async function shutdown(signal: string): Promise<void> {
     console.error(`[scheduler] queue close failed: ${err instanceof Error ? err.message : String(err)}`);
   }
   await redis.quit().catch(() => redis.disconnect());
+  await runtimeStatePool?.close().catch(() => undefined);
   process.exit(0);
 }
 

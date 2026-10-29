@@ -78,6 +78,7 @@ export interface DecisionIntelligenceResult {
    */
   confidenceUnavailable?: boolean;
   structuralIssues: StructuralValidationIssue[];
+  /** Machine-readable reason when the stop-loss is not VALID (MISSING_STOP_LOSS, INVALID_STOP_LOSS, STOP_LOSS_DIRECTION_INVALID, ...). */
   bullThesis: Thesis;
   bearThesis: Thesis;
   counterThesis: CounterThesis;

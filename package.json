@@ -19,6 +19,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
+    "safety:control": "tsx scripts/ops/safety-control.ts",
     "options:preview": "tsx scripts/options-preview.ts",
     "options:viewer": "tsx apps/web/src/server.ts",
     "options:demo": "tsx scripts/options-demo.ts",

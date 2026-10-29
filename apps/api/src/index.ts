@@ -38,6 +38,7 @@ import { Redis } from "ioredis";
 import { eq } from "drizzle-orm";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { getDb, getPool, schema, type Db } from "@twins/database";
+import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusalError } from "@twins/runtime-state";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
 import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
@@ -116,6 +117,12 @@ function settleWithin<T>(p: Promise<T>, ms: number): Promise<Settled<T>> {
       (error: unknown) => { clearTimeout(t); resolve({ kind: "error", error }); },
     );
   });
+}
+
+/** 503 for a paused intake. The body names the reason code only; Retry-After tells a well-behaved client when to retry. */
+export function replyIntakePaused(reply: FastifyReply, log: StructuredLogger, refusal: SafetyRefusalError): FastifyReply {
+  log.warn("api.intake.paused", { operation: refusal.operation, reason: refusal.reason, statusCode: 503 });
+  return reply.code(503).header("Retry-After", "30").send({ error: "intake_paused", reason: refusal.reason });
 }
 
 export interface ApiOptions {
@@ -372,6 +379,11 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
       const requestId = request.id;
       // Defence in depth: the onRequest hook above already rejected unauthenticated requests.
       if (!isWebhookAuthorized(request)) return rejectWebhook(request, reply);
+
+      // Runtime safety boundary (Stage 1 / Task 2): while intake is disabled, the kill switch is active or the state is unreadable nothing is
+      // enqueued. 503 + Retry-After makes Telegram redeliver the update later, so nothing is lost by pausing.
+      const intakeRefusal = await evaluateSafety("intake", "api.webhook.telegram");
+      if (intakeRefusal) return replyIntakePaused(reply, structuredLog, intakeRefusal);
 
       // Authenticated. An externally supplied correlation id is UNTRUSTED: it is used only if it
       // is a short token of safe characters; otherwise an internal id is generated.
@@ -681,6 +693,8 @@ const isDirectRun =
 
 if (isDirectRun) {
   enforceLiveTradingGuard("api"); // before any configuration or connection (buildApp enforces it again)
+  // Runtime safety state for this process (Stage 1 / Task 2). The API reads it through the shared pool; unreadable state fails closed.
+  configureRuntimeState({ source: pgStateSource(getPool()), logger: createStructuredLogger(undefined, { service: "api" }) });
   const port = Number(readEnv("PORT") ?? "4000");
   const server = await buildApp();
   // HOST defaults to 0.0.0.0 (previous behaviour); set HOST=127.0.0.1 for loopback-only local runs.

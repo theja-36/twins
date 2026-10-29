@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@twins/runtime-state": "*",
     "@twins/adapter-telegram": "*",
     "@twins/config": "*",
     "@twins/database": "*",

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { schema } from "@twins/database";
+import { assertIntakeEnabled } from "@twins/runtime-state";
 import type { Db } from "../db";
 import type { AssessmentReason, OptionsAssessment } from "./assess";
 import type { OptionsContractMaster } from "./master";
@@ -46,6 +47,8 @@ const NOT_ASSESSED: Record<"ambiguous" | "unsupported", AssessmentReason> = {
  * Never creates a signal, instrument, approval or order.
  */
 export async function recordOptionsIntake(db: Db, input: RecordOptionsIntakeInput): Promise<RecordOptionsIntakeResult> {
+  // Runtime safety boundary (Stage 1 / Task 2): no new claim row while intake is disabled, the kill switch is active, or the state is unreadable.
+  await assertIntakeEnabled("signals.recordOptionsIntake");
   const { intake } = input;
   const assessed = intake.kind === "claim" ? input.assessment : undefined;
   if (intake.kind === "claim" && !assessed) throw new Error("recordOptionsIntake: a claim requires its assessment");

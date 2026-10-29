@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { evaluateSafety } from "@twins/runtime-state";
 import {
   channelIdentifierOf,
   normalizeUserCaptureMessage,
@@ -147,6 +148,15 @@ export function registerInternalIngest(app: FastifyInstance, deps: InternalInges
       const received = now();
       const correlationId = newCorrelationId();
       const log = deps.log.child({ requestId: request.id, correlationId });
+
+      // Runtime safety boundary (Stage 1 / Task 2): the capture client is authenticated by now. While intake is disabled, the kill switch is
+      // active or the state is unreadable nothing is enqueued; 503 + Retry-After makes the capture client keep the event in its bounded
+      // queue and retry later (it treats 5xx as transient and never gives up on the channel).
+      const intakeRefusal = await evaluateSafety("intake", "api.internal_ingest.telegram_user");
+      if (intakeRefusal) {
+        log.warn("capture.ingest.rejected", { reason: "intake_paused", safetyReason: intakeRefusal.reason, statusCode: 503 });
+        return reply.code(503).header("Retry-After", "30").send({ error: "intake_paused", reason: intakeRefusal.reason });
+      }
 
       const validation = validateIngestBody(request.body, received.getTime());
       if (!validation.ok) {

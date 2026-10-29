@@ -52,7 +52,21 @@ try {
     const got = tr.rows.map((r) => r.tgname).join(",");
     if (got !== `${t}_no_truncate,${t}_no_update_delete`) throw new Error(`append-only triggers missing or unexpected on ${t}: [${got}]`);
   }
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present`);
+  // 0009: runtime safety controls: three seeded rows with the documented defaults, one seed event each, and the guard/audit/append-only triggers.
+  const controls = await client.query("select control_name, value from system_controls order by control_name");
+  const got = controls.rows.map((r) => `${r.control_name}=${r.value}`).join(",");
+  if (controls.rowCount !== 3 || !/INTAKE_ENABLED=(true|false),KILL_SWITCH_ACTIVE=(true|false),TRADING_ENABLED=(true|false)/.test(got)) throw new Error(`system_controls (0009) must hold exactly the three controls, found [${got}]`);
+  const seeds = await client.query("select count(*)::int as n from system_control_events where event_type = 'seed'");
+  if (seeds.rows[0].n !== 3) throw new Error(`expected 3 seed events from 0009, found ${seeds.rows[0].n}`);
+  for (const [table, want] of [
+    ["system_controls", "system_controls_audit_insert,system_controls_audit_update,system_controls_before_update,system_controls_no_delete,system_controls_no_truncate"],
+    ["system_control_events", "system_control_events_chain_after_insert,system_control_events_chain_before_insert,system_control_events_no_truncate,system_control_events_no_update_delete"], // (0009 created the two append-only guards; 0010 added the chain triggers)
+  ]) {
+    const tr = await client.query("select tgname from pg_trigger where tgrelid = $1::regclass and not tgisinternal order by tgname", [`public.${table}`]);
+    const names9 = tr.rows.map((r) => r.tgname).join(",");
+    if (names9 !== want) throw new Error(`triggers missing or unexpected on ${table}: [${names9}]`);
+  }
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present`);
 } finally {
   await client.end();
 }
