@@ -29,3 +29,4 @@ export * from "./historicalImport";
 export * from "./historicalOutcomes";
 export * from "./historicalScorecards";
 export * from "./historicalPatterns";
+export * from "./agents";
