@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../support/apiWithTestPolicy";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 /** A clearly test-owned fake queue. There is no NODE_ENV-based stub in the API: tests that do not enqueue still inject this. */
 const testOwnedFakeQueue = () => ({ add: vi.fn().mockResolvedValue({ id: "test-owned-fake-job" }) });
@@ -43,7 +44,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: { add: mockQueueAdd },
+      intakeOutbox: memoryOutbox(), telegramQueue: { add: mockQueueAdd },
     });
 
     const response = await app.inject({
@@ -73,7 +74,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: { add: mockQueueAdd },
+      intakeOutbox: memoryOutbox(), telegramQueue: { add: mockQueueAdd },
     });
 
     const response = await app.inject({
@@ -104,7 +105,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: { add: mockQueueAdd },
+      intakeOutbox: memoryOutbox(), telegramQueue: { add: mockQueueAdd },
     });
 
     const response = await app.inject({
@@ -128,9 +129,9 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     expect(response.statusCode).toBe(202);
     expect(response.json()).toEqual({ status: "accepted" });
     expect(mockQueueAdd).toHaveBeenCalledOnce();
-    const [jobType, _payload, options] = mockQueueAdd.mock.calls[0] as [string, unknown, { jobId: string }];
-    expect(jobType).toBe("telegram_messages");
-    expect(options.jobId).toBe("tg-tg_chat_-1001234567890-42");
+    const [jobType, payload, options] = mockQueueAdd.mock.calls[0] as [string, { outboxId: string }, { jobId: string }];
+    expect(jobType).toBe("telegram_outbox"); // Redis carries only the durable outbox row id
+    expect(options.jobId).toBe(`outbox-${payload.outboxId}-0`);
   });
 
   it("handles non-text updates cleanly with 200 ignored without enqueuing", async () => {
@@ -138,7 +139,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: { add: mockQueueAdd },
+      intakeOutbox: memoryOutbox(), telegramQueue: { add: mockQueueAdd },
     });
 
     const response = await app.inject({
@@ -164,12 +165,12 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     expect(mockQueueAdd).not.toHaveBeenCalled();
   });
 
-  it("fails with 500 when queue enqueue fails and does not acknowledge acceptance", async () => {
+  it("still acknowledges (202) when the Redis enqueue fails AFTER the durable write; the row is recoverable by the reconciler", async () => {
     const failingQueueAdd = vi.fn().mockRejectedValue(new Error("Redis connection dropped"));
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: { add: failingQueueAdd },
+      intakeOutbox: memoryOutbox(), telegramQueue: { add: failingQueueAdd },
     });
 
     const response = await app.inject({
@@ -190,7 +191,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
       },
     });
 
-    expect(response.statusCode).toBe(500);
+    expect(response.statusCode).toBe(202);
     expect(failingQueueAdd).toHaveBeenCalledOnce();
   });
 
@@ -198,7 +199,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: testOwnedFakeQueue(),
+      intakeOutbox: memoryOutbox(), telegramQueue: testOwnedFakeQueue(),
     });
 
     // Missing auth header
@@ -223,7 +224,7 @@ describe("API Webhook Authentication & Security (R0A / SEC-01, SEC-02, SEC-03)",
     const app = await buildApp({
       apiKey: validApiKey,
       telegramWebhookSecret: validWebhookSecret,
-      telegramQueue: testOwnedFakeQueue(),
+      intakeOutbox: memoryOutbox(), telegramQueue: testOwnedFakeQueue(),
     });
 
     const response = await app.inject({

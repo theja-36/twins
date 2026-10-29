@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { evaluateSafety } from "@twins/runtime-state";
 import {
@@ -8,14 +7,17 @@ import {
   type TelegramIntakePolicy,
 } from "@twins/adapter-telegram";
 import { constantTimeCompare, newCorrelationId, type StructuredLogger } from "@twins/shared";
+import { buildDeletionOutboxInput, buildMessageOutboxInput } from "@twins/ingestion";
+import type { IntakeService } from "./intakeService.js";
 import { validateIngestBody, type ValidatedIngest } from "./internalIngestValidation.js";
 
 /**
  * POST /internal/ingest/telegram-user - the ONLY way the read-only User API capture service hands messages to TWINS.
  *
  * Exists only when TWINS_CAPTURE_INGEST_TOKEN is configured (otherwise the route is absent: 404). Never given a reverse-proxy
- * route; as a second line of defence any request that carries proxy headers is refused. The API stays write-free: it
- * validates, applies the approved-chat gate and enqueues; the worker stores. Options-only and parsing stay in the worker.
+ * route; as a second line of defence any request that carries proxy headers is refused. The API validates, applies the approved-chat gate and
+ * writes each accepted entry to the durable PostgreSQL intake outbox BEFORE acknowledging it (a Redis job carrying only the row id follows; a lost
+ * job is repaired by the worker's reconciler). The worker does the real storage; options-only and parsing stay in the worker.
  */
 export const INTERNAL_INGEST_PATH = "/internal/ingest/telegram-user";
 export const INTERNAL_INGEST_BODY_LIMIT = 2 * 1024 * 1024;
@@ -80,21 +82,12 @@ export class WindowCounter {
   }
 }
 
-export interface AddCaptureJob {
-  name: "telegram_messages" | "telegram_events";
-  jobId: string;
-  data: unknown;
-  /** Absolute deadline (epoch ms) for the whole request's queue work. */
-  deadlineMs: number;
-}
-export type AddCaptureJobResult = "added" | "duplicate";
-
 export interface InternalIngestDeps {
   token: string;
   policy: Pick<TelegramIntakePolicy, "isChatApproved">;
   log: StructuredLogger;
-  /** Bounded enqueue provided by the API (throws the API's generic 503 error when the queue is unavailable). */
-  addJob: (job: AddCaptureJob) => Promise<AddCaptureJobResult>;
+  /** Durable acceptance (outbox row first, Redis job second). Throws the API's generic 503 error when the outbox cannot be written. */
+  intake: IntakeService;
   exchange: string;
   instrumentType: string;
   caps: CaptureCaps;
@@ -113,8 +106,6 @@ function bearerMatches(header: string | undefined, token: string): boolean {
   if (scheme?.toLowerCase() !== "bearer" || !value || rest.length > 0) return false;
   return constantTimeCompare(value, token);
 }
-
-const sha12 = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex").slice(0, 12);
 
 export function registerInternalIngest(app: FastifyInstance, deps: InternalIngestDeps): void {
   const now = deps.now ?? (() => new Date());
@@ -205,12 +196,14 @@ export function registerInternalIngest(app: FastifyInstance, deps: InternalInges
             ignored += 1; // no text/caption: nothing to store (same as the Bot API path)
             continue;
           }
-          const outcome = await deps.addJob({
-            name: "telegram_messages",
-            // Same deterministic job id as the Bot API path, so live and history captures of one message collapse.
-            jobId: `tg-${normalized.channelIdentifier}-${normalized.externalMessageId}`,
-            deadlineMs: deadline,
-            data: {
+          // Same identity as the Bot API path (channel + revision identity), so live and history captures of one message collapse.
+          const outcome = await deps.intake.submit(
+            buildMessageOutboxInput({
+              intakeSource: "user_capture",
+              normalized,
+              correlationId,
+              receivedAt: observedAt,
+              payload: {
               jobType: "telegram_messages",
               providerName: USER_CAPTURE_PROVIDER_NAME,
               correlation,
@@ -221,9 +214,12 @@ export function registerInternalIngest(app: FastifyInstance, deps: InternalInges
                 instrumentType: deps.instrumentType,
                 capture: captureMeta(observedAt),
               },
-            },
-          });
-          if (outcome === "added") accepted += 1;
+              },
+            }),
+            deadline,
+            log,
+          );
+          if (outcome.outcome === "accepted") accepted += 1;
           else duplicates += 1;
         }
         return { accepted, duplicates, ignored };
@@ -232,18 +228,24 @@ export function registerInternalIngest(app: FastifyInstance, deps: InternalInges
       async function enqueueDeletion(v: ValidatedIngest, observedAt: Date, deadline: number) {
         const ids = [...new Set(v.deletedMessageIds)].sort((a, b) => a - b).map(String);
         const channelIdentifier = channelIdentifierOf(v.chat.id);
-        const outcome = await deps.addJob({
-          name: "telegram_events",
-          jobId: `tg-events-del-${channelIdentifier}-${sha12(ids.join(","))}`,
-          deadlineMs: deadline,
-          data: {
-            jobType: "telegram_events",
-            providerName: USER_CAPTURE_PROVIDER_NAME,
-            correlation: { correlationId, requestId: request.id, receivedAt: observedAt.toISOString() },
-            events: { kind: "delete", channelIdentifier, chatId: String(v.chat.id), messageIds: ids, capture: captureMeta(observedAt) },
-          },
-        });
-        return { accepted: outcome === "added" ? ids.length : 0, duplicates: outcome === "duplicate" ? ids.length : 0, ignored: 0 };
+        const outcome = await deps.intake.submit(
+          buildDeletionOutboxInput({
+            intakeSource: "user_capture",
+            channelIdentifier,
+            messageIds: ids,
+            correlationId,
+            receivedAt: observedAt,
+            payload: {
+              jobType: "telegram_events",
+              providerName: USER_CAPTURE_PROVIDER_NAME,
+              correlation: { correlationId, requestId: request.id, receivedAt: observedAt.toISOString() },
+              events: { kind: "delete", channelIdentifier, chatId: String(v.chat.id), messageIds: ids, capture: captureMeta(observedAt) },
+            },
+          }),
+          deadline,
+          log,
+        );
+        return { accepted: outcome.outcome === "accepted" ? ids.length : 0, duplicates: outcome.outcome === "duplicate" ? ids.length : 0, ignored: 0 };
       }
     },
   );

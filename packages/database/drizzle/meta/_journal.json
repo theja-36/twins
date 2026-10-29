@@ -85,6 +85,13 @@
       "when": 1793266582584,
       "tag": "0011_stop_loss_validations",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793270586793,
+      "tag": "0012_telegram_intake_outbox",
+      "breakpoints": true
     }
   ]
 }

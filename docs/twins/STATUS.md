@@ -11,6 +11,9 @@
 ## 1a. Implementation checkpoint (2026-10-29)
 **Stage 1 (Safety Core) is complete, approved and committed** on branch `feat/stage1-safety-core` as seven reviewable commits (shared live-trading guard; database-backed runtime state and kill switch; immutable audit trail and hash-chain verifier; mandatory stop-loss invariant; Stage 1 safety tests; docs; hosted CI), each production commit type-checked on its own. Design and evidence: [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md), [MANDATORY_STOP_LOSS.md](MANDATORY_STOP_LOSS.md), [CI.md](CI.md), [phases/01-operations-foundation/TEST_EVIDENCE.md](phases/01-operations-foundation/TEST_EVIDENCE.md). The branch is not merged to `main` and nothing is deployed. The table below keeps the earlier phase numbering; Stage 1 delivered parts of P01 and P06 and is not a phase advance.
 
+## 1b. Stage 2 progress (2026-10-29)
+Stage 2 / Task 1 (commit checkpoint + hosted CI) is complete and **merged to `main`** (PR #19, hosted CI green on `main`). Stage 2 / Task 2 (durable Telegram intake outbox) is implemented on branch `feat/stage2-durable-outbox`: an acknowledged message is now a committed PostgreSQL row before any Redis work, with claim/retry/dead-letter/reconcile and runtime-safety gating. Design: [DURABLE_INTAKE_OUTBOX.md](DURABLE_INTAKE_OUTBOX.md). Not merged to `main` and not deployed to staging.
+
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |
 |---|---|---|---|---|

@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   index,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -159,5 +160,53 @@ export const telegramMessageEvents = pgTable(
       "telegram_message_events_raw_meta_size_check",
       sql`octet_length(${table.rawMeta}::text) <= 4096`,
     ),
+  }),
+);
+
+/**
+ * Durable intake outbox (Stage 2 / Task 2). Every Telegram message the API acknowledges is first written here, in PostgreSQL; Redis only
+ * carries the row id. Identity and payload columns are immutable (trigger); only the processing-state columns change, and COMPLETED /
+ * DEAD_LETTER are terminal. Rows are never deleted (the runtime role has no DELETE grant and a trigger refuses it).
+ */
+export const telegramIntakeOutbox = pgTable(
+  "telegram_intake_outbox",
+  {
+    id: idColumn(),
+    /** message | edit (a later revision, own identity) | deletion (one row per distinct set of observed deletions). */
+    messageType: text("message_type").notNull(),
+    /** bot_webhook | user_capture. */
+    intakeSource: text("intake_source").notNull(),
+    /** The message's own revision identity (externalMessageId); for a deletion a digest of the sorted deleted ids. */
+    sourceMessageId: text("source_message_id").notNull(),
+    channelId: text("channel_id").notNull(),
+    channelType: text("channel_type").notNull().default("telegram_chat"),
+    authorId: text("author_id"),
+    /** The exact job payload the worker processes (untrusted external content, exactly like telegram_messages.raw_payload). */
+    rawPayload: jsonb("raw_payload").notNull(),
+    correlationId: text("correlation_id"),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    availableAt: timestamp("available_at", { withTimezone: true }).notNull().defaultNow(),
+    /** Set when a Redis job for the current attempt was accepted; NULL means "not (yet) enqueued", which the reconciler repairs. */
+    enqueuedAt: timestamp("enqueued_at", { withTimezone: true }),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(8),
+    status: text("status").notNull().default("PENDING"),
+    /** Error CODE / class name only, at most 200 characters: never message content. */
+    lastError: text("last_error"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedBy: text("locked_by"),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    createdAt: createdAtColumn(),
+    updatedAt: updatedAtColumn(),
+  },
+  (table) => ({
+    identityUnique: uniqueIndex("telegram_intake_outbox_identity_unique").on(table.channelId, table.sourceMessageId, table.messageType),
+    dueIdx: index("telegram_intake_outbox_due_idx").on(table.status, table.availableAt),
+    statusCheck: check("telegram_intake_outbox_status_check", sql`${table.status} in ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'DEAD_LETTER')`),
+    typeCheck: check("telegram_intake_outbox_type_check", sql`${table.messageType} in ('message', 'edit', 'deletion')`),
+    sourceCheck: check("telegram_intake_outbox_source_check", sql`${table.intakeSource} in ('bot_webhook', 'user_capture')`),
+    attemptsCheck: check("telegram_intake_outbox_attempts_check", sql`${table.attemptCount} >= 0 and ${table.maxAttempts} between 1 and 100`),
+    lockCheck: check("telegram_intake_outbox_lock_check", sql`(${table.status} = 'PROCESSING') = (${table.lockedAt} is not null and ${table.lockedBy} is not null)`),
+    completedCheck: check("telegram_intake_outbox_completed_check", sql`(${table.status} = 'COMPLETED') = (${table.completedAt} is not null)`),
   }),
 );

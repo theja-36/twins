@@ -1,6 +1,6 @@
 /**
  * Dedicated child worker process for the crash/recovery test. Runs the REAL queue handler
- * (`processTelegramQueueJob`) against the guarded twins_ci database and the test Redis, on a
+ * (`processSignalQueueJob`, i.e. the durable-outbox claim + the unchanged pipeline) against the guarded twins_ci database and the test Redis, on a
  * test-owned queue passed as `--queue=<name>`.
  *
  *   --mode=crash    holds BEFORE the first INSERT into `signals` (after the message row is committed;
@@ -18,8 +18,8 @@ import { getTableName } from "drizzle-orm";
 import { createBoundedDb, type Db } from "../../../../packages/database/src/index";
 import { createStructuredLogger } from "../../../../packages/shared/src/index";
 import { configureRuntimeState, pgStateSource } from "../../../../packages/runtime-state/src/index";
-import { type TelegramJobPayload } from "../../../../services/worker/src/index";
-import { processTelegramQueueJob } from "../../../support/workerWithTestPolicy";
+import { type SignalQueueJobPayload } from "../../../../services/worker/src/index";
+import { processSignalQueueJob } from "../../../support/workerWithTestPolicy";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../../adapters/market/src/index";
 import { syntheticMarketProvider } from "../harness";
 
@@ -93,9 +93,9 @@ async function main(): Promise<void> {
       : dbHandle.db;
 
   const redis = new Redis(process.env.REDIS_URL ?? "", { maxRetriesPerRequest: null });
-  const worker = new Worker<TelegramJobPayload>(
+  const worker = new Worker<SignalQueueJobPayload>(
     queueName,
-    async (job: Job<TelegramJobPayload>) => processTelegramQueueJob(job, undefined, db, { logger }),
+    async (job: Job<SignalQueueJobPayload>) => processSignalQueueJob(job, undefined, db, { logger, outboxRetryPolicy: { baseMs: 50, maxMs: 200 } }),
     { connection: redis, concurrency: 1, lockDuration: 3000, stalledInterval: 1000, maxStalledCount: 1 },
   );
   await worker.waitUntilReady();

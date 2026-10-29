@@ -5,6 +5,7 @@ import { INTERNAL_INGEST_BODY_LIMIT, INTERNAL_INGEST_PATH } from "../../../apps/
 import { MAX_MESSAGES_PER_CALL } from "../../../apps/api/src/internalIngestValidation";
 import { createTelegramIntakePolicy, normalizeRawUpdate, revisionExternalId } from "../../../adapters/telegram/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 const API_KEY = "internal-test-api-key-0123456789";
 const WEBHOOK_SECRET = "internal-test-webhook-secret-0123";
@@ -14,11 +15,31 @@ const OTHER = -1002000000002;
 const CANARY = "CANARY-CHANNEL-TEXT-91ac";
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
-function fakeQueue() {
+/**
+ * Test-owned fake Redis queue + in-memory outbox. The API now enqueues only `{ outboxId }`; to keep these tests asserting the SAME payload
+ * content they always did, `jobs` is keyed by the legacy per-message job id and holds the payload stored in the outbox row that the Redis
+ * job points at. Like BullMQ, a repeated Redis jobId is ignored.
+ */
+function fakeQueue(outbox: ReturnType<typeof memoryOutbox> = memoryOutbox()) {
   const jobs = new Map<string, { name: string; data: Loose; opts: Loose }>();
+  const seen = new Set<string>();
+  const queueCalls: unknown[][] = [];
+  const legacyId = (e: { messageType: string; channelId: string; sourceMessageId: string }) =>
+    e.messageType === "deletion" ? `tg-events-del-${e.channelId}-${e.sourceMessageId.slice(4)}` : `tg-${e.channelId}-${e.sourceMessageId}`;
   return {
     jobs,
-    add: vi.fn(async (name: string, data: Loose, opts: Loose) => { jobs.set(opts.jobId, { name, data, opts }); return { id: opts.jobId }; }),
+    outbox,
+    /** The outbox row the n-th Redis job points at. */
+    entry: (n: number) => outbox.list().find((e) => e.id === (queueCalls[n]?.[1] as Loose | undefined)?.["outboxId"]),
+    add: vi.fn(async (name: string, data: Loose, opts: Loose) => {
+      queueCalls.push([name, data, opts]);
+      if (seen.has(opts.jobId)) return { id: opts.jobId };
+      seen.add(opts.jobId);
+      const entry = outbox.list().find((e) => e.id === data.outboxId);
+      if (!entry) throw new Error("redis job points at an outbox row that does not exist");
+      jobs.set(legacyId(entry), { name: String(entry.payload["jobType"]), data: entry.payload as Loose, opts });
+      return { id: opts.jobId };
+    }),
     getJob: vi.fn(async (id: string) => (jobs.has(id) ? { id } : undefined)),
   };
 }
@@ -30,6 +51,7 @@ async function make(options: Record<string, unknown> = {}) {
     apiKey: API_KEY,
     telegramWebhookSecret: WEBHOOK_SECRET,
     telegramQueue: queue as never,
+    intakeOutbox: queue.outbox,
     telegramIntakePolicy: createTelegramIntakePolicy({ allowedChatIds: String(CHAT_ID) }),
     structuredLogger: createStructuredLogger((r) => records.push(r)),
     captureIngestToken: TOKEN,
@@ -134,7 +156,8 @@ describe("authentication happens before the body is read", () => {
     });
     expect(res.statusCode).toBe(202);
     expect(queue.add).toHaveBeenCalledTimes(1);
-    expect((queue.add.mock.calls[0]?.[1] as Loose).telegram.capture).toBeUndefined(); // the bot path carries no capture provenance
+    expect(queue.entry(0)?.intakeSource).toBe("bot_webhook");
+    expect((queue.entry(0)?.payload as Loose)["telegram"].capture).toBeUndefined(); // the bot path carries no capture provenance
   });
 });
 
@@ -229,9 +252,12 @@ describe("accepted traffic", () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ accepted: 1, duplicates: 0, ignored: 1, rejected: [] });
     expect(queue.add).toHaveBeenCalledTimes(1);
-    const [name, data, opts] = queue.add.mock.calls[0] as [string, Loose, Loose];
-    expect(name).toBe("telegram_messages");
-    expect(opts).toMatchObject({ jobId: `tg-tg_chat_${CHAT_ID}-837678`, attempts: 3 });
+    const [name, redisData, opts] = queue.add.mock.calls[0] as [string, Loose, Loose];
+    const data = queue.entry(0)?.payload as Loose; // the payload lives in the outbox row; Redis carries only its id
+    expect(name).toBe("telegram_outbox");
+    expect(Object.keys(redisData).sort()).toEqual(["jobType", "outboxId"]);
+    expect(opts).toMatchObject({ jobId: `outbox-${redisData["outboxId"]}-0`, attempts: 3 });
+    expect(queue.entry(0)).toMatchObject({ channelId: `tg_chat_${CHAT_ID}`, sourceMessageId: "837678", messageType: "message", intakeSource: "user_capture" });
     expect(data.jobType).toBe("telegram_messages");
     expect(data.providerName).toBe("telegram-user-capture");
     expect(data.telegram.normalizedMessage).toMatchObject({ channelIdentifier: `tg_chat_${CHAT_ID}`, chatId: String(CHAT_ID), externalMessageId: "837678", rawText: text });
@@ -254,8 +280,8 @@ describe("accepted traffic", () => {
     const bot = normalizeRawUpdate({ update_id: 1, edited_channel_post: { message_id: 42, date, edit_date: editDate, chat: { id: CHAT_ID, type: "channel" }, text } });
     const expectedId = revisionExternalId("42", editDate, text);
     expect(bot?.externalMessageId).toBe(expectedId);
-    expect(queue.add.mock.calls[0]?.[2]).toMatchObject({ jobId: `tg-tg_chat_${CHAT_ID}-${expectedId}` });
-    expect((queue.add.mock.calls[0]?.[1] as Loose).telegram.normalizedMessage).toMatchObject({ originMessageId: "42", externalMessageId: expectedId });
+    expect(queue.entry(0)).toMatchObject({ channelId: `tg_chat_${CHAT_ID}`, sourceMessageId: expectedId, messageType: "edit" });
+    expect((queue.entry(0)?.payload as Loose)["telegram"].normalizedMessage).toMatchObject({ originMessageId: "42", externalMessageId: expectedId });
   });
   it("duplicates are idempotent: the same message twice, and live then history, create ONE job", async () => {
     const { post, queue } = await make();
@@ -263,7 +289,8 @@ describe("accepted traffic", () => {
     expect((await post(live([msg(10)]))).json()).toMatchObject({ accepted: 0, duplicates: 1 });
     const second = await post(history([msg(10), msg(11)]));
     expect(second.json()).toMatchObject({ accepted: 1, duplicates: 1 });
-    expect(queue.add).toHaveBeenCalledTimes(2); // ids 10 and 11 only
+    expect(queue.outbox.list()).toHaveLength(2); // ids 10 and 11 only: one outbox row each (a repeated Redis jobId is ignored by BullMQ)
+    expect(queue.jobs.size).toBe(2);
     const history11 = queue.jobs.get(`tg-tg_chat_${CHAT_ID}-11`)?.data as Loose;
     expect(history11.telegram.capture.captureMethod).toBe("api_history");
     expect(Date.parse(history11.telegram.capture.importedAt)).toBe(Date.parse(history11.telegram.capture.observedAt));
@@ -274,13 +301,13 @@ describe("accepted traffic", () => {
     const res = await post(del([30, 10, 20, 10], { clientObservedAt: "2026-10-22T12:00:00Z" }));
     expect(res.json()).toEqual({ accepted: 3, duplicates: 0, ignored: 0, rejected: [] });
     expect(queue.add).toHaveBeenCalledTimes(1);
-    const [name, data, opts] = queue.add.mock.calls[0] as [string, Loose, Loose];
-    expect(name).toBe("telegram_events");
+    const data = queue.entry(0)?.payload as Loose;
+    expect(queue.entry(0)).toMatchObject({ messageType: "deletion", channelId: `tg_chat_${CHAT_ID}` });
     expect(data).toMatchObject({ jobType: "telegram_events", events: { kind: "delete", channelIdentifier: `tg_chat_${CHAT_ID}`, chatId: String(CHAT_ID), messageIds: ["10", "20", "30"], capture: { captureMethod: "api_live", clientObservedAt: "2026-10-22T12:00:00Z" } } });
-    expect(opts.jobId).toMatch(/^tg-events-del-tg_chat_-1001000000001-[0-9a-f]{12}$/);
+    expect(queue.entry(0)?.sourceMessageId).toMatch(/^del-[0-9a-f]{12}$/);
     expect(JSON.stringify(data)).not.toMatch(/"text"|rawText/);
     expect((await post(del([20, 30, 10]))).json()).toMatchObject({ accepted: 0, duplicates: 3 });
-    expect(queue.add).toHaveBeenCalledTimes(1);
+    expect(queue.outbox.list()).toHaveLength(1);
   });
 });
 
@@ -315,27 +342,43 @@ describe("caps", () => {
 });
 
 describe("queue failures and log hygiene", () => {
-  it("a Redis outage becomes a generic 503 that leaks nothing", async () => {
+  it("a Redis outage AFTER the durable write is still an acceptance: 200, the row is in the outbox, nothing leaks, the reconciler will enqueue it", async () => {
     const queue = fakeQueue();
-    queue.getJob.mockRejectedValue(Object.assign(new Error(`connect ECONNREFUSED redis://:secret@host ${CANARY}`), { code: "ECONNREFUSED" }));
-    const { post } = await make({ telegramQueue: queue });
+    queue.add.mockRejectedValue(Object.assign(new Error(`connect ECONNREFUSED redis://:secret@host ${CANARY}`), { code: "ECONNREFUSED" }));
+    const { post, records } = await make({ telegramQueue: queue, intakeOutbox: queue.outbox });
+    const res = await post(live([msg(1)]));
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ accepted: 1 });
+    expect(res.body).not.toMatch(/secret|ECONNREFUSED|redis/i);
+    expect(queue.outbox.list()).toHaveLength(1);
+    expect(queue.outbox.list()[0]?.enqueued).toBe(false); // never marked enqueued: the reconciler repairs it
+    expect(records.some((r) => r.event === "outbox.enqueue_failed_but_durable")).toBe(true);
+    expect(JSON.stringify(records)).not.toMatch(/secret|redis:\/\//); // the safe error CODE may be logged, never the message
+    expect(JSON.stringify(records)).not.toContain(CANARY);
+  });
+  it("a hanging or erroring enqueue after the durable write is bounded and still a 200; the outbox row is the acceptance", async () => {
+    const hanging = fakeQueue();
+    hanging.add.mockImplementation(() => new Promise(() => undefined));
+    const slow = await make({ telegramQueue: hanging, intakeOutbox: hanging.outbox, enqueueTimeoutMs: 250 });
+    expect((await slow.post(live([msg(1)]))).statusCode).toBe(200);
+    expect(hanging.outbox.list()).toHaveLength(1);
+    const broken = fakeQueue();
+    broken.add.mockRejectedValue(new Error(`boom ${CANARY}`));
+    const bad = await make({ telegramQueue: broken, intakeOutbox: broken.outbox });
+    const res = await bad.post(live([msg(1)]));
+    expect(res.statusCode).toBe(200);
+    expect(res.body).not.toContain(CANARY);
+    expect(broken.outbox.list()).toHaveLength(1);
+  });
+  it("if the outbox cannot be written nothing is acknowledged: generic 503 that leaks nothing (fail closed)", async () => {
+    const queue = fakeQueue(memoryOutbox({ failRecord: true }));
+    const { post, records } = await make({ telegramQueue: queue, intakeOutbox: queue.outbox });
     const res = await post(live([msg(1)]));
     expect(res.statusCode).toBe(503);
     expect(res.json()).toMatchObject({ message: "Service Unavailable" });
-    expect(res.body).not.toMatch(/secret|ECONNREFUSED|redis/i);
-    expect(res.body).not.toContain(CANARY);
-  });
-  it("an enqueue timeout is a 503 and an unexpected enqueue error a generic 500", async () => {
-    const hanging = fakeQueue();
-    hanging.add.mockImplementation(() => new Promise(() => undefined));
-    const slow = await make({ telegramQueue: hanging, enqueueTimeoutMs: 250 });
-    expect((await slow.post(live([msg(1)]))).statusCode).toBe(503);
-    const broken = fakeQueue();
-    broken.add.mockRejectedValue(new Error(`boom ${CANARY}`));
-    const bad = await make({ telegramQueue: broken });
-    const res = await bad.post(live([msg(1)]));
-    expect(res.statusCode).toBe(500);
-    expect(res.body).not.toContain(CANARY);
+    expect(res.body).not.toMatch(/ECONNREFUSED|database/i);
+    expect(queue.add).not.toHaveBeenCalled();
+    expect(records.some((r) => r.event === "outbox.persist_failed")).toBe(true);
   });
   it("logs contain ids, counts and reason codes only: never the text, the token, entities or the body", async () => {
     const { post, records } = await make();
