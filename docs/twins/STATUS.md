@@ -14,6 +14,9 @@
 ## 1b. Stage 2 progress (2026-10-29)
 Stage 2 / Task 1 (commit checkpoint + hosted CI) is complete and **merged to `main`** (PR #19, hosted CI green on `main`). Stage 2 / Task 2 (durable Telegram intake outbox) is implemented on branch `feat/stage2-durable-outbox`: an acknowledged message is now a committed PostgreSQL row before any Redis work, with claim/retry/dead-letter/reconcile and runtime-safety gating. Design: [DURABLE_INTAKE_OUTBOX.md](DURABLE_INTAKE_OUTBOX.md). Not merged to `main` and not deployed to staging.
 
+## 1c. Staging (2026-10-29)
+Stage 2 / Task 4: **staging runs commit `a0120d75`** (Stage 1 safety core, hosted CI, durable outbox, off-host backup code) with migrations 0000-0012, the `twins_app` runtime role, api/worker/approval-bot (inactive) on image `sha256:ef8b49d6…`; LIVE_TRADING=false, TRADING_ENABLED=false, TWINS_BOT_ACTIVE=false. Verification and rollback: [STAGING_DEPLOYMENT_VERIFICATION.md](STAGING_DEPLOYMENT_VERIFICATION.md).
+
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |
 |---|---|---|---|---|

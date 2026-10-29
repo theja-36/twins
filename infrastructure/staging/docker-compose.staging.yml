@@ -109,7 +109,8 @@ services:
     profiles: ["ops"]
     image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
-    command: ["node", "--import", "tsx", "/app/scripts/ops/safety-control.ts"]
+    # entrypoint (not command): arguments given to `compose run` are APPENDED to the CLI instead of replacing it
+    entrypoint: ["node", "--import", "tsx", "/app/scripts/ops/safety-control.ts"]
     environment: *app-env
     depends_on:
       postgres: { condition: service_healthy }
@@ -125,7 +126,7 @@ services:
     profiles: ["ops"]
     image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
-    command: ["node", "--import", "tsx", "/app/scripts/ops/verify-audit-chain.ts"]
+    entrypoint: ["node", "--import", "tsx", "/app/scripts/ops/verify-audit-chain.ts"]
     environment: *app-env
     depends_on:
       postgres: { condition: service_healthy }
