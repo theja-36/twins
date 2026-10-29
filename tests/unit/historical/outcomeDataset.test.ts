@@ -78,7 +78,9 @@ describe("architecture: the outcome engine is research-only", () => {
   it("neither reads nor stores raw message text", () => {
     for (const f of files) expect(strip(readFileSync(join(ROOT, f), "utf8")), f).not.toMatch(/rawText|raw_text/);
   });
-  it("is not wired into any runtime service (CLI only)", () => {
-    for (const d of ["apps", "services", "adapters"]) for (const f of walk(d)) expect(readFileSync(join(ROOT, f), "utf8"), f).not.toMatch(/historical-evaluate|packages\/historical|@twins\/historical/);
+  it("is not wired into any runtime service except the Task 5 source-intelligence integration (CLI only otherwise)", () => {
+    // Stage 4 / Task 5 connects source intelligence to the risk flow through exactly these files (the risk recorder, the read-only API routes, the worker via @twins/risk); nothing else imports it
+    const allowed = new Set(["apps/api/src/intelligenceApi.ts", "packages/risk/src/intelligence/record.ts"]);
+    for (const d of ["apps", "services", "adapters", "packages/risk/src"]) for (const f of walk(d)) if (!allowed.has(f)) expect(readFileSync(join(ROOT, f), "utf8"), f).not.toMatch(/historical-evaluate|packages\/historical|@twins\/historical/);
   });
 });

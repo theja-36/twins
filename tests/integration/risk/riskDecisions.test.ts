@@ -14,6 +14,7 @@ import {
   getRiskDecision, listRiskDecisions, recordRiskApproval, RiskDecisionError, supersedeRiskDecision, type RiskDecisionInput,
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
+import { validIntelligence } from "../../support/intelligenceFixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
 
@@ -71,7 +72,7 @@ function input(subject: Subject, stopLossValidationId: string, over: Partial<Ris
   };
 }
 /** What a SIZED position size looks like on a row (Stage 3 / Task 2: the database refuses APPROVED_FOR_REVIEW without it). */
-const SIZED = { plannedQuantity: 100, plannedNotional: 10000, plannedMaxLossAmount: 500, plannedMaxLossPercent: 0.5, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } } };
+const SIZED = { plannedQuantity: 100, plannedNotional: 10000, plannedMaxLossAmount: 500, plannedMaxLossPercent: 0.5, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" }, intelligence: validIntelligence() } };
 const err = async (p: Promise<unknown>): Promise<RiskDecisionError> => { try { await p; } catch (e) { return e as RiskDecisionError; } throw new Error("expected a RiskDecisionError"); };
 const rowCount = async (t: string): Promise<number> => Number(must((await pool.query(`select count(*)::int as n from ${t}`)).rows[0])["n"]);
 

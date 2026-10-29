@@ -119,9 +119,12 @@ describe("Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0
 
     // H. Stage 3 / Task 1: the worker created exactly one PENDING risk decision, linked to the signal and its stop-loss evidence, and nothing else downstream.
     const riskRows = await listRiskDecisions(dbHandle.db, { signalId: must(persistedSignal).id });
-    expect(riskRows).toHaveLength(1);
+    expect(riskRows).toHaveLength(2); // (newest first) v2 = the Stage 4 / Task 5 source-intelligence version, v1 = the PENDING decision
     const [stop] = await dbHandle.db.select().from(schema.stopLossValidations).where(eq(schema.stopLossValidations.signalId, must(persistedSignal).id));
-    expect(riskRows[0]).toMatchObject({ status: "PENDING", effectiveStatus: "PENDING", decisionVersion: 1, createdBy: "service:risk-decision", stopLossValidationId: must(stop).id, plannedQuantity: null, plannedNotional: null });
+    expect(riskRows[1]).toMatchObject({ status: "PENDING", effectiveStatus: "SUPERSEDED", decisionVersion: 1, createdBy: "service:risk-decision", stopLossValidationId: must(stop).id, plannedQuantity: null, plannedNotional: null });
+    // no scorecard exists for this synthetic source: intelligence is recorded as UNAVAILABLE (never a guessed tier), the decision stays PENDING and unsized
+    expect(riskRows[0]).toMatchObject({ status: "PENDING", effectiveStatus: "PENDING", decisionVersion: 2, createdBy: "service:source-intelligence", decisionReasonCode: "source_intelligence_unavailable", sourceTrustTier: "UNKNOWN", plannedQuantity: null });
+    expect((riskRows[0]?.outputSnapshot as { intelligence?: { status?: string } }).intelligence?.status).toBe("UNAVAILABLE");
     expect(riskRows[0]?.evidenceReferences).toMatchObject({ signalValidationId: must(persistedValidation).id, stopLossValidationId: must(stop).id });
     expect(await dbHandle.db.select().from(schema.decisions).where(eq(schema.decisions.signalId, must(persistedSignal).id))).toEqual([]); // nothing in the legacy decisions table
   });

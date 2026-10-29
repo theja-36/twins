@@ -96,10 +96,11 @@ describe("options intake", () => {
     const warn = records.find((r) => r.event === "worker.options.claim_not_ingested");
     expect(warn).toBeDefined();
     expect(JSON.stringify(records)).not.toContain("BUY NIFTY"); // the raw text is not copied into logs
-    // Stage 3 / Task 1: exactly one PENDING risk decision for the claim, linked to its stop-loss evidence; no sizing, no approval
+    // Stage 3 / Task 1: one PENDING risk decision for the claim, linked to its stop-loss evidence; no sizing, no approval. Stage 4 / Task 5: followed by one intelligence version (UNAVAILABLE: no scorecard exists)
     const [claim] = await db.select().from(schema.optionsClaims).where(eq(schema.optionsClaims.telegramMessageId, must(stored[0]).id));
     const decision = await getLatestRiskDecisionForOptionsClaim(db, must(claim).id);
-    expect(decision).toMatchObject({ status: "PENDING", optionsClaimId: claim?.id, instrumentType: "option", symbol: "NIFTY", optionType: "CE", plannedQuantity: null, createdBy: "service:risk-decision" });
+    expect(decision).toMatchObject({ status: "PENDING", optionsClaimId: claim?.id, instrumentType: "option", symbol: "NIFTY", optionType: "CE", plannedQuantity: null, createdBy: "service:source-intelligence", decisionVersion: 2, decisionReasonCode: "source_intelligence_unavailable", sourceTrustTier: "UNKNOWN" });
+    expect((decision?.outputSnapshot as { intelligence?: { status?: string; reasonCode?: string } }).intelligence).toMatchObject({ status: "UNAVAILABLE", reasonCode: "SOURCE_INTELLIGENCE_UNAVAILABLE" });
     const [stop] = await db.select().from(schema.stopLossValidations).where(eq(schema.stopLossValidations.optionsClaimId, must(claim).id));
     expect(decision?.stopLossValidationId).toBe(must(stop).id);
     expect(records.find((r) => r.event === "worker.risk_decision.recorded")).toMatchObject({ created: true, status: "PENDING" });

@@ -200,7 +200,9 @@ describe("architecture: scorecards are research-only", () => {
       expect(t, f).not.toMatch(/\b(?:db|tx)\.(update|delete)\(/);
     }
   });
-  it("does not modify risk decisions: no runtime service, API or risk module imports the scorecard code yet", () => {
-    for (const d of ["apps", "services", "adapters", "packages/risk/src"]) for (const f of walk(d)) expect(readFileSync(join(ROOT, f), "utf8"), f).not.toMatch(/scorecards|getLatestSourceTrustTier|@twins\/historical|packages\/historical/);
+  it("scorecard code is reached by the risk flow only through the Task 5 source-intelligence integration (which only READS tiers)", () => {
+    // Stage 4 / Task 5 connects source intelligence to the risk flow through exactly these files (the risk recorder, the read-only API routes, the worker via @twins/risk); nothing else imports it
+    const allowed = new Set(["apps/api/src/intelligenceApi.ts", "packages/risk/src/intelligence/record.ts"]);
+    for (const d of ["apps", "services", "adapters", "packages/risk/src"]) for (const f of walk(d)) if (!allowed.has(f)) expect(readFileSync(join(ROOT, f), "utf8"), f).not.toMatch(/scorecards|getLatestSourceTrustTier|@twins\/historical|packages\/historical/);
   });
 });
