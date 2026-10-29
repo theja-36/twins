@@ -54,7 +54,7 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
       expect(head).toBe("age-encryption.org/v1");
     }
     const manifest = JSON.parse(await readFile(join(root, "manifest.jsonl"), "utf8")) as { snapshot: { migrations: number; tableCounts: Record<string, number>; chainHeads: Record<string, unknown> } };
-    expect(manifest.snapshot.migrations).toBe(15);
+    expect(manifest.snapshot.migrations).toBe(16);
     expect(Object.keys(manifest.snapshot.chainHeads).sort()).toEqual(["audit_events", "options_claims", "risk_decisions", "signal_validations", "stop_loss_validations", "system_control_events", "telegram_messages"]);
     expect(manifest.snapshot.tableCounts["audit_events"]).toBeGreaterThan(0);
 
@@ -63,11 +63,11 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
       store, environment: "ci", identityFile, statusDir, workDir: join(root, "drill"), log, now: () => new Date(), hostFingerprint: "ci-recovery-host", runnerLabel: "ci-runner-scratch-database",
       createScratch: databaseScratch(DATABASE_URL, hooks, container ? { dockerContainer: container } : {}),
     });
-    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "15" });
+    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "16" });
     expect(drill.checks["row_counts"]).toMatch(/tables match/);
     expect(drill.checks["chain_heads"]).toBe("7 chains match");
     expect(drill.checks["audit_chain"]).toMatch(/PASS/);
-    expect(drill.checks["verify_migrations"]).toMatch(/15 migrations/);
+    expect(drill.checks["verify_migrations"]).toMatch(/16 migrations/);
     expect(drill.crossHost).toBe(true);
     expect((await readStatus(statusDir, "drill", new Date(), 100)).ok).toBe(true);
     // the scratch database is gone and no plaintext is left behind

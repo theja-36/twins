@@ -114,7 +114,7 @@ describe("migration 0012", () => {
   });
   it("is registered in the journal as the 13th migration (0013 follows it)", () => {
     const journal = JSON.parse(read("packages/database/drizzle/meta/_journal.json")) as { entries: Array<{ tag: string }> };
-    expect(journal.entries).toHaveLength(15);
+    expect(journal.entries).toHaveLength(16);
     expect(journal.entries[12]?.tag).toBe("0012_telegram_intake_outbox");
   });
 });

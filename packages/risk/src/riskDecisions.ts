@@ -23,7 +23,9 @@ export type RiskErrorCode =
   | "idempotency_conflict"
   | "not_found"
   | "not_latest_version"
-  | "store_failure";
+  | "store_failure"
+  | "not_sizable"
+  | "capital_not_configured";
 
 /** Fixed code + message naming the rule, never a driver message or a value. `cause` keeps the safety refusal for callers that must map it. */
 export class RiskDecisionError extends Error {
@@ -57,6 +59,11 @@ export interface RiskDecisionInput {
   target1?: number | null;
   target2?: number | null;
   target3?: number | null;
+  /** Position sizing (Stage 3 / Task 2). Written only by the sizing module; absent (NULL) on decisions that have not been sized. */
+  plannedQuantity?: number | null;
+  plannedNotional?: number | null;
+  plannedMaxLossAmount?: number | null;
+  plannedMaxLossPercent?: number | null;
   confidenceScore?: number | null;
   sourceTrustTier?: string | null;
   decisionReasonCode: string;
@@ -149,11 +156,14 @@ export function validateRiskDecisionInput(input: RiskDecisionInput): void {
   if (input.expiry != null && !DATE.test(input.expiry)) throw new RiskDecisionError("invalid_input", "expiry must be YYYY-MM-DD");
   if (!input.inputSnapshot || typeof input.inputSnapshot !== "object" || Array.isArray(input.inputSnapshot) || Object.keys(input.inputSnapshot).length === 0) throw new RiskDecisionError("invalid_input", "a complete, non-empty inputSnapshot is required");
   for (const [n, v] of [["entryPrice", input.entryPrice], ["stopLoss", input.stopLoss], ["target1", input.target1], ["target2", input.target2], ["target3", input.target3], ["strike", input.strike]] as const) positive(n, v);
+  for (const [n, v] of [["plannedQuantity", input.plannedQuantity], ["plannedNotional", input.plannedNotional], ["plannedMaxLossAmount", input.plannedMaxLossAmount], ["plannedMaxLossPercent", input.plannedMaxLossPercent]] as const) {
+    if (v != null && !(Number.isFinite(v) && v >= 0)) throw new RiskDecisionError("invalid_input", `${n} must be a non-negative number`);
+  }
   if (input.confidenceScore != null && !(input.confidenceScore >= 0 && input.confidenceScore <= 100)) throw new RiskDecisionError("invalid_input", "confidenceScore must be between 0 and 100");
   if (input.status === "APPROVED_FOR_REVIEW" && (input.stopLoss == null || input.entryPrice == null || !input.stopLossBasis)) throw new RiskDecisionError("stop_loss_not_valid", "APPROVED_FOR_REVIEW requires a stop-loss, an entry price and a stop-loss basis");
 }
 
-async function refuseUnlessSafe(operation: string): Promise<void> {
+export async function refuseUnlessSafe(operation: string): Promise<void> {
   // Fail closed: an unreadable state refuses too. Creating a risk decision is intake-class work, so the intake controls (which include the kill switch) apply.
   let refusal;
   try {
@@ -285,7 +295,11 @@ async function insertDecision(db: Db, input: RiskDecisionInput, previous: RiskDe
     target1: num(input.target1),
     target2: num(input.target2),
     target3: num(input.target3),
-    // Sizing and exposure are deliberately NOT computed here (later stages append new versions that fill them).
+    // Sizing is computed by the sizing module (pure engine) and passed in; this writer stores it verbatim. Portfolio exposure is a later stage.
+    plannedQuantity: num(input.plannedQuantity),
+    plannedNotional: num(input.plannedNotional),
+    plannedMaxLossAmount: num(input.plannedMaxLossAmount),
+    plannedMaxLossPercent: num(input.plannedMaxLossPercent),
     plannedRiskRewardRatio: num(computeRiskReward(input.entryPrice, input.stopLoss, input.target1)),
     confidenceScore: num(input.confidenceScore),
     sourceTrustTier: input.sourceTrustTier ?? null,

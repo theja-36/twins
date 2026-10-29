@@ -110,7 +110,10 @@ try {
   if (ordersGuard.rowCount !== 1 || ordersGuard.rows[0].tgenabled !== "A") throw new Error("orders_require_risk_decision (0014) is missing or not ENABLE ALWAYS");
   const rdCols = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'risk_decisions' and column_name in ('stop_loss_validation_id','supersedes_id','decision_version','status','input_snapshot','evidence_references','event_hash','chain_index')");
   if (rdCols.rows[0].n !== 8) throw new Error("risk_decisions (0014) is missing required columns");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present`);
+  // 0015: an APPROVED_FOR_REVIEW decision must carry a SIZED position size (enforced on every new row).
+  const sizedCheck = await client.query("select 1 from pg_constraint where conrelid = 'public.risk_decisions'::regclass and conname = 'risk_decisions_sized_review_check'");
+  if (sizedCheck.rowCount !== 1) throw new Error("risk_decisions_sized_review_check (0015) is missing");
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present`);
 } finally {
   await client.end();
 }

@@ -81,7 +81,7 @@ describe("architecture: the schema, the chain and the boundaries", () => {
   const sql = read("packages/database/drizzle/0014_risk_decisions_foundation.sql");
   it("migration 0014 is registered, guards legacy data first, and installs the append-only, chain and integrity protections ENABLE ALWAYS", () => {
     const journal = JSON.parse(read("packages/database/drizzle/meta/_journal.json")) as { entries: Array<{ tag: string }> };
-    expect(journal.entries.at(-1)?.tag).toBe("0014_risk_decisions_foundation");
+    expect(journal.entries.map((e) => e.tag)).toContain("0014_risk_decisions_foundation");
     expect(sql.indexOf("DO $$")).toBeLessThan(sql.indexOf("ALTER TABLE"));
     expect(sql).toMatch(/legacy risk_decisions rows exist/);
     for (const t of ["risk_decisions_chain_before_insert", "risk_decisions_chain_after_insert", "risk_decisions_no_update_delete", "risk_decisions_no_truncate", "risk_decisions_a_integrity_before_insert", "orders_require_risk_decision"]) expect(sql, t).toContain(`ENABLE ALWAYS TRIGGER "${t}"`);
