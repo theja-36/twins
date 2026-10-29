@@ -104,6 +104,11 @@ export const riskDecisions = pgTable(
       "risk_decisions_portfolio_review_check",
       sql`${table.status} <> 'APPROVED_FOR_REVIEW' or coalesce(${table.outputSnapshot} -> 'portfolio' ->> 'outcome' = 'APPROVED_FOR_REVIEW', false)`,
     ),
+    // Stage 3 / Task 5: an approval for review also needs PASSING market-risk gates (NULL counts as not evaluated).
+    marketReviewCheck: check(
+      "risk_decisions_market_review_check",
+      sql`${table.status} <> 'APPROVED_FOR_REVIEW' or coalesce(${table.outputSnapshot} -> 'market' ->> 'outcome' = 'PASSED', false)`,
+    ),
     actorCheck: check("risk_decisions_actor_check", sql`${table.createdBy} ~ '^(service|operator):[a-z0-9][a-z0-9._-]{1,40}$'`),
   }),
 );

@@ -127,6 +127,13 @@
       "when": 1793295457284,
       "tag": "0017_circuit_breakers",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793301774817,
+      "tag": "0018_market_risk_gates",
+      "breakpoints": true
     }
   ]
 }
