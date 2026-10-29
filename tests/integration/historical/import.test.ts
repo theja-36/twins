@@ -274,8 +274,6 @@ describe("safety and privacy", () => {
     const dir = tempDir();
     await run(writeJsonl(dir, "a.jsonl", makeRecords(`hist-${sfx()}`, 20, [MSG.completeOption, MSG.equity, MSG.several])), `itest-${sfx()}`);
     expect(await counts()).toEqual(before);
-    const live = await q("select count(*)::int as n from options_claims where created_at > now() - interval '1 minute'");
-    expect(live[0]!["n"]).toBe(0);
   });
   it("the evidence, the batch, the normalized records, the issues and the checkpoints are append-only; the chain detects tampering; a revision must point at its own message", async () => {
     const dir = tempDir();

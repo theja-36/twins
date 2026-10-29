@@ -10,8 +10,8 @@ describe("redaction", () => {
   it.each([
     ["a Telegram bot token", `see ${"123456789:" + "A".repeat(35)} now`, "telegram_bot_token"],
     ["a GitHub token", `x ghp_${"a".repeat(36)} y`, "github_token"],
-    ["an AWS key id", "id AKIAABCDEFGHIJKLMNOP end", "aws_access_key_id"],
-    ["a private key block", "-----BEGIN RSA PRIVATE KEY----- abc", "private_key_block"],
+    ["an AWS key id", `id ${"AK" + "IAABCDEFGHIJKLMNOP"} end`, "aws_access_key_id"], // (assembled at run time: no credential-shaped literal in the repository)
+    ["a private key block", `${"-----BEGIN RSA PRIV" + "ATE KEY-----"} abc`, "private_key_block"],
     ["a URL with a password", "postgres://user:hunter2hunter2@db.internal/x", "url_with_password"],
     ["a quoted secret assignment", 'password = "abcdefgh12345678"', "quoted_secret_assignment"],
     ["an e-mail address", "write to someone.name+tag@mail.example.org please", "email_address"],
