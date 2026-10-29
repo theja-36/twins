@@ -23,9 +23,9 @@ import {
 import { schema, createBoundedDb, type BoundedDbHandle } from "../../../packages/database/src/index";
 import { marketDataProviders, YAHOO_PROVIDER_NAME } from "../../../adapters/market/src/index";
 import { withIntakeGate } from "../../../services/worker/src/safetyGate";
-import { processTelegramQueueJob } from "../../support/workerWithTestPolicy";
+import { processSignalQueueJob } from "../../support/workerWithTestPolicy";
 import { buildApp } from "../../support/apiWithTestPolicy";
-import type { TelegramJobPayload } from "../../../services/worker/src/index";
+import type { SignalQueueJobPayload as TelegramJobPayload } from "../../../services/worker/src/index";
 import { requireTestDatabaseUrl, requireTestRedisUrl } from "../targetConfig";
 import { main as safetyControlCli } from "../../../scripts/ops/safety-control";
 import { TEST_API_KEY, TEST_WEBHOOK_SECRET, syntheticMarketProvider, telegramWebhookPayload, uniqueChatId, waitFor, webhookHeaders, must } from "../runtime/harness";
@@ -327,11 +327,15 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
     const messageId = Math.floor(Math.random() * 1_000_000_000);
     const chatId = uniqueChatId();
     const payload = telegramWebhookPayload(updateId, messageId, `r0b_test_channel_${updateId}`, chatId);
-    const jobId = `tg-tg_chat_${chatId}-${messageId}`;
+    const channel = `tg_chat_${chatId}`;
+    const outboxRows = () => dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.sourceMessageId, String(messageId)));
 
-    // 1. healthy: the webhook enqueues (no worker is running yet, so the job waits in Redis)
+    // 1. healthy: the webhook writes the durable outbox row, then enqueues its id (no worker is running yet, so the job waits in Redis)
     const accepted = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: webhookHeaders, payload });
     expect(accepted.statusCode).toBe(202);
+    const row = must((await outboxRows())[0]);
+    expect(row.channelId).toBe(channel);
+    const jobId = `outbox-${row.id}-0`;
     expect(await queue.getJob(jobId)).toBeTruthy();
 
     // 2. kill switch on: new intake is refused at the API with 503 and nothing is enqueued
@@ -339,7 +343,7 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
     const second = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: webhookHeaders, payload: telegramWebhookPayload(updateId + 1, messageId + 1, `r0b_test_channel_${updateId}`, chatId) });
     expect(second.statusCode).toBe(503);
     expect(second.json()).toMatchObject({ error: "intake_paused", reason: "kill_switch_active" });
-    expect(await queue.getJob(`tg-tg_chat_${chatId}-${messageId + 1}`)).toBeFalsy();
+    expect(await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.sourceMessageId, String(messageId + 1)))).toHaveLength(0); // refused intake leaves no outbox row
 
     // 3. start the worker with the real gate: the earlier job must be held, untouched
     let invocations = 0;
@@ -348,7 +352,7 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
       withIntakeGate(
         async (job: Job<TelegramJobPayload>) => {
           invocations += 1;
-          await processTelegramQueueJob(job, undefined, dbHandle.db, { analysisMarket: { source: "r0b-synthetic", timeframe: "1d", context: "synthetic" } });
+          await processSignalQueueJob(job, undefined, dbHandle.db, { analysisMarket: { source: "r0b-synthetic", timeframe: "1d", context: "synthetic" } });
         },
         () => worker ?? null,
         { pauseMs: 300 },
@@ -363,6 +367,7 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
     expect(held.failedReason).toBeFalsy();
     expect(invocations).toBeGreaterThan(0); // the worker did take it and refuse it, repeatedly
     expect(await dbHandle.db.select().from(schema.telegramMessages).where(eq(schema.telegramMessages.externalMessageId, String(messageId)))).toHaveLength(0);
+    expect(must((await outboxRows())[0])).toMatchObject({ status: "PENDING", attemptCount: 0, lockedBy: null }); // the row was never claimed while the kill switch was active
 
     // 4. clear the kill switch: the SAME job completes and is persisted
     await setControl("KILL_SWITCH_ACTIVE", false, uniq("clear kill switch end-to-end test"));
@@ -370,6 +375,7 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
     const rows = await dbHandle.db.select().from(schema.telegramMessages).where(eq(schema.telegramMessages.externalMessageId, String(messageId)));
     expect(rows).toHaveLength(1);
     expect(must(await queue.getJob(jobId)).attemptsMade).toBe(1);
+    expect(must((await outboxRows())[0])).toMatchObject({ status: "COMPLETED", attemptCount: 1 });
     // existing records stayed readable the whole time (the select above ran while/after the switch was active)
   }, 90_000);
 
@@ -391,5 +397,6 @@ describe("kill switch end to end: API -> Redis -> worker -> PostgreSQL", () => {
     expect(down.json()).toMatchObject({ reason: "state_unavailable" });
     configureRuntimeState({ source: pgStateSource(pool), ttlMs: 0, failureTtlMs: 0 });
     expect(await queue.getJob(`tg-tg_chat_${chatId}-${messageId}`)).toBeFalsy();
+    expect(await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.channelId, `tg_chat_${chatId}`))).toHaveLength(0); // nothing was accepted while intake was off or the state unreadable
   }, 60_000);
 });

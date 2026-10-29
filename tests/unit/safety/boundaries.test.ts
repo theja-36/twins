@@ -14,6 +14,7 @@ import { ApprovalBot } from "../../../services/approval-bot/src/bot";
 import { createLogger } from "../../../services/approval-bot/src/log";
 import { FakeBotApi, MemoryBotDb, TestClock, makeClaim, silentLogger, testConfig } from "../../support/approvalBotFakes";
 import { must } from "../../support/must";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 /** Installs a fresh, uncached in-memory state for the test and returns it. */
 function use(initial: Partial<Record<ControlName, boolean>> = {}): InMemoryStateSource {
@@ -95,7 +96,7 @@ describe("API intake boundaries (webhook and internal capture endpoint)", () => 
     const app = await buildApp({
       apiKey: "boundary-api-key-0123456789",
       telegramWebhookSecret: SECRET,
-      telegramQueue: { add, getJob: async () => undefined } as never,
+      intakeOutbox: memoryOutbox(), telegramQueue: { add, getJob: async () => undefined } as never,
       telegramIntakePolicy: createTelegramIntakePolicy({ allowedChatIds: String(CHAT) }),
       structuredLogger: createStructuredLogger((r) => records.push(r)),
       captureIngestToken: TOKEN,

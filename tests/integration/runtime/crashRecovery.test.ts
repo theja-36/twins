@@ -14,6 +14,10 @@
  * check, a test-only fast configuration in the child) to re-run the SAME job: no duplicate business
  * records, the canonical message reused, one signal and one validation, and the correlation context
  * of the original request visible in both processes' logs.
+ *
+ * Durable intake (Stage 2 / Task 2): the crash happens AFTER the worker claimed the outbox row (status PROCESSING, lease held by the dead pid). The
+ * outbox row, not the Redis job, is what guarantees recovery: BullMQ may redeliver the stalled job (which finds the row still leased and does nothing)
+ * and the reconciler, once the lease expires (test-only 4 s here), returns the row to FAILED and re-enqueues it for a new attempt.
  * Not claimed: exactly-once delivery; "stalled" is an event/mechanism, not a job state.
  */
 import { writeFileSync } from "node:fs";
@@ -26,6 +30,9 @@ import { Queue, QueueEvents } from "bullmq";
 import { Redis } from "ioredis";
 import { buildApp } from "../../support/apiWithTestPolicy";
 import { createBoundedDb, schema } from "../../../packages/database/src/index";
+import { createOwnedOutbox } from "../../support/ownedOutbox";
+import { startOutboxReconciler } from "../../../services/worker/src/outbox";
+import { configureRuntimeState, pgStateSource } from "../../../packages/runtime-state/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 import { DATABASE_URL, REDIS_URL, TEST_API_KEY, TEST_WEBHOOK_SECRET, must, telegramWebhookPayload, uniqueChatId, waitFor, webhookHeaders } from "./harness";
 
@@ -86,9 +93,14 @@ describe.skipIf(!enabled)("worker process crash and recovery (real SIGKILL, guar
     const events = new QueueEvents(queueName, { connection: eventsRedis });
     const stalledEvents: Array<{ jobId: string }> = [];
     events.on("stalled", (a) => stalledEvents.push({ jobId: a.jobId }));
-    const app = await buildApp({ apiKey: TEST_API_KEY, telegramWebhookSecret: TEST_WEBHOOK_SECRET, telegramQueue: queue, db: dbHandle.db, structuredLogger: logger });
+    const owned = createOwnedOutbox(dbHandle.db); // only this test's rows are reconciled into its queue
+    const app = await buildApp({ apiKey: TEST_API_KEY, telegramWebhookSecret: TEST_WEBHOOK_SECRET, telegramQueue: queue, intakeOutbox: owned.outbox, db: dbHandle.db, structuredLogger: logger });
     cleanup.push(async () => { await app.close(); await events.close(); await queue.obliterate({ force: true }); await queue.close(); await producerRedis.quit(); await eventsRedis.quit(); await dbHandle.close(); });
     await queue.waitUntilReady(); await events.waitUntilReady();
+    // The production reconciler with test-speed settings (lease 4 s). It runs in this parent process; the children are the workers that get killed.
+    configureRuntimeState({ source: pgStateSource(dbHandle.pool), ttlMs: 0, failureTtlMs: 0 });
+    const reconciler = startOutboxReconciler(dbHandle.db, { logger, queue: owned.queueFor(queue), intervalMs: 500, graceMs: 100, leaseMs: 4000, redeliverAfterMs: 3000 });
+    cleanup.push(async () => reconciler.stop());
 
     const evidence: Record<string, unknown> = { queueName, targets: { db: "twins_ci", redis: "127.0.0.1:16379" } };
     let jobIdForEvidence: string | undefined;
@@ -117,8 +129,10 @@ describe.skipIf(!enabled)("worker process crash and recovery (real SIGKILL, guar
       const chatId = uniqueChatId(); const messageId = Math.floor(Math.random() * 1e9);
       const res = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: { ...webhookHeaders, "x-correlation-id": "crash-test-corr-0001" }, payload: telegramWebhookPayload(Math.floor(Math.random() * 1e9), messageId, `crash_${messageId}`, chatId) });
       expect(res.statusCode).toBe(202);
-      const jobId = `tg-tg_chat_${chatId}-${messageId}`;
-        jobIdForEvidence = jobId;
+      const outboxRow = must((await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.sourceMessageId, String(messageId))))[0]);
+      const jobId = `outbox-${outboxRow.id}-0`; // the Redis job (carries only the row id)
+      const pipelineId = `outbox-${outboxRow.id}`; // what the worker logs as jobId
+      jobIdForEvidence = jobId;
 
       // 3. checkpoint: committed message, signal not yet inserted
       const checkpoint = await waitIpc(crashing, "checkpoint");
@@ -129,6 +143,9 @@ describe.skipIf(!enabled)("worker process crash and recovery (real SIGKILL, guar
       const sigsBefore = await dbHandle.db.select().from(schema.signals).where(eq(schema.signals.telegramMessageId, must(msgBefore).id));
       expect(sigsBefore).toHaveLength(0);
       expect(await must(await queue.getJob(jobId)).getState()).toBe("active");
+      const claimed = must((await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.id, outboxRow.id)))[0]);
+      expect(claimed).toMatchObject({ status: "PROCESSING", attemptCount: 1 }); // claimed by the worker that is about to die
+      expect(claimed.lockedBy).toContain(`:${crashing.pid}`);
 
       // 4. ownership proof, then terminate ONLY this child, abruptly
       expect(crashing.proc.pid).toBe(crashing.pid);
@@ -151,7 +168,7 @@ describe.skipIf(!enabled)("worker process crash and recovery (real SIGKILL, guar
       const recovering = spawnChild("worker-2 (replacement)", "recover", queueName);
       children.push(recovering);
       await waitIpc(recovering, "ready");
-      await waitFor(async () => ((await must(await queue.getJob(jobId)).getState()) === "completed" ? true : undefined), RECOVERY_DEADLINE_MS, `recovery of ${jobId}`);
+      await waitFor(async () => ((await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.id, outboxRow.id)))[0]?.status === "COMPLETED" ? true : undefined), RECOVERY_DEADLINE_MS, `recovery of outbox row ${outboxRow.id}`);
       const recoveryMs = Date.now() - killedAt;
 
       // 6. persisted records: no duplicates, canonical message reused
@@ -164,17 +181,20 @@ describe.skipIf(!enabled)("worker process crash and recovery (real SIGKILL, guar
       expect(validations).toHaveLength(1);
       expect(must(validations[0]).idempotencyKey).toBe(`telegram-ingest:${must(signals[0]).id}`);
 
-      // 7. BullMQ evidence (events/counters, not a separate job state)
+      // 7. outbox evidence: the row records two attempts (the crashed claim and the recovery), completed, lease cleared
+      const finalRow = must((await dbHandle.db.select().from(schema.telegramIntakeOutbox).where(eq(schema.telegramIntakeOutbox.id, outboxRow.id)))[0]);
+      expect(finalRow).toMatchObject({ status: "COMPLETED", attemptCount: 2, lockedBy: null, lockedAt: null });
+      expect(records.some((r) => r.event === "outbox.reconciled" && r["outboxId"] === outboxRow.id && r["action"] === "lease_expired")).toBe(true);
+      // BullMQ evidence (events/counters, not a separate job state): the stalled Redis job was detected, but it was the OUTBOX lease that guaranteed the retry
       const job = must(await queue.getJob(jobId));
-      expect(job.attemptsStarted).toBe(2); // the crashed start + the recovery start
       expect(job.stalledCounter).toBe(1);
       expect(stalledEvents.some((e) => e.jobId === jobId)).toBe(true);
 
       // 8. logs link to the same job and correlation context
       const accepted = must(records.find((r) => r.event === "webhook.intake.accepted"));
       expect(accepted["correlationId"]).toBe("crash-test-corr-0001");
-      const w1 = crashing.logs.filter((l) => l["jobId"] === jobId);
-      const w2 = recovering.logs.filter((l) => l["jobId"] === jobId);
+      const w1 = crashing.logs.filter((l) => l["jobId"] === pipelineId);
+      const w2 = recovering.logs.filter((l) => l["jobId"] === pipelineId);
       expect(w1.find((l) => l["event"] === "worker.job.started")).toMatchObject({ correlationId: "crash-test-corr-0001", attempt: 1, childPid: crashing.pid });
       expect(w1.find((l) => l["event"] === "worker.message.ingested")).toMatchObject({ inserted: 1 });
       expect(w2.find((l) => l["event"] === "worker.job.started")).toMatchObject({ correlationId: "crash-test-corr-0001", attempt: 2, childPid: recovering.pid });

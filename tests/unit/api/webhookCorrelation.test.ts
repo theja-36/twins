@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 const must = <T,>(v: T | undefined | null): T => { if (v === undefined || v === null) throw new Error("expected a value"); return v; };
 
@@ -18,33 +19,39 @@ const headers = (extra: Record<string, string> = {}) => ({ "content-type": "appl
 
 async function setup(queue: { add: ReturnType<typeof vi.fn>; getJob?: ReturnType<typeof vi.fn> }) {
   const records: LogRecord[] = [];
+  const outbox = memoryOutbox();
   const app = await buildApp({
     apiKey: API_KEY,
     telegramWebhookSecret: SECRET,
-    telegramQueue: queue as never,
+    intakeOutbox: outbox, telegramQueue: queue as never,
     structuredLogger: createStructuredLogger((r) => records.push(r)),
   });
-  return { app, records };
+  return { app, records, outbox };
 }
 const events = (records: LogRecord[]) => records.map((r) => r.event);
 
 describe("webhook correlation logging", () => {
-  it("accepted intake: generates ids, logs milestones and puts correlation metadata in the job payload", async () => {
+  it("accepted intake: generates ids, logs milestones and puts correlation metadata in the durable outbox payload", async () => {
     const add = vi.fn().mockResolvedValue({ id: "x" });
-    const { app, records } = await setup({ add });
+    const { app, records, outbox } = await setup({ add });
     const res = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers(), payload: update() });
     expect(res.statusCode).toBe(202);
-    expect(events(records)).toEqual(["webhook.intake.accepted", "webhook.enqueue.succeeded"]);
-    const [, data, opts] = add.mock.calls[0] as [string, { correlation: { correlationId: string; requestId: string; receivedAt: string } }, { jobId: string }];
+    expect(events(records)).toEqual(["webhook.intake.accepted", "outbox.accepted", "outbox.enqueued", "webhook.enqueue.succeeded"]);
+    const [name, redisData, opts] = add.mock.calls[0] as [string, { outboxId: string }, { jobId: string }];
+    const entry = must(outbox.list()[0]);
+    const data = entry.payload as { correlation: { correlationId: string; requestId: string; receivedAt: string } };
+    expect(name).toBe("telegram_outbox");
+    expect(redisData).toEqual({ jobType: "telegram_outbox", outboxId: entry.id }); // Redis carries only the row id
     const accepted = must(records[0]);
     expect(accepted["correlationId"]).toBe(data.correlation.correlationId);
     expect(accepted["requestId"]).toBe(data.correlation.requestId);
     expect(accepted["correlationSource"]).toBe("generated");
     expect(data.correlation.requestId).toMatch(/^req_/);
-    // job id is the business key, distinct from the correlation id
-    expect(opts.jobId).toBe("tg-tg_chat_-1001234567890-10");
-    expect(opts.jobId).not.toContain(data.correlation.correlationId);
-    expect(accepted["jobId"]).toBe(opts.jobId);
+    // the business key (channel + revision identity) is distinct from the correlation id; the Redis job id is attempt-scoped
+    expect(accepted["jobId"]).toBe("tg-tg_chat_-1001234567890-10");
+    expect(accepted["jobId"]).not.toContain(data.correlation.correlationId);
+    expect(opts.jobId).toBe(`outbox-${entry.id}-0`);
+    expect(entry).toMatchObject({ channelId: "tg_chat_-1001234567890", sourceMessageId: "10", messageType: "message", intakeSource: "bot_webhook" });
   });
 
   it("ignores a client-supplied request-id header (request id stays server generated)", async () => {
@@ -80,38 +87,32 @@ describe("webhook correlation logging", () => {
     expect(add).toHaveBeenCalledTimes(2); // rejected request enqueued nothing
   });
 
-  it("duplicate request deduplicating onto an existing job links to that job instead of claiming its own ids", async () => {
-    const first = { correlationId: "corr_first-request-1", requestId: "req_first", receivedAt: "2026-01-01T00:00:00.000Z" };
-    const add = vi.fn().mockResolvedValue({ id: "tg-tg_chat_-1001234567890-10" });
-    const getJob = vi.fn().mockResolvedValue({ id: "tg-tg_chat_-1001234567890-10", data: { correlation: first } });
-    const { app, records } = await setup({ add, getJob });
+  it("a redelivered update deduplicates onto the existing outbox row: its payload and correlation stay the first request's", async () => {
+    const add = vi.fn().mockResolvedValue({ id: "x" });
+    const { app, records, outbox } = await setup({ add });
+    await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers({ "x-correlation-id": "corr_first-request-1" }), payload: update() });
+    records.length = 0;
+    const res = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers({ "x-correlation-id": "corr_second-request-2" }), payload: update() });
+    expect(res.statusCode).toBe(202);
+    expect(outbox.list()).toHaveLength(1);
+    expect((outbox.list()[0]?.payload as { correlation: { correlationId: string } }).correlation.correlationId).toBe("corr_first-request-1");
+    const dup = must(records.find((r) => r.event === "webhook.enqueue.deduplicated"));
+    expect(dup["correlationId"]).toBe("corr_second-request-2"); // this request's own id is logged but did not become the row's
+    expect(events(records)).toContain("outbox.duplicated");
+    expect(events(records)).not.toContain("webhook.enqueue.succeeded");
+    expect(add.mock.calls.map((c) => (c[2] as { jobId: string }).jobId)).toHaveLength(2);
+    expect(new Set(add.mock.calls.map((c) => (c[2] as { jobId: string }).jobId)).size).toBe(1); // same attempt-scoped Redis job id: BullMQ ignores the repeat
+  });
+
+  it("an enqueue failure AFTER the durable write is acknowledged (202) and logged with a safe code; the row stays recoverable", async () => {
+    const add = vi.fn().mockRejectedValue(Object.assign(new Error("connection string password=CANARY"), { code: "ENQUEUE_FAILED" }));
+    const { app, records, outbox } = await setup({ add });
     const res = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers(), payload: update() });
     expect(res.statusCode).toBe(202);
-    const dup = must(records.find((r) => r.event === "webhook.enqueue.deduplicated"));
-    expect(dup).toBeDefined();
-    expect(dup["existingJobCorrelationId"]).toBe("corr_first-request-1");
-    expect(dup["existingJobRequestId"]).toBe("req_first");
-    expect(dup["correlationId"]).not.toBe("corr_first-request-1"); // this request's own id is logged but did not become the job's
-    expect(events(records)).not.toContain("webhook.enqueue.succeeded");
-  });
-
-  it("legacy stored job without correlation metadata is still linked (id unknown)", async () => {
-    const add = vi.fn().mockResolvedValue({ id: "j" });
-    const getJob = vi.fn().mockResolvedValue({ id: "j", data: {} });
-    const { app, records } = await setup({ add, getJob });
-    await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers(), payload: update() });
-    const dup = must(records.find((r) => r.event === "webhook.enqueue.deduplicated"));
-    expect(dup["existingJobCorrelationId"]).toBeUndefined();
-    expect(dup["jobId"]).toBe("tg-tg_chat_-1001234567890-10");
-  });
-
-  it("logs enqueue failure with a safe error code and rethrows (500)", async () => {
-    const add = vi.fn().mockRejectedValue(Object.assign(new Error("connection string password=CANARY"), { code: "ENQUEUE_FAILED" }));
-    const { app, records } = await setup({ add });
-    const res = await app.inject({ method: "POST", url: "/webhooks/telegram", headers: headers(), payload: update() });
-    expect(res.statusCode).toBe(500);
-    const failed = must(records.find((r) => r.event === "webhook.enqueue.failed"));
-    expect(failed).toMatchObject({ errorCode: "ENQUEUE_FAILED", statusCode: 500 });
+    const failed = must(records.find((r) => r.event === "outbox.enqueue_failed_but_durable"));
+    expect(failed).toMatchObject({ errorCode: "ENQUEUE_FAILED" });
+    expect(outbox.list()).toHaveLength(1);
+    expect(outbox.list()[0]?.enqueued).toBe(false);
     expect(JSON.stringify(records)).not.toContain("CANARY");
   });
 

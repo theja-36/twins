@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../../apps/api/src/index"; // the REAL buildApp: no test-wide allow-all policy here
 import { createTelegramIntakePolicy } from "../../../adapters/telegram/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 const API_KEY = "intake-test-api-key";
 const SECRET = "intake-test-webhook-secret";
@@ -12,18 +13,19 @@ const TEXT = "BUY NIFTY 24500 CE 27 OCT 2026 ABOVE 120 SL 90 TGT 150 PREMIUM";
 const approvedOnly = () => createTelegramIntakePolicy({ allowedChatIds: String(APPROVED) });
 
 async function make(policy?: ReturnType<typeof createTelegramIntakePolicy>) {
+  const outbox = memoryOutbox();
   const add = vi.fn().mockResolvedValue({ id: "fake" });
   const records: LogRecord[] = [];
   const app = await buildApp({
     apiKey: API_KEY,
     telegramWebhookSecret: SECRET,
-    telegramQueue: { add },
+    intakeOutbox: outbox, telegramQueue: { add },
     structuredLogger: createStructuredLogger((r) => records.push(r)),
     ...(policy ? { telegramIntakePolicy: policy } : {}),
   });
   const post = (payload: unknown, secret: string | null = SECRET) =>
     app.inject({ method: "POST", url: "/webhooks/telegram", headers: { "content-type": "application/json", ...(secret !== null ? { "x-telegram-bot-api-secret-token": secret } : {}) }, payload: payload as never });
-  return { app, add, records, post };
+  return { app, add, records, post, outbox };
 }
 const msg = (chatId: unknown, extra: Record<string, unknown> = {}) => ({ message_id: 77, date: 1_700_000_000, chat: { id: chatId, type: "channel", username: "someone" }, text: TEXT, ...extra });
 
@@ -109,7 +111,7 @@ describe("approved-chat gate in the webhook", () => {
   });
 
   it("approval follows the message that would be ingested: a decoy approved chat in a lower-precedence field cannot smuggle an unapproved chat in", async () => {
-    const { post, add } = await make(approvedOnly());
+    const { post, add, outbox } = await make(approvedOnly());
     // `message` (unapproved) wins the selection, so this is rejected even though edited_message names an approved chat.
     const r1 = await post({ update_id: 51, message: msg(OTHER), edited_message: msg(APPROVED, { edit_date: 1_700_000_100 }) });
     expect(r1.json()).toEqual({ status: "ignored", reason: "not accepted" });
@@ -117,7 +119,7 @@ describe("approved-chat gate in the webhook", () => {
     const r2 = await post({ update_id: 52, message: msg(APPROVED), edited_message: msg(OTHER, { edit_date: 1_700_000_100 }) });
     expect(r2.statusCode).toBe(202);
     expect(add).toHaveBeenCalledTimes(1);
-    const job = add.mock.calls[0]?.[1] as { telegram: { normalizedMessage: { chatId: string } } };
+    const job = outbox.list()[0]?.payload as unknown as { telegram: { normalizedMessage: { chatId: string } } };
     expect(job.telegram.normalizedMessage.chatId).toBe(String(APPROVED));
   });
 

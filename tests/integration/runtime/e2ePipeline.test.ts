@@ -57,11 +57,12 @@ describe("Runtime Pipeline Integration: API -> Redis -> Worker -> PostgreSQL (R0
     expect(response.json()).toEqual({ status: "accepted" });
 
     const jobId = `tg-tg_chat_${chatId}-${messageId}`;
-    await waitFor(
-      async () => ((await (await h.queue.getJob(jobId))?.getState()) === "completed" ? true : undefined),
-      20_000,
-      "job completion",
-    );
+    await h.waitCompleted(`tg_chat_${chatId}`, String(messageId)); // the durable outbox row reaches COMPLETED
+    const row = must(await h.outboxRow(`tg_chat_${chatId}`, String(messageId)));
+    expect(row).toMatchObject({ status: "COMPLETED", attemptCount: 1, lockedBy: null, lastError: null, intakeSource: "bot_webhook", messageType: "message" });
+    expect(row.completedAt).toBeInstanceOf(Date);
+    // Redis carried only the row id, and that job completed too
+    await waitFor(async () => ((await (await h.queue.getJob(`outbox-${row.id}-0`))?.getState()) === "completed" ? true : undefined), 20_000, "redis job completion");
     expect(h.invocations.get(jobId)).toBe(1);
 
     // C. Verify PostgreSQL source-of-record persistence

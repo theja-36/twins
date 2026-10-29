@@ -104,7 +104,7 @@ describe("R0B failure handling (real Redis + PostgreSQL)", () => {
     expect(await countsFor(h.db, channel)).toEqual({ messages: 0, signals: 0, validations: 0 });
   }, 30_000);
 
-  it("injected transient failure is retried by BullMQ and the final result is not duplicated", async () => {
+  it("injected transient failure is retried by the durable outbox (backoff + reconciler) and the final result is not duplicated", async () => {
     let remainingFailures = 1;
     const h = await harness({
       // Seam: first insert into telegram_messages throws once (injected, in-process).
@@ -139,14 +139,11 @@ describe("R0B failure handling (real Redis + PostgreSQL)", () => {
     expect(res.statusCode).toBe(202);
 
     const jobId = `tg-${channel}-${messageId}`;
-    await waitFor(
-      async () => ((await (await h.queue.getJob(jobId))?.getState()) === "completed" ? true : undefined),
-      20_000,
-      "job to complete after retry",
-    );
+    await h.waitCompleted(channel, String(messageId)); // FAILED with backoff, re-enqueued by the reconciler, then COMPLETED
 
     expect(remainingFailures).toBe(0);
     expect(h.invocations.get(jobId)).toBe(2); // one injected failure + one successful retry
+    expect(must(await h.outboxRow(channel, String(messageId)))).toMatchObject({ status: "COMPLETED", attemptCount: 2, lastError: null });
     expect(await countsFor(h.db, channel)).toEqual({ messages: 1, signals: 1, validations: 1 });
   }, 40_000);
 
@@ -162,24 +159,20 @@ describe("R0B failure handling (real Redis + PostgreSQL)", () => {
 
     const first = await h.app.inject({ method: "POST", url: "/webhooks/telegram", headers: webhookHeaders, payload });
     expect(first.statusCode).toBe(202);
-    await waitFor(
-      async () => ((await (await h.queue.getJob(jobId))?.getState()) === "completed" ? true : undefined),
-      20_000,
-      "first delivery to complete",
-    );
+    await h.waitCompleted(channel, String(messageId));
     expect(await countsFor(h.db, channel)).toEqual({ messages: 1, signals: 1, validations: 1 });
 
-    // Layer 1: webhook redelivery. The queue jobId dedupes while the job is retained.
+    // Layer 1: webhook redelivery. The outbox identity (channel + revision identity + type) dedupes it: no second row, no second Redis job.
     const second = await h.app.inject({ method: "POST", url: "/webhooks/telegram", headers: webhookHeaders, payload });
     expect(second.statusCode).toBe(202);
     const counts = await h.queue.getJobCounts("waiting", "active", "delayed", "completed", "failed");
     expect(counts).toMatchObject({ waiting: 0, active: 0, delayed: 0, completed: 1, failed: 0 });
     expect(h.invocations.get(jobId)).toBe(1);
+    const row = must(await h.outboxRow(channel, String(messageId)));
+    expect(row.status).toBe("COMPLETED");
 
-    // Layer 2: queue-level dedupe lost (e.g. job retention expired) -> the worker
-    // is handed the same logical message again. DB idempotency must hold.
-    const original = await h.queue.getJob(jobId);
-    await processTelegramQueueJob(must(original), "r0b-redelivery", h.db);
+    // Layer 2: the worker is handed the same logical message again with the stored payload (e.g. a replayed or lost-lease job). DB idempotency must hold.
+    await processTelegramQueueJob({ id: "r0b-redelivery", data: row.rawPayload, attemptsMade: 0, opts: { attempts: 3 } } as never, "r0b-redelivery", h.db);
     expect(await countsFor(h.db, channel)).toEqual({ messages: 1, signals: 1, validations: 1 });
   }, 40_000);
 });

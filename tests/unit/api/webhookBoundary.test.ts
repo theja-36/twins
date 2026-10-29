@@ -7,6 +7,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 const API_KEY = "boundary-api-key-9d2";
 const SECRET = "boundary-secret-4e1";
@@ -14,14 +15,14 @@ const GOOD = { update_id: 7, message: { message_id: 3, date: 1700000000, chat: {
 const H = (extra: Record<string, string> = {}) => ({ "content-type": "application/json", ...extra });
 const authed = H({ "x-telegram-bot-api-secret-token": SECRET });
 
-async function setup(addImpl?: () => Promise<unknown>) {
+async function setup(addImpl?: () => Promise<unknown>, outbox = memoryOutbox()) {
   const pinoLines: string[] = [];
   const records: LogRecord[] = [];
   const add = vi.fn(addImpl ?? (async () => ({ id: "test-owned-fake-job" })));
   const app = await buildApp({
     apiKey: API_KEY,
     telegramWebhookSecret: SECRET,
-    telegramQueue: { add } as never,
+    intakeOutbox: outbox, telegramQueue: { add } as never,
     db: {} as never,
     logger: { level: "trace", stream: { write: (l: string) => pinoLines.push(l) } } as never,
     structuredLogger: createStructuredLogger((r) => records.push(r)),
@@ -101,30 +102,53 @@ describe("webhook secret is checked before the body is parsed", () => {
     expect(everything(a.body, u.body)).not.toContain("CANARYBIG");
   });
 
-  it("an unexpected handler error (e.g. a database/queue error whose message holds data) -> generic 500 and the message is never logged", async () => {
-    const { app, everything } = await setup(async () => { throw Object.assign(new Error("insert failed: row (password=CANARYERR-99)"), { code: "ENQUEUE_FAILED" }); });
+  it("an outbox (database) error whose message holds data -> generic 503 (nothing accepted) and the message is never logged or returned", async () => {
+    const outbox = memoryOutbox();
+    outbox.record = async () => { throw Object.assign(new Error("insert failed: row (password=CANARYERR-99)"), { code: "DB_WRITE_FAILED" }); };
+    const { app, everything, add } = await setup(undefined, outbox);
     const res = await post(app, authed, GOOD);
-    expect(res.statusCode).toBe(500);
-    expect(res.json()).toEqual({ statusCode: 500, error: "Internal Server Error", message: "Internal Server Error" });
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toEqual({ statusCode: 503, error: "Service Unavailable", message: "Service Unavailable" });
+    expect(everything(res.body)).not.toContain("CANARYERR");
+    expect(add).not.toHaveBeenCalled(); // no Redis job without a durable row
+  });
+
+  it("a queue error after the durable write -> 202 (the row is the acceptance) and the message is never logged", async () => {
+    const { app, everything, add } = await setup(async () => { throw Object.assign(new Error("insert failed: row (password=CANARYERR-99)"), { code: "ENQUEUE_FAILED" }); });
+    const res = await post(app, authed, GOOD);
+    expect(res.statusCode).toBe(202);
+    expect(add).toHaveBeenCalledTimes(1);
     expect(everything(res.body)).not.toContain("CANARYERR");
   });
 });
 
 describe("queue selection is explicit (no NODE_ENV stub)", () => {
-  it("NODE_ENV=test without an injected queue does NOT acknowledge-and-discard: with an unreachable real Redis a valid request gets a generic 503, never 202", async () => {
+  it("NODE_ENV=test without an injected queue does NOT pretend a job exists: with an unreachable real Redis the message is acknowledged only because it is durable (202), and nothing is marked enqueued", async () => {
     expect(process.env["NODE_ENV"]).toBe("test");
     const savedRedis = process.env["REDIS_URL"];
     process.env["REDIS_URL"] = "redis://127.0.0.1:1"; // closed local port; nothing is contacted beyond loopback
     let app: Awaited<ReturnType<typeof buildApp>> | undefined;
+    const outbox = memoryOutbox();
     try {
-      app = await buildApp({ apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, logger: false, enqueueTimeoutMs: 400 });
+      app = await buildApp({ apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, intakeOutbox: outbox, logger: false, enqueueTimeoutMs: 400 });
       const res = await post(app as never, authed, GOOD);
-      // With the producer bound the unreachable real queue now answers promptly with a generic 503; a stub would have answered 202.
-      expect(res.statusCode).toBe(503);
-      expect(res.json()).toEqual({ statusCode: 503, error: "Service Unavailable", message: "Service Unavailable" });
+      expect(res.statusCode).toBe(202);
+      expect(outbox.list()).toHaveLength(1); // a stub would have acknowledged and kept nothing; the durable row is the acknowledgement
+      expect(outbox.list()[0]?.enqueued).toBe(false);
     } finally {
       if (savedRedis === undefined) delete process.env["REDIS_URL"]; else process.env["REDIS_URL"] = savedRedis;
       if (app) await Promise.race([app.close(), new Promise((r) => setTimeout(r, 3000))]);
     }
   }, 30_000);
+  it("without a durable outbox (database unreachable) the same request is a generic 503, never 202", async () => {
+    let app: Awaited<ReturnType<typeof buildApp>> | undefined;
+    try {
+      app = await buildApp({ apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, logger: false, enqueueTimeoutMs: 400, telegramQueue: { add: vi.fn() } as never });
+      const res = await post(app as never, authed, GOOD);
+      expect(res.statusCode).toBe(503);
+      expect(res.json()).toEqual({ statusCode: 503, error: "Service Unavailable", message: "Service Unavailable" });
+    } finally {
+      if (app) await Promise.race([app.close(), new Promise((r) => setTimeout(r, 3000))]);
+    }
+  });
 });

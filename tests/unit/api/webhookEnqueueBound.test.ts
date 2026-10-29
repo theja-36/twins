@@ -10,6 +10,7 @@ import {
 } from "../../../apps/api/src/index";
 import { buildApp } from "../../support/apiWithTestPolicy";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
+import { memoryOutbox } from "../../support/memoryOutbox";
 
 const API_KEY = "bound-api-key-77";
 const SECRET = "bound-secret-31";
@@ -20,8 +21,10 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function app(queue: unknown, enqueueTimeoutMs = 300) {
   const records: LogRecord[] = [];
+  const outbox = memoryOutbox();
   const instance = await buildApp({
     apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, logger: false, enqueueTimeoutMs,
+    intakeOutbox: outbox,
     ...(queue ? { telegramQueue: queue as never } : {}),
     structuredLogger: createStructuredLogger((r) => records.push(r)),
   });
@@ -30,7 +33,7 @@ async function app(queue: unknown, enqueueTimeoutMs = 300) {
     const res = await instance.inject({ method: "POST", url: "/webhooks/telegram", headers, payload: JSON.stringify(payload) });
     return { res, ms: Date.now() - t0 };
   };
-  return { instance, records, post };
+  return { instance, records, post, outbox };
 }
 const events = (r: LogRecord[]) => r.map((x) => x.event);
 
@@ -49,7 +52,7 @@ describe("bound configuration (fail-closed)", () => {
     },
   );
   it("buildApp refuses to start with an invalid bound", async () => {
-    await expect(buildApp({ apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, logger: false, enqueueTimeoutMs: 10, telegramQueue: { add: vi.fn() } as never })).rejects.toThrow(/between 250 and 30000/);
+    await expect(buildApp({ apiKey: API_KEY, telegramWebhookSecret: SECRET, db: {} as never, logger: false, enqueueTimeoutMs: 10, intakeOutbox: memoryOutbox(), telegramQueue: { add: vi.fn() } as never })).rejects.toThrow(/between 250 and 30000/);
   });
 });
 
@@ -65,8 +68,13 @@ describe("connectivity classification", () => {
   ])("%#", (err, expected) => expect(isDependencyUnavailable(err)).toBe(expected));
 });
 
+/**
+ * Stage 2 / Task 2: the webhook is acknowledged once the message is durable in PostgreSQL (here: a test-owned in-memory outbox); a Redis problem
+ * can no longer fail the request. What these tests still pin: the Redis enqueue is bounded, answers are prompt, nothing leaks, and the
+ * row is left un-enqueued so the worker's reconciler picks it up.
+ */
 describe("Redis never becomes ready (real client + BullMQ queue against a closed local port)", () => {
-  it("every valid webhook gets a prompt generic 503 (nothing submitted), never 202 and never a hang; shutdown is bounded", async () => {
+  it("every valid webhook is acknowledged promptly (202) because it is durable; nothing is enqueued, never a hang; shutdown is bounded", async () => {
     const saved = process.env["REDIS_URL"];
     process.env["REDIS_URL"] = "redis://127.0.0.1:1";
     let ctx: Awaited<ReturnType<typeof app>> | undefined;
@@ -74,10 +82,11 @@ describe("Redis never becomes ready (real client + BullMQ queue against a closed
       ctx = await app(undefined, 400);
       const results = await Promise.all([ctx.post(update(1)), ctx.post(update(2)), ctx.post(update(3))]);
       for (const { res, ms } of results) {
-        expect(res.statusCode).toBe(503);
-        expect(res.json()).toEqual(GENERIC_503);
+        expect(res.statusCode).toBe(202);
         expect(ms).toBeLessThan(1500); // bound 400 ms + scheduling, nowhere near indefinite
       }
+      expect(ctx.outbox.list()).toHaveLength(3); // all three are durable...
+      expect(ctx.outbox.list().every((e) => !e.enqueued)).toBe(true); // ...and left for the reconciler
       const bodies = results.map((r) => r.res.body).join("");
       for (const leak of ["ECONNREFUSED", "127.0.0.1", "redis://"]) expect(bodies).not.toContain(leak); // clients learn nothing
       const logs = JSON.stringify(ctx.records);
@@ -86,8 +95,8 @@ describe("Redis never becomes ready (real client + BullMQ queue against a closed
       expect(redisErrors.length).toBeGreaterThanOrEqual(1); // diagnostics are recorded (rate-limited), as codes only
       const allowed = new Set(["ts", "level", "event", "service", "errorCode", "errorName", "suppressedSinceLast"]);
       for (const r of redisErrors) expect(Object.keys(r).every((k) => allowed.has(k))).toBe(true);
-      expect(ctx.records.filter((r) => r.event === "webhook.enqueue.unavailable" && r["submission"] === "not_attempted")).toHaveLength(3);
-      expect(events(ctx.records)).not.toContain("webhook.enqueue.succeeded");
+      expect(ctx.records.filter((r) => r.event === "outbox.enqueue_failed_but_durable")).toHaveLength(3);
+      expect(events(ctx.records)).not.toContain("outbox.enqueued");
       // auth/body protections still hold in this state
       const unauth = await ctx.instance.inject({ method: "POST", url: "/webhooks/telegram", headers: { "content-type": "application/json" }, payload: "{bad" });
       expect(unauth.statusCode).toBe(403);
@@ -101,60 +110,61 @@ describe("Redis never becomes ready (real client + BullMQ queue against a closed
 });
 
 describe("Redis unavailable after a previously healthy connection (controlled queue behaviour)", () => {
-  it("connectivity errors -> generic 503 'failed_unconfirmed'; other errors stay 500; no underlying text is exposed", async () => {
+  it("connectivity errors and other errors alike: the durable row is acknowledged (202), the failure is logged as a code, no underlying text is exposed", async () => {
     const conn = vi.fn().mockRejectedValue(Object.assign(new Error("Connection is closed. host=10.9.8.7 password=CANARYREDIS"), { name: "Error" }));
     const a = await app({ add: conn });
     const { res } = await a.post();
-    expect(res.statusCode).toBe(503);
-    expect(res.json()).toEqual(GENERIC_503);
-    expect(a.records.find((r) => r.event === "webhook.enqueue.unavailable")).toMatchObject({ submission: "failed_unconfirmed", statusCode: 503 });
+    expect(res.statusCode).toBe(202);
+    expect(a.records.find((r) => r.event === "outbox.enqueue_failed_but_durable")).toBeDefined();
+    expect(a.outbox.list()).toHaveLength(1);
     expect(JSON.stringify(a.records) + res.body).not.toContain("CANARYREDIS");
 
     const bug = await app({ add: vi.fn().mockRejectedValue(new TypeError("programming error CANARYBUG")) });
     const b = await bug.post();
-    expect(b.res.statusCode).toBe(500);
+    expect(b.res.statusCode).toBe(202);
     expect(b.res.body).not.toContain("CANARYBUG");
+    expect(JSON.stringify(bug.records)).not.toContain("CANARYBUG");
   });
 
-  it("a hung submission is bounded: generic 503 within the bound, outcome recorded as UNKNOWN, late completion logged (the call is not cancelled)", async () => {
-    let finish!: (v: unknown) => void;
-    const add = vi.fn(() => new Promise((r) => { finish = r; }));
+  it("a hung Redis submission is bounded: 202 within the bound (the row is durable), the row stays un-enqueued for the reconciler", async () => {
+    const add = vi.fn(() => new Promise(() => undefined));
     const a = await app({ add }, 300);
     const { res, ms } = await a.post();
-    expect(res.statusCode).toBe(503);
-    expect(res.json()).toEqual(GENERIC_503);
+    expect(res.statusCode).toBe(202);
     expect(ms).toBeGreaterThanOrEqual(250);
     expect(ms).toBeLessThan(1200);
-    expect(a.records.find((r) => r.event === "webhook.enqueue.outcome_unknown")).toMatchObject({ submission: "timed_out_unconfirmed", boundMs: 300 });
-    expect(events(a.records)).not.toContain("webhook.enqueue.late_completion");
-    finish({ id: "late" }); // the underlying enqueue completes AFTER the 503
-    await sleep(20);
-    expect(a.records.find((r) => r.event === "webhook.enqueue.late_completion")).toMatchObject({ outcome: "succeeded" });
+    expect(a.outbox.list()).toHaveLength(1);
+    expect(a.outbox.list()[0]?.enqueued).toBe(false);
+    expect(a.records.find((r) => r.event === "outbox.enqueue_failed_but_durable")).toBeDefined();
+  });
+
+  it("if the durable write itself fails the webhook is NOT acknowledged: generic 503 and no Redis job", async () => {
+    const add = vi.fn().mockResolvedValue({ id: "ok" });
+    const a = await app({ add });
+    a.outbox.failRecord = true;
+    const { res } = await a.post();
+    expect(res.statusCode).toBe(503);
+    expect(res.json()).toEqual(GENERIC_503);
+    expect(add).not.toHaveBeenCalled();
   });
 });
 
 describe("healthy path", () => {
-  it("202 only after the queue confirmed, with the unchanged job options (worker retry policy is not the HTTP policy)", async () => {
+  it("202 only after the row is durable AND the Redis job was accepted, with the unchanged job options; the row is marked enqueued", async () => {
     const add = vi.fn().mockResolvedValue({ id: "ok" });
     const a = await app({ add });
     const { res, ms } = await a.post();
     expect(res.statusCode).toBe(202);
     expect(ms).toBeLessThan(250);
-    const [, , opts] = add.mock.calls[0] as [string, unknown, { jobId: string; attempts: number; backoff: unknown }];
+    const [, data, opts] = add.mock.calls[0] as [string, { outboxId: string }, { jobId: string; attempts: number; backoff: unknown }];
     expect(opts).toMatchObject({ attempts: 3, backoff: { type: "exponential", delay: 1000 } });
-    expect(opts.jobId).toBe("tg-tg_chat_-100777-5");
-  });
-  it("the best-effort duplicate lookup cannot turn a confirmed submission into a hang or a failure", async () => {
-    const a = await app({ add: vi.fn().mockResolvedValue({ id: "ok" }), getJob: vi.fn(() => new Promise(() => undefined)) }, 600);
-    const { res, ms } = await a.post();
-    expect(res.statusCode).toBe(202);
-    expect(ms).toBeLessThan(1500);
-    expect(a.records.find((r) => r.event === "webhook.enqueue.link_lookup_failed")).toBeDefined();
+    expect(opts.jobId).toBe(`outbox-${data.outboxId}-0`);
+    expect(a.outbox.list()[0]).toMatchObject({ id: data.outboxId, enqueued: true });
   });
 });
 
-describe("ambiguous submission outcome: retry is safe because the job id is deterministic", () => {
-  it("timed-out first request (job created LATER) + client retry -> exactly one job; the retry gets 202", async () => {
+describe("ambiguous Redis outcome: a retry is safe because the outbox identity and the attempt-scoped job id are deterministic", () => {
+  it("slow first enqueue (completes LATER) + client retry -> exactly one outbox row and one Redis job; both requests get 202", async () => {
     // Fake with BullMQ's documented semantics: add() with an existing jobId returns the existing job, never a second one.
     const jobs = new Map<string, unknown>();
     let delayFirst = true;
@@ -163,18 +173,18 @@ describe("ambiguous submission outcome: retry is safe because the job id is dete
       if (!jobs.has(opts.jobId)) jobs.set(opts.jobId, data);
       return { id: opts.jobId };
     });
-    const a = await app({ add, getJob: async (id: string) => (jobs.has(id) ? { id, data: jobs.get(id) } : undefined) }, 300);
+    const a = await app({ add }, 300);
     const first = await a.post();
-    expect(first.res.statusCode).toBe(503); // outcome unknown at this moment: jobs.size is still 0 here
+    expect(first.res.statusCode).toBe(202); // durable; the Redis outcome is unknown at this moment
     expect(jobs.size).toBe(0);
     await sleep(600); // the abandoned submission now completes by itself
     expect(jobs.size).toBe(1);
-    expect(a.records.find((r) => r.event === "webhook.enqueue.late_completion")).toMatchObject({ outcome: "succeeded" });
     const retry = await a.post();
     expect(retry.res.statusCode).toBe(202);
     const again = await a.post();
     expect(again.res.statusCode).toBe(202);
     expect(jobs.size).toBe(1); // never a second job for the same update
+    expect(a.outbox.list()).toHaveLength(1); // never a second outbox row either
     expect(new Set(add.mock.calls.map((c) => (c[2] as { jobId: string }).jobId)).size).toBe(1);
   });
 });
