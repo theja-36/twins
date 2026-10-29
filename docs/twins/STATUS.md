@@ -33,6 +33,8 @@ Stage 4 / Task 3 (source scorecards and trust tiers) is implemented on branch `f
 Stage 4 / Task 4 (pattern library and calibrated confidence) is implemented on branch `feat/stage4-pattern-confidence` (migration 0023, chains 22-26); see [PATTERN_LIBRARY_AND_CONFIDENCE.md](PATTERN_LIBRARY_AND_CONFIDENCE.md).
 
 Stage 4 / Task 5 (source intelligence in the live risk flow) is implemented on branch `feat/stage4-source-intelligence` (migration 0024); see [SOURCE_INTELLIGENCE_INTEGRATION.md](SOURCE_INTELLIGENCE_INTEGRATION.md).
+
+Stage 5 / Task 1 (agent contract, registry and orchestrator; disabled by default, no agents) is implemented on branch `feat/stage5-agent-engine` (migration 0025, chains 27-32); see [AGENT_ENGINE.md](AGENT_ENGINE.md).
 Stage 3 / Task 6 (risk decision API and approval integration) is implemented on branch `feat/stage3-risk-approval` (migration 0019); see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md).
 Stage 3 / Task 5 (market, liquidity and event-risk gates) is implemented on branch `feat/stage3-market-risk-gates` (migration 0018); see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md).
 Stage 3 / Task 4 (risk-decision expiry and loss circuit breakers) is implemented on branch `feat/stage3-expiry-circuit-breakers` (migration 0017); see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md).

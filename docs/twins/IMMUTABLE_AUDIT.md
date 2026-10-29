@@ -80,3 +80,5 @@ Superuser compromise or restore-from-edited-dump (anchor + off-host backup are t
 **Stage 4 / Task 3 addition:** `historical_source_registry`, `historical_scorecard_runs`, `historical_scorecard_metrics`, `historical_trust_tiers` and `historical_scorecard_events` are chains 17-21 (payload version 1; see [SOURCE_SCORECARDS.md](SOURCE_SCORECARDS.md)).
 
 **Stage 4 / Task 4 addition:** `historical_pattern_definitions`, `historical_pattern_runs`, `historical_pattern_snapshots`, `historical_confidence_runs` and `historical_confidence_estimates` are chains 22-26 (payload version 1; see [PATTERN_LIBRARY_AND_CONFIDENCE.md](PATTERN_LIBRARY_AND_CONFIDENCE.md)).
+
+**Stage 5 / Task 1 addition:** `agent_definitions`, `agent_orchestrator_runs`, `agent_runs`, `agent_findings`, `agent_evidence_references` and `agent_orchestrator_syntheses` are chains 27-32 (payload version 1; see [AGENT_ENGINE.md](AGENT_ENGINE.md)); a check constraint makes a synthesis that grants approval impossible.
