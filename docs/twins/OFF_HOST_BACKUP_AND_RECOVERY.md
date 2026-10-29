@@ -78,5 +78,32 @@ Evidence is classified; only the last class proves loss-of-host recovery.
 | Off-host upload | a real encrypted backup stored in the R2 bucket and re-downloaded and re-hashed | see §13 |
 | **Cross-host restore** | the same object downloaded on a machine other than the source, decrypted with the recovery key, restored, compared and audit-verified (`crossHost: true`) | see §13 |
 
-## 13. Real-provider evidence
-Recorded below when executed against the owner's bucket (object name, size, SHA-256, timestamp, drill result, runner). Until this section is filled, off-host recovery is **not** proven.
+## 13. Real-provider evidence (2026-10-29)
+Synthetic data only: a throwaway PostgreSQL 16 container with the 13 migrations applied plus 12 `SYNTHETIC drill message` rows, one synthetic channel and 5 `synthetic.drill.seed` audit events. The real staging database, Telegram channel, API, worker, approval bot and VPS were not touched. Encrypted to the **drill-only** age key (recipient fingerprint `f3a09006f3e77b22`); the production key was not used.
+
+**Real encrypted backup and off-host upload (host A = the developer's Mac)**
+| Item | Value |
+|---|---|
+| Provider / location | Cloudflare R2, private bucket `twins-backups` (S3 API; account id omitted) |
+| Object keys | `daily/drill/twins-drill-20261029T133819Z.tar.age`, `weekly/drill/…` and `monthly/drill/…` (same bytes, first backup of the week and month), each with `.manifest.json` |
+| Encrypted size | 319 240 bytes |
+| SHA-256 (of the encrypted artifact) | `e7d794812904763dbabf2099785014dd53207adcb2cca550d3352e87ba2e2c30` |
+| Created / upload verified | 2026-10-29T13:38:19.003Z / 2026-10-29T13:38:21.839Z |
+| Encryption | age v1 (X25519 recipient, ChaCha20-Poly1305), client-side before upload |
+| Post-upload check | each of the three objects was downloaded again from R2 and its SHA-256 matched (`backup.upload.verified` x3) |
+| Snapshot facts in the manifest | 13 migrations; rows: telegram_messages 12, telegram_sources 1, audit_events 23, system_control_events 3, system_controls 3, others 0; 6 audit-chain heads |
+
+**Cross-host restore drill** - manual workflow `offhost-drill`, run https://github.com/theja-36/twins/actions/runs/40883891061
+Runner: GitHub-hosted `ubuntu-24.04` (host B, fingerprint differs from the source: `crossHost: true`). Result: **success** at 2026-10-29T13:39:48Z.
+| Check | Result |
+|---|---|
+| Download from R2 + SHA-256 vs manifest | match |
+| Decrypt with the drill-only identity (repository secret) | ok; plaintext digest matches |
+| Dump digest | match |
+| Restore into a disposable `postgres:16-alpine` container | ok |
+| Migrations | 13 (structure verification passed) |
+| Exact row counts, 11 critical tables | all match the backup snapshot |
+| Audit-chain heads, 6 chains | all match |
+| Audit-chain verifier on the restored database | PASS (no anchor file in this bundle: the synthetic source had none, so anchor comparison was not exercised) |
+| Cleanup | container destroyed, plaintext wiped, key file shredded; the evidence artifact holds the status file and log (no secrets) |
+**Not proven by this evidence:** restore of real staging data; the anchor comparison; the production key and its escrow; installation of the timers on the VPS; Bucket Lock/lifecycle settings in the bucket (owner dashboard task); behaviour at real data volumes.
