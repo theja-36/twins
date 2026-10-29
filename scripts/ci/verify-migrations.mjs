@@ -86,7 +86,15 @@ try {
   if (inv.rowCount !== 1 || inv.rows[0].tgenabled !== "A") throw new Error("signal_validations_stop_loss_invariant (0011) is missing or not ENABLE ALWAYS");
   const view = await client.query("select to_regclass('public.signal_validation_eligibility') is not null as ok");
   if (!view.rows[0].ok) throw new Error("signal_validation_eligibility (0011) is missing");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present`);
+  // 0012: durable Telegram intake outbox: the table, the identity unique index and the ENABLE ALWAYS guard triggers (read-only catalog checks).
+  const outbox = await client.query("select to_regclass('public.telegram_intake_outbox') is not null as ok");
+  if (!outbox.rows[0].ok) throw new Error("telegram_intake_outbox (0012) is missing");
+  const idx = await client.query("select 1 from pg_indexes where tablename = 'telegram_intake_outbox' and indexname = 'telegram_intake_outbox_identity_unique' and indexdef like '%UNIQUE%'");
+  if (idx.rowCount !== 1) throw new Error("telegram_intake_outbox_identity_unique (0012) is missing");
+  const obTriggers = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.telegram_intake_outbox'::regclass and not tgisinternal order by tgname");
+  const obNames = obTriggers.rows.map((r) => r.tgname).join(",");
+  if (obNames !== "telegram_intake_outbox_guard,telegram_intake_outbox_no_truncate" || obTriggers.rows.some((r) => r.tgenabled !== "A")) throw new Error(`telegram_intake_outbox triggers missing or not ENABLE ALWAYS: [${obNames}]`);
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present`);
 } finally {
   await client.end();
 }
