@@ -11,7 +11,7 @@ import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { orderSideEnum, orderStatusEnum, tradingModeEnum } from "./enums";
 import { accounts } from "./accounts";
 import { instruments } from "./instruments";
-import { riskDecisions } from "./decisions";
+import { riskDecisions } from "./riskDecisions";
 
 /**
  * An order (spec section 32). `riskDecisionId` is nullable only because a

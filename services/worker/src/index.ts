@@ -21,10 +21,11 @@
  */
 
 import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
-import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
+import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { observe, recordProcessStart } from "@twins/alerting";
+import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
@@ -315,6 +316,27 @@ export async function processSignalQueueJob(
   return processTelegramQueueJob(job as Job<TelegramJobPayload>, correlationId, db, options);
 }
 
+
+/**
+ * Stage 3 / Task 1: the first (PENDING) risk decision for a validated signal or a recorded options claim. Nothing is sized, limited or sent for approval
+ * here. Fail closed: a database or runtime-state error propagates (the intake outbox retries; the creation is idempotent per subject). A safety refusal
+ * keeps its identity so the intake gate pauses the job instead of consuming an attempt.
+ */
+async function recordPendingRiskDecision(
+  log: StructuredLogger,
+  create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
+  subject: { signalId?: string; optionsClaimId?: string },
+): Promise<void> {
+  try {
+    const r = await create();
+    if (r.skipped) log.warn("worker.risk_decision.skipped", { reason: r.skipped, ...subject });
+    else log.info("worker.risk_decision.recorded", { riskDecisionId: r.id, created: r.created, status: r.status, decisionVersion: r.decisionVersion, ...subject });
+  } catch (error) {
+    if (error instanceof RiskDecisionError && error.cause instanceof SafetyRefusalError) throw error.cause;
+    throw error;
+  }
+}
+
 // ─── Telegram pipeline ─────────────────────────────────────────────────────
 
 /**
@@ -523,6 +545,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id });
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -560,6 +583,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -635,6 +659,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId });
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,

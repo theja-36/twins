@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import pg from "pg";
+import { createPendingRiskDecisionForSignal } from "../../../packages/risk/src/index";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { eq } from "drizzle-orm";
@@ -39,11 +40,11 @@ const scratchUrl = (() => {
 const DATABASE_URL = scratchUrl;
 let pool: pg.Pool;
 let handle: BoundedDbHandle;
-const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations"] as const;
+const TABLES = ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events", "stop_loss_validations", "risk_decisions"] as const;
 type Table = (typeof TABLES)[number];
 const GUARD: Record<Table, string> = Object.fromEntries(TABLES.map((t) => [t, `${t}_no_update_delete`])) as Record<Table, string>;
 /** A content column per table that a tamperer would change. */
-const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail" };
+const CONTENT: Record<Table, string> = { audit_events: "event_type", signal_validations: "rationale", telegram_messages: "raw_text", options_claims: "parser_version", system_control_events: "reason", stop_loss_validations: "detail", risk_decisions: "decision_reason" };
 
 async function code(sql: string, params: unknown[] = [], tx = false): Promise<string> {
   const c = await pool.connect();
@@ -76,6 +77,7 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
   await c.query("insert into instruments (id, symbol, exchange, instrument_type) values ($1, $2, 'NSE', 'equity')", [instrumentId, `T${suffix}`.toUpperCase()]);
   const signalId = randomUUID();
   await c.query("insert into signals (id, source_type, telegram_message_id, instrument_id, parser_version, direction, signal_timestamp) values ($1, 'telegram', $2, $3, 'itest-v1', 'buy', now())", [signalId, messageIds[0], instrumentId]);
+  let lastRiskId: string | null = null;
   for (let i = 0; i < 2; i++) {
     await c.query(
       `insert into signal_validations (id, signal_id, outcome, decision_confidence, confidence_label, bull_thesis, bear_thesis, counter_thesis, counter_thesis_severity, source_reliability, source_reliability_reason, rationale)
@@ -83,11 +85,20 @@ async function appendFixtures(c: pg.PoolClient, extraMessages = 3): Promise<Fixt
       [randomUUID(), signalId, `rationale ${suffix} ${i}`],
     );
     await c.query("insert into options_claims (id, telegram_message_id, parser_version, result_kind, reasons, provenance) values ($1, $2, $3, 'ambiguous', '[]', '{}')", [randomUUID(), messageIds[0], `itest-${suffix}-${i}`]);
+    const stopLossId = randomUUID();
     await c.query(
       `insert into stop_loss_validations (id, subject_kind, signal_id, rule_version, result, reason_code, detail, instrument_type, instrument_kind, side)
        values ($1, 'signal', $2, 'stop-loss-v1', 'MISSING', 'MISSING_STOP_LOSS', $3, 'equity', 'equity', 'buy')`,
-      [randomUUID(), signalId, `absent_or_blank ${suffix} ${i}`],
+      [stopLossId, signalId, `absent_or_blank ${suffix} ${i}`],
     );
+    // risk decisions (Stage 3): version 1, then version 2 superseding it
+    const riskId = randomUUID();
+    await c.query(
+      `insert into risk_decisions (id, signal_id, stop_loss_validation_id, supersedes_id, decision_version, status, idempotency_key, instrument_type, symbol, decision_reason_code, decision_reason, input_snapshot, evidence_references, created_by)
+       values ($1, $2, $3, $4, $5, 'PENDING', $6, 'equity', $7, 'stop_loss_missing', $8, '{"itest":true}', '{}', 'service:itest')`,
+      [riskId, signalId, stopLossId, i === 0 ? null : lastRiskId, i + 1, `itest-risk-${suffix}-${i}`, `T${suffix}`.toUpperCase(), `risk reason ${suffix} ${i}`],
+    );
+    lastRiskId = riskId;
     await c.query("insert into audit_events (id, event_type, entity_type, actor_type, metadata) values ($1, $2, 'itest', 'system', $3::jsonb)", [randomUUID(), `itest.${suffix}.${i}`, JSON.stringify({ b: 2, a: [1, null, "x"] })]);
   }
   return { sourceId, messageIds, signalId };
@@ -203,6 +214,7 @@ describe("valid append flows still work and extend the chain", () => {
     expect(validation.reused).toBe(false);
     const claim = await recordOptionsIntake(handle.db, { telegramMessageId: must(msg).id, parserVersion: `itest-${suffix}`, intake: { kind: "ambiguous", directives: [] } as never, assessment: undefined, master: null, premium: null });
     expect(claim.created).toBe(true);
+    expect(await createPendingRiskDecisionForSignal(handle.db, must(signal).id)).toMatchObject({ created: true, status: "PENDING" }); // the real writer of risk decisions (evidence recorded by the validation above)
     await handle.db.insert(schema.auditEvents).values({ eventType: `itest.valid.${suffix}`, entityType: "itest", actorType: "system", metadata: { suffix } });
     const report = await verifyAuditChainsWithPool(pool);
     expect(report.failures).toEqual([]);
@@ -254,7 +266,10 @@ describe("tamper evidence: every kind of tampering is detected, at the first fai
       await c.query(`alter table ${table} disable trigger ${GUARD[table]}`);
       for (const g of opts.alsoGuard ?? []) await c.query(`alter table ${table} disable trigger ${g}`);
       if (opts.alsoHeads) await c.query("alter table audit_chain_heads disable trigger audit_chain_heads_guard");
+      // a determined tamperer also has to get past the foreign keys that now protect evidence and predecessors (restrict): replica mode skips FK triggers
+      await c.query("set local session_replication_role = replica");
       await tamper(c, { first, last });
+      await c.query("set local session_replication_role = origin");
       await c.query(`alter table ${table} enable always trigger ${GUARD[table]}`);
       for (const g of opts.alsoGuard ?? []) await c.query(`alter table ${table} enable always trigger ${g}`);
       if (opts.alsoHeads) await c.query("alter table audit_chain_heads enable always trigger audit_chain_heads_guard");

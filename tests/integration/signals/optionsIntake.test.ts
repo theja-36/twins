@@ -15,6 +15,8 @@ import {
 } from "../../../packages/signals/src/index";
 import { createStructuredLogger, type LogRecord } from "../../../packages/shared/src/index";
 import { processTelegramJob } from "../../support/workerWithTestPolicy";
+import { must } from "../../support/must";
+import { getLatestRiskDecisionForOptionsClaim } from "../../../packages/risk/src/index";
 
 const db = createDb(requireTestDatabaseUrl());
 afterAll(async () => {
@@ -94,6 +96,14 @@ describe("options intake", () => {
     const warn = records.find((r) => r.event === "worker.options.claim_not_ingested");
     expect(warn).toBeDefined();
     expect(JSON.stringify(records)).not.toContain("BUY NIFTY"); // the raw text is not copied into logs
+    // Stage 3 / Task 1: exactly one PENDING risk decision for the claim, linked to its stop-loss evidence; no sizing, no approval
+    const [claim] = await db.select().from(schema.optionsClaims).where(eq(schema.optionsClaims.telegramMessageId, must(stored[0]).id));
+    const decision = await getLatestRiskDecisionForOptionsClaim(db, must(claim).id);
+    expect(decision).toMatchObject({ status: "PENDING", optionsClaimId: claim?.id, instrumentType: "option", symbol: "NIFTY", optionType: "CE", plannedQuantity: null, createdBy: "service:risk-decision" });
+    const [stop] = await db.select().from(schema.stopLossValidations).where(eq(schema.stopLossValidations.optionsClaimId, must(claim).id));
+    expect(decision?.stopLossValidationId).toBe(must(stop).id);
+    expect(records.find((r) => r.event === "worker.risk_decision.recorded")).toMatchObject({ created: true, status: "PENDING" });
+    expect(JSON.stringify(records)).not.toContain("risk_decision_card");
   });
 });
 

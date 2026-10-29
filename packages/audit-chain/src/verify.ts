@@ -62,6 +62,8 @@ export async function checkProtection(db: Queryable): Promise<{ problems: Failur
   const problems: Failure[] = [];
   const expected: Array<[string, string, readonly string[]]> = [
     ...CHAIN_SPECS.map((s): [string, string, readonly string[]] => [s.chain, s.table, [...s.triggers, ...INVARIANT_TRIGGERS.filter(([t]) => t === s.table).map(([, name]) => name)]]),
+    // invariant triggers on tables that are not chains (e.g. the orders guard that demands a risk decision)
+    ...INVARIANT_TRIGGERS.filter(([t]) => !CHAIN_SPECS.some((s) => s.table === t)).map(([t, name]): [string, string, readonly string[]] => [t, t, [name]]),
     ["system_controls", "system_controls", SYSTEM_CONTROLS_TRIGGERS],
     [HEADS_TABLE, HEADS_TABLE, HEADS_TRIGGERS],
   ];

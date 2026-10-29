@@ -20,6 +20,9 @@ Stage 2 / Task 4: **staging runs commit `a0120d75`** (Stage 1 safety core, hoste
 ## 1d. Alerting and scheduled verification (2026-10-29)
 Stage 2 / Task 5 and the Telegram alert destination are **merged to `main`** (PR #23, #24) and deployed to staging (image `tgalert-0d333eb7`; migrations 0000-0013); **Stage 2 is complete**. Installed timers: daily backup (existing), hourly audit verification, weekly local backup verification; alert relay running with **no destination configured yet**. See [OPERATIONAL_ALERTING.md](OPERATIONAL_ALERTING.md).
 
+## 1e. Stage 3 (2026-10-29)
+Stage 3 / Task 1 (risk decision schema and immutable risk records) is implemented on branch `feat/stage3-risk-decisions` (migration 0014, `packages/risk`); not merged and **not deployed to staging**. See [RISK_DECISIONS.md](RISK_DECISIONS.md).
+
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |
 |---|---|---|---|---|

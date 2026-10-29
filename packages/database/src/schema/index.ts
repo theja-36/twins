@@ -10,6 +10,7 @@ export * from "./telegram";
 export * from "./signals";
 export * from "./analyses";
 export * from "./decisions";
+export * from "./riskDecisions";
 export * from "./execution";
 export * from "./audit";
 export * from "./operations";

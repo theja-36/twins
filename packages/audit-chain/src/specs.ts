@@ -85,13 +85,25 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     ],
     triggers: guards("options_claims"),
   },
+  {
+    chain: "risk_decisions",
+    table: "risk_decisions",
+    fields: [
+      txt("t.id"), txt("t.signal_id"), txt("t.options_claim_id"), txt("t.stop_loss_validation_id"), txt("t.supersedes_id"), txt("t.decision_version"), plain("t.status"), plain("t.idempotency_key"),
+      plain("t.instrument_type"), plain("t.market"), plain("t.symbol"), txt("t.expiry"), txt("t.strike"), plain("t.option_type"), plain("t.side"), txt("t.entry_price"), txt("t.stop_loss"), plain("t.stop_loss_basis"),
+      txt("t.target_1"), txt("t.target_2"), txt("t.target_3"), txt("t.planned_quantity"), txt("t.planned_notional"), txt("t.planned_max_loss_amount"), txt("t.planned_max_loss_percent"),
+      txt("t.planned_risk_reward_ratio"), txt("t.confidence_score"), plain("t.source_trust_tier"), plain("t.decision_reason_code"), plain("t.decision_reason"), txt("t.input_snapshot"), txt("t.output_snapshot"),
+      txt("t.evidence_references"), plain("t.created_by"), ts("t.created_at"),
+    ],
+    triggers: [...guards("risk_decisions"), "risk_decisions_a_integrity_before_insert"],
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */
 export const HEADS_TABLE = "audit_chain_heads";
 export const HEADS_TRIGGERS = ["audit_chain_heads_guard", "audit_chain_heads_no_truncate"] as const;
 /** Invariant triggers that are not part of a chain but protect a rule (the mandatory stop-loss on approvals). */
-export const INVARIANT_TRIGGERS: ReadonlyArray<readonly [table: string, trigger: string]> = [["signal_validations", "signal_validations_stop_loss_invariant"]];
+export const INVARIANT_TRIGGERS: ReadonlyArray<readonly [table: string, trigger: string]> = [["signal_validations", "signal_validations_stop_loss_invariant"], ["orders", "orders_require_risk_decision"]];
 export const SYSTEM_CONTROLS_TRIGGERS = ["system_controls_before_update", "system_controls_audit_insert", "system_controls_audit_update", "system_controls_no_delete", "system_controls_no_truncate"] as const;
 export const DDL_WATCH = "twins_audit_ddl_watch";
 export const PROTECTED_TABLES = CHAIN_SPECS.map((s) => s.table);
