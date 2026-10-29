@@ -13,6 +13,10 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Owner decisions (DECIDED / PROPOSED / OPEN) | [DECISION_LOG.md](DECISION_LOG.md) |
 | Information requests to the owner | [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md) |
 | Baseline state, phase states, release readiness | [STATUS.md](STATUS.md) |
+| Runtime safety state, kill switch, fail-closed rules, integration points (Stage 1 / Task 2) | [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md) |
+| Immutable audit trail, hash chains, verifier, role separation, operator identity (Stage 1 / Task 3) | [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md) |
+| Hosted CI workflow, required checks, failure guide, branch-protection policy (Stage 2 / Task 1) | [CI.md](CI.md) |
+| Mandatory stop-loss rule, reason codes, options rules, evidence, enforcement layers (Stage 1 / Task 4) | [MANDATORY_STOP_LOSS.md](MANDATORY_STOP_LOSS.md) |
 | Phase order, dependencies, gates | [roadmap/](roadmap/MASTER_ROADMAP.md) |
 | Per-phase plan, trackers and handoff | [phases/](phases/) |
 | Audit evidence and method | [audit/](audit/00_AUDIT_SCOPE_AND_METHOD.md) |

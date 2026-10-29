@@ -4,9 +4,12 @@
 
 ## 1. Product-baseline state
 - Architecture: **RECEIVED 2026-10-24**, saved verbatim as [PRODUCT_BASELINE.md](PRODUCT_BASELINE.md), reconciled with the requirement matrix. Finding F-001 / question Q-001 closed on that basis; owner decisions D-026..D-044 were recorded 2026-10-24 (hybrid architecture, first mandate type, source changes, RESEARCH_ONLY, outbox initial rules, material changes, TWINS levels, generated-candidate deferral, open-position contract). Q-019..Q-024, Q-026 and Q-028 are answered, Q-025 is partly answered with explicit deferrals, and Q-027 is explicitly deferred; no residual architecture question lacks an answer or a deferral. Deferrals keep the affected work blocked.
-- Requirements (127): VERIFIED_IMPLEMENTED 10, PARTIAL 43, MISSING 70, UNVERIFIED 3, BLOCKED 1, NOT_APPLICABLE 0. (v1 had 78; 49 added, 11 changed.)
+- Requirements (130; updated 2026-10-29: Stage 1 Task 2 added XC-11 and moved EX-08 to PARTIAL, Task 3 added XC-12, Task 4 added XC-13): VERIFIED_IMPLEMENTED 10, PARTIAL 47, MISSING 69, UNVERIFIED 3, BLOCKED 1, NOT_APPLICABLE 0. (v1 had 78; 49 added, 11 changed.)
 - Highest-severity open findings: F-002 (no risk/sizing/emergency layer, no production-budget fail-closed), F-003 (`APPROVE` naming collision; target eligibility states absent). Full list: [audit/10_FINDINGS_AND_RECOMMENDATIONS.md](audit/10_FINDINGS_AND_RECOMMENDATIONS.md).
 - F1 (independent review of security-critical code): **unresolved**; no reviewer is assumed, no waiver or retrospective approval is recorded, and the assistant does not self-certify independence. The historical discrepancy between the recorded F1 policy and real data held in staging is finding F-020 (decision D-031 OPEN).
+
+## 1a. Implementation checkpoint (2026-10-29)
+**Stage 1 (Safety Core) is complete, approved and committed** on branch `feat/stage1-safety-core` as seven reviewable commits (shared live-trading guard; database-backed runtime state and kill switch; immutable audit trail and hash-chain verifier; mandatory stop-loss invariant; Stage 1 safety tests; docs; hosted CI), each production commit type-checked on its own. Design and evidence: [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md), [MANDATORY_STOP_LOSS.md](MANDATORY_STOP_LOSS.md), [CI.md](CI.md), [phases/01-operations-foundation/TEST_EVIDENCE.md](phases/01-operations-foundation/TEST_EVIDENCE.md). The branch is not merged to `main` and nothing is deployed. The table below keeps the earlier phase numbering; Stage 1 delivered parts of P01 and P06 and is not a phase advance.
 
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |
