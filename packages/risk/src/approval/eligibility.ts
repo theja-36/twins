@@ -4,18 +4,19 @@ import { evaluateSafety } from "@twins/runtime-state";
 import { getCircuitBreakerStatus, type BreakerOptions, type CircuitBreakerStatus } from "../breakers/record";
 import { loadExpiryConfig, type ExpiryConfig } from "../expiry/config";
 import { databaseNow } from "../expiry/record";
+import { intelligenceOf, isIntelligenceValid } from "../intelligence/record";
 import { getRiskDecision, RiskDecisionError, type RiskDecisionRecord } from "../riskDecisions";
 
 /**
  * Approval eligibility (Stage 3 / Task 6). A risk decision may be PRESENTED for approval only when ALL of these hold at this moment: current (un-superseded)
  * APPROVED_FOR_REVIEW version; inside its validity window; the latest stop-loss validation is the cited one and VALID; sizing SUCCEEDED; the portfolio limits
- * PASSED; the market gates PASSED; no loss circuit breaker is open; the kill switch is off. Every unmet condition is listed with a fixed machine-readable
+ * PASSED; the market gates PASSED; valid source intelligence is recorded (trust A / B / C and a known confidence tier); no loss circuit breaker is open; the kill switch is off. Every unmet condition is listed with a fixed machine-readable
  * code. The same rules are enforced AGAIN inside the database at the instant an approval is recorded (twins_record_risk_approval), so a card shown a while ago
  * can never approve from stale state. This read-only assessment writes nothing.
  */
 export const ELIGIBILITY_REASONS = [
   "decision_not_found", "decision_superseded", "decision_not_approved_for_review", "decision_expired", "stop_loss_not_valid", "sizing_missing", "portfolio_not_passed", "market_not_passed",
-  "circuit_breaker_open", "kill_switch_active", "state_unavailable", "breaker_state_unavailable",
+  "circuit_breaker_open", "kill_switch_active", "state_unavailable", "breaker_state_unavailable", "source_intelligence_not_valid",
 ] as const;
 export type EligibilityReason = (typeof ELIGIBILITY_REASONS)[number];
 
@@ -58,6 +59,8 @@ export async function assessApprovalEligibility(db: Db, decisionId: string, opts
   if (out?.sizing?.status !== "SIZED" || !((num(decision.plannedQuantity) ?? 0) > 0) || !((num(decision.plannedMaxLossAmount) ?? 0) > 0)) reasons.push("sizing_missing");
   if (out?.portfolio?.outcome !== "APPROVED_FOR_REVIEW") reasons.push("portfolio_not_passed");
   if (out?.market?.outcome !== "PASSED") reasons.push("market_not_passed");
+  // Stage 4 / Task 5: valid source intelligence is mandatory. UNKNOWN / D trust, UNKNOWN confidence or no recorded intelligence can never be approval-eligible.
+  if (!isIntelligenceValid(intelligenceOf(decision))) reasons.push("source_intelligence_not_valid");
 
   // runtime safety: an unreadable state fails closed
   const refusal = await evaluateSafety("kill_switch_inactive", "risk_approval.eligibility").catch(() => ({ reason: "state_unavailable" }) as const);

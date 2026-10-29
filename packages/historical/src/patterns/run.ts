@@ -139,7 +139,7 @@ export async function latestPatternRun(db: Db, atOrBefore?: Date): Promise<{ id:
   return r;
 }
 
-async function loadViews(db: Db, runId: string, keyTexts: string[]): Promise<Map<string, PatternView>> {
+export async function loadPatternViews(db: Db, runId: string, keyTexts: string[]): Promise<Map<string, PatternView>> {
   const rows = await db.select({ patternId: D.id, keyText: D.keyText, level: D.level, snapshotId: PS.id, status: PS.evidenceStatus, sampleSize: PS.sampleSize, metrics: PS.metrics })
     .from(PS).innerJoin(D, eq(D.id, PS.patternId)).where(and(eq(PS.runId, runId), inArray(D.keyText, keyTexts)));
   return new Map(rows.map((r) => [r.keyText, { patternId: r.patternId, snapshotId: r.snapshotId, keyText: r.keyText, level: r.level, status: r.status as PatternView["status"], sampleSize: r.sampleSize, metrics: r.metrics as PatternMetrics }]));
@@ -159,7 +159,7 @@ export async function estimateSignalConfidence(db: Db, signal: SignalForConfiden
     return { ...base, patternRunId: null, score: 0, tier: "UNKNOWN", evidenceQuality: "NO_LIBRARY", sampleSize: 0, primaryPatternKey: null, patternRefs: [], inputs: { features: f, sourceTrustTier: sourceTrustTier }, explanation: [{ rule: "NO_PATTERN_LIBRARY", detail: "no pattern metrics run exists at or before the signal time" }], limitations: ["HISTORICAL_ASSOCIATION_ONLY", "NO_CAUSAL_CLAIM"] };
   }
   const keys = patternKeys(deriveFeatures(signal)).map((k) => k.keyText);
-  const views = await loadViews(db, run.id, keys);
+  const views = await loadPatternViews(db, run.id, keys);
   const extra = run.asOf.getTime() > signal.timestamp.getTime() ? ["LOOKAHEAD_IN_SAMPLE"] : [];
   return { ...base, patternRunId: run.id, ...computeConfidence(signal, sourceTrustTier, marketContext, (k) => views.get(k), cfg, extra) };
 }
@@ -211,7 +211,7 @@ export async function runConfidenceEstimation(db: Db, o: EstimateOptions): Promi
     return { r, sig };
   });
   counts.skippedNotSignal = rows.length - prepared.length;
-  for (const [k, v] of await loadViews(db, patternRun.id, [...need])) allViews.set(k, v);
+  for (const [k, v] of await loadPatternViews(db, patternRun.id, [...need])) allViews.set(k, v);
   for (const { r, sig } of prepared) {
     const tl = timelines.get(r.channel) ?? [];
     const upTo = tl.filter((t) => t.asOf.getTime() <= sig.timestamp.getTime());

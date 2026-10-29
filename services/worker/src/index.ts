@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
+import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
 import { Redis } from "ioredis";
@@ -345,6 +345,7 @@ async function recordPendingRiskDecision(
   size?: () => ReturnType<typeof sizeLatestRiskDecisionForSignal>,
   evaluate?: (decisionId: string) => ReturnType<typeof evaluatePortfolioRisk>,
   db?: Db,
+  intel?: () => ReturnType<typeof recordIntelligenceForSignal>,
 ): Promise<void> {
   try {
     const r = await create();
@@ -353,6 +354,13 @@ async function recordPendingRiskDecision(
       return;
     }
     log.info("worker.risk_decision.recorded", { riskDecisionId: r.id, created: r.created, status: r.status, decisionVersion: r.decisionVersion, ...subject });
+    // Stage 4 / Task 5: record point-in-time source intelligence (trust tier + calibrated confidence) as a new decision version BEFORE sizing. Unavailable intelligence is recorded as such
+    // (the decision stays PENDING with an explicit reason and cannot be sized or approved); a database / runtime-state error propagates, so the job fails closed and is retried.
+    if (intel) {
+      const ir = await intel();
+      if ("skipped" in ir) log.info("worker.source_intelligence.skipped", { reason: ir.skipped, ...subject });
+      else log.info("worker.source_intelligence.recorded", { riskDecisionId: ir.id, created: ir.created, intelligenceStatus: ir.intelligenceStatus, reasonCode: ir.reasonCode, trustTier: ir.trustTier, confidenceTier: ir.confidenceTier, decisionVersion: ir.decisionVersion, ...subject });
+    }
     // Stage 3 / Task 2: append the position-size version. Planning only: no order, broker call or approval is produced.
     const sz = size ? await size() : undefined;
     if (!sz) return;
@@ -591,7 +599,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
-    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id), (id) => evaluatePortfolioRisk(db, id), db);
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForOptionsClaim(db, record.id));
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -629,7 +637,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
-    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id), db); // resume: a crash after validation must not leave the signal without its risk decision
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId)); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -705,7 +713,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
-  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId), (id) => evaluatePortfolioRisk(db, id), db);
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId));
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,

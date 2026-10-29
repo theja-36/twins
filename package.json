@@ -27,6 +27,7 @@
     "historical:evaluate": "tsx scripts/ops/historical-evaluate.ts",
     "historical:scorecard": "tsx scripts/ops/historical-scorecard.ts",
     "historical:patterns": "tsx scripts/ops/historical-patterns.ts",
+    "intelligence": "tsx scripts/ops/source-intelligence.ts",
     "options:preview": "tsx scripts/options-preview.ts",
     "options:viewer": "tsx apps/web/src/server.ts",
     "options:demo": "tsx scripts/options-demo.ts",
