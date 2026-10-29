@@ -27,3 +27,4 @@ export * from "./eventBlackouts";
 export * from "./riskApprovals";
 export * from "./historicalImport";
 export * from "./historicalOutcomes";
+export * from "./historicalScorecards";

@@ -25,6 +25,7 @@
     "risk:control": "tsx scripts/ops/risk-control.ts",
     "historical:import": "tsx scripts/ops/historical-import.ts",
     "historical:evaluate": "tsx scripts/ops/historical-evaluate.ts",
+    "historical:scorecard": "tsx scripts/ops/historical-scorecard.ts",
     "options:preview": "tsx scripts/options-preview.ts",
     "options:viewer": "tsx apps/web/src/server.ts",
     "options:demo": "tsx scripts/options-demo.ts",

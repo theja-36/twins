@@ -166,6 +166,36 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     fields: [txt("t.id"), txt("t.run_id"), plain("t.event_type"), txt("t.sequence"), txt("t.detail"), plain("t.created_by"), ts("t.created_at")],
     triggers: guards("historical_evaluation_events"),
   },
+  {
+    chain: "historical_source_registry",
+    table: "historical_source_registry",
+    fields: [txt("t.id"), plain("t.entry_type"), plain("t.source_key"), plain("t.channel_label"), txt("t.alias_of_id"), plain("t.reason"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_source_registry"),
+  },
+  {
+    chain: "historical_scorecard_runs",
+    table: "historical_scorecard_runs",
+    fields: [txt("t.id"), plain("t.run_key"), txt("t.source_id"), ts("t.as_of"), plain("t.algorithm_version"), txt("t.config"), plain("t.config_sha256"), plain("t.label_set_sha256"), txt("t.input_summary"), txt("t.source_snapshot"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_scorecard_runs"),
+  },
+  {
+    chain: "historical_scorecard_metrics",
+    table: "historical_scorecard_metrics",
+    fields: [txt("t.id"), txt("t.run_id"), plain("t.window_type"), ts("t.window_start"), ts("t.window_end"), txt("t.sample_size"), txt("t.metrics"), txt("t.caveats"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_scorecard_metrics"),
+  },
+  {
+    chain: "historical_trust_tiers",
+    table: "historical_trust_tiers",
+    fields: [txt("t.id"), txt("t.run_id"), txt("t.source_id"), plain("t.tier"), plain("t.tier_label"), ts("t.as_of"), txt("t.explanation"), txt("t.metric_snapshot"), txt("t.threshold_config"), txt("t.evidence_references"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_trust_tiers"),
+  },
+  {
+    chain: "historical_scorecard_events",
+    table: "historical_scorecard_events",
+    fields: [txt("t.id"), txt("t.run_id"), plain("t.event_type"), txt("t.sequence"), txt("t.detail"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("historical_scorecard_events"),
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */
