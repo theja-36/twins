@@ -97,4 +97,5 @@ Existing tests changed (none weakened, skipped or deleted): `structuralValidatio
 ## Stage 2 / Task 1 - commit checkpoint and hosted CI (2026-10-29)
 - Stage 1 is committed on `feat/stage1-safety-core`; the earlier "uncommitted" wording in the sections above describes the state when each task was verified.
 - New guard tests: `tests/unit/ci/secretScan.test.ts` (5) and `tests/unit/ci/workflow.test.ts` (8) pin the workflow's triggers, permissions, gate, Node pinning, step order, service containers and the absence of secrets.
-- Hosted run results (URL, job statuses, test counts) are recorded in the follow-up entry below once the run completes.
+- Local verification (Node 22, disposable Postgres 16 / Redis 7): npm ci, lint (0 errors, 116 warnings), `tsc -b`, 88 unit files / 1289 tests, db:migrate (12 migrations), verify-migrations, integration 38 files passed + 2 skipped / 309 tests passed + 4 skipped, `audit:verify --require-ddl-watch` ok, crash test ok.
+- Hosted run https://github.com/theja-36/twins/actions/runs/40855674182 (branch `feat/stage1-safety-core`, after merging `origin/main`): static, unit (Node 20, 22), integration (Node 20, 22), crash-recovery and `ci-gate` all **success**. The crash-recovery job was re-run twice more on hosted runners and passed both times, so it stays in the gate.
