@@ -15,6 +15,7 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Baseline state, phase states, release readiness | [STATUS.md](STATUS.md) |
 | Runtime safety state, kill switch, fail-closed rules, integration points (Stage 1 / Task 2) | [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md) |
 | Immutable audit trail, hash chains, verifier, role separation, operator identity (Stage 1 / Task 3) | [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md) |
+| Historical archive import: input contract, identity, dedup, normalization, commands, report (Stage 4 / Task 1) | [HISTORICAL_ARCHIVE_IMPORT.md](HISTORICAL_ARCHIVE_IMPORT.md) |
 | Risk decision API, approval cards, approval persistence and security boundaries (Stage 3 / Task 6) | [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md) |
 | Market, liquidity and event-risk gates: sessions, expiry, blackouts, thresholds, outcomes (Stage 3 / Task 5) | [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md) |
 | Risk-decision expiry and loss circuit breakers, loss accounting, enforcement, alerts, operations (Stage 3 / Task 4) | [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md) |
