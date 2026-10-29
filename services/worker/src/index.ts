@@ -22,6 +22,7 @@
 
 import { UnrecoverableError, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
+import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { withIntakeGate } from "./safetyGate.js";
 import { Redis } from "ioredis";
 import { createStructuredLogger, describeErrorSafely, type StructuredLogger } from "@twins/shared";
@@ -83,6 +84,8 @@ export const workerDb = createBoundedDb({
 // an unreadable state refuses. Not configured under NODE_ENV=test, where the vitest setup installs an explicit test source instead.
 if (process.env["NODE_ENV"] !== "test") {
   configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: createStructuredLogger(undefined, { service: "worker" }) });
+  // Role separation (Stage 1 / Task 3): outside local development the worker must run as the least-privilege role, or it refuses to start (exit 82).
+  if (config.appEnv !== "development") await enforceRuntimeRoleSeparation("worker", workerDb.pool);
 }
 // ─── Register concrete adapters ────────────────────────────────────────────
 

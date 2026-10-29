@@ -1,0 +1,12 @@
+# Hourly audit-chain verification (design: docs/twins/IMMUTABLE_AUDIT.md). Persistent: a run missed while the host was down is made up at boot.
+[Unit]
+Description=TWINS audit-chain integrity check timer
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=120
+Unit=twins-audit-verify.service
+
+[Install]
+WantedBy=timers.target

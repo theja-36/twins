@@ -6,6 +6,7 @@
     { "path": "packages/types" },
     { "path": "packages/shared" },
     { "path": "packages/runtime-state" },
+    { "path": "packages/audit-chain" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },
     { "path": "packages/dataquality" },

@@ -66,6 +66,21 @@ try {
     const names9 = tr.rows.map((r) => r.tgname).join(",");
     if (names9 !== want) throw new Error(`triggers missing or unexpected on ${table}: [${names9}]`);
   }
+  // 0010: append-only + hash chain on the five audit tables, the chain heads, and the guard triggers (all ENABLE ALWAYS). Read-only catalog checks;
+  // the data itself is checked by the audit verifier (npm run audit:verify).
+  for (const t of ["audit_events", "signal_validations", "telegram_messages", "options_claims", "system_control_events"]) {
+    const cols = await client.query("select column_name from information_schema.columns where table_name = $1 and column_name in ('chain_index','previous_hash','payload_hash','event_hash')", [t]);
+    if (cols.rowCount !== 4) throw new Error(`${t} must have the 4 chain columns from 0010, found ${cols.rowCount}`);
+    const tg = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = $1::regclass and not tgisinternal and tgname like any (array[$2, $3, $4, $5]) order by tgname", [`public.${t}`, `${t}_chain_before_insert`, `${t}_chain_after_insert`, `${t}_no_update_delete`, `${t}_no_truncate`]);
+    if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
+  }
+  const heads = await client.query("select count(*)::int as n from audit_chain_heads");
+  if (heads.rows[0].n !== 6) throw new Error(`audit_chain_heads must hold 6 chains, found ${heads.rows[0].n}`);
+  const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
+  if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
+  if (slNames !== "stop_loss_validations_chain_after_insert,stop_loss_validations_chain_before_insert,stop_loss_validations_no_truncate,stop_loss_validations_no_update_delete" || slTriggers.rows.some((r) => r.tgenabled !== "A")) throw new Error(`stop_loss_validations triggers missing or not ENABLE ALWAYS: [${slNames}]`);
+  if (inv.rowCount !== 1 || inv.rows[0].tgenabled !== "A") throw new Error("signal_validations_stop_loss_invariant (0011) is missing or not ENABLE ALWAYS");
+  const view = await client.query("select to_regclass('public.signal_validation_eligibility') is not null as ok");
   console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present`);
 } finally {
   await client.end();

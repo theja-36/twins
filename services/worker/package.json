@@ -9,6 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@twins/audit-chain": "*",
     "@twins/runtime-state": "*",
     "@twins/adapter-macro": "*",
     "@twins/adapter-market": "*",

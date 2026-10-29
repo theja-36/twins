@@ -117,9 +117,22 @@ services:
     mem_limit: 256m
     cpus: 0.25
 
+  # EXPLICIT one-shot, read-only audit-chain integrity check (profile `ops`; also run by twins-audit-verify.timer):
+  #   docker compose ... --profile ops run --rm audit-verify            (exit 0 PASS, 1 FAIL with the first failure printed)
+  audit-verify:
+    <<: *hardening
+    restart: "no"
     profiles: ["ops"]
     image: twins-staging:${TWINS_IMAGE_TAG:-local}
     pull_policy: never
+    command: ["node", "--import", "tsx", "/app/scripts/ops/verify-audit-chain.ts"]
+    environment: *app-env
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
+    mem_limit: 256m
+    cpus: 0.25
+
   api:
     <<: *hardening
     image: twins-staging:${TWINS_IMAGE_TAG:-local}
@@ -139,8 +152,9 @@ services:
       # and `redis`. Bare names would therefore resolve to Coolify's services (and send them TWINS credentials), so the
       # API uses the unique container names, which resolve only to the TWINS containers on twins_data. Only the API
       # overrides these; the shared anchor (worker, migrate, scheduler: single private network) is unchanged.
-      DATABASE_URL: postgresql://${POSTGRES_USER:?set POSTGRES_USER}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@twins-staging-postgres-1:5432/${POSTGRES_DB:?set POSTGRES_DB}
+      # Runtime role (Stage 1 / Task 3): can read and APPEND to the audit tables but not update, delete or truncate them (infrastructure/staging/app-role.sql).
       # The owner credential (POSTGRES_USER) is used only by migrate, safety-control and audit-verify.
+      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@twins-staging-postgres-1:5432/${POSTGRES_DB:?set POSTGRES_DB}
       REDIS_URL: redis://:${REDIS_PASSWORD:?set REDIS_PASSWORD}@twins-staging-redis-1:6379
       HOST: 0.0.0.0              # inside the container only; the host publish below is loopback-only
       PORT: "4000"
@@ -200,6 +214,7 @@ services:
     command: ["node", "--import", "tsx", "/app/services/worker/src/index.ts"]
     environment:
       <<: *app-env
+      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # runtime role, see api
       # Same intake guards as the API; the worker enforces them again on every queued job (a job queued earlier or by
       # another producer is still checked). Empty = no chat approved. Options-only is a literal.
       TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
@@ -222,6 +237,7 @@ services:
     command: ["node", "--import", "tsx", "/app/services/scheduler/src/index.ts"]
     environment:
       <<: *app-env
+      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # runtime role, see api
       MARKET_WATCHLIST: ""
     depends_on:
       redis: { condition: service_healthy }

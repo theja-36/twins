@@ -39,6 +39,7 @@ import { eq } from "drizzle-orm";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { getDb, getPool, schema, type Db } from "@twins/database";
 import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusalError } from "@twins/runtime-state";
+import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
 import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
@@ -695,6 +696,9 @@ if (isDirectRun) {
   enforceLiveTradingGuard("api"); // before any configuration or connection (buildApp enforces it again)
   // Runtime safety state for this process (Stage 1 / Task 2). The API reads it through the shared pool; unreadable state fails closed.
   configureRuntimeState({ source: pgStateSource(getPool()), logger: createStructuredLogger(undefined, { service: "api" }) });
+  // Role separation (Stage 1 / Task 3): outside local development the API must run as the least-privilege role (cannot update, delete or truncate
+  // the audit tables, cannot alter them); otherwise it refuses to start (exit 82).
+  if (loadConfig().appEnv !== "development") await enforceRuntimeRoleSeparation("api", getPool());
   const port = Number(readEnv("PORT") ?? "4000");
   const server = await buildApp();
   // HOST defaults to 0.0.0.0 (previous behaviour); set HOST=127.0.0.1 for loopback-only local runs.
