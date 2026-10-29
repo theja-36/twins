@@ -27,3 +27,10 @@ GRANT SELECT, INSERT ON claim_review_cards TO :"bot_role";
 GRANT UPDATE (state, telegram_message_id, card_text_sha256, sent_at, decided_at) ON claim_review_cards TO :"bot_role";
 GRANT SELECT, INSERT ON approval_bot_state TO :"bot_role";
 GRANT UPDATE (paused, update_offset, updated_at) ON approval_bot_state TO :"bot_role";
+-- Stage 3 / Task 6 (risk approvals): the bot READS the approval cards the application created (the card text is already rendered; the bot never reads a risk decision) and advances
+-- them ONLY through three SECURITY DEFINER functions. It has no privilege at all on the risk decision records, the approvals or any audit table and cannot write risk_approval_cards directly.
+GRANT SELECT ON risk_approval_cards TO :"bot_role";
+GRANT EXECUTE ON FUNCTION twins_risk_card_mark_sent(uuid, bigint, text) TO :"bot_role";
+GRANT EXECUTE ON FUNCTION twins_risk_card_expire_due() TO :"bot_role";
+GRANT EXECUTE ON FUNCTION twins_record_risk_approval(uuid, uuid, text, text, jsonb, text, timestamptz) TO :"bot_role";
+
