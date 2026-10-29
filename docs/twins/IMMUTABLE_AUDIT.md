@@ -64,3 +64,5 @@ Each event also records `source_process` (e.g. `safety-control`, `raw_sql`), the
 
 ## Limits (not solved here)
 Superuser compromise or restore-from-edited-dump (anchor + off-host backup are the answer; off-host backup is still deferred, D-040); no cross-database signing or trusted timestamps; alert delivery of a failed verification is not wired; the `telegram_message_events`/`claim_reviews`/`approval_bot_events` tables are append-only but not chained; chain writers to one table queue on an advisory lock.
+
+**Stage 3 / Task 1 addition:** `risk_decisions` is the seventh chain (payload version 1; see [RISK_DECISIONS.md](RISK_DECISIONS.md)); the verifier also checks the `orders_require_risk_decision` guard (a non-chain invariant trigger).
