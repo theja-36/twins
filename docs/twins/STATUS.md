@@ -23,7 +23,8 @@ Stage 2 / Task 5 and the Telegram alert destination are **merged to `main`** (PR
 ## 1e. Stage 3 (2026-10-29)
 Stage 3 / Task 1 (risk decision schema and immutable risk records) is implemented on branch `feat/stage3-risk-decisions` (migration 0014, `packages/risk`); not merged and **not deployed to staging**. See [RISK_DECISIONS.md](RISK_DECISIONS.md).
 
-Stage 3 / Task 2 (position sizing engine) is implemented on branch `feat/stage3-position-sizing` (migration 0015, `packages/risk/src/sizing`); see [POSITION_SIZING.md](POSITION_SIZING.md). Task 1 is merged to main (PR #26); neither is deployed to staging.
+Stage 3 / Task 2 (position sizing engine) is implemented on branch `feat/stage3-position-sizing` (migration 0015, `packages/risk/src/sizing`); see [POSITION_SIZING.md](POSITION_SIZING.md). Tasks 1 and 2 are merged to main (PRs #26, #27); none is deployed to staging.
+Stage 3 / Task 3 (portfolio open-risk and correlation limits) is implemented on branch `feat/stage3-portfolio-limits` (migration 0016, `packages/risk/src/portfolio`); see [PORTFOLIO_RISK_LIMITS.md](PORTFOLIO_RISK_LIMITS.md).
 
 ## 2. Phase implementation state (only the user advances phases)
 | Phase | Title | State | Depends on | Primary requirements |

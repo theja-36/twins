@@ -25,7 +25,9 @@ export type RiskErrorCode =
   | "not_latest_version"
   | "store_failure"
   | "not_sizable"
-  | "capital_not_configured";
+  | "capital_not_configured"
+  | "sizing_missing"
+  | "not_evaluable";
 
 /** Fixed code + message naming the rule, never a driver message or a value. `cause` keeps the safety refusal for callers that must map it. */
 export class RiskDecisionError extends Error {

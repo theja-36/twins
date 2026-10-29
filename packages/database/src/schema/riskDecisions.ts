@@ -99,6 +99,11 @@ export const riskDecisions = pgTable(
       "risk_decisions_sized_review_check",
       sql`${table.status} <> 'APPROVED_FOR_REVIEW' or (coalesce(${table.plannedQuantity} > 0, false) and coalesce(${table.plannedNotional} > 0, false) and coalesce(${table.plannedMaxLossAmount} > 0, false) and coalesce(${table.plannedMaxLossPercent} > 0, false) and coalesce(${table.outputSnapshot} -> 'sizing' ->> 'status' = 'SIZED', false))`,
     ),
+    // Stage 3 / Task 3: an approval for review also needs a passing portfolio evaluation (NULL counts as not evaluated).
+    portfolioReviewCheck: check(
+      "risk_decisions_portfolio_review_check",
+      sql`${table.status} <> 'APPROVED_FOR_REVIEW' or coalesce(${table.outputSnapshot} -> 'portfolio' ->> 'outcome' = 'APPROVED_FOR_REVIEW', false)`,
+    ),
     actorCheck: check("risk_decisions_actor_check", sql`${table.createdBy} ~ '^(service|operator):[a-z0-9][a-z0-9._-]{1,40}$'`),
   }),
 );

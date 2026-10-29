@@ -15,6 +15,7 @@ Documentation-only work. **No implementation, deployment, migration, restart, cr
 | Baseline state, phase states, release readiness | [STATUS.md](STATUS.md) |
 | Runtime safety state, kill switch, fail-closed rules, integration points (Stage 1 / Task 2) | [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md) |
 | Immutable audit trail, hash chains, verifier, role separation, operator identity (Stage 1 / Task 3) | [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md) |
+| Portfolio open-risk and correlation limits, exposure model, outcomes, examples (Stage 3 / Task 3) | [PORTFOLIO_RISK_LIMITS.md](PORTFOLIO_RISK_LIMITS.md) |
 | Position sizing formulas, tiers, defaults, statuses, examples (Stage 3 / Task 2) | [POSITION_SIZING.md](POSITION_SIZING.md) |
 | Risk decision schema, immutability, lifecycle, orders guard, extension points (Stage 3 / Task 1) | [RISK_DECISIONS.md](RISK_DECISIONS.md) |
 | Operational alerting, severity policy, payload contract, scheduled verification, status surface, dead-letter operations (Stage 2 / Task 5) | [OPERATIONAL_ALERTING.md](OPERATIONAL_ALERTING.md) |
