@@ -159,6 +159,13 @@ services:
       TWINS_ALERT_WEBHOOK_URL: ${TWINS_ALERT_WEBHOOK_URL:-}
       TWINS_ALERT_WEBHOOK_SECRET: ${TWINS_ALERT_WEBHOOK_SECRET:-}
       TWINS_ALERT_ALLOW_INSECURE_TEST: ${TWINS_ALERT_ALLOW_INSECURE_TEST:-}
+      # Telegram destination: the existing approval-bot token (copied into staging.env, 0600) and the numeric id of the dedicated operational alert chat.
+      TWINS_ALERT_TELEGRAM_BOT_TOKEN: ${TWINS_ALERT_TELEGRAM_BOT_TOKEN:-}
+      TWINS_ALERT_TELEGRAM_CHAT_ID: ${TWINS_ALERT_TELEGRAM_CHAT_ID:-}
+      TWINS_ALERT_RELAY_STATUS_FILE: /status/alert-relay.json
+    # delivery status (ok / pending or dropped CRITICAL alerts) for monitoring; written by the relay user (uid 1000)
+    volumes:
+      - /var/lib/twins-monitor/alert-relay:/status
     networks: [twins_data, twins_alert_egress]
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8099/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]

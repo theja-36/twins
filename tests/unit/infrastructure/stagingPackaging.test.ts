@@ -32,8 +32,14 @@ describe("staging packaging (static)", () => {
     expect(compose).not.toMatch(/LIVE_TRADING: "?true/);
   });
   it("keeps providers, Telegram registration and contract masters off", () => {
-    expect(compose).not.toMatch(/TELEGRAM_BOT_TOKEN|OPENROUTER|BROKER_|MARKET_DATA_API_KEY|NEWS_PROVIDER|TWINS_OPTIONS_/);
-    expect(env.replace(/^#.*$/gm, "")).not.toMatch(/TELEGRAM_BOT_TOKEN|OPENROUTER|BROKER_|TWINS_OPTIONS_/);
+    // The ONE permitted exception (Stage 2 / Task 5 follow-up): the alert-relay's Telegram ALERT destination variable. It is checked separately below.
+    const withoutAlertToken = (t: string) => t.replace(/TWINS_ALERT_TELEGRAM_BOT_TOKEN/g, "");
+    expect(withoutAlertToken(compose)).not.toMatch(/TELEGRAM_BOT_TOKEN|OPENROUTER|BROKER_|MARKET_DATA_API_KEY|NEWS_PROVIDER|TWINS_OPTIONS_/);
+    expect(withoutAlertToken(env.replace(/^#.*$/gm, ""))).not.toMatch(/TELEGRAM_BOT_TOKEN|OPENROUTER|BROKER_|TWINS_OPTIONS_/);
+    expect(compose.split("\n").filter((l) => l.includes("TWINS_ALERT_TELEGRAM_BOT_TOKEN") && !l.trim().startsWith("#"))).toHaveLength(1); // one line, and only in the alert-relay service
+    expect(service("alert-relay")).toContain("TWINS_ALERT_TELEGRAM_BOT_TOKEN: ${TWINS_ALERT_TELEGRAM_BOT_TOKEN:-}");
+    expect(env).toMatch(/^TWINS_ALERT_TELEGRAM_BOT_TOKEN=$/m); // empty in the template: the token is copied in on the host, never committed
+    expect(env).toMatch(/^TWINS_ALERT_TELEGRAM_CHAT_ID=$/m);
     expect(service("scheduler")).toMatch(/profiles: \["scheduler"\]/);
     expect(service("scheduler")).toMatch(/MARKET_WATCHLIST: ""/);
   });
@@ -136,7 +142,7 @@ describe("staging packaging (static)", () => {
     expect(env).toMatch(/^TWINS_TELEGRAM_ALLOWED_CHAT_IDS=$/m);
     expect(env).not.toMatch(/^TWINS_TELEGRAM_ALLOWED_CHAT_IDS=.+/m);
     expect(env).toMatch(/separate approval/);
-    expect(env).not.toMatch(/TELEGRAM_BOT_TOKEN=/);
+    expect(env.replace(/TWINS_ALERT_TELEGRAM_BOT_TOKEN=/g, "")).not.toMatch(/TELEGRAM_BOT_TOKEN=/); // (only the alert destination variable is allowed)
   });
   it("builds from the staging host's source tree, resolved against the compose file's own location", () => {
     const m = /build:\n\s+context: (\S+)\n\s+dockerfile: (\S+)/.exec(service("api"));
