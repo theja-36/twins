@@ -169,6 +169,13 @@
       "when": 1793311299609,
       "tag": "0023_historical_patterns",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1793312821840,
+      "tag": "0024_risk_source_intelligence",
+      "breakpoints": true
     }
   ]
 }

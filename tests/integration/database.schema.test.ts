@@ -4,6 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import { createDb, schema } from "../../packages/database/src/index";
 import { createRiskDecision } from "../../packages/risk/src/index";
+import { validIntelligence } from "../support/intelligenceFixtures";
 
 /**
  * Integration tests run against a real PostgreSQL instance (spec section
@@ -248,7 +249,7 @@ describe("database schema (integration)", () => {
     if (!sig) throw new Error("insert did not return a row");
     const [stop] = await db.insert(schema.stopLossValidations).values({ subjectKind: "signal", signalId: sig.id, ruleVersion: "stop-loss-v1", result: "VALID", levelBasis: "price", normalizedStopLoss: "95", entryPrice: "100", riskDistance: "5", riskPct: "5", maxRiskPct: "10" }).returning();
     if (!stop) throw new Error("insert did not return a row");
-    const risk = await createRiskDecision(db, { subject: { kind: "signal", signalId: sig.id }, stopLossValidationId: stop.id, status: "APPROVED_FOR_REVIEW", plannedQuantity: 100, plannedNotional: 10000, plannedMaxLossAmount: 500, plannedMaxLossPercent: 0.5, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" } }, idempotencyKey: `schema-test:${randomUUID()}`, createdBy: "service:schema-test", instrumentType: "equity", symbol: instrument.symbol, entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "schema_test", inputSnapshot: { synthetic: true } });
+    const risk = await createRiskDecision(db, { subject: { kind: "signal", signalId: sig.id }, stopLossValidationId: stop.id, status: "APPROVED_FOR_REVIEW", plannedQuantity: 100, plannedNotional: 10000, plannedMaxLossAmount: 500, plannedMaxLossPercent: 0.5, outputSnapshot: { sizing: { status: "SIZED" }, portfolio: { outcome: "APPROVED_FOR_REVIEW" }, market: { outcome: "PASSED" }, intelligence: validIntelligence() }, idempotencyKey: `schema-test:${randomUUID()}`, createdBy: "service:schema-test", instrumentType: "equity", symbol: instrument.symbol, entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "schema_test", inputSnapshot: { synthetic: true } });
 
     // Stage 3 / Task 6: an order also needs a recorded APPROVE approval of that decision (written by the approval function; an operator APPROVE here)
     await db.execute(sql`select twins_record_risk_approval(${risk.id}::uuid, null::uuid, 'APPROVE', 'operator:schema-test', '{"via":"schema-test"}'::jsonb, null, ${new Date(Date.now() + 5 * 60_000).toISOString()}::timestamptz)`);

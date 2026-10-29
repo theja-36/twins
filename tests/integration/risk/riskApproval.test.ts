@@ -18,6 +18,7 @@ import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } 
 import { PgBotDb } from "../../../services/approval-bot/src/db";
 import { buildApp } from "../../support/apiWithTestPolicy";
 import { memoryOutbox } from "../../support/memoryOutbox";
+import { validIntelligence } from "../../support/intelligenceFixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
 import { healthy, OPEN_NOW, syntheticProvider } from "./gates";
@@ -56,7 +57,7 @@ async function make(stage: "pending" | "sized" | "portfolio" | "approved" | "mar
   const input: RiskDecisionInput = {
     subject: { kind: "signal", signalId: must(signal).id }, stopLossValidationId: must(ev).id, status: "PENDING", idempotencyKey: `ra-pending:${randomUUID()}`, createdBy: "service:risk-decision", instrumentType: "equity", market: "NSE", symbol, side: "BUY",
     entryPrice: 100, stopLoss: 95, stopLossBasis: "price", target1: 110, sourceTrustTier: "HIGH", decisionReasonCode: "awaiting_risk_gates",
-    inputSnapshot: { synthetic: true, signalValidation: { decisionConfidence: 0.9 } }, outputSnapshot: { stage: "risk_decision_foundation", sized: false, limitsApplied: false }, evidenceReferences: { fixture: true },
+    inputSnapshot: { synthetic: true, signalValidation: { decisionConfidence: 0.9 } }, outputSnapshot: { stage: "risk_decision_foundation", sized: false, limitsApplied: false, intelligence: validIntelligence() }, evidenceReferences: { fixture: true },
   };
   const v1 = await createRiskDecision(db(), input);
   const base = { signalId: must(signal).id, evidenceId: must(ev).id, v1: v1.id, sized: v1.id };

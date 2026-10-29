@@ -5,6 +5,7 @@ import { getLatestRiskDecisionForOptionsClaim, getLatestRiskDecisionForSignal, g
 import { breakerBlockId, breakerGate, type BreakerOptions, type CircuitBreakerStatus } from "../breakers/record";
 import { databaseNow, isStale } from "../expiry/record";
 import { loadExpiryConfig } from "../expiry/config";
+import { intelligenceOf, isIntelligenceValid } from "../intelligence/record";
 import { loadSizingConfig, type SizingConfig } from "./config";
 import { computePositionSize, SIZING_ENGINE_VERSION, type SizingInput, type SizingResult } from "./engine";
 
@@ -20,6 +21,11 @@ export interface SizeOptions extends BreakerOptions {
   config?: SizingConfig;
   /** Overrides config.availableCapital (tests, operator tools). */
   capital?: number | null;
+  /**
+   * Stage 4 / Task 5. true (the worker): a decision that does not carry recorded source intelligence is REJECTED (`source_intelligence_missing`), never sized from the legacy
+   * self-reported confidence. false (default, legacy callers): such a decision keeps the pre-Task-5 behaviour. A decision that DOES carry intelligence always uses it.
+   */
+  requireIntelligence?: boolean;
 }
 
 export interface SizingOutcome extends CreateOutcome {
@@ -73,6 +79,12 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
   const { lotSize, lotSizeSource } = await lotSizeFor(db, prev);
   const valid = evidence?.result === "VALID";
   const targets = [prev.target1, prev.target2, prev.target3].map(asNum);
+  const intel = intelligenceOf(prev);
+  const intelValid = isIntelligenceValid(intel);
+  const intelRequired = opts.requireIntelligence === true || intel !== null;
+  // Source intelligence decides the tiers when it exists (or is required): invalid, missing or UNKNOWN intelligence can only produce UNKNOWN tiers, i.e. no size.
+  const resolvedConfidenceTier = !intelRequired ? undefined : intelValid && intel ? intel.confidence.tier : ("UNKNOWN" as const);
+  const resolvedTrust = !intelRequired ? prev.sourceTrustTier : intelValid && intel ? intel.sizingTrustTier : "UNKNOWN";
   const input: SizingInput = {
     capital,
     instrumentType: prev.instrumentType,
@@ -84,9 +96,10 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
     stopLossResult: evidence?.result ?? null,
     targets,
     lotSize,
-    confidenceScore: confidenceOf(prev),
-    sourceTrustTier: prev.sourceTrustTier,
-    context: { riskDecisionId: prev.id, decisionVersion: prev.decisionVersion, status: prev.status, stopLossValidationId: evidence?.id ?? null, lotSizeSource },
+    confidenceScore: !intelRequired ? confidenceOf(prev) : intelValid && intel ? intel.confidence.score : null,
+    ...(resolvedConfidenceTier ? { confidenceTier: resolvedConfidenceTier } : {}),
+    sourceTrustTier: resolvedTrust,
+    context: { ...(intelRequired ? { sourceIntelligence: { status: intel?.status ?? "MISSING", reasonCode: intel?.reasonCode ?? "SOURCE_INTELLIGENCE_UNAVAILABLE", inputHash: intel?.inputHash ?? null, trustTier: intel?.trust.tier ?? null, confidenceTier: intel?.confidence.tier ?? null } } : {}), riskDecisionId: prev.id, decisionVersion: prev.decisionVersion, status: prev.status, stopLossValidationId: evidence?.id ?? null, lotSizeSource },
   };
   const result = computePositionSize(input, config);
   // Circuit breakers (Stage 3 / Task 4): a new SIZED decision is not created while a loss breaker is open (the rejection is recorded instead). Unreadable state fails closed.
@@ -132,11 +145,12 @@ export async function sizeRiskDecision(db: Db, decisionId: string, opts: SizeOpt
     plannedMaxLossAmount: sized ? result.maxLossAmount : null,
     plannedMaxLossPercent: sized ? result.maxLossPercent : null,
     confidenceScore: input.confidenceScore,
-    sourceTrustTier: prev.sourceTrustTier,
-    decisionReasonCode: sized ? "sized_awaiting_limits" : blocked ? "sizing_circuit_breaker_open" : `sizing_${result.reasonCode}`.slice(0, 60),
+    sourceTrustTier: input.sourceTrustTier ?? prev.sourceTrustTier,
+    decisionReasonCode: sized ? "sized_awaiting_limits" : blocked ? "sizing_circuit_breaker_open" : intelRequired && !intelValid ? (intel ? intel.reasonCode.toLowerCase() : "source_intelligence_missing") : `sizing_${result.reasonCode}`.slice(0, 60),
     decisionReason: sized ? `${result.explanation} Awaiting the remaining risk gates (portfolio limits, circuit breakers, market checks), which are not part of this stage.` : blocked ? `A loss circuit breaker is open (${blocked.blockedBy.join(", ")}); no new sized decision is created until it resets.` : result.explanation,
     inputSnapshot: { sizing: result.snapshot, ...(blocked ? { circuitBreaker: { blockedBy: blocked.blockedBy, openBreachIds: blocked.openBreachIds, asOf: blocked.asOf.toISOString() } } : {}), previousDecisionId: prev.id, previousVersion: prev.decisionVersion, base: prev.inputSnapshot },
     outputSnapshot: {
+      ...(intel ? { intelligence: intel } : {}), // the recorded intelligence is carried through every later version
       stage: "position_sizing",
       sized,
       limitsApplied: false,

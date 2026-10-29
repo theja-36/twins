@@ -31,6 +31,8 @@ Stage 4 / Task 2 (historical outcome labeling and evaluation) is implemented on 
 Stage 4 / Task 3 (source scorecards and trust tiers) is implemented on branch `feat/stage4-source-scorecards` (migration 0022, chains 17-21); see [SOURCE_SCORECARDS.md](SOURCE_SCORECARDS.md).
 
 Stage 4 / Task 4 (pattern library and calibrated confidence) is implemented on branch `feat/stage4-pattern-confidence` (migration 0023, chains 22-26); see [PATTERN_LIBRARY_AND_CONFIDENCE.md](PATTERN_LIBRARY_AND_CONFIDENCE.md).
+
+Stage 4 / Task 5 (source intelligence in the live risk flow) is implemented on branch `feat/stage4-source-intelligence` (migration 0024); see [SOURCE_INTELLIGENCE_INTEGRATION.md](SOURCE_INTELLIGENCE_INTEGRATION.md).
 Stage 3 / Task 6 (risk decision API and approval integration) is implemented on branch `feat/stage3-risk-approval` (migration 0019); see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md).
 Stage 3 / Task 5 (market, liquidity and event-risk gates) is implemented on branch `feat/stage3-market-risk-gates` (migration 0018); see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md).
 Stage 3 / Task 4 (risk-decision expiry and loss circuit breakers) is implemented on branch `feat/stage3-expiry-circuit-breakers` (migration 0017); see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md).

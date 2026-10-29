@@ -1,5 +1,7 @@
 # Risk decision API and approval workflow - Stage 3 / Task 6
 
+> **Stage 4 / Task 5:** approval eligibility additionally requires valid source intelligence (`source_intelligence_not_valid`; also enforced inside `twins_record_risk_approval`, migration 0024) - see [SOURCE_INTELLIGENCE_INTEGRATION.md](SOURCE_INTELLIGENCE_INTEGRATION.md).
+
 > Decision [D-060](DECISION_LOG.md); requirement [SZ-17](REQUIREMENTS_TRACEABILITY.md) (new). Builds on [RISK_DECISIONS.md](RISK_DECISIONS.md), [POSITION_SIZING.md](POSITION_SIZING.md), [PORTFOLIO_RISK_LIMITS.md](PORTFOLIO_RISK_LIMITS.md), [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md), [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md), [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md). Code: `packages/risk/src/approval/`, `apps/api/src/riskApi.ts`, `services/approval-bot/` (risk-card path), migration `0019_risk_approvals`, role scripts in `infrastructure/staging/`.
 
 **An approval records a human decision about ONE decision version. It creates no order, fill, position or broker call, and enables nothing.** `LIVE_TRADING` stays false, `TWINS_BOT_ACTIVE` stays false in the repository, no real Telegram signal channel is connected, and no external call is made by this code (the bot's only network client remains its Bot API client).

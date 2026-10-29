@@ -268,7 +268,13 @@ describe("architecture: the pattern code is research-only and local", () => {
       expect(t, f).not.toMatch(/\b(?:db|tx)\.(update|delete)\(/);
     }
   });
-  it("is not wired into the live risk flow, the API, or any runtime service", () => {
-    for (const d of ["apps", "services", "adapters", "packages/risk/src"]) for (const f of walk(d)) expect(readFileSync(join(ROOT, f), "utf8"), f).not.toMatch(/estimateSignalConfidence|patterns\/|@twins\/historical|packages\/historical/);
+  it("reaches the live risk flow only through the Task 5 source-intelligence integration; the Task 4 service function itself is still not called by any runtime code", () => {
+    // Stage 4 / Task 5 connects source intelligence to the risk flow through exactly these files (the risk recorder, the read-only API routes, the worker via @twins/risk); nothing else imports it
+    const allowed = new Set(["apps/api/src/intelligenceApi.ts", "packages/risk/src/intelligence/record.ts"]);
+    for (const d of ["apps", "services", "adapters", "packages/risk/src"]) for (const f of walk(d)) {
+      const t = readFileSync(join(ROOT, f), "utf8");
+      expect(t, f).not.toMatch(/estimateSignalConfidence|patterns\//);
+      if (!allowed.has(f)) expect(t, f).not.toMatch(/@twins\/historical|packages\/historical/);
+    }
   });
 });

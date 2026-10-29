@@ -37,6 +37,9 @@
     },
     {
       "path": "../../packages/risk"
+    },
+    {
+      "path": "../../packages/historical"
     }
   ],
   "include": [

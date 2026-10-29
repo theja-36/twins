@@ -14,6 +14,7 @@
     "@twins/adapter-telegram": "*",
     "@twins/config": "*",
     "@twins/database": "*",
+    "@twins/historical": "*",
     "@twins/decision-intelligence": "*",
     "@twins/ingestion": "*",
     "@twins/shared": "*",

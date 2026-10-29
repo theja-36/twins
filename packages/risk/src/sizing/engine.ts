@@ -31,6 +31,8 @@ export interface SizingInput {
   lotSize: number | null;
   /** 0-100; null/0 = unknown. */
   confidenceScore: number | null;
+  /** Stage 4 / Task 5: a confidence tier RESOLVED by the calibrated confidence model. When present it is used as is (the score is not re-banded by the sizing thresholds). */
+  confidenceTier?: SizingTier;
   /** HIGH | MODERATE | MEDIUM | LOW | UNKNOWN. */
   sourceTrustTier: string | null;
   /** The existing risk decision this sizing is computed for (context only; echoed into the snapshot). */
@@ -101,7 +103,7 @@ const configView = (c: SizingConfig) => ({ version: SIZING_CONFIG_VERSION, maxRi
 
 export function computePositionSize(input: SizingInput, config: SizingConfig): SizingResult {
   const inputHash = hashSizingInput(input, config);
-  const confTier = confidenceTier(input.confidenceScore, config);
+  const confTier: SizingTier = input.confidenceTier ?? confidenceTier(input.confidenceScore, config);
   const trust = trustTier(input.sourceTrustTier);
   const applied = lower(confTier, trust);
   const base = { confidenceTier: confTier, trustTier: trust, appliedTier: applied, inputHash };
