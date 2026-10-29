@@ -78,6 +78,13 @@
       "when": 1793264374010,
       "tag": "0010_audit_immutability_hash_chain",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793266582584,
+      "tag": "0011_stop_loss_validations",
+      "breakpoints": true
     }
   ]
 }

@@ -40,6 +40,7 @@ import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { getDb, getPool, schema, type Db } from "@twins/database";
 import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusalError } from "@twins/runtime-state";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
+import { getValidationEligibility } from "@twins/signals";
 import { describeUpdateChat, loadTelegramIntakePolicy, normalizeRawUpdate, type TelegramIntakePolicy } from "@twins/adapter-telegram";
 import { registerInternalIngest, resolveCaptureCaps, resolveCaptureIngestToken, type AddCaptureJob, type AddCaptureJobResult, type CaptureCaps } from "./internalIngest.js";
 import { ProviderDataError } from "@twins/types";
@@ -586,12 +587,18 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
           new Date(b.validatedAt).getTime() - new Date(a.validatedAt).getTime(),
       );
 
-      const latest = sorted[0]!;
+      const latest = sorted[0];
+      if (!latest) return reply.code(202).send({ status: "pending", signalId, message: "Signal has not yet been validated. Check back shortly." });
+
+      // Mandatory stop-loss (Stage 1 / Task 4): whether this verdict is approval-eligible comes from the stop-loss evidence, never from the outcome alone.
+      const eligibility = await getValidationEligibility(db, latest.id);
 
       return reply.code(200).send({
         signalId,
         validationId: latest.id,
         outcome: latest.outcome,
+        approvalEligible: eligibility.approvalEligible,
+        stopLoss: { result: eligibility.stopLossResult, reasonCode: eligibility.stopLossReasonCode, note: eligibility.note },
         decisionConfidence: Number(latest.decisionConfidence),
         confidenceLabel: latest.confidenceLabel,
         rationale: latest.rationale,

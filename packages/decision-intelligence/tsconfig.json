@@ -10,7 +10,8 @@
     { "path": "../database" },
     { "path": "../dataquality" },
     { "path": "../signals" },
-    { "path": "../runtime-state" }
+    { "path": "../runtime-state" },
+    { "path": "../stop-loss" }
   ],
   "include": ["src"]
 }

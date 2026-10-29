@@ -1,7 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import { evaluateSafety } from "@twins/runtime-state";
 import { buildCallbackData, parseCallbackData, verifyCallback } from "./callback";
-import { renderClaimCard, renderExpired, renderOutcome, renderTestCard, type CardContext, type ClaimRow } from "./card";
+import { claimHasValidStopLoss, renderClaimCard, renderExpired, renderOutcome, renderTestCard, type CardContext, type ClaimRow } from "./card";
 import type { BotConfig } from "./config";
 import type { BotDb, CardRow } from "./db";
 import type { BotLogger } from "./log";
@@ -83,11 +83,11 @@ export class ApprovalBot {
     await this.note(type, cardId, prev && prev.suppressed > 0 ? { suppressed_before: prev.suppressed } : {});
   }
 
-  private buttons(card: CardRow, test: boolean): InlineButton[] {
-    return [
-      { text: test ? "Approve (test)" : "Approve (record only)", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "a") },
-      { text: test ? "Reject (test)" : "Reject", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "r") },
-    ];
+  private buttons(card: CardRow, test: boolean, approvable = true): InlineButton[] {
+    const reject: InlineButton = { text: test ? "Reject (test)" : "Reject", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "r") };
+    // No Approve button at all for a claim without a VALID stop-loss (Stage 1 / Task 4); handleCallback refuses a forged approve too.
+    if (!approvable) return [reject];
+    return [{ text: test ? "Approve (test)" : "Approve (record only)", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "a") }, reject];
   }
 
   private ctx(cardId: string): CardContext {
@@ -98,7 +98,7 @@ export class ApprovalBot {
   private async deliver(card: CardRow, row: ClaimRow): Promise<boolean> {
     const rendered = renderClaimCard(row, this.ctx(card.id));
     try {
-      const messageId = await this.d.api.sendMessage(this.d.cfg.approverId, rendered.text, this.buttons(card, false));
+      const messageId = await this.d.api.sendMessage(this.d.cfg.approverId, rendered.text, this.buttons(card, false, claimHasValidStopLoss(row.claim)));
       await this.d.db.markSent(card.id, messageId, rendered.sha256);
       await this.note("card_sent", card.id);
       return true;
@@ -202,6 +202,15 @@ export class ApprovalBot {
       return { kind: "rejected", reason: "wrong_message" };
     }
     const action = parsed.action === "a" ? "approve" : "reject";
+    if (action === "approve" && card.kind === "claim") {
+      // MANDATORY STOP-LOSS (Stage 1 / Task 4): a claim without a VALID stop-loss (shared rule, recomputed from the stored claim) can never be approved.
+      const claimRow = await this.d.db.getClaimForCard(card.id);
+      if (!claimRow || !claimHasValidStopLoss(claimRow.claim)) {
+        await this.noteRejected("approval_refused:stop_loss_not_valid", card.id);
+        await this.answer(cq.id, "Approval blocked: this claim has no valid stop-loss. You can only reject it.");
+        return { kind: "rejected", reason: "stop_loss_not_valid" };
+      }
+    }
     if (action === "approve") {
       // Runtime safety boundary (Stage 1 / Task 2): an approval is the step that leads toward an order, so it is never persisted while the
       // kill switch is active or the safety state is unreadable. A REJECTION is risk-reducing and is still recorded.

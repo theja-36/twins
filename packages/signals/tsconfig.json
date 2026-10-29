@@ -7,6 +7,7 @@
     "moduleResolution": "Bundler"
   },
   "references": [
+    { "path": "../stop-loss" },
     { "path": "../runtime-state" },
     { "path": "../database" },
     { "path": "../dataquality" },

@@ -8,7 +8,8 @@
   },
   "references": [
     { "path": "../../packages/config" },
-    { "path": "../../packages/runtime-state" }
+    { "path": "../../packages/runtime-state" },
+    { "path": "../../packages/stop-loss" }
   ],
   "include": ["src"]
 }

@@ -1,9 +1,12 @@
 import type { schema } from "@twins/database";
+import { loadStopLossConfig, validateStopLoss, type StopLossConfig, type StopLossValidation } from "@twins/stop-loss";
 import type { StructuralValidationIssue } from "./types";
 
 export interface StructuralValidationOptions {
   /** Historical ingestion/analysis horizon in ms (default 30 days); NOT an executable-freshness policy. */
   maxSignalAgeMs?: number;
+  /** Stop-loss sanity bounds. Default: read from TWINS_STOPLOSS_MAX_RISK_PCT_* (defaults when unset). */
+  stopLoss?: StopLossConfig;
 }
 
 /**
@@ -17,6 +20,8 @@ const DEFAULT_MAX_SIGNAL_AGE_MS = 1000 * 60 * 60 * 24 * 30;
 
 export interface StructuralValidationResult {
   issues: StructuralValidationIssue[];
+  /** The mandatory stop-loss validation of this signal (always computed, so the evidence exists even when another rule already blocks). */
+  stopLoss: StopLossValidation;
   /** A blocking issue means the signal itself is invalid and cannot proceed regardless of evidence (spec: "exposes a strong invalidating condition"). */
   blocking: boolean;
 }
@@ -82,6 +87,20 @@ export function validateSignalStructure(
     }
   }
 
+  // MANDATORY STOP-LOSS (Stage 1 / Task 4): the single shared rule. A missing or invalid stop-loss is blocking (REJECT); one that cannot be shown to be
+  // valid (e.g. no usable entry/reference price, unsupported instrument) is a non-blocking issue here but decide() can never APPROVE it.
+  const stopLoss = validateStopLoss(
+    { instrumentType: instrument?.instrumentType ?? null, side: signal.direction, stopLoss: signal.stopLoss, entryPrice: signal.entryPrice, levelBasis: "price" },
+    options.stopLoss ?? loadStopLossConfig(),
+  );
+  if (stopLoss.result !== "VALID") {
+    issues.push({
+      ruleId: `structural.stop_loss.${(stopLoss.reasonCode ?? "unknown").toLowerCase()}`,
+      description: `mandatory stop-loss check failed: ${stopLoss.reasonCode}${stopLoss.detail ? ` (${stopLoss.detail})` : ""}`,
+    });
+    if (stopLoss.result === "MISSING" || stopLoss.result === "INVALID") blocking = true;
+  }
+
   const isBare =
     signal.entryPrice === null &&
     signal.stopLoss === null &&
@@ -94,5 +113,5 @@ export function validateSignalStructure(
     });
   }
 
-  return { issues, blocking };
+  return { issues, stopLoss, blocking };
 }

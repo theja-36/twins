@@ -6,6 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "dependencies": {
+    "@twins/stop-loss": "*",
     "@twins/runtime-state": "*",
     "@twins/database": "*",
     "@twins/dataquality": "*",

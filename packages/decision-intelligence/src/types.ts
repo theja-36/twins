@@ -8,6 +8,8 @@
  * not a replacement for either.
  */
 
+import type { StopLossReason, StopLossValidation } from "@twins/stop-loss";
+
 export type SignalValidationOutcome = "APPROVE" | "REJECT" | "INSUFFICIENT_EVIDENCE";
 
 export type CounterThesisSeverity = "low" | "medium" | "high";
@@ -78,7 +80,10 @@ export interface DecisionIntelligenceResult {
    */
   confidenceUnavailable?: boolean;
   structuralIssues: StructuralValidationIssue[];
+  /** The mandatory stop-loss validation (shared rule). APPROVE is impossible unless its result is VALID. */
+  stopLoss: StopLossValidation;
   /** Machine-readable reason when the stop-loss is not VALID (MISSING_STOP_LOSS, INVALID_STOP_LOSS, STOP_LOSS_DIRECTION_INVALID, ...). */
+  stopLossReasonCode?: StopLossReason;
   bullThesis: Thesis;
   bearThesis: Thesis;
   counterThesis: CounterThesis;

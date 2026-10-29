@@ -22,6 +22,7 @@
 
 import { UnrecoverableError, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource } from "@twins/runtime-state";
+import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { withIntakeGate } from "./safetyGate.js";
 import { Redis } from "ioredis";
@@ -87,6 +88,7 @@ if (process.env["NODE_ENV"] !== "test") {
   // Role separation (Stage 1 / Task 3): outside local development the worker must run as the least-privilege role, or it refuses to start (exit 82).
   if (config.appEnv !== "development") await enforceRuntimeRoleSeparation("worker", workerDb.pool);
 }
+
 // ─── Register concrete adapters ────────────────────────────────────────────
 
 marketDataProviders.register(YAHOO_PROVIDER_NAME, new YahooFinanceAdapter());
@@ -206,6 +208,9 @@ export const configuredOptionsMaster: OptionsContractMaster | null = optionsRefe
     : null;
 
 const defaultWorkerLogger = createStructuredLogger(undefined, { service: "worker" });
+
+/** Mandatory stop-loss sanity bounds (TWINS_STOPLOSS_MAX_RISK_PCT_*); a malformed override makes the worker refuse to start. */
+const stopLossConfig = loadStopLossConfig();
 
 /**
  * Fail-closed intake policy for this process: TWINS_TELEGRAM_ALLOWED_CHAT_IDS (missing/empty approves NO chat; malformed
@@ -490,7 +495,7 @@ export async function processTelegramJob(
     // equity signal, instrument, approval or order. Only a master that was explicitly configured is used (and recorded).
     const intake = signalOutcome.optionsIntake;
     const master = options.optionsMaster ?? configuredOptionsMaster;
-    const assessment = intake.kind === "claim" ? await assessOptionsClaim(intake.claim, master ?? unconfiguredContractMaster, unavailablePremiumProvider) : undefined;
+    const assessment = intake.kind === "claim" ? await assessOptionsClaim(intake.claim, master ?? unconfiguredContractMaster, unavailablePremiumProvider, stopLossConfig) : undefined;
     const record = await recordOptionsIntake(db, {
       telegramMessageId: telegramRow.id,
       parserVersion: signalOutcome.parserVersion ?? TELEGRAM_PARSER_VERSION,

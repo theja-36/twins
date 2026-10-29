@@ -1,5 +1,6 @@
 export * from "./extract";
 export * from "./ingestSignal";
+export * from "./stopLossEvidence";
 export * from "./intelligence";
 export * from "./types";
 export * from "./context/market";

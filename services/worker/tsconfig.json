@@ -7,6 +7,7 @@
     "moduleResolution": "Bundler"
   },
   "references": [
+    { "path": "../../packages/stop-loss" },
     { "path": "../../packages/audit-chain" },
     { "path": "../../packages/runtime-state" },
     { "path": "../../packages/config" },

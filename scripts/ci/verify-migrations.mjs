@@ -78,9 +78,14 @@ try {
   if (heads.rows[0].n !== 6) throw new Error(`audit_chain_heads must hold 6 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
+  // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
+  const slTriggers = await client.query("select tgname, tgenabled from pg_trigger where tgrelid = 'public.stop_loss_validations'::regclass and not tgisinternal order by tgname");
+  const slNames = slTriggers.rows.map((r) => r.tgname).join(",");
   if (slNames !== "stop_loss_validations_chain_after_insert,stop_loss_validations_chain_before_insert,stop_loss_validations_no_truncate,stop_loss_validations_no_update_delete" || slTriggers.rows.some((r) => r.tgenabled !== "A")) throw new Error(`stop_loss_validations triggers missing or not ENABLE ALWAYS: [${slNames}]`);
+  const inv = await client.query("select tgenabled from pg_trigger where tgrelid = 'public.signal_validations'::regclass and tgname = 'signal_validations_stop_loss_invariant'");
   if (inv.rowCount !== 1 || inv.rows[0].tgenabled !== "A") throw new Error("signal_validations_stop_loss_invariant (0011) is missing or not ENABLE ALWAYS");
   const view = await client.query("select to_regclass('public.signal_validation_eligibility') is not null as ok");
+  if (!view.rows[0].ok) throw new Error("signal_validation_eligibility (0011) is missing");
   console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present`);
 } finally {
   await client.end();

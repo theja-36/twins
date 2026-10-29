@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "dependencies": {
+    "@twins/config": "*"
+  },
   "scripts": {
     "dev": "echo 'web app not yet scaffolded - Phase 20 (UI/UX)'"
   }

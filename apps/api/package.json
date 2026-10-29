@@ -17,6 +17,7 @@
     "@twins/decision-intelligence": "*",
     "@twins/ingestion": "*",
     "@twins/shared": "*",
+    "@twins/signals": "*",
     "@twins/types": "*",
     "bullmq": "^6.3.11",
     "drizzle-orm": "^0.45.2",

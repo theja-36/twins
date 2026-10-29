@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { validateOptionsClaimStopLoss } from "@twins/stop-loss";
 
 /**
  * Card text for the approver. Plain text only (no Markdown/HTML parse mode, so nothing in it can be interpreted as markup), built ONLY from
@@ -143,6 +144,12 @@ export function renderClaimCard(row: ClaimRow, ctx: CardContext): RenderedCard {
   const parser = /^[A-Za-z0-9._-]{1,40}$/.test(row.parserVersion) ? row.parserVersion : "unknown";
   const outcome = row.assessmentOutcome && /^[A-Z_]{3,40}$/.test(row.assessmentOutcome) ? row.assessmentOutcome : "not assessed";
   const reasons = reasonLines(row.reasons);
+  // Mandatory stop-loss (Stage 1 / Task 4): recomputed from the stored claim with the shared rule, so even a claim stored before this rule existed is judged.
+  const stop = validateOptionsClaimStopLoss(row.claim);
+  const stopLine =
+    stop.result === "VALID"
+      ? `Stop-loss: VALID (${fmt(stop.normalizedStopLoss)} vs entry ${fmt(stop.entryPrice)}, ${fmt(stop.riskPct)}% risk, premium basis)`
+      : `Stop-loss: NOT VALID (${stop.reasonCode ?? "unknown"}) - approval is DISABLED for this claim; you can only reject it.`;
 
   const head = [
     `TWINS claim ${shortId(ctx.cardId)}  |  UNVERIFIED  |  records your decision only - places NO order`,
@@ -151,6 +158,7 @@ export function renderClaimCard(row: ClaimRow, ctx: CardContext): RenderedCard {
     `Entry: ${entryText(claim["entry"])} | Stop: ${fmt(num(claim["stopLoss"]))} | Targets: ${targets.length > 0 ? targets.map((t) => fmt(t)).join(", ") : "not stated"} | Levels refer to: ${basis}`,
     ...(flags.length > 0 ? [`Note: ${flags.join("; ")}`] : []),
     ...(view ? [`Implied underlying view (informational only): ${view}`] : []),
+    stopLine,
     `Assessment: ${outcome}`,
   ];
   const tail = [`Parser: ${parser} | card expires in ${ttlText(ctx.ttlSeconds)}`, "Approve = your decision is recorded. Nothing is traded."];
@@ -165,6 +173,9 @@ export function renderClaimCard(row: ClaimRow, ctx: CardContext): RenderedCard {
   text = text.slice(0, MAX_TEXT);
   return { text, sha256: sha(text) };
 }
+
+/** Whether the shared stop-loss rule accepts this claim: the only claims a human may approve. */
+export const claimHasValidStopLoss = (claim: unknown): boolean => validateOptionsClaimStopLoss(claim).result === "VALID";
 
 export function renderTestCard(ctx: CardContext): RenderedCard {
   const text = [
