@@ -75,7 +75,7 @@ try {
     if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
   }
   const heads = await client.query("select count(*)::int as n from audit_chain_heads");
-  if (heads.rows[0].n !== 26) throw new Error(`audit_chain_heads must hold 26 chains, found ${heads.rows[0].n}`);
+  if (heads.rows[0].n !== 32) throw new Error(`audit_chain_heads must hold 32 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
   // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
@@ -166,7 +166,16 @@ try {
   // 0024: the SECURITY DEFINER approval function must refuse an approval without valid source intelligence.
   const fn = await client.query("select prosecdef, pg_get_functiondef(oid) as def from pg_proc where proname = 'twins_record_risk_approval'");
   if (fn.rowCount !== 1 || fn.rows[0].prosecdef !== true || !fn.rows[0].def.includes("source_intelligence_not_valid")) throw new Error("twins_record_risk_approval (0024) is missing, not SECURITY DEFINER, or does not require valid source intelligence");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present; 0019 approval chain, card guard and SECURITY DEFINER doors present; 0020 historical import evidence chain and append-only tables present; 0021 historical outcome chains and append-only guards present; 0022 source scorecard chains and append-only guards present; 0023 pattern and confidence chains and append-only guards present; 0024 approval function requires valid source intelligence`);
+  // 0025: agent engine (six chained, append-only tables; a synthesis can never grant approval).
+  for (const table of ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "agent_findings", "agent_evidence_references", "agent_orchestrator_syntheses"]) {
+    for (const trigger of [`${table}_no_update_delete`, `${table}_chain_before_insert`, `${table}_no_truncate`]) {
+      const t = await client.query("select tgenabled from pg_trigger where tgrelid = $1::regclass and tgname = $2", [`public.${table}`, trigger]);
+      if (t.rowCount !== 1 || t.rows[0].tgenabled !== "A") throw new Error(`${trigger} (0025) is missing or not ENABLE ALWAYS`);
+    }
+  }
+  const noApproval = await client.query("select 1 from pg_constraint where conname = 'agent_orchestrator_syntheses_no_approval_check'");
+  if (noApproval.rowCount !== 1) throw new Error("agent_orchestrator_syntheses_no_approval_check (0025) is missing");
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present; 0019 approval chain, card guard and SECURITY DEFINER doors present; 0020 historical import evidence chain and append-only tables present; 0021 historical outcome chains and append-only guards present; 0022 source scorecard chains and append-only guards present; 0023 pattern and confidence chains and append-only guards present; 0024 approval function requires valid source intelligence; 0025 agent engine chains and append-only guards present`);
 } finally {
   await client.end();
 }

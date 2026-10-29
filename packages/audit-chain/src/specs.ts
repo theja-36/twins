@@ -226,6 +226,42 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     fields: [txt("t.id"), txt("t.run_id"), txt("t.normalized_record_id"), txt("t.source_record_id"), txt("t.score"), plain("t.tier"), plain("t.evidence_quality"), txt("t.sample_size"), txt("t.pattern_refs"), txt("t.inputs"), txt("t.explanation"), txt("t.limitations"), txt("t.evidence_references"), plain("t.created_by"), ts("t.created_at")],
     triggers: guards("historical_confidence_estimates"),
   },
+  {
+    chain: "agent_definitions",
+    table: "agent_definitions",
+    fields: [txt("t.id"), plain("t.agent_id"), plain("t.agent_version"), plain("t.contract_version"), txt("t.contract"), plain("t.contract_sha256"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_definitions"),
+  },
+  {
+    chain: "agent_orchestrator_runs",
+    table: "agent_orchestrator_runs",
+    fields: [txt("t.id"), plain("t.run_key"), txt("t.risk_decision_id"), txt("t.decision_version"), plain("t.trigger"), txt("t.trigger_context"), txt("t.agent_set"), txt("t.config"), plain("t.config_sha256"), txt("t.input_snapshot"), plain("t.input_sha256"), plain("t.status"), ts("t.started_at"), ts("t.completed_at"), txt("t.duration_ms"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_orchestrator_runs"),
+  },
+  {
+    chain: "agent_runs",
+    table: "agent_runs",
+    fields: [txt("t.id"), txt("t.orchestrator_run_id"), txt("t.definition_id"), plain("t.agent_id"), plain("t.agent_version"), plain("t.status"), plain("t.verdict"), txt("t.confidence"), txt("t.attempts"), plain("t.input_snapshot_ref"), txt("t.input_snapshot"), txt("t.output_snapshot"), ts("t.started_at"), ts("t.completed_at"), txt("t.duration_ms"), plain("t.error_code"), plain("t.error_message"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_runs"),
+  },
+  {
+    chain: "agent_findings",
+    table: "agent_findings",
+    fields: [txt("t.id"), txt("t.agent_run_id"), txt("t.ordinal"), plain("t.code"), plain("t.severity"), plain("t.summary"), txt("t.detail"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_findings"),
+  },
+  {
+    chain: "agent_evidence_references",
+    table: "agent_evidence_references",
+    fields: [txt("t.id"), txt("t.agent_run_id"), txt("t.ordinal"), plain("t.kind"), plain("t.ref"), plain("t.ref_sha256"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_evidence_references"),
+  },
+  {
+    chain: "agent_orchestrator_syntheses",
+    table: "agent_orchestrator_syntheses",
+    fields: [txt("t.id"), txt("t.orchestrator_run_id"), plain("t.assessment"), txt("t.score"), plain("t.algorithm_version"), txt("t.synthesis_input"), plain("t.synthesis_input_sha256"), txt("t.result"), txt("t.grants_approval"), plain("t.created_by"), ts("t.created_at")],
+    triggers: guards("agent_orchestrator_syntheses"),
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */
