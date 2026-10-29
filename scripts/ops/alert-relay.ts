@@ -20,10 +20,9 @@ try {
   if (env["TWINS_ALERT_WEBHOOK_URL"]) destinations.push(createWebhookSender({ url: env["TWINS_ALERT_WEBHOOK_URL"], secret: env["TWINS_ALERT_WEBHOOK_SECRET"], allowInsecureTestDestination: env["TWINS_ALERT_ALLOW_INSECURE_TEST"] === "1" }));
   const tgToken = env["TWINS_ALERT_TELEGRAM_BOT_TOKEN"];
   const tgChat = env["TWINS_ALERT_TELEGRAM_CHAT_ID"];
-  if (tgToken || tgChat) {
-    if (!tgToken || !tgChat) throw new TelegramConfigError("both TWINS_ALERT_TELEGRAM_BOT_TOKEN and TWINS_ALERT_TELEGRAM_CHAT_ID are required for the Telegram destination");
-    destinations.push(createTelegramSender({ token: tgToken, chatId: tgChat }));
-  }
+  if (tgChat && !tgToken) throw new TelegramConfigError("TWINS_ALERT_TELEGRAM_CHAT_ID is set but TWINS_ALERT_TELEGRAM_BOT_TOKEN is missing");
+  if (tgToken && !tgChat) log("relay.telegram_pending", { note: "bot token present but the alert chat id is not resolved yet; Telegram destination disabled" });
+  if (tgToken && tgChat) destinations.push(createTelegramSender({ token: tgToken, chatId: tgChat }));
 } catch (error) {
   log("relay.config_error", { reason: error instanceof TelegramConfigError ? error.message : "invalid alert destination configuration" }); // messages name the variable, never its value
   process.exit(2);
