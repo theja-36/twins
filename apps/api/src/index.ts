@@ -48,6 +48,7 @@ import { buildMessageOutboxInput, OUTBOX_JOB_ID, OUTBOX_QUEUE_JOB_NAME, PgIntake
 import { observe, recordProcessStart } from "@twins/alerting";
 import { currentRuntimeState } from "@twins/runtime-state";
 import { buildStatus } from "./statusSurface.js";
+import { registerRiskRoutes } from "./riskApi.js";
 import { createIntakeService, type IntakeEnqueue } from "./intakeService.js";
 import {
   acceptCorrelationId,
@@ -322,6 +323,8 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   }
 
   // ── Health check (no auth) ──────────────────────────────────────────────────
+  registerRiskRoutes(app, { db, authorized: checkBearerToken }); // Stage 3 / Task 6: bearer-protected internal risk approval API
+
   app.get("/health", async () => ({
     status: "ok",
     service: "api",

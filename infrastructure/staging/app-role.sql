@@ -23,7 +23,9 @@ DECLARE
 	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch
 	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads'];
 	-- read only: the runtime safety controls are changed only through the owner-run safety-control CLI
-	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay)
+	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
+	-- insert only: the approval card is created by the application and then only ever advanced by the approval bot's SECURITY DEFINER functions
+	insert_only text[] := ARRAY['risk_approval_cards'];
 BEGIN
 	FOR t IN SELECT c.relname AS name, c.relkind AS kind,
 	               (EXISTS (SELECT 1 FROM pg_attribute a WHERE a.attrelid = c.oid AND a.attname = 'event_hash' AND NOT a.attisdropped)
@@ -35,6 +37,8 @@ BEGIN
 			EXECUTE format('GRANT SELECT ON %I TO %I', t.name, r); -- views (e.g. signal_validation_eligibility) are read-only
 		ELSIF t.name = ANY (read_only) THEN
 			EXECUTE format('GRANT SELECT ON %I TO %I', t.name, r);
+		ELSIF t.name = ANY (insert_only) THEN
+			EXECUTE format('GRANT SELECT, INSERT ON %I TO %I', t.name, r);
 		ELSIF t.append_only THEN
 			EXECUTE format('GRANT SELECT, INSERT ON %I TO %I', t.name, r);
 		ELSE
@@ -43,3 +47,5 @@ BEGIN
 	END LOOP;
 END
 $$;
+-- the one door through which the API records a risk APPROVE / REJECT (it re-checks eligibility inside the database); the card-state doors are for the approval bot only
+GRANT EXECUTE ON FUNCTION twins_record_risk_approval(uuid, uuid, text, text, jsonb, text, timestamptz) TO :"app_role";

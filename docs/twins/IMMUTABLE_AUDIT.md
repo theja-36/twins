@@ -70,3 +70,5 @@ Superuser compromise or restore-from-edited-dump (anchor + off-host backup are t
 **Stage 3 / Task 4 addition:** `loss_events` and `circuit_breaker_events` are the eighth and ninth chains (payload version 1; see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md)); `risk_decisions` gains the `risk_decisions_b_breaker_before_insert` guard (verified ENABLE ALWAYS), and `orders_require_risk_decision` now also refuses orders while a breaker is open.
 
 **Stage 3 / Task 5 addition:** `event_blackout_windows` is the tenth chain (payload version 1; see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md)); `risk_decisions` gains the `risk_decisions_market_review_check` (an approval needs a PASSED market evaluation).
+
+**Stage 3 / Task 6 addition:** `risk_approvals` is the eleventh chain (payload version 1; see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md)); it is written only by the SECURITY DEFINER function `twins_record_risk_approval`, and `orders_require_risk_decision` now also requires a recorded APPROVE.

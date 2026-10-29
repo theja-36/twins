@@ -11,7 +11,7 @@ import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages
 import { verifyAuditChains, verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
 import {
   computeRiskReward, createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, createRiskDecision, getLatestRiskDecisionForOptionsClaim, getLatestRiskDecisionForSignal,
-  getRiskDecision, listRiskDecisions, RiskDecisionError, supersedeRiskDecision, type RiskDecisionInput,
+  getRiskDecision, listRiskDecisions, recordRiskApproval, RiskDecisionError, supersedeRiskDecision, type RiskDecisionInput,
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { requireTestDatabaseUrl } from "../targetConfig";
@@ -278,6 +278,8 @@ describe("relationship integrity", () => {
     const approved = await supersedeRiskDecision(db(), pending.id, { stopLossValidationId: ev.id, status: "APPROVED_FOR_REVIEW", ...SIZED, idempotencyKey: `rd-test:${randomUUID()}`, createdBy: "service:risk-test", instrumentType: "equity", symbol: "SYNTH", entryPrice: 100, stopLoss: 95, stopLossBasis: "price", decisionReasonCode: "review_ready", inputSnapshot: { x: 1 } });
     expect(await tryOrder(pending.id)).toMatch(/\(is SUPERSEDED\)/);
     // an approved, un-superseded decision passes the risk-decision guard; the insert then fails on the NEXT rule (the fake account is not a real FK), proving the guard is not the blocker
+    expect(await tryOrder(approved.id)).toMatch(/orders: the risk decision has no recorded APPROVE approval/); // Task 6: ...and it must also have a recorded APPROVE
+    expect(await recordRiskApproval(db(), { decisionId: approved.id, action: "APPROVE", actor: "operator:itest" })).toMatchObject({ outcome: "recorded" });
     const outcome = await tryOrder(approved.id);
     expect(outcome).not.toMatch(/orders: /);
     expect(outcome).toMatch(/^23503|^23502/);

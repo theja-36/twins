@@ -3,7 +3,7 @@ import { evaluateSafety } from "@twins/runtime-state";
 import { buildCallbackData, parseCallbackData, verifyCallback } from "./callback";
 import { claimHasValidStopLoss, renderClaimCard, renderExpired, renderOutcome, renderTestCard, type CardContext, type ClaimRow } from "./card";
 import type { BotConfig } from "./config";
-import type { BotDb, CardRow } from "./db";
+import type { BotDb, CardRow, RiskCardRow } from "./db";
 import type { BotLogger } from "./log";
 import { TelegramApiError, type BotApiPort, type InlineButton, type TelegramUpdate } from "./telegramApi";
 
@@ -24,7 +24,7 @@ export type UpdateResult =
   | { kind: "ignored" }
   | { kind: "rejected"; reason: string }
   | { kind: "stale"; reason: string }
-  | { kind: "decision"; cardId: string; cardKind: "claim" | "test"; action: "approve" | "reject" }
+  | { kind: "decision"; cardId: string; cardKind: "claim" | "test" | "risk"; action: "approve" | "reject" }
   | { kind: "command"; command: string };
 
 export interface BotDeps {
@@ -113,6 +113,28 @@ export class ApprovalBot {
     }
   }
 
+  /** Sends one risk-approval card (text rendered by the application). On any Telegram problem it stays 'pending' and is retried until it expires. */
+  private async deliverRisk(card: RiskCardRow): Promise<boolean> {
+    const buttons: InlineButton[] = [
+      { text: "Approve (record only)", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "a") },
+      { text: "Reject", callback_data: buildCallbackData(this.d.cfg.hmacKey, card.id, card.nonce, "r") },
+    ];
+    try {
+      const messageId = await this.d.api.sendMessage(this.d.cfg.approverId, card.cardText, buttons);
+      if (!(await this.d.db.markRiskSent(card.id, messageId, card.cardContentSha256))) return false;
+      await this.note("risk_card_sent", null, { card: shortCard(card.id) });
+      return true;
+    } catch (error) {
+      if (error instanceof TelegramApiError) {
+        if (error.code === 429) this.sendBlockedUntil = this.d.now().getTime() + Math.min(error.retryAfter ?? 30, 3600) * 1000;
+        if (error.code === 401) throw new FatalBotError("telegram_unauthorized", EXIT_TELEGRAM);
+        await this.note("telegram_error", null, { method: "sendMessage", code: error.code, card: shortCard(card.id) });
+        return false;
+      }
+      throw error;
+    }
+  }
+
   private async sendNew(state: { activatedAt: Date; paused: boolean }): Promise<number> {
     const now = this.d.now();
     if (state.paused || now.getTime() < this.sendBlockedUntil) return 0;
@@ -132,6 +154,14 @@ export class ApprovalBot {
       if (budget <= 0 || this.d.now().getTime() < this.sendBlockedUntil) break;
       const row = await this.d.db.getClaimForCard(card.id);
       if (row && (await this.deliver(card, row))) {
+        sent += 1;
+        budget -= 1;
+      }
+    }
+    // 1b. risk-approval cards (Stage 3 / Task 6): already rendered by the application from an approval-eligible decision; the bot only delivers them
+    for (const card of await this.d.db.listPendingRiskCards(Math.max(budget, 0))) {
+      if (budget <= 0 || this.d.now().getTime() < this.sendBlockedUntil) break;
+      if (await this.deliverRisk(card)) {
         sent += 1;
         budget -= 1;
       }
@@ -162,6 +192,16 @@ export class ApprovalBot {
         }
       }
     }
+    for (const card of await this.d.db.expireDueRisk()) {
+      await this.note("risk_card_expired", null, { card: shortCard(card.cardId) });
+      if (card.telegramMessageId !== null) {
+        try {
+          await this.d.api.editMessageText(this.d.cfg.approverId, card.telegramMessageId, renderExpired(card.cardId));
+        } catch {
+          /* best effort */
+        }
+      }
+    }
     return expired.length;
   }
 
@@ -188,6 +228,8 @@ export class ApprovalBot {
       await this.noteRejected("callback_rejected:bad_data");
       return { kind: "rejected", reason: "bad_data" };
     }
+    const riskCard = await this.d.db.getRiskCard(parsed.cardId);
+    if (riskCard) return this.handleRiskCallback(updateId, cq, parsed, riskCard);
     const card = await this.d.db.getCard(parsed.cardId);
     if (!card) {
       await this.noteRejected("callback_rejected:unknown_card");
@@ -237,6 +279,61 @@ export class ApprovalBot {
     }
     this.d.log.log("bot.decision", { card: shortCard(card.id), action, kind: result.kind });
     return { kind: "decision", cardId: card.id, cardKind: result.kind, action };
+  }
+
+  /**
+   * A tap on a risk-approval card (Stage 3 / Task 6). The bot only relays it: the database function re-checks, at this instant, that the decision is still the current
+   * APPROVED_FOR_REVIEW version, inside its validity, with no open breaker, kill switch off, the stop-loss still VALID and every gate passed - otherwise nothing is approved
+   * and the card is expired. A rejection is risk-reducing and always recorded. Approving places NO order.
+   */
+  private async handleRiskCallback(updateId: number, cq: NonNullable<TelegramUpdate["callback_query"]>, parsed: NonNullable<ReturnType<typeof parseCallbackData>>, card: RiskCardRow): Promise<UpdateResult> {
+    const { approverId } = this.d.cfg;
+    if (!verifyCallback(this.d.cfg.hmacKey, parsed, card.nonce)) {
+      await this.noteRejected("callback_rejected:bad_hmac", null);
+      return { kind: "rejected", reason: "bad_hmac" };
+    }
+    if (card.telegramMessageId !== cq.message?.message_id) {
+      await this.noteRejected("callback_rejected:wrong_message", null);
+      return { kind: "rejected", reason: "wrong_message" };
+    }
+    const action = parsed.action === "a" ? "approve" : "reject";
+    if (action === "approve") {
+      const refusal = await evaluateSafety("kill_switch_inactive", "approval_bot.risk_approval_decision");
+      if (refusal) {
+        await this.noteRejected(`safety_refused:risk_approval:${refusal.reason}`, null);
+        await this.answer(cq.id, "System halted: approvals are blocked right now.");
+        return { kind: "rejected", reason: "safety_halt" };
+      }
+    }
+    const decisionId = await this.d.db.getRiskCardDecisionId(card.id);
+    if (!decisionId) {
+      await this.noteRejected("callback_rejected:unknown_card", null);
+      return { kind: "rejected", reason: "unknown_card" };
+    }
+    const result = await this.d.db.decideRisk({ cardId: card.id, decisionId, action, approverId, updateId, cardMessageId: cq.message!.message_id });
+    if (result.outcome === "refused") {
+      await this.noteRejected(`risk_approval_refused:${result.reason}`, null);
+      await this.answer(cq.id, "This proposal can no longer be approved (it changed or expired). Nothing was approved.");
+      try {
+        await this.d.api.editMessageText(approverId, cq.message!.message_id, renderExpired(card.id));
+      } catch {
+        /* best effort */
+      }
+      return { kind: "stale", reason: result.reason };
+    }
+    if (result.outcome !== "recorded") {
+      await this.noteRejected(`callback_stale:${result.outcome}`, null);
+      await this.answer(cq.id, "This card is no longer active.");
+      return { kind: "stale", reason: result.outcome };
+    }
+    await this.answer(cq.id, action === "approve" ? "Approval recorded (no order is placed)." : "Rejection recorded.");
+    try {
+      await this.d.api.editMessageText(approverId, cq.message!.message_id, renderOutcome(card.cardText, action, this.d.now(), false));
+    } catch {
+      /* the decision is recorded; the confirmation edit is best effort */
+    }
+    this.d.log.log("bot.decision", { card: shortCard(card.id), action, kind: "risk" });
+    return { kind: "decision", cardId: card.id, cardKind: "risk", action };
   }
 
   private async answer(id: string, text: string): Promise<void> {

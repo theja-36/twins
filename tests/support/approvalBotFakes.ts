@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { BotConfig } from "../../services/approval-bot/src/config";
 import { loadBotConfig } from "../../services/approval-bot/src/config";
 import type { ClaimRow } from "../../services/approval-bot/src/card";
-import type { BotDb, BotState, CardRow, DecideInput, DecideResult } from "../../services/approval-bot/src/db";
+import type { BotDb, BotState, CardRow, DecideInput, DecideResult, DecideRiskResult, RiskCardRow } from "../../services/approval-bot/src/db";
 import { TelegramApiError, type BotApiPort, type InlineButton, type TelegramUpdate } from "../../services/approval-bot/src/telegramApi";
 
 export const APPROVER = 123456789; // synthetic
@@ -162,6 +162,49 @@ export class MemoryBotDb implements BotDb {
   }
   async recordEvent(type: string, cardId: string | null, detail: Record<string, string | number | boolean>): Promise<void> {
     this.events.push({ type, cardId, detail });
+  }
+  // ── risk-approval cards (Stage 3 / Task 6): the same semantics as the database functions, minus the eligibility re-check, which `riskRefusal` simulates ──
+  riskCards = new Map<string, RiskCardRow & { decisionId: string }>();
+  riskApprovals: Array<{ cardId: string; decisionId: string; action: string; approver: number; updateId: number }> = [];
+  /** When set, the next APPROVE is refused with this reason (what the database function does when the decision changed, expired or a breaker/kill switch is on). */
+  riskRefusal: string | null = null;
+  async listPendingRiskCards(limit: number): Promise<RiskCardRow[]> {
+    return [...this.riskCards.values()].filter((c) => c.state === "pending" && c.expiresAt > this.clock.now()).slice(0, limit);
+  }
+  async getRiskCard(id: string): Promise<RiskCardRow | null> {
+    return this.riskCards.get(id) ?? null;
+  }
+  async getRiskCardDecisionId(id: string): Promise<string | null> {
+    return this.riskCards.get(id)?.decisionId ?? null;
+  }
+  async markRiskSent(id: string, messageId: number, _sha: string): Promise<boolean> {
+    void _sha;
+    const c = this.riskCards.get(id);
+    if (!c || c.state !== "pending") return false;
+    Object.assign(c, { state: "sent", telegramMessageId: messageId });
+    return true;
+  }
+  async decideRisk(i: DecideInput & { decisionId: string }): Promise<DecideRiskResult> {
+    this.maybeFail();
+    const c = this.riskCards.get(i.cardId);
+    if (!c || c.decisionId !== i.decisionId) return { outcome: "unknown" };
+    if (c.expiresAt <= this.clock.now()) return { outcome: "expired" };
+    if (c.state !== "sent" || c.telegramMessageId !== i.cardMessageId) return { outcome: "not_pending" };
+    if (this.riskApprovals.some((a) => a.decisionId === i.decisionId)) return { outcome: "duplicate" };
+    if (i.action === "approve" && this.riskRefusal) {
+      c.state = "expired";
+      const reason = this.riskRefusal;
+      this.riskRefusal = null;
+      return { outcome: "refused", reason };
+    }
+    c.state = "decided";
+    this.riskApprovals.push({ cardId: c.id, decisionId: c.decisionId, action: i.action, approver: i.approverId, updateId: i.updateId });
+    return { outcome: "recorded" };
+  }
+  async expireDueRisk(): Promise<Array<{ cardId: string; telegramMessageId: number | null }>> {
+    const out: Array<{ cardId: string; telegramMessageId: number | null }> = [];
+    for (const c of this.riskCards.values()) if ((c.state === "sent" || c.state === "pending") && c.expiresAt <= this.clock.now()) { c.state = "expired"; out.push({ cardId: c.id, telegramMessageId: c.telegramMessageId }); }
+    return out;
   }
   async close(): Promise<void> {
     this.closed = true;

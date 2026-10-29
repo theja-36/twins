@@ -24,3 +24,4 @@ export * from "./systemControl";
 export * from "./stopLossValidations";
 export * from "./circuitBreakers";
 export * from "./eventBlackouts";
+export * from "./riskApprovals";

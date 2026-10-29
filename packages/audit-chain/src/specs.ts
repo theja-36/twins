@@ -121,6 +121,15 @@ export const CHAIN_SPECS: readonly ChainSpec[] = [
     ],
     triggers: [...guards("event_blackout_windows"), "event_blackout_windows_a_integrity_before_insert"],
   },
+  {
+    chain: "risk_approvals",
+    table: "risk_approvals",
+    fields: [
+      txt("t.id"), txt("t.risk_decision_id"), txt("t.decision_version"), txt("t.card_id"), plain("t.action"), plain("t.actor"), txt("t.actor_context"), plain("t.reason"), txt("t.decision_snapshot"), txt("t.evidence_references"),
+      ts("t.valid_until"), plain("t.card_text_sha256"), ts("t.created_at"),
+    ],
+    triggers: [...guards("risk_approvals"), "risk_approvals_a_integrity_before_insert"],
+  },
 ];
 
 /** Extra protection that is not a per-table chain trigger. */

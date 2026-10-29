@@ -23,7 +23,8 @@ Stage 2 / Task 5 and the Telegram alert destination are **merged to `main`** (PR
 ## 1e. Stage 3 (2026-10-29)
 Stage 3 / Task 1 (risk decision schema and immutable risk records) is implemented on branch `feat/stage3-risk-decisions` (migration 0014, `packages/risk`); not merged and **not deployed to staging**. See [RISK_DECISIONS.md](RISK_DECISIONS.md).
 
-Stage 3 / Task 2 (position sizing engine) is implemented on branch `feat/stage3-position-sizing` (migration 0015, `packages/risk/src/sizing`); see [POSITION_SIZING.md](POSITION_SIZING.md). Tasks 1-4 are merged to main (PRs #26-#29); none is deployed to staging.
+Stage 3 / Task 2 (position sizing engine) is implemented on branch `feat/stage3-position-sizing` (migration 0015, `packages/risk/src/sizing`); see [POSITION_SIZING.md](POSITION_SIZING.md). Tasks 1-5 are merged to main (PRs #26-#30); none is deployed to staging.
+Stage 3 / Task 6 (risk decision API and approval integration) is implemented on branch `feat/stage3-risk-approval` (migration 0019); see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md).
 Stage 3 / Task 5 (market, liquidity and event-risk gates) is implemented on branch `feat/stage3-market-risk-gates` (migration 0018); see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md).
 Stage 3 / Task 4 (risk-decision expiry and loss circuit breakers) is implemented on branch `feat/stage3-expiry-circuit-breakers` (migration 0017); see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md).
 Stage 3 / Task 3 (portfolio open-risk and correlation limits) is implemented on branch `feat/stage3-portfolio-limits` (migration 0016, `packages/risk/src/portfolio`); see [PORTFOLIO_RISK_LIMITS.md](PORTFOLIO_RISK_LIMITS.md).

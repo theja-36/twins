@@ -75,7 +75,7 @@ try {
     if (tg.rowCount !== 4 || tg.rows.some((r) => r.tgenabled !== "A")) throw new Error(`guard/chain triggers on ${t} missing or not ENABLE ALWAYS: [${tg.rows.map((r) => `${r.tgname}:${r.tgenabled}`).join(",")}]`);
   }
   const heads = await client.query("select count(*)::int as n from audit_chain_heads");
-  if (heads.rows[0].n !== 10) throw new Error(`audit_chain_heads must hold 10 chains, found ${heads.rows[0].n}`);
+  if (heads.rows[0].n !== 11) throw new Error(`audit_chain_heads must hold 11 chains, found ${heads.rows[0].n}`);
   const mech = await client.query("select count(*)::int as n from information_schema.columns where table_name = 'system_control_events' and column_name in ('change_mechanism','source_process','operator_context','db_session_user','db_client_addr','db_application_name')");
   if (mech.rows[0].n !== 6) throw new Error("system_control_events must have the 6 operator-context columns from 0010");
   // 0011: stop-loss evidence table (chained, append-only), the APPROVE invariant on signal_validations and the eligibility view.
@@ -130,7 +130,16 @@ try {
   }
   const marketCheck = await client.query("select 1 from pg_constraint where conrelid = 'public.risk_decisions'::regclass and conname = 'risk_decisions_market_review_check'");
   if (marketCheck.rowCount !== 1) throw new Error("risk_decisions_market_review_check (0018) is missing");
-  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present`);
+  // 0019: risk approvals (chained, append-only), the card guard and the SECURITY DEFINER doors (not executable by PUBLIC).
+  for (const [table, trigger] of [["risk_approvals", "risk_approvals_no_update_delete"], ["risk_approvals", "risk_approvals_a_integrity_before_insert"], ["risk_approval_cards", "risk_approval_cards_guard"], ["risk_approval_cards", "risk_approval_cards_no_delete"]]) {
+    const t = await client.query("select tgenabled from pg_trigger where tgrelid = $1::regclass and tgname = $2", [`public.${table}`, trigger]);
+    if (t.rowCount !== 1 || t.rows[0].tgenabled !== "A") throw new Error(`${trigger} (0019) is missing or not ENABLE ALWAYS`);
+  }
+  for (const fn of ["twins_record_risk_approval(uuid,uuid,text,text,jsonb,text,timestamptz)", "twins_risk_card_mark_sent(uuid,bigint,text)", "twins_risk_card_expire_due()"]) {
+    const f = await client.query("select p.prosecdef as definer from pg_proc p where p.oid = $1::regprocedure", [fn]);
+    if (f.rowCount !== 1 || f.rows[0].definer !== true) throw new Error(`${fn} (0019) must be SECURITY DEFINER`); // (the REVOKE from PUBLIC is a privilege, which restore drills deliberately do not restore: it is asserted by the integration tests)
+  }
+  console.log(`[ci] ${expected} migrations recorded; 0004 structures present; parser_version has no default; 0007 capture structures and append-only triggers present; 0008 approval-bot tables and append-only triggers present; 0009 system controls, seed events and triggers present; 0010 audit chains, heads and ENABLE ALWAYS guards present; 0011 stop-loss evidence chain, APPROVE invariant and eligibility view present; 0012 intake outbox, identity index and guards present; 0013 replay log and guarded dead-letter replay present; 0014 risk decisions (chain, integrity, view) and the orders guard present; 0015 sized-review check present; 0016 portfolio-review check present; 0017 loss/breaker chains and the breaker gate present; 0018 blackout chain and the market-review check present; 0019 approval chain, card guard and SECURITY DEFINER doors present`);
 } finally {
   await client.end();
 }
