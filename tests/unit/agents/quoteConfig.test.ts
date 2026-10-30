@@ -119,7 +119,7 @@ describe("registration, worker wiring and source hygiene", () => {
     expect(ids).toHaveLength(12); expect(ids).toEqual(expect.arrayContaining(["liquidity-v1", "options-risk-v1"]));
   });
   it("the worker resolves the quote providers only when the engine is enabled", () => {
-    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \} : null;/);
+    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \}\)\) : null;/);
   });
   it("the new agent and provider sources read no message text, import no network / broker / LLM code, read no system clock and write nothing", () => {
     for (const f of ["liquidity.ts", "optionsRisk.ts", "quoteProviders.ts", "quoteCommon.ts"]) {

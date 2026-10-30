@@ -399,5 +399,47 @@ The refusal reason codes are fixed, not configurable (`research_assessment_block
 * The role that evaluates eligibility needs SELECT on `agent_orchestrator_runs`, `agent_orchestrator_syntheses` and `risk_decisions`; without it the check fails closed (`research_assessment_unavailable`) while the engine is enabled.
 * Existing synthesis rows stay `research-synthesis-v1` (append-only).
 
+## Observability and provider snapshot management (Stage 5 / Task 9)
+Makes the engine observable and its snapshot files manageable. **It changes no verdict, no assessment, no halt decision and no approval behaviour** (the observer only reads events and the result; the same evaluation with or without it is the same stored run), fetches nothing, schedules nothing, deploys nothing, and writes no order, fill, position, approval card or database row.
+
+### Observability (`observability.ts`)
+Structured, redacted, **bounded** records through the existing structured logger (JSON lines; the logger additionally masks sensitive-looking keys and bounds values). Fields are ids, fixed-form codes (validated against an allow-list pattern, otherwise `UNKNOWN`), counts, durations and verdict names. **Never logged:** message text, finding summaries or details, agent output, provider responses, file contents, secrets. Field names avoid the logger's sensitive-key filter by construction (tested: no `[redacted]` appears).
+
+| Level (`TWINS_AGENT_LOG_LEVEL`, default `summary`) | Records |
+| --- | --- |
+| `errors` | `agent_engine.run.failed` (error; the code, error name and number of agents that had finished), `agent_engine.config.invalid` (error) |
+| `summary` | + **one** `agent_engine.run.completed` per run (warn when it halts or an agent did not complete, otherwise info): status, assessment, `halt`, `haltReasonCode`, agent count, duration, `statusCounts`, `verdictDistribution`, `timedOut`, `notCompleted`, `failedAttempts` and a compact per-agent list (id, status, verdict, duration, attempts, error code; at most 20), or `agent_engine.run.reused` when a stored result is returned again; and `agent_engine.providers` once at start-up |
+| `agents` | + `agent_engine.run.started` and one `agent_engine.agent.finished` per agent (warn unless COMPLETED); a timeout is `agent_engine.agent.timed_out` (warn) |
+| `debug` | + `agent_engine.agent.started` and `agent_engine.agent.attempt_failed` |
+At the default level an engine run costs exactly one record however many agents run. The result of `runAgentEngine` now also carries `haltReasonCode` (`HALT_<rule>`, `NO_HALT`, or `UNKNOWN` for a run stored before synthesis v2). The worker wires `createRunObserver` into the engine call (replacing the old per-event log line, which was unbounded), logs a failed run before rethrowing, and reports **configuration validation failures** (`agent_engine.config.invalid`: config name, error code, and a redacted bounded message that names settings, not values) before start-up fails. **Provider availability** (`agent_engine.providers`) lists, by snapshot kind, which providers the registry was given and which are missing; with the engine enabled a gap is a warning.
+
+### Provider snapshot management (`snapshots.ts`, `npm run agents:snapshots`)
+The research agents read pre-exported `twins-*-v1` JSON files. This module lists, validates and installs them; it reads and writes **local files only**. Layout: `<snapshot dir>/<kind>.json`, for the 15 kinds: `holiday-calendar`, `economic-calendar`, `macro-context`, `news`, `sentiment`, `constituents`, `market-data` (constituent moves), `quotes` (liquidity), `option-quotes`, `option-chain`, `ohlc`, `last-price`, `instrument-reference`, `historical-patterns`, `historical-outcomes`.
+
+| Status | Meaning |
+| --- | --- |
+| `OK` | accepted by the **same strict parser the agent uses**, `as_of` valid, age within the warn limit |
+| `STALE` | older than the warn age |
+| `EXPIRED` | older than the max age, **or** a calendar whose covered period has ended |
+| `MALFORMED` | not JSON / not an object / wrong format / rejected by the strict parser / `as_of` missing, offset-less or in the future |
+| `UNSAFE` | symlink, not a regular file, empty or over 16 MB |
+| `MISSING` | no file (or no directory) |
+Each report carries the file name, required flag, a fixed reason code, `as_of`, age in hours, the warn / max limits, size, SHA-256, **coverage** (entry count, up to ten keys, covered period for calendars) and - when the rules are available - the configured provider source and whether that setting actually reads the file in the snapshot directory (`notServed`). The listing also reports unexpected files and leftover temporary files from an interrupted write. Listing and validation write nothing. Default max / warn ages (hours): holiday calendar 8760 / 4320; economic calendar 720 / 168; macro context 48 / 24; news and sentiment 24 / 6; constituents 2160 / 720; market data 24 / 2; quotes, option quotes and option chain 0.5 / 0.083 (the quote agents go UNAVAILABLE at 30 minutes); OHLC 120 / 24; last price 24 / 2; instrument reference 720 / 168; historical patterns and outcomes 2880 / 720.
+
+**Detecting missing / malformed snapshots.** `missingRequired`, `malformed`, `unsafe`, `expired`, `stale` and `notServed` are listed; `ok` is the verdict under the configured strictness: **STRICT** (default) requires every required snapshot to be `OK` (stale fails) and fails on any malformed or unsafe file; **LENIENT** accepts a stale required snapshot and warns about a malformed optional one (a missing, expired, malformed or unsafe required snapshot still fails).
+
+**Writing.** `writeSnapshot` (CLI: `write --kind K --file F`) validates the content with the kind's strict parser and requires a valid, non-future `as_of`; then writes atomically: a temp file in the same directory (exclusive create, mode 0600, fsync), then a rename over the target (the directory is created 0700 when absent). **An existing snapshot is replaced only with an explicit confirmation naming the kind** (`--overwrite --confirm <kind>`; library `confirmOverwrite`), and the previous version is kept once in `.previous/<kind>.json`. A failure at any step leaves the existing snapshot untouched and removes the temp file; a symlinked directory or target, an unknown or path-like kind, a non-object or oversized document are refused.
+
+**CLI.** `npm run agents:snapshots -- list|validate [--dir D] [--json]` and `write --kind K --file F [--dir D] [--overwrite --confirm K]`. Exit codes: 0 ok, 1 failure / not ok, 2 usage, 3 refused (would overwrite). Output never shows snapshot contents beyond counts and short key lists.
+
+### Configuration (Task 9)
+`TWINS_AGENT_LOG_LEVEL` (errors | summary | agents | debug; default summary). `TWINS_AGENT_SNAPSHOT_DIR` (default `data/agent-snapshots`, git-ignored), `TWINS_AGENT_SNAPSHOT_REQUIRED` (comma list of kinds; default all fifteen; empty = none), `TWINS_AGENT_SNAPSHOT_STRICTNESS` (STRICT | LENIENT; default STRICT), `TWINS_AGENT_SNAPSHOT_FRESHNESS_HOURS` (JSON `{"<kind>": {"warn": h, "max": h}}`, warn < max). A malformed value throws (the observability level at worker start-up, after logging a redacted `config.invalid` record; the snapshot settings in the CLI).
+
+### Limits
+* The freshness limits here govern the **files**; the agents keep their own staleness rules (an agent still goes UNAVAILABLE on data it considers too old, whatever this tool says).
+* The manager validates the snapshot's own `as_of`; it cannot tell whether the exporter captured what it claims. The worker does not read the snapshot directory itself: providers still read the files named by `TWINS_AGENT_*_PROVIDER` (the `notServed` check reports a mismatch).
+* There is no exporter, scheduler or fetcher: snapshots must be produced elsewhere and installed with `write` (each a separate, reviewed task). Two operators writing the same kind concurrently each get an atomic replace but the last confirmed write wins.
+* The log volume bound applies to the engine's own records; the worker's other lines are unchanged.
+
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.

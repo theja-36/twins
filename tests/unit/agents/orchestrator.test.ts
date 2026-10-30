@@ -291,7 +291,7 @@ describe("architecture: the engine creates no executable state and calls nothing
     const fn = w.slice(w.indexOf("async function recordPendingRiskDecision"));
     expect(fn.indexOf("await intel()")).toBeLessThan(fn.indexOf("await agents(latestId)"));
     expect(fn.indexOf("await agents(latestId)")).toBeLessThan(fn.indexOf("await size()"));
-    expect(w).toMatch(/const agentEngineConfig = loadAgentEngineConfig\(\)/);
+    expect(w).toMatch(/const agentEngineConfig = observeConfigLoad\(defaultWorkerLogger, \"agent-engine\", \(\) => loadAgentEngineConfig\(\)\)/);
     expect(read("packages/agents/src/record.ts")).toMatch(/if \(!config\.enabled\) return \{ skipped: "ENGINE_DISABLED" \}/);
     expect(read("packages/agents/src/config.ts")).toMatch(/enabled: false/);
   });
