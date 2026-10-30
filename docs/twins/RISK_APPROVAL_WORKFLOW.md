@@ -1,6 +1,8 @@
 # Risk decision API and approval workflow - Stage 3 / Task 6
 
 > **Stage 4 / Task 5:** approval eligibility additionally requires valid source intelligence (`source_intelligence_not_valid`; also enforced inside `twins_record_risk_approval`, migration 0024) - see [SOURCE_INTELLIGENCE_INTEGRATION.md](SOURCE_INTELLIGENCE_INTEGRATION.md).
+>
+> **Stage 5 / Task 8:** approval eligibility also re-checks the latest research assessment (`research_assessment_blocked` / `_incomplete` / `_adverse`, and `research_assessment_missing` when the agent engine is enabled); the database function refuses a BLOCKED / INCOMPLETE / ADVERSE latest assessment too (migration 0027) - see [AGENT_ENGINE.md](AGENT_ENGINE.md#approval-eligibility-re-check-stage-5--task-8).
 
 > Decision [D-060](DECISION_LOG.md); requirement [SZ-17](REQUIREMENTS_TRACEABILITY.md) (new). Builds on [RISK_DECISIONS.md](RISK_DECISIONS.md), [POSITION_SIZING.md](POSITION_SIZING.md), [PORTFOLIO_RISK_LIMITS.md](PORTFOLIO_RISK_LIMITS.md), [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md), [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md), [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md). Code: `packages/risk/src/approval/`, `apps/api/src/riskApi.ts`, `services/approval-bot/` (risk-card path), migration `0019_risk_approvals`, role scripts in `infrastructure/staging/`.
 

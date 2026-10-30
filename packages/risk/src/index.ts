@@ -19,5 +19,6 @@ export * from "./market/engine";
 export * from "./market/windows";
 export * from "./market/record";
 export * from "./approval/eligibility";
+export * from "./approval/researchEligibility";
 export * from "./approval/card";
 export * from "./approval/service";

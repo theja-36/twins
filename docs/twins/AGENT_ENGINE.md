@@ -25,12 +25,23 @@ Builds each agent's inputs from the risk-decision context, runs agents as soon a
 ## Persistence (append-only, hash-chained; chains 27-32)
 `agent_definitions` (registry snapshot per agent id / version / contract hash), `agent_orchestrator_runs` (risk-decision reference and version, trigger and context, agent set and versions, configuration snapshot + hash, input snapshot + hash, status, timestamps), `agent_runs`, `agent_findings`, `agent_evidence_references`, `agent_orchestrator_syntheses` (assessment, score, the **synthesis input** and its hash, the full result). A run is written **once, complete, in one transaction** after the agents have run in memory. Run identity = hash(decision version, agent set + contract hashes, configuration, inputs): the same evaluation returns the existing run **without re-running any agent**; a new decision version, agent version, configuration or input is a new run. Database checks: a synthesis can never `grants_approval`; a COMPLETED run needs a real verdict and a confidence, every other status has verdict `UNAVAILABLE` and a non-COMPLETED/UNAVAILABLE run needs an error code; sizes and codes are bounded.
 
-## Synthesis (`research-synthesis-v1`)
+## Synthesis (`research-synthesis-v2`)
 A pure function of the agent results and the configuration; **timestamps and durations are not part of its input**, so identical results synthesize identically. Verdict scores: SUPPORTIVE +1, NEUTRAL 0, CAUTION -0.5, ADVERSE -1. Rules, in order:
 1. a COMPLETED `BLOCKING` verdict from an agent that can block (not advisory) -> **RESEARCH_BLOCKED** (evidence of a block wins over missing data);
 2. a required agent without a COMPLETED result, or no scoring result at all (including an engine with no agents) -> **RESEARCH_INCOMPLETE** (fail closed);
 3. a COMPLETED ADVERSE verdict from a scoring agent with weight >= `adverseVetoWeight` (default 50) -> **RESEARCH_ADVERSE**;
 4. otherwise the weighted mean `sum(weight x confidence/100 x score) / sum(weight)` against the thresholds (>= +0.35 **SUPPORTIVE**, >= -0.15 **NEUTRAL**, >= -0.5 **CAUTION**, below **ADVERSE**; low confidence pulls an agent toward neutral).
+### Synthesis output structure (Task 8; the rules above are unchanged)
+v2 adds transparency only, derived from the same inputs (agent ids, verdicts, confidences and finding **codes** - never free text), so it is as deterministic as the assessment. The six assessment categories, the rule order (blocking, incomplete, adverse veto, weighted mean) and `grantsApproval: false` are unchanged, and the database `no_approval` constraint on `agent_orchestrator_syntheses` is untouched. The stored `result` contains, besides the v1 fields (`assessment`, `score`, `contributions`, `blockers`, `missingRequired`, `unavailableOptional`, `advisory`, `notes`, `inputSha256`):
+| Field | Content |
+| --- | --- |
+| `agentSummaries[]` | per agent: id, version, status, verdict, confidence, weight, required / can-block / advisory flags, `scored`, `reasonCodes` (its non-INFO finding codes, or its error code when it did not complete) |
+| `reasons.blocking / adverse / caution / neutral[]` | the agents behind each verdict class with weight, confidence, finding codes and `counted` (false for a BLOCKING / ADVERSE verdict that does not count: an agent that cannot block, an advisory agent, or an ADVERSE below the veto weight). `neutral` holds NEUTRAL and SUPPORTIVE results |
+| `reasons.unavailable[]` | agents without a COMPLETED result: status, error code, whether required |
+| `scoreBreakdown` | the formula, the verdict scores, `totalWeight`, `weightedSum`, `score` and one row per scored agent: weight, `weightShare`, confidence, verdict, verdict score, contribution |
+| `thresholdEvaluation` | `decidedBy` (`BLOCKING_VERDICT`, `REQUIRED_AGENT_MISSING`, `NO_SCORING_RESULTS`, `ADVERSE_VETO` or `WEIGHTED_SCORE`), the thresholds applied and every rule in evaluation order (`blocking_verdict`, `required_agent_result`, `scoring_result_exists`, `adverse_veto`, `score_supportive_min`, `score_neutral_min`, `score_caution_min`, `score_below_caution_min`) with threshold, value, `met` and `reached` (false once an earlier rule decided) |
+| `halt` | `halt`, the halt list in force, the assessment, `reasonCode` (`HALT_<decidedBy>` or `NO_HALT`) and a fixed-form `reason` sentence, e.g. "The flow halts: RESEARCH_ADVERSE was decided by an ADVERSE verdict from an agent at or above the veto weight (agent_x)." |
+Existing v1 rows are not rewritten (append-only); new runs use `research-synthesis-v2`, so the same decision re-evaluated after upgrade is a new, additive run (the run key already covers the agent set, configuration and inputs).
 Advisory-only agents are reported but never scored and never block; zero-weight agents do not score; a failed *optional* agent is listed as unavailable and does not make the run incomplete. The result carries the literal `grantsApproval: false`. **It never creates `APPROVED_FOR_REVIEW` and bypasses no sizing, portfolio, market, breaker, expiry, kill-switch or approval gate** (a source test asserts no code under `packages/agents` mentions the status).
 
 ## Configuration (strict: a malformed value throws at start-up)
@@ -46,7 +57,7 @@ In the worker, **after source intelligence and before sizing** (so before every 
 No message text is read (inputs are parsed fields, tiers and numbers); agent text is redacted (bot tokens, private-key blocks, AWS keys, bearer tokens, long hex / base64, e-mail) and bounded before it is logged or stored; events and log fields are allow-listed; no network, LLM or broker code is imported (source tests). The engine writes only its six tables and never updates or deletes.
 
 ## Limits and remaining risks
-* The enforcement of a halting assessment is in the worker flow; **approval eligibility does not re-check the research assessment** (a future task should add it once real agents exist, as Task 5 did for source intelligence).
+* The enforcement of a halting assessment is in the worker flow, and (Task 8) **approval eligibility now re-checks the latest research assessment** - see [Approval eligibility re-check](#approval-eligibility-re-check-stage-5--task-8).
 * Enabling the engine with no registered agents halts every decision (INCOMPLETE) - by design; keep it disabled until agents exist.
 * Agents get frozen copies, not process isolation: a buggy agent can still consume CPU until its timeout.
 * Agent independence is not assumed or estimated: weights are configuration, not learned (RE-09).
@@ -353,6 +364,40 @@ Providers: `TWINS_AGENT_HISTORICAL_PATTERN_PROVIDER`, `TWINS_AGENT_HISTORICAL_OU
 * Historical association only: the win-rate and expectancy statistics are those of past evaluated signals and carry no causal claim or guarantee.
 * The challenger only recombines recorded results: it cannot detect an error that every agent shares, and its adverse-weight check counts evidence the synthesis already scores (hence weight 30, below the veto weight). It sees agent results, not their inputs.
 * A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
+
+## Approval eligibility re-check (Stage 5 / Task 8)
+Closes the gap noted in D-066 (a). A decision may be presented for approval, and an approval recorded, only if the **latest research assessment** of its lineage allows it.
+
+**Which assessment.** The agent engine runs in the worker on the version that records source intelligence, *before* sizing; the version that later becomes `APPROVED_FOR_REVIEW` is a newer row of the same signal / options claim. The assessment that counts is therefore the most recent run (by creation time, then id) among the versions of the same subject that are **not newer than the decision**. A later run on a later version (for example an operator re-run on the approved version) supersedes an earlier one in either direction.
+
+| Latest assessment | Result |
+| --- | --- |
+| `RESEARCH_BLOCKED` | refused: `research_assessment_blocked` |
+| `RESEARCH_INCOMPLETE` | refused: `research_assessment_incomplete` |
+| `RESEARCH_ADVERSE` | refused: `research_assessment_adverse` |
+| `RESEARCH_CAUTION`, `RESEARCH_NEUTRAL`, `RESEARCH_SUPPORTIVE` | the existing eligibility rules continue (CAUTION / NEUTRAL may be made refusing by configuration, SUPPORTIVE never) |
+| none, engine enabled | refused: `research_assessment_missing` (configurable) |
+| none, engine disabled | **unchanged** (no extra reason) unless `WHEN_ENGINE_DISABLED=REQUIRE` |
+| store unreadable, a check applies | refused: `research_assessment_unavailable` (fail closed) |
+
+**Two layers.** (1) The application layer (`assessApprovalEligibility`, so `createApprovalCard`, and a pre-check in `recordRiskApproval` for APPROVE) applies the configurable policy, including the missing-assessment rule, and returns a readable reason before anything is written. (2) The database function `twins_record_risk_approval` (migration 0027) **refuses an APPROVE when the latest assessment of the lineage is BLOCKED, INCOMPLETE or ADVERSE**, at the instant the approval is recorded - this is the path the Telegram approval bot uses, and it cannot be switched off by configuration. A decision with no assessment is unaffected inside the database (whether a missing assessment matters depends on whether the engine is enabled, which the database does not know; a card can only exist for a decision that passed the application check). Nothing in this path writes to the agent tables, creates an order, fill, position or card, grants approval or calls a network; an assessment never approves anything.
+
+**Consistency with the worker.** By default the worker halt list (`TWINS_AGENT_ENGINE_HALT_ON`) and the refusal list are the same three assessments, so a decision that passes the halt is not refused for its own assessment, and one that halts is also refused if it is ever presented. A customised halt list does not weaken eligibility: the refusal list always contains the three mandatory assessments. A decision whose version was assessed `SUPPORTIVE` at the worker but has a later `ADVERSE`/`BLOCKED` run cannot be approved.
+
+**Configuration** (strict; a malformed value throws at start-up; `loadResearchEligibilityConfig`):
+| Variable | Values (default) |
+| --- | --- |
+| `TWINS_RESEARCH_ELIGIBILITY_ENFORCED` | `true` / `false` (**true**): the application-layer re-check; the database floor is not configurable |
+| `TWINS_RESEARCH_ELIGIBILITY_ON_MISSING` | `REFUSE` / `ALLOW` (**REFUSE**): engine enabled and no assessment |
+| `TWINS_RESEARCH_ELIGIBILITY_WHEN_ENGINE_DISABLED` | `IGNORE` / `REQUIRE` (**IGNORE**) |
+| `TWINS_RESEARCH_ELIGIBILITY_REFUSE_ON` | list of assessments (**BLOCKED, INCOMPLETE, ADVERSE**; these three are mandatory; CAUTION / NEUTRAL may be added; SUPPORTIVE is rejected) |
+| `TWINS_AGENT_ENGINE_ENABLED` | the same switch the engine uses (**false**) |
+The refusal reason codes are fixed, not configurable (`research_assessment_blocked`, `_incomplete`, `_adverse`, `_caution`, `_neutral`, `_missing`, `_unavailable`): the database returns the same codes, and a configurable code could hide a refusal. An existing BLOCKED / INCOMPLETE / ADVERSE assessment keeps refusing even if the engine is later disabled.
+
+### Limits of the re-check
+* The database cannot know whether the engine is enabled, so a decision that never received an assessment is refused for that only by the application layer; a deployment that records approvals by calling the function directly (not through the bot or the service) is not covered for the *missing* case.
+* The role that evaluates eligibility needs SELECT on `agent_orchestrator_runs`, `agent_orchestrator_syntheses` and `risk_decisions`; without it the check fails closed (`research_assessment_unavailable`) while the engine is enabled.
+* Existing synthesis rows stay `research-synthesis-v1` (append-only).
 
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.

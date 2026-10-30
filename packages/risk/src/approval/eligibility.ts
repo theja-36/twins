@@ -6,6 +6,7 @@ import { loadExpiryConfig, type ExpiryConfig } from "../expiry/config";
 import { databaseNow } from "../expiry/record";
 import { intelligenceOf, isIntelligenceValid } from "../intelligence/record";
 import { getRiskDecision, RiskDecisionError, type RiskDecisionRecord } from "../riskDecisions";
+import { loadResearchEligibilityConfig, researchEligibilityReasons, type ResearchEligibilityConfig } from "./researchEligibility";
 
 /**
  * Approval eligibility (Stage 3 / Task 6). A risk decision may be PRESENTED for approval only when ALL of these hold at this moment: current (un-superseded)
@@ -17,6 +18,7 @@ import { getRiskDecision, RiskDecisionError, type RiskDecisionRecord } from "../
 export const ELIGIBILITY_REASONS = [
   "decision_not_found", "decision_superseded", "decision_not_approved_for_review", "decision_expired", "stop_loss_not_valid", "sizing_missing", "portfolio_not_passed", "market_not_passed",
   "circuit_breaker_open", "kill_switch_active", "state_unavailable", "breaker_state_unavailable", "source_intelligence_not_valid",
+  "research_assessment_blocked", "research_assessment_incomplete", "research_assessment_adverse", "research_assessment_caution", "research_assessment_neutral", "research_assessment_missing", "research_assessment_unavailable",
 ] as const;
 export type EligibilityReason = (typeof ELIGIBILITY_REASONS)[number];
 
@@ -26,6 +28,8 @@ const num = (v: unknown): number | null => (v === null || v === undefined || v =
 export interface EligibilityOptions extends BreakerOptions {
   now?: Date;
   capital?: number | null;
+  /** Research-assessment re-check policy (Stage 5 / Task 8); defaults to the environment. */
+  research?: ResearchEligibilityConfig;
 }
 export interface EligibilityAssessment {
   eligible: boolean;
@@ -61,6 +65,9 @@ export async function assessApprovalEligibility(db: Db, decisionId: string, opts
   if (out?.market?.outcome !== "PASSED") reasons.push("market_not_passed");
   // Stage 4 / Task 5: valid source intelligence is mandatory. UNKNOWN / D trust, UNKNOWN confidence or no recorded intelligence can never be approval-eligible.
   if (!isIntelligenceValid(intelligenceOf(decision))) reasons.push("source_intelligence_not_valid");
+
+  // Stage 5 / Task 8: the latest research assessment of the decision's lineage must not be BLOCKED, INCOMPLETE or ADVERSE (and must exist when the engine is enabled); see researchEligibility.ts
+  for (const code of await researchEligibilityReasons(db, decision, opts.research ?? loadResearchEligibilityConfig())) reasons.push(code);
 
   // runtime safety: an unreadable state fails closed
   const refusal = await evaluateSafety("kill_switch_inactive", "risk_approval.eligibility").catch(() => ({ reason: "state_unavailable" }) as const);
