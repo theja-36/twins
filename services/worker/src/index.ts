@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, runAgentEngine } from "@twins/agents";
+import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -346,7 +346,7 @@ const agentEngineConfig = loadAgentEngineConfig();
 const agentRules = agentEngineConfig.enabled ? loadAgentRulesConfig() : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? resolveInstrumentReference(agentRules.instrument.referenceSource) : null;
-const agentProviders = agentRules ? { ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules) } : null;
+const agentProviders = agentRules ? { ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules) } : null;
 const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
   if (!agentRules) return createDefaultRegistry();
   let r = agentRegistries.get(db);
