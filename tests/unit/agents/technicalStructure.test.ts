@@ -8,7 +8,6 @@ const run = async (inp: Record<string, unknown> = inputs(), o: { rules?: AgentRu
   (await evalAgents([technicalStructureAgent(o.rules ?? rulesWithOhlc(), o.ohlc === undefined ? ohlc(fromCloses(wave(70, 80, 0.5))) : o.ohlc, o.price === undefined ? null : o.price)], inp, {}, [], NOW)).byId(TECHNICAL_STRUCTURE_AGENT_ID);
 const noStop = (o: Parameters<typeof inputs>[0] = {}) => inputs({ ...o, rd: { stopLoss: null, ...o.rd } });
 const SELL = (o: Parameters<typeof inputs>[0] = {}) => inputs({ ...o, rd: { side: "SELL", stopLoss: 500, targets: [95, 90], ...o.rd }, sf: { side: "SELL" } });
-const up = () => ohlc(fromCloses(wave(70, 80, 0.5)));        // rising with swings: ends near 115
 const down = () => ohlc(fromCloses(wave(70, 120, -0.5)));    // falling with swings
 const range = () => ohlc(fromCloses(wave(70, 100, 0, 2)));   // oscillating around 100
 

@@ -45,11 +45,6 @@ afterAll(async () => { await handle?.close(); await pool.end(); });
 const q = async (sql: string, params: unknown[] = []) => (await pool.query(sql, params)).rows as Array<Record<string, ReturnType<typeof JSON.parse>>>;
 const counts = async (tables: string[]) => Promise.all(tables.map(async (t) => Number(must((await q(`select count(*)::int as n from ${t}`))[0])["n"])));
 const synthetic: IntelligenceResolver = async (req) => ({ ...(validIntelligence() as never as Awaited<ReturnType<IntelligenceResolver>>), asOf: req.signal.timestamp.toISOString(), inputHash: createHash("sha256").update(randomUUID()).digest("hex") });
-const slow = <T extends object>(p: T, ms: number, methods: string[]): T => {
-  const o = { ...p } as Record<string, unknown>;
-  for (const m of methods) { const f = (p as Record<string, (...a: unknown[]) => Promise<unknown>>)[m]!; o[m] = async (...a: unknown[]) => { await new Promise((r) => setTimeout(r, ms)); return f.apply(p, a); }; }
-  return o as T;
-};
 
 interface Made { id: string; symbol: string }
 /** A synthetic decision whose signal was sent one minute before the fixed engine clock. */
