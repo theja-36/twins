@@ -33,6 +33,12 @@ import { AgentContractError } from "../contract";
  *   TWINS_AGENT_MACRO_CURRENCY_CAUTION                                absolute one-day currency move % 1
  *   TWINS_AGENT_MACRO_STALE_CAUTION_MINUTES / _UNAVAILABLE_MINUTES    60 / 1440 (older than the second -> the context is UNAVAILABLE)
  *   TWINS_AGENT_MACRO_RELEASE_BEFORE_MINUTES / _AFTER_MINUTES         macro-release window 60 / 15 (CRITICAL -> TWINS_AGENT_MACRO_CRITICAL_RELEASE BLOCKING|ADVERSE, HIGH -> ADVERSE, MEDIUM -> CAUTION)
+ * Stage 5 / Task 4 (news + index constituents; see the agent docs for the full list):
+ *   TWINS_AGENT_NEWS_PROVIDER / TWINS_AGENT_SENTIMENT_PROVIDER / TWINS_AGENT_CONSTITUENT_PROVIDER / TWINS_AGENT_MARKET_DATA_PROVIDER   none | file:<path> (default none -> UNAVAILABLE, never a pass)
+ *   TWINS_AGENT_NEWS_*  (LOOKBACK_MINUTES 1440, NEAR_TERM_MINUTES 120, SENTIMENT_THRESHOLD 0.3, MIN_RELIABILITY 0.5, STALE_CAUTION_MINUTES 120, STALE_UNAVAILABLE_MINUTES 1440, CRITICAL_ADVERSE BLOCKING, ...)
+ *   TWINS_AGENT_SENTIMENT_AGGREGATE_CAUTION / _ADVERSE / TWINS_AGENT_SENTIMENT_MIN_SAMPLE   0.2 / 0.5 / 5
+ *   TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS (default BANKNIFTY,FINNIFTY,MIDCPNIFTY,NIFTY,SENSEX: other underlyings -> the constituent agent is not applicable), TWINS_AGENT_CONSTITUENT_QUOTE_MARKET (NSE)
+ *   TWINS_AGENT_CONSTITUENT_*  (TOP_COUNT 10, MIN_WEIGHT 1, MIN_COVERED_WEIGHT 60, MIN_USABLE_SHARE 0.7, MOVE_*, IMPACT_*, CRITICAL_WEIGHT 5, CRITICAL_EVENT BLOCKING, STALE_*, NEWS_*, ...)
  * Enable / disable and weights use the engine settings (TWINS_AGENT_ENGINE_DISABLED_AGENTS, TWINS_AGENT_ENGINE_WEIGHTS).
  */
 export const AGENT_RULES_VERSION = "agent-rules-v1";
@@ -52,6 +58,17 @@ export interface AgentRulesConfig {
     breadthRiskOff: number; breadthRiskOn: number; globalCaution: number; globalAdverse: number; currencyCaution: number; staleCautionMinutes: number; unavailableMinutes: number;
     releaseBefore: number; releaseAfter: number; criticalRelease: Severity2;
   };
+  news: {
+    source: string; sentimentSource: string; lookbackMinutes: number; nearTermMinutes: number; sentimentThreshold: number; aggregateCaution: number; aggregateAdverse: number; aggregateMinSample: number;
+    minReliability: number; staleCautionMinutes: number; unavailableMinutes: number; futureToleranceMinutes: number; maxItems: number; criticalAdverse: Severity2;
+  };
+  constituent: {
+    constituentSource: string; marketDataSource: string; topCount: number; minWeight: number; minCoveredWeight: number; minUsableShare: number; moveCaution: number; moveAdverse: number; extremeMove: number;
+    impactCaution: number; impactAdverse: number; singleContributionAdverse: number; sectorConcentration: number; staleCautionMinutes: number; unavailableMinutes: number; criticalWeight: number; criticalEvent: Severity2;
+    newsLookbackMinutes: number; nearTermMinutes: number; sentimentThreshold: number; minReliability: number;
+    /** Underlyings treated as INDEX signals (others: the agent is not applicable) and the cash-market code used for quotes and news. */
+    indexUnderlyings: string[]; quoteMarket: string;
+  };
 }
 export type Severity3 = "CAUTION" | "ADVERSE" | "BLOCKING";
 export type Severity4 = "INFO" | "CAUTION" | "ADVERSE";
@@ -68,6 +85,15 @@ export const DEFAULT_AGENT_RULES: AgentRulesConfig = {
   macro: {
     source: "none", trendLookbackSessions: 5, trendSupportivePct: 0.5, trendCautionPct: 0.75, trendAdversePct: 2, volCaution: 20, volAdverse: 25, volBlock: 40, volSpikePct: 15, moveCaution: 1.5, moveAdverse: 3, moveBlock: 7,
     gapCaution: 1, gapAdverse: 2, breadthRiskOff: 0.3, breadthRiskOn: 0.7, globalCaution: 1, globalAdverse: 2, currencyCaution: 1, staleCautionMinutes: 60, unavailableMinutes: 1440, releaseBefore: 60, releaseAfter: 15, criticalRelease: "BLOCKING",
+  },
+  news: {
+    source: "none", sentimentSource: "none", lookbackMinutes: 1440, nearTermMinutes: 120, sentimentThreshold: 0.3, aggregateCaution: 0.2, aggregateAdverse: 0.5, aggregateMinSample: 5, minReliability: 0.5,
+    staleCautionMinutes: 120, unavailableMinutes: 1440, futureToleranceMinutes: 5, maxItems: 500, criticalAdverse: "BLOCKING",
+  },
+  constituent: {
+    constituentSource: "none", marketDataSource: "none", topCount: 10, minWeight: 1, minCoveredWeight: 60, minUsableShare: 0.7, moveCaution: 1, moveAdverse: 2, extremeMove: 10, impactCaution: 0.3, impactAdverse: 0.75,
+    singleContributionAdverse: 0.4, sectorConcentration: 0.5, staleCautionMinutes: 60, unavailableMinutes: 1440, criticalWeight: 5, criticalEvent: "BLOCKING", newsLookbackMinutes: 1440, nearTermMinutes: 120,
+    sentimentThreshold: 0.3, minReliability: 0.5, indexUnderlyings: ["BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTY", "SENSEX"], quoteMarket: "NSE",
   },
 };
 const bad = (what: string): never => { throw new AgentContractError("INVALID_ENGINE_CONFIG", `invalid agent rules configuration: ${what}`); };
@@ -118,6 +144,14 @@ export function validateAgentRules(c: AgentRulesConfig): AgentRulesConfig {
   if (!(Number.isInteger(m.trendLookbackSessions) && m.trendLookbackSessions >= 1 && m.trendLookbackSessions <= 60)) bad("trend lookback");
   if (!asc(m.trendCautionPct, m.trendAdversePct) || !(m.trendSupportivePct >= 0 && m.trendSupportivePct <= 20) || !asc(m.volCaution, m.volAdverse, m.volBlock) || !asc(m.moveCaution, m.moveAdverse, m.moveBlock) || !asc(m.gapCaution, m.gapAdverse) || !asc(m.globalCaution, m.globalAdverse)) bad("macro thresholds must be non-negative and strictly increasing");
   if (!(m.volSpikePct > 0 && m.currencyCaution > 0) || !(m.breadthRiskOff > 0 && m.breadthRiskOff < m.breadthRiskOn && m.breadthRiskOn < 1)) bad("macro thresholds");
+  const n = c.news, ct = c.constituent;
+  for (const src of [n.source, n.sentimentSource, ct.constituentSource, ct.marketDataSource]) if (!(src === "none" || /^file:.{1,400}$/.test(src))) bad("provider source");
+  if (!(n.lookbackMinutes >= 1 && n.lookbackMinutes <= 20_160 && n.nearTermMinutes >= 1 && n.nearTermMinutes <= n.lookbackMinutes) || !(n.sentimentThreshold > 0 && n.sentimentThreshold <= 1) || !asc(n.aggregateCaution, n.aggregateAdverse) || n.aggregateAdverse > 1) bad("news windows / thresholds");
+  if (!(n.aggregateMinSample >= 1 && n.aggregateMinSample <= 10_000) || !(n.minReliability >= 0 && n.minReliability <= 1) || !(n.staleCautionMinutes >= 1 && n.staleCautionMinutes < n.unavailableMinutes && n.unavailableMinutes <= 20_160) || !(n.futureToleranceMinutes >= 0 && n.futureToleranceMinutes <= 60) || !(n.maxItems >= 1 && n.maxItems <= 5000)) bad("news limits");
+  if (!(ct.topCount >= 1 && ct.topCount <= 100) || !(ct.minWeight >= 0 && ct.minWeight <= 100) || !(ct.minCoveredWeight > 0 && ct.minCoveredWeight <= 100) || !(ct.minUsableShare > 0 && ct.minUsableShare <= 1) || !asc(ct.moveCaution, ct.moveAdverse, ct.extremeMove) || !asc(ct.impactCaution, ct.impactAdverse)) bad("constituent thresholds");
+  if (!(ct.singleContributionAdverse > 0) || !(ct.sectorConcentration > 0 && ct.sectorConcentration <= 1) || !(ct.staleCautionMinutes >= 1 && ct.staleCautionMinutes < ct.unavailableMinutes && ct.unavailableMinutes <= 20_160) || !(ct.criticalWeight >= 0 && ct.criticalWeight <= 100)) bad("constituent limits");
+  if (ct.indexUnderlyings.some((x) => !/^[A-Z0-9&._-]{1,30}$/.test(x)) || !/^[A-Z0-9]{2,20}$/.test(ct.quoteMarket)) bad("constituent index underlyings / quote market");
+  if (!(ct.newsLookbackMinutes >= 1 && ct.newsLookbackMinutes <= 20_160 && ct.nearTermMinutes >= 1 && ct.nearTermMinutes <= ct.newsLookbackMinutes) || !(ct.sentimentThreshold > 0 && ct.sentimentThreshold <= 1) || !(ct.minReliability >= 0 && ct.minReliability <= 1)) bad("constituent news limits");
   if (!(m.staleCautionMinutes >= 1 && m.staleCautionMinutes < m.unavailableMinutes && m.unavailableMinutes <= 20_160) || !(m.releaseBefore >= 0 && m.releaseBefore <= 1440 && m.releaseAfter >= 0 && m.releaseAfter <= 1440)) bad("macro staleness / release windows");
   return c;
 }
@@ -158,6 +192,29 @@ export function loadAgentRulesConfig(env: Record<string, string | undefined> = p
       staleCautionMinutes: int(env, "TWINS_AGENT_MACRO_STALE_CAUTION_MINUTES", d.macro.staleCautionMinutes, 1, 20_160), unavailableMinutes: int(env, "TWINS_AGENT_MACRO_STALE_UNAVAILABLE_MINUTES", d.macro.unavailableMinutes, 1, 20_160),
       releaseBefore: int(env, "TWINS_AGENT_MACRO_RELEASE_BEFORE_MINUTES", d.macro.releaseBefore, 0, 1440), releaseAfter: int(env, "TWINS_AGENT_MACRO_RELEASE_AFTER_MINUTES", d.macro.releaseAfter, 0, 1440),
       criticalRelease: pick(env, "TWINS_AGENT_MACRO_CRITICAL_RELEASE", ["ADVERSE", "BLOCKING"], d.macro.criticalRelease),
+    },
+    news: {
+      source: src(env, "TWINS_AGENT_NEWS_PROVIDER"), sentimentSource: src(env, "TWINS_AGENT_SENTIMENT_PROVIDER"), lookbackMinutes: int(env, "TWINS_AGENT_NEWS_LOOKBACK_MINUTES", d.news.lookbackMinutes, 1, 20_160),
+      nearTermMinutes: int(env, "TWINS_AGENT_NEWS_NEAR_TERM_MINUTES", d.news.nearTermMinutes, 1, 20_160), sentimentThreshold: dec(env, "TWINS_AGENT_NEWS_SENTIMENT_THRESHOLD", d.news.sentimentThreshold, 0.01, 1),
+      aggregateCaution: dec(env, "TWINS_AGENT_SENTIMENT_AGGREGATE_CAUTION", d.news.aggregateCaution, 0, 1), aggregateAdverse: dec(env, "TWINS_AGENT_SENTIMENT_AGGREGATE_ADVERSE", d.news.aggregateAdverse, 0, 1),
+      aggregateMinSample: int(env, "TWINS_AGENT_SENTIMENT_MIN_SAMPLE", d.news.aggregateMinSample, 1, 10_000), minReliability: dec(env, "TWINS_AGENT_NEWS_MIN_RELIABILITY", d.news.minReliability, 0, 1),
+      staleCautionMinutes: int(env, "TWINS_AGENT_NEWS_STALE_CAUTION_MINUTES", d.news.staleCautionMinutes, 1, 20_160), unavailableMinutes: int(env, "TWINS_AGENT_NEWS_STALE_UNAVAILABLE_MINUTES", d.news.unavailableMinutes, 1, 20_160),
+      futureToleranceMinutes: int(env, "TWINS_AGENT_NEWS_FUTURE_TOLERANCE_MINUTES", d.news.futureToleranceMinutes, 0, 60), maxItems: int(env, "TWINS_AGENT_NEWS_MAX_ITEMS", d.news.maxItems, 1, 5000),
+      criticalAdverse: pick(env, "TWINS_AGENT_NEWS_CRITICAL_ADVERSE", ["ADVERSE", "BLOCKING"], d.news.criticalAdverse),
+    },
+    constituent: {
+      constituentSource: src(env, "TWINS_AGENT_CONSTITUENT_PROVIDER"), marketDataSource: src(env, "TWINS_AGENT_MARKET_DATA_PROVIDER"), topCount: int(env, "TWINS_AGENT_CONSTITUENT_TOP_COUNT", d.constituent.topCount, 1, 100),
+      minWeight: dec(env, "TWINS_AGENT_CONSTITUENT_MIN_WEIGHT", d.constituent.minWeight, 0, 100), minCoveredWeight: dec(env, "TWINS_AGENT_CONSTITUENT_MIN_COVERED_WEIGHT", d.constituent.minCoveredWeight, 0.1, 100),
+      minUsableShare: dec(env, "TWINS_AGENT_CONSTITUENT_MIN_USABLE_SHARE", d.constituent.minUsableShare, 0.01, 1), moveCaution: dec(env, "TWINS_AGENT_CONSTITUENT_MOVE_CAUTION", d.constituent.moveCaution, 0, 100),
+      moveAdverse: dec(env, "TWINS_AGENT_CONSTITUENT_MOVE_ADVERSE", d.constituent.moveAdverse, 0, 100), extremeMove: dec(env, "TWINS_AGENT_CONSTITUENT_EXTREME_MOVE", d.constituent.extremeMove, 0, 100),
+      impactCaution: dec(env, "TWINS_AGENT_CONSTITUENT_IMPACT_CAUTION", d.constituent.impactCaution, 0, 100), impactAdverse: dec(env, "TWINS_AGENT_CONSTITUENT_IMPACT_ADVERSE", d.constituent.impactAdverse, 0, 100),
+      singleContributionAdverse: dec(env, "TWINS_AGENT_CONSTITUENT_SINGLE_CONTRIBUTION_ADVERSE", d.constituent.singleContributionAdverse, 0.01, 100), sectorConcentration: dec(env, "TWINS_AGENT_CONSTITUENT_SECTOR_CONCENTRATION", d.constituent.sectorConcentration, 0.01, 1),
+      staleCautionMinutes: int(env, "TWINS_AGENT_CONSTITUENT_STALE_CAUTION_MINUTES", d.constituent.staleCautionMinutes, 1, 20_160), unavailableMinutes: int(env, "TWINS_AGENT_CONSTITUENT_STALE_UNAVAILABLE_MINUTES", d.constituent.unavailableMinutes, 1, 20_160),
+      criticalWeight: dec(env, "TWINS_AGENT_CONSTITUENT_CRITICAL_WEIGHT", d.constituent.criticalWeight, 0, 100), criticalEvent: pick(env, "TWINS_AGENT_CONSTITUENT_CRITICAL_EVENT", ["ADVERSE", "BLOCKING"], d.constituent.criticalEvent),
+      newsLookbackMinutes: int(env, "TWINS_AGENT_CONSTITUENT_NEWS_LOOKBACK_MINUTES", d.constituent.newsLookbackMinutes, 1, 20_160), nearTermMinutes: int(env, "TWINS_AGENT_CONSTITUENT_NEWS_NEAR_TERM_MINUTES", d.constituent.nearTermMinutes, 1, 20_160),
+      sentimentThreshold: dec(env, "TWINS_AGENT_CONSTITUENT_SENTIMENT_THRESHOLD", d.constituent.sentimentThreshold, 0.01, 1), minReliability: dec(env, "TWINS_AGENT_CONSTITUENT_MIN_RELIABILITY", d.constituent.minReliability, 0, 1),
+      indexUnderlyings: ((): string[] => { const v = env["TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS"]; if (v === undefined || v.trim() === "") return d.constituent.indexUnderlyings; const l = v.split(",").map((x) => x.trim()); if (l.some((x) => !/^[A-Z0-9&._-]{1,30}$/.test(x)) || new Set(l).size !== l.length) bad("TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS"); return l.sort(); })(),
+      quoteMarket: ((): string => { const v = env["TWINS_AGENT_CONSTITUENT_QUOTE_MARKET"]; if (v === undefined || v === "") return d.constituent.quoteMarket; if (!/^[A-Z0-9]{2,20}$/.test(v)) bad("TWINS_AGENT_CONSTITUENT_QUOTE_MARKET"); return v; })(),
     },
   });
 }

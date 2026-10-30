@@ -32,8 +32,8 @@ const CHAINS = ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "a
 const LIVE = ["orders", "fills", "positions", "risk_approvals", "risk_approval_cards", "decisions", "claim_review_cards", "telegram_intake_outbox", "risk_decisions", "signals"];
 const CM = ["macro-global-v1", "market-calendar-v1"];
 // Task 3 scope: calendar + macro are required, the Task 2 agents are switched off here (covered by productionAgents.test.ts); the "all four" test enables everything.
-const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: CM.join(",") }), disabledAgents: ["instrument-verification-v1", "signal-integrity-v1"] };
-const ALL4 = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" });
+const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: CM.join(",") }), disabledAgents: ["index-constituent-impact-v1", "instrument-verification-v1", "news-sentiment-v1", "signal-integrity-v1"] };
+const ALL4 = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "instrument-verification-v1,macro-global-v1,market-calendar-v1,signal-integrity-v1" }), disabledAgents: ["index-constituent-impact-v1", "news-sentiment-v1"] };
 const clock = (d: Date = NOW) => ({ now: () => d, sleep: async () => undefined });
 
 beforeAll(() => { handle = createBoundedDb(DATABASE_URL, { max: 4, idleTimeoutMillis: 10_000 }); state = inMemoryStateSource(); configureRuntimeState({ source: state, ttlMs: 0, failureTtlMs: 0 }); });

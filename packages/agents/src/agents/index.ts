@@ -7,6 +7,10 @@ import { fileEconomicCalendar, fileHolidayCalendar, type EconomicCalendarProvide
 import { fileMacroProvider, type MacroContextProvider } from "./macroProvider";
 import { marketCalendarAgent } from "./marketCalendar";
 import { macroGlobalAgent } from "./macroGlobal";
+import { fileNewsProvider, fileSentimentProvider, type NewsProvider, type SentimentProvider } from "./newsProviders";
+import { fileConstituentProvider, fileMarketData, type ConstituentProvider, type MarketDataProvider } from "./constituentProviders";
+import { newsSentimentAgent } from "./newsSentiment";
+import { indexConstituentAgent } from "./indexConstituent";
 
 export * from "./common";
 export * from "./rules";
@@ -17,13 +21,18 @@ export * from "./calendarProviders";
 export * from "./macroProvider";
 export * from "./marketCalendar";
 export * from "./macroGlobal";
+export * from "./newsProviders";
+export * from "./constituentProviders";
+export * from "./newsSentiment";
+export * from "./indexConstituent";
 
-/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-3). Later tasks append to this list; nothing else is registered. */
-export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1"] as const;
+/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-4). Later tasks append to this list; nothing else is registered. */
+export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1"] as const;
 
 export interface ProductionRegistryOptions {
   rules: AgentRulesConfig; instrumentReference?: InstrumentReference | null; historicalReference?: HistoricalInstrumentReference;
   holidayCalendar?: HolidayCalendarProvider | null; economicCalendar?: EconomicCalendarProvider | null; macroProvider?: MacroContextProvider | null;
+  newsProvider?: NewsProvider | null; sentimentProvider?: SentimentProvider | null; constituentProvider?: ConstituentProvider | null; marketDataProvider?: MarketDataProvider | null;
 }
 /** Registers the production agents. Used only when the engine is explicitly enabled; a missing provider makes its agent report UNAVAILABLE (never a pass). */
 export function createProductionRegistry(o: ProductionRegistryOptions): AgentRegistry {
@@ -32,6 +41,8 @@ export function createProductionRegistry(o: ProductionRegistryOptions): AgentReg
   r.register(instrumentVerificationAgent(o.rules, o.instrumentReference ?? null, o.historicalReference));
   r.register(marketCalendarAgent(o.rules, o.holidayCalendar ?? null, o.economicCalendar ?? null));
   r.register(macroGlobalAgent(o.rules, o.macroProvider ?? null));
+  r.register(newsSentimentAgent(o.rules, o.newsProvider ?? null, o.sentimentProvider ?? null));
+  r.register(indexConstituentAgent(o.rules, o.constituentProvider ?? null, o.marketDataProvider ?? null, o.newsProvider ?? null));
   return r;
 }
 /** Resolves `TWINS_AGENT_INSTRUMENT_REFERENCE` (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
@@ -50,4 +61,9 @@ const fileSource = (source: string, what: string): string | null => {
 export function resolveCalendarMacroProviders(rules: AgentRulesConfig): { holidayCalendar: HolidayCalendarProvider | null; economicCalendar: EconomicCalendarProvider | null; macroProvider: MacroContextProvider | null } {
   const h = fileSource(rules.calendar.holidaySource, "holiday calendar"), e = fileSource(rules.calendar.economicSource, "economic calendar"), m = fileSource(rules.macro.source, "macro provider");
   return { holidayCalendar: h === null ? null : fileHolidayCalendar(h), economicCalendar: e === null ? null : fileEconomicCalendar(e), macroProvider: m === null ? null : fileMacroProvider(m) };
+}
+/** Resolves the news / sentiment / constituent / market-data provider settings (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
+export function resolveNewsConstituentProviders(rules: AgentRulesConfig): { newsProvider: NewsProvider | null; sentimentProvider: SentimentProvider | null; constituentProvider: ConstituentProvider | null; marketDataProvider: MarketDataProvider | null } {
+  const n = fileSource(rules.news.source, "news provider"), s = fileSource(rules.news.sentimentSource, "sentiment provider"), c = fileSource(rules.constituent.constituentSource, "constituent provider"), m = fileSource(rules.constituent.marketDataSource, "market-data provider");
+  return { newsProvider: n === null ? null : fileNewsProvider(n), sentimentProvider: s === null ? null : fileSentimentProvider(s), constituentProvider: c === null ? null : fileConstituentProvider(c), marketDataProvider: m === null ? null : fileMarketData(m) };
 }
