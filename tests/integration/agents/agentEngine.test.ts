@@ -11,6 +11,7 @@ import { AgentRegistry, getLatestAgentAssessment, runAgentEngine, type AgentRunR
 import { assessApprovalEligibility, createPendingRiskDecisionForSignal, listRiskDecisions, recordSourceIntelligence, type IntelligenceResolver } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { validIntelligence } from "../../support/intelligenceFixtures";
+import { randomLetters } from "../../support/randomLetters";
 import { answer, config, delay, fakeAgent } from "../../support/fakeAgents";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
@@ -20,7 +21,6 @@ const pool = new pg.Pool({ connectionString: DATABASE_URL, max: 4 });
 let handle: BoundedDbHandle;
 let state: InMemoryStateSource;
 const db = () => handle.db;
-const sfx = () => randomUUID().slice(0, 8);
 const CHAINS = ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "agent_findings", "agent_evidence_references", "agent_orchestrator_syntheses"];
 const LIVE = ["orders", "fills", "positions", "risk_approvals", "risk_approval_cards", "decisions", "claim_review_cards", "telegram_intake_outbox", "risk_decisions", "signals"];
 
@@ -38,7 +38,7 @@ const synthetic: IntelligenceResolver = async (req) => ({ ...(validIntelligence(
 
 /** A synthetic risk decision (PENDING, then its source-intelligence version): the context the engine is run against. */
 async function makeDecision(): Promise<string> {
-  const [instrument] = await db().insert(schema.instruments).values({ symbol: `AG${sfx()}`.toUpperCase().replace(/[0-9]/g, "Q"), exchange: "NSE", instrumentType: "equity" }).returning();
+  const [instrument] = await db().insert(schema.instruments).values({ symbol: `AG${randomLetters(8)}`, exchange: "NSE", instrumentType: "equity" }).returning();
   const [signal] = await db().insert(schema.signals).values({ sourceType: "synthetic", instrumentId: must(instrument).id, parserVersion: "ag-test", direction: "buy", entryPrice: "100", stopLoss: "95", targets: [105, 110], signalTimestamp: new Date("2025-01-06T00:00:00Z") }).returning();
   await db().insert(schema.stopLossValidations).values({ subjectKind: "signal", signalId: must(signal).id, ruleVersion: "stop-loss-v1", result: "VALID", levelBasis: "price", normalizedStopLoss: "95", entryPrice: "100", riskDistance: "5", riskPct: "5", maxRiskPct: "10" });
   const pending = await createPendingRiskDecisionForSignal(db(), must(signal).id);

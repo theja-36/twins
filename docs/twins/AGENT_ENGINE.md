@@ -150,5 +150,55 @@ Providers: `TWINS_AGENT_HOLIDAY_CALENDAR`, `TWINS_AGENT_ECONOMIC_CALENDAR`, `TWI
 * Events are judged against the engine clock; a re-run of the same decision version returns the stored result and does not re-measure.
 * A supportive result from the agents does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
+## The news and index-constituent agents (Stage 5 / Task 4)
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all six production agents, so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. **News input is structured provider records only; raw Telegram message text is never a news input.** Findings never repeat headline text (only item ids, impact, category, source label, ages and numbers).
+
+### Provider interfaces (`newsProviders.ts`, `constituentProviders.ts`)
+| Interface | Contract | Shipped implementations |
+| --- | --- | --- |
+| `NewsProvider` | `items({from,to,market,symbols})` -> items `{ id, publishedAt (ISO with offset), sourceLabel, headline (safe summary), symbols[] ("*" = market-wide), markets[] ("ALL"), sentimentLabel POSITIVE/NEGATIVE/NEUTRAL/MIXED, sentimentScore -1..1 or null, impact LOW/MEDIUM/HIGH/CRITICAL, category, reference (safe id or null), sourceReliability 0..1 or null }`; `asOf` | in-memory; file `twins-news-v1` |
+| `SentimentProvider` | `sentiment({market,symbol})` -> `{ score -1..1, label, sampleSize, asOf }` or `null` | in-memory; file `twins-sentiment-v1` (keys `MARKET:SYMBOL`) |
+| `ConstituentProvider` | `knowsIndex(index)`, `constituents(index)` -> `{ index, asOf, constituents[{ symbol, index, weight %, sector, recentChangePct|null, dataAsOf, newsRefs[] }] }` or `null` | in-memory; file `twins-index-constituents-v1` |
+| `MarketDataProvider` | `quotes({market,symbols})` -> `{ SYMBOL: { changePct1d, asOf } }` (absent = no quote) | in-memory; file `twins-market-quotes-v1` (keys `MARKET:SYMBOL`) |
+Files get the same safety checks and strict validation as the earlier provider files (malformed data is rejected, nothing repaired; an invalid file stops the worker at start-up). Providers return empty / `null` for what they do not cover and throw on failure; the agents re-validate whatever a provider returns.
+
+### `news-sentiment-v1` - News / Sentiment Agent (weight 50, can block)
+Inputs: `risk_decision` (required); `signal_context`, `signal_features`, `source_intelligence` (optional; only its status is recorded); the news provider (required) and sentiment provider (optional); the engine clock. Direction is derived from side and option type exactly as in `macro-global-v1`.
+| Check | Result |
+| --- | --- |
+| required data | no news provider, a provider that throws, malformed items, a feed snapshot older than `TWINS_AGENT_NEWS_STALE_UNAVAILABLE_MINUTES` (1440) or dated in the future, a missing market / underlying -> **UNAVAILABLE** (never a pass) |
+| relevance | items for the underlying or market-wide (`*`), for the market or `ALL`, inside `TWINS_AGENT_NEWS_LOOKBACK_MINUTES` (1440); future-dated items are ignored (CAUTION); more than `TWINS_AGENT_NEWS_MAX_ITEMS` (500) -> the most recent are assessed (CAUTION) |
+| duplicates | the same id, or the same source and normalised headline, counts once (INFO) |
+| stance | the item's score (or +/-1 for a POSITIVE / NEGATIVE label) times the direction; beyond `TWINS_AGENT_NEWS_SENTIMENT_THRESHOLD` (0.3) it is adverse or supportive; MIXED is never a direction |
+| adverse items | CRITICAL inside the near-term window (`TWINS_AGENT_NEWS_NEAR_TERM_MINUTES`, 120) -> **BLOCKING** (`TWINS_AGENT_NEWS_CRITICAL_ADVERSE`: BLOCKING or ADVERSE); CRITICAL older -> ADVERSE; HIGH -> ADVERSE; MEDIUM -> CAUTION; LOW -> INFO. A source with reliability below `TWINS_AGENT_NEWS_MIN_RELIABILITY` (0.5) is downgraded one level |
+| conflict | adverse and supportive items of at least medium impact -> CAUTION; HIGH or CRITICAL on both sides -> ADVERSE |
+| event proximity | HIGH / CRITICAL items in the near term with no clear direction (neutral / mixed) -> CAUTION |
+| aggregate sentiment | against the direction by >= 0.5 with >= 5 samples -> ADVERSE (fewer samples -> CAUTION); >= 0.2 -> CAUTION; stale -> CAUTION; in the direction -> supportive evidence; none / not configured -> INFO |
+| feed freshness | older than `TWINS_AGENT_NEWS_STALE_CAUTION_MINUTES` (120) or undated -> CAUTION |
+Verdict = the worst level. With nothing adverse: **SUPPORTIVE** if there is supportive evidence (a supportive item of at least medium impact or a supportive aggregate), otherwise **NEUTRAL** (confidence 70; this includes "no recent news").
+
+### `index-constituent-impact-v1` - Index-Constituent Impact Agent (weight 50, can block)
+Applies to **index signals only**: the underlying must be in `TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS` (default BANKNIFTY, FINNIFTY, MIDCPNIFTY, NIFTY, SENSEX). For any other underlying the agent is not applicable: NEUTRAL, `applicable: false`, providers untouched. Inputs: `risk_decision` (required), the constituent provider (required for index signals), a market-data provider and the news provider (optional), the engine clock.
+| Check | Result |
+| --- | --- |
+| required data | no constituent provider, an index it does not cover, **index / underlying mismatch** (set or record for another index), malformed data (duplicate symbols, bad weights, total above 100.5%), covered weight below `..._MIN_COVERED_WEIGHT` (60%), usable (present, fresh) change data for less than `..._MIN_USABLE_SHARE` (70%) of the top constituents' weight, a throwing provider -> **UNAVAILABLE** (never a pass) |
+| top constituents | the heaviest `..._TOP_COUNT` (10) with weight >= `..._MIN_WEIGHT` (1%). A market-data quote takes precedence over the record's own change; a change older than `..._STALE_UNAVAILABLE_MINUTES` (1440) is unusable, older than `..._STALE_CAUTION_MINUTES` (60) is stale (CAUTION); some unusable -> CAUTION |
+| weighted impact | the weight-averaged move of the usable constituents times the direction: <= -0.75% -> ADVERSE, <= -0.3% -> CAUTION, >= +0.3% -> supportive evidence |
+| breadth | >= 60% of the weight moving against by >= `..._MOVE_CAUTION` (1%) -> CAUTION; sizeable weight (>= 35%) on both sides -> CAUTION (mixed) |
+| single constituents | one contributing (weight x move) against by >= 0.4 index percent -> ADVERSE; a constituent with weight >= `..._CRITICAL_WEIGHT` (5%) moving >= 10% -> ADVERSE, or >= 2% against -> CAUTION |
+| sector concentration | a sector holding >= 50% of the considered weight: INFO, or CAUTION when it moved against the direction |
+| constituent news (same classification as the news agent, for the top constituents) | CRITICAL adverse near term: heavy constituent -> `..._CRITICAL_EVENT` (BLOCKING), lighter -> ADVERSE; HIGH adverse: heavy -> ADVERSE, lighter -> CAUTION; MEDIUM adverse on a heavy constituent -> CAUTION; supportive HIGH+ on heavy constituents -> supportive evidence; both sides -> CAUTION |
+Verdict = the worst level; with nothing adverse it is **SUPPORTIVE** if the weighted move (or heavy-constituent news) is in the direction, otherwise **NEUTRAL**.
+
+### Configuration (Task 4)
+Providers: `TWINS_AGENT_NEWS_PROVIDER`, `TWINS_AGENT_SENTIMENT_PROVIDER`, `TWINS_AGENT_CONSTITUENT_PROVIDER`, `TWINS_AGENT_MARKET_DATA_PROVIDER` (`none` | `file:<path>`, default `none`). News windows, thresholds and staleness: `TWINS_AGENT_NEWS_*`, `TWINS_AGENT_SENTIMENT_*`. Constituent count, weight, move, impact, staleness, news and blocking settings: `TWINS_AGENT_CONSTITUENT_*` (including `INDEX_UNDERLYINGS` and `QUOTE_MARKET`, the cash-market code used for quotes and news, default `NSE`). Enable / disable and weights use the engine settings. All settings are listed in `rules.ts`; defaults are conservative; a malformed value throws at start-up.
+
+### Limitations of these two agents
+* **With the engine enabled, all six required agents need their providers.** Without a news provider, or without constituent data for an index signal, every such decision is `INCOMPLETE` and halts. Reviewed, regularly refreshed snapshot files (or a future live adapter, a separate task) must exist before enabling; non-index signals do not need constituent data.
+* Sentiment labels and scores are the provider's: the agents do not classify text, do not weigh sources beyond the optional reliability field and infer no cause. A news item's headline is used only for duplicate detection.
+* Constituent weights and sectors come from the snapshot and are only as current as it is; the weighted move covers the heaviest constituents, not the whole index, and is not the index's own move.
+* The index-underlying list is configuration, not discovery: an index missing from it is treated as not applicable (the instrument agent still verifies the underlying).
+* Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
+
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.
