@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -114,7 +114,6 @@ describe("listing and validation (read-only)", () => {
     for (const k of ["news", "sentiment", "ohlc"]) writeFileSync(join(dir, `${k}.json`), "x");
     writeFileSync(join(dir, "sentiment.json"), ""); mkdirSync(join(dir, "ohlc.json.d"));
     writeFileSync(join(dir, "news.json"), "x"); // replaced below by a symlink
-    const { unlinkSync } = require("node:fs") as typeof import("node:fs");
     unlinkSync(join(dir, "news.json")); symlinkSync(other, join(dir, "news.json"));
     unlinkSync(join(dir, "ohlc.json")); mkdirSync(join(dir, "ohlc.json"));
     const v = listSnapshots(cfgFor(dir), NOW);
@@ -216,7 +215,7 @@ describe("atomic, confirmed writes", () => {
     const dir = tmpSnapshotDir(); populate(dir, ["news"]);
     const next = JSON.stringify(snapshotDoc("news", iso(0.5)));
     let seenAtRename = "";
-    writeSnapshot(cfgFor(dir), "news", next, { confirmOverwrite: "news", now: NOW, io: { rename: (from, to) => { seenAtRename = read(dir, "news"); expect(readFileSync(from, "utf8")).toBe(next); require("node:fs").renameSync(from, to); } } });
+    writeSnapshot(cfgFor(dir), "news", next, { confirmOverwrite: "news", now: NOW, io: { rename: (from, to) => { seenAtRename = read(dir, "news"); expect(readFileSync(from, "utf8")).toBe(next); renameSync(from, to); } } });
     expect(JSON.parse(seenAtRename).as_of).toBe(iso(1)); // before the rename the old complete file is what readers see
     expect(read(dir, "news")).toBe(next);
   });
