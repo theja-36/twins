@@ -79,7 +79,7 @@ export async function orchestrate(plan: ExecutionPlan, config: AgentEngineConfig
         const ac = new AbortController();
         let timer: ReturnType<typeof setTimeout> | undefined;
         const ctx: AgentContext = {
-          agentId: c.agentId, attempt, signal: ac.signal,
+          agentId: c.agentId, attempt, signal: ac.signal, now: now(),
           inputs: frozenCopy(Object.fromEntries(declared.map((k) => [k, inputs[k] ?? null]))),
           dependencies: frozenCopy(Object.fromEntries(depResults.map((d) => [d.agentId, d]))),
         };

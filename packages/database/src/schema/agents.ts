@@ -24,7 +24,7 @@ export const agentDefinitions = pgTable(
   },
   (t) => ({
     refUnique: uniqueIndex("agent_definitions_ref_unique").on(t.agentId, t.agentVersion, t.contractSha256),
-    valueCheck: check("agent_definitions_value_check", sql`${t.agentId} ~ '^[a-z][a-z0-9_]{2,40}$' and ${t.agentVersion} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$' and ${t.contractSha256} ~ ${HEX} and octet_length(${t.contract}::text) <= 16384`),
+    valueCheck: check("agent_definitions_value_check", sql`${t.agentId} ~ '^[a-z][a-z0-9_-]{2,40}$' and ${t.agentVersion} ~ '^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}$' and ${t.contractSha256} ~ ${HEX} and octet_length(${t.contract}::text) <= 16384`),
     actorCheck: check("agent_definitions_actor_check", sql`${t.createdBy} ~ ${ACTOR}`),
   }),
 );
@@ -88,7 +88,7 @@ export const agentRuns = pgTable(
     agentIdx: index("agent_runs_agent_idx").on(t.agentId, t.agentVersion),
     statusCheck: check("agent_runs_status_check", sql`${t.status} in ('COMPLETED', 'FAILED', 'TIMEOUT', 'SKIPPED', 'UNAVAILABLE') and ${t.verdict} in ('SUPPORTIVE', 'NEUTRAL', 'CAUTION', 'ADVERSE', 'BLOCKING', 'UNAVAILABLE') and ${t.attempts} between 0 and 5 and ${t.durationMs} >= 0 and ${t.completedAt} >= ${t.startedAt}`),
     coherenceCheck: check("agent_runs_coherence_check", sql`((${t.status} = 'COMPLETED') = (${t.verdict} <> 'UNAVAILABLE')) and ((${t.status} = 'COMPLETED') = (${t.confidence} is not null)) and (${t.confidence} is null or ${t.confidence} between 0 and 100) and (${t.status} in ('COMPLETED', 'UNAVAILABLE') or ${t.errorCode} is not null)`),
-    valueCheck: check("agent_runs_value_check", sql`${t.agentId} ~ '^[a-z][a-z0-9_]{2,40}$' and ${t.inputSnapshotRef} ~ ${HEX} and (${t.errorCode} is null or ${t.errorCode} ~ '^[A-Z][A-Z0-9_]{2,60}$') and (${t.errorMessage} is null or char_length(${t.errorMessage}) <= 300) and octet_length(${t.inputSnapshot}::text) <= 65536 and octet_length(${t.outputSnapshot}::text) <= 16384`),
+    valueCheck: check("agent_runs_value_check", sql`${t.agentId} ~ '^[a-z][a-z0-9_-]{2,40}$' and ${t.inputSnapshotRef} ~ ${HEX} and (${t.errorCode} is null or ${t.errorCode} ~ '^[A-Z][A-Z0-9_]{2,60}$') and (${t.errorMessage} is null or char_length(${t.errorMessage}) <= 300) and octet_length(${t.inputSnapshot}::text) <= 65536 and octet_length(${t.outputSnapshot}::text) <= 16384`),
     actorCheck: check("agent_runs_actor_check", sql`${t.createdBy} ~ ${ACTOR}`),
   }),
 );

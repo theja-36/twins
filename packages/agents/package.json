@@ -8,6 +8,7 @@
   "dependencies": {
     "@twins/database": "*",
     "@twins/historical": "*",
+    "@twins/ingestion": "*",
     "@twins/risk": "*",
     "drizzle-orm": "^0.45.2"
   }

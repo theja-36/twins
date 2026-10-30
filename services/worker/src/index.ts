@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createDefaultRegistry, loadAgentEngineConfig, runAgentEngine } from "@twins/agents";
+import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveInstrumentReference, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -339,11 +339,20 @@ function alertMarket(log: StructuredLogger, a: MarketAlert): void {
   marketAlerter?.alert({ ...a, dedupeKey: `${a.code}:${a.details.reason}:${a.details.kind}` });
 }
 
-// Stage 5 / Task 1: the agent engine. DISABLED by default (TWINS_AGENT_ENGINE_ENABLED); no research agent is implemented yet, so the registry is empty. A malformed configuration
-// throws here, at start-up. When disabled, the risk flow below is exactly as before.
+// Stage 5: the agent engine. DISABLED by default (TWINS_AGENT_ENGINE_ENABLED): then the registry is empty, nothing is loaded and the risk flow below is exactly as before. Only when it is
+// explicitly enabled are the production agents (signal integrity, instrument verification) registered - with the configured rules and instrument reference. A malformed configuration
+// or an unreadable instrument-reference file throws here, at start-up (fail closed).
 const agentEngineConfig = loadAgentEngineConfig();
-const agentRegistry = createDefaultRegistry();
-const agentEngineFor = (log: StructuredLogger, db: Db) => (decisionId: string) => runAgentEngine(db, decisionId, { registry: agentRegistry, config: agentEngineConfig, emit: (e) => log.info("worker.agent_engine.event", { ...e }) });
+const agentRules = agentEngineConfig.enabled ? loadAgentRulesConfig() : null;
+const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
+const agentReference = agentRules ? resolveInstrumentReference(agentRules.instrument.referenceSource) : null;
+const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
+  if (!agentRules) return createDefaultRegistry();
+  let r = agentRegistries.get(db);
+  if (!r) { r = createProductionRegistry({ rules: agentRules, instrumentReference: agentReference, historicalReference: historicalDatasetReference(db) }); agentRegistries.set(db, r); }
+  return r;
+};
+const agentEngineFor = (log: StructuredLogger, db: Db) => (decisionId: string) => runAgentEngine(db, decisionId, { registry: agentRegistryFor(db), config: agentEngineConfig, emit: (e) => log.info("worker.agent_engine.event", { ...e }) });
 
 async function recordPendingRiskDecision(
   log: StructuredLogger,

@@ -10,7 +10,7 @@ export type AgentStatus = (typeof AGENT_STATUSES)[number];
 export const AGENT_VERDICTS = ["SUPPORTIVE", "NEUTRAL", "CAUTION", "ADVERSE", "BLOCKING", "UNAVAILABLE"] as const;
 export type AgentVerdict = (typeof AGENT_VERDICTS)[number];
 /** The inputs the orchestrator can resolve from a risk-decision context (parsed fields, tiers and numbers only). */
-export const CONTEXT_INPUT_KEYS = ["risk_decision", "source_intelligence", "stop_loss_validation", "signal_features"] as const;
+export const CONTEXT_INPUT_KEYS = ["risk_decision", "source_intelligence", "stop_loss_validation", "signal_features", "signal_context"] as const;
 export type ContextInputKey = (typeof CONTEXT_INPUT_KEYS)[number];
 export const FINDING_SEVERITIES = ["INFO", "LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
@@ -46,6 +46,8 @@ export interface AgentContext {
   /** Frozen COMPLETED results of the agents it depends on. */
   dependencies: Readonly<Record<string, AgentRunResult>>;
   attempt: number;
+  /** The orchestrator's clock for this attempt (agents must not read the system clock themselves). */
+  now: Date;
   /** Aborted when the attempt times out; a well-behaved agent stops work. Its late result is ignored regardless. */
   signal: AbortSignal;
 }
@@ -85,7 +87,7 @@ export class AgentUnavailableError extends Error {
   }
 }
 
-const AGENT_ID = /^[a-z][a-z0-9_]{2,40}$/;
+const AGENT_ID = /^[a-z][a-z0-9_-]{2,40}$/;
 const VERSION = /^\d{1,3}\.\d{1,3}\.\d{1,3}$/;
 const CODE = /^[A-Z][A-Z0-9_]{2,60}$/;
 const KIND = /^[a-z][a-z0-9_]{1,30}$/;
@@ -102,7 +104,7 @@ const inputList = (v: unknown, name: string): ContextInputKey[] => {
 export function validateAgentContract(raw: unknown): AgentContract {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return fail("CONTRACT_NOT_AN_OBJECT", "the contract must be an object");
   const c = raw as Record<string, unknown>;
-  if (typeof c["agentId"] !== "string" || !AGENT_ID.test(c["agentId"])) fail("INVALID_AGENT_ID", "agentId must be lower_snake_case, 3-41 characters");
+  if (typeof c["agentId"] !== "string" || !AGENT_ID.test(c["agentId"])) fail("INVALID_AGENT_ID", "agentId must be lower-case letters, digits, _ or -, starting with a letter, 3-41 characters");
   if (typeof c["agentName"] !== "string" || c["agentName"].trim().length < 3 || c["agentName"].length > 80 || sanitizeText(c["agentName"], 80) !== c["agentName"].trim()) fail("INVALID_AGENT_NAME", "agentName must be 3-80 plain characters");
   if (typeof c["version"] !== "string" || !VERSION.test(c["version"])) fail("INVALID_VERSION", "version must be major.minor.patch");
   const requiredInputs = inputList(c["requiredInputs"], "requiredInputs");
