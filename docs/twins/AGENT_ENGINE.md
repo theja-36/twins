@@ -201,7 +201,7 @@ Providers: `TWINS_AGENT_NEWS_PROVIDER`, `TWINS_AGENT_SENTIMENT_PROVIDER`, `TWINS
 * Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
 ## The technical-structure and price-action agents (Stage 5 / Task 5)
-Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all eight production agents - ten after Task 6 - so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected OHLC / last-price providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both judge the **underlying's** candles (for an option, the underlying's series) with the direction derived from side and option type as in `macro-global-v1`. Findings state what the series shows; they do not predict or infer cause.
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all eight production agents - ten after Task 6, twelve after Task 7 - so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected OHLC / last-price providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both judge the **underlying's** candles (for an option, the underlying's series) with the direction derived from side and option type as in `macro-global-v1`. Findings state what the series shows; they do not predict or infer cause.
 
 ### Provider interfaces (`ohlcProviders.ts`, `ohlcCommon.ts`)
 | Interface | Contract | Shipped implementations |
@@ -306,6 +306,52 @@ Providers: `TWINS_AGENT_QUOTE_PROVIDER`, `TWINS_AGENT_OPTION_QUOTE_PROVIDER`, `T
 * Greeks and IV are taken from the provider as given (theta per calendar day, vega per IV point, IV in percent); the agent does not recompute them, models no volatility surface and does not compare implied with realised volatility.
 * Expiry time is the configured close of the expiry date; the agent has no exchange calendar (a holiday-shifted expiry is the calendar agent's concern).
 * The options agent assumes the premium stop-loss is in premium units, as signal-integrity does; it judges contracts one at a time (no spreads or multi-leg structures).
+* A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
+
+## The historical-pattern and independent-challenger agents (Stage 5 / Task 7)
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all twelve production agents, so a missing result fails closed). `historical-pattern-v1` is independent and runs in the first parallel level. `independent-challenger-v1` **depends on every other registered research agent**, so it runs in a later level and receives their frozen results; if any of them did not COMPLETE the challenger is SKIPPED (`DEPENDENCY_NOT_COMPLETED`) and never reasons over a missing result. Both receive parsed fields and the engine clock only (never message text) and are validated, redacted, persisted and included in the synthesis like every other agent. A BLOCKING verdict halts at the existing worker halt point. **No migration, no broker, no external API, no database read by the agents, no order, fill, position or approval-card write, and no change to approval eligibility.** The engine stays disabled by default.
+
+### Provider interfaces (`historicalProviders.ts`)
+| Interface | Contract | Shipped implementations |
+| --- | --- | --- |
+| `HistoricalPatternProvider` | `patterns({keys})` -> the library patterns matching the exact keys: `{ keyText, level 1-4, status, sampleSize, asOf, firstObserved, lastObserved, regimeMix, volatilityMix }` (unknown patterns are absent) | in-memory; file `twins-historical-patterns-v1` |
+| `HistoricalOutcomeProvider` | `outcomes({keyText})` -> `{ evaluable, entered, wins, losses, noEntry, expiredAfterEntry, unverifiable, netExpectancyR, netExpectancyLowerBoundR, averageWinnerR, averageLoserR, asOf }` or `null` | in-memory; file `twins-historical-outcomes-v1` |
+Pattern keys are computed by the Stage 4 `patternKeys(signal_features)` (L1 market/instrument/side ... L4 + underlying, time of day, expiry proximity, stop distance, reward/risk), so the agent never invents a key and never borrows a BUY pattern for a SELL. The files are exports of the pattern library (D-064); a database-backed adapter is a separate task. Counts must add up (`wins + losses + expired = entered`, `entered + noEntry <= evaluable`), regime / volatility mixes must sum to 1, nothing is repaired. The OHLC / last-price providers of Task 5 supply the current regime and volatility only.
+
+### `historical-pattern-v1` - Historical Pattern Agent (weight 50, can block)
+Inputs: `risk_decision`, `signal_features` (required); `signal_context`, `source_intelligence` (optional; only its status is recorded); pattern and outcome providers (required); OHLC provider (optional, for regime / volatility); the engine clock. The **deepest** matching pattern that is not `INSUFFICIENT_EVIDENCE` and has at least `TWINS_AGENT_HIST_MIN_SAMPLE` (30) evaluated outcomes is used.
+| Check | Result |
+| --- | --- |
+| no provider / throws / no matching pattern / no pattern or outcomes with the minimum sample / no entered outcomes / malformed / data older than `HIST_STALE_UNAVAILABLE_DAYS` (120) or in the future / incomplete features | **UNAVAILABLE** (never a pass; the provider's message is never stored) |
+| data older than `HIST_STALE_CAUTION_DAYS` (30); pattern last observed over `HIST_LAST_OBSERVED_MAX_DAYS` (365) ago; `LOW_QUALITY_EVIDENCE`; unverifiable share > 40% | CAUTION |
+| critical: >= `HIST_CRITICAL_MIN_SAMPLE` (100) outcomes, win-rate Wilson upper bound < 0.20 and net expectancy <= -0.3R | `HIST_CRITICAL_SEVERITY` (**ADVERSE**, configurable BLOCKING) |
+| win rate (wins / entered, Wilson interval at z 1.96) | upper bound < 0.35 with expectancy missing or <= 0 -> ADVERSE; upper bound < 0.50 -> CAUTION; lower bound >= 0.50 -> supportive measure |
+| net expectancy (R) | <= -0.1R with a negative lower bound -> ADVERSE; <= 0 -> CAUTION; missing -> CAUTION; lower bound > 0 -> supportive measure |
+| regime / volatility similarity | the current regime (efficiency ratio) or volatility bucket (average true range % of price) had a share of the historical sample below 20% -> CAUTION; not determinable or not recorded -> INFO and never SUPPORTIVE |
+Verdict = the worst level. With nothing cautionary: **SUPPORTIVE** needs at least two supportive measures, a `SUFFICIENT` pattern at level >= `HIST_MIN_LEVEL_FOR_SUPPORT` (2) and comparable market conditions; otherwise **NEUTRAL** (confidence 70).
+
+### `independent-challenger-v1` - Independent Challenger Agent (weight 30, can block)
+Inputs: `risk_decision` (required); `signal_context`, `signal_features`, `source_intelligence`, `stop_loss_validation` (optional); the frozen results of every dependency. It invents no facts and calls no provider: every finding names recorded results.
+| Check | Result |
+| --- | --- |
+| direction coherence | an agent's recorded `direction` differs from the one derived from side and option type -> `CHAL_INCOHERENCE_SEVERITY` (**BLOCKING**, configurable ADVERSE); direction not derivable -> CAUTION |
+| stop-loss coherence | stop on the wrong side -> incoherence severity; validation result not VALID -> incoherence severity; no validation -> CAUTION; validated risk % differs from the computed one by > 1 point -> CAUTION |
+| risk / reward | first target on the wrong side -> incoherence severity; reward/risk < 0.5 -> ADVERSE; < 1 -> CAUTION; no target -> CAUTION |
+| contradictions | any SUPPORTIVE against any ADVERSE / BLOCKING -> CAUTION; >= 2 SUPPORTIVE with confidence >= 80 against >= 2 ADVERSE / BLOCKING -> `CHAL_CRITICAL_SEVERITY` (**BLOCKING**, configurable ADVERSE) |
+| unsupported claims | SUPPORTIVE with no evidence reference -> CAUTION; SUPPORTIVE whose own output counts adverse / blocking findings -> critical severity |
+| missing evidence / overconfidence | no or invalid source intelligence, no signal context -> CAUTION; >= 50% of assessed agents without a clear view -> CAUTION; source confidence >= 70 (or tier HIGH) while >= 40% of assessed agents are CAUTION / ADVERSE / BLOCKING -> CAUTION |
+| data quality | >= 3 non-INFO stale / missing / unusable findings across the agents -> CAUTION; >= 6 -> ADVERSE |
+| adverse evidence weight | confidence-weighted share of ADVERSE / BLOCKING results >= 30% -> CAUTION; >= 50% -> ADVERSE |
+Agents marked `applicable: false` are not counted. Verdict = the worst level. With nothing found: **SUPPORTIVE** needs at least 3 assessed agents with at least half SUPPORTIVE; otherwise **NEUTRAL**.
+
+### Configuration (Task 7)
+Providers: `TWINS_AGENT_HISTORICAL_PATTERN_PROVIDER`, `TWINS_AGENT_HISTORICAL_OUTCOME_PROVIDER` (`none` | `file:<path>`, default `none`). Lookbacks, similarity, minimum sample, outcome thresholds, staleness and severities: `TWINS_AGENT_HIST_*`. Challenger severity thresholds: `TWINS_AGENT_CHAL_*`. Enable / disable and weights use the engine settings. Every value is validated at start-up (ordered thresholds, a critical sample not below the minimum); an invalid value stops the process. **Disabling any research agent requires disabling `independent-challenger-v1` too** (the engine refuses a graph in which an agent depends on a disabled one).
+
+### Limitations of these two agents
+* **With the engine enabled, all twelve required agents need their providers.** Without exported pattern and outcome files every decision is `INCOMPLETE` and halts. The agent reads no database; the pattern-library snapshot must be exported (a database adapter is a separate task). The library matches exact keys only, so a signal with no matching pattern is UNAVAILABLE rather than assessed from similar ones.
+* Regime and volatility similarity use the Task 5 OHLC provider and the library's recorded mixes; the current-conditions thresholds are in bars and percent of price and are not interchangeable between daily and intraday series. Without them evidence is never SUPPORTIVE.
+* Historical association only: the win-rate and expectancy statistics are those of past evaluated signals and carry no causal claim or guarantee.
+* The challenger only recombines recorded results: it cannot detect an error that every agent shares, and its adverse-weight check counts evidence the synthesis already scores (hence weight 30, below the veto weight). It sees agent results, not their inputs.
 * A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
 ## Future agent roadmap (not in this task)

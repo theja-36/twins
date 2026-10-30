@@ -1,49 +1,29 @@
-import { mkdtempSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { patternKeys, type Features } from "@twins/historical";
+import {
+  DEFAULT_AGENT_RULES, memoryOutcomeProvider, memoryPatternProvider, type AgentRulesConfig, type HistoricalOutcomeProvider, type HistoricalPatternProvider, type OutcomeDistribution, type PatternMatch,
+} from "../../packages/agents/src/index";
+import { NOW } from "./agentFixtures";
+import { at } from "./calendarMacroFixtures";
+import { fromCloses } from "./ohlcFixtures";
 
-/** SYNTHETIC historical-message fixtures only: no real channel, author, price history or message is used anywhere. */
-export const MSG = {
-  completeOption: "BUY NIFTY 24500 CE 29 OCT 2031 ABOVE 120 SL 90 TGT 150 180 premium",
-  equity: "BUY RELIANCE @ 2800 SL 2750 TGT 2900 3000",
-  equityNoStop: "BUY TCS @ 3500 TGT 3600",
-  equityBadStop: "BUY INFY @ 1500 SL 1600 TGT 1700",
-  optionNoExpiry: "BUY NIFTY 24500 CE @ 120 SL 90 TGT 150 premium",
-  optionYearMissing: "BUY NIFTY 24500 CE 29 OCT @ 120 SL 90 TGT 150 premium",
-  optionPeriodWord: "BUY NIFTY 24500 CE MONTHLY @ 120 SL 90 TGT 150 premium",
-  optionNoBasis: "BUY NIFTY 24500 CE 29 OCT 2031 @ 120 SL 90 TGT 150",
-  several: "BUY RELIANCE @ 2800 SL 2750 TGT 2900 SELL TCS @ 3500 SL 3600 TGT 3400",
-  noise: "Good morning everyone, markets look calm today",
-  // the token-shaped string is assembled at run time so that no credential-shaped literal exists in the repository
-  withSecret: `BUY RELIANCE @ 2800 SL 2750 TGT 2900 token ${"123456789:" + "B".repeat(35)} mail trader@example.com`,
+/** SYNTHETIC historical fixtures at NOW (2025-01-06T04:05Z): an equity BUY of ACME, a pattern library 5 days old with 120 evaluated outcomes. */
+export const FEATURES: Features = {
+  market: "NSE", instrumentType: "EQUITY", underlying: "ACME", optionType: "NA", side: "BUY", timeOfDay: "OPENING", dayOfWeek: "MON", expiryProximity: "NA", entryType: "level", stopDistance: "5_10PCT", rewardRisk: "1_2", targetStructure: "T1_T2_T3",
 };
-
-export interface RecordInput { channel: string; message_id: string | number; timestamp: string | number; text: string; [k: string]: unknown }
-
-export function tempDir(): string {
-  return mkdtempSync(join(tmpdir(), "twins-hist-"));
-}
-export function writeJsonl(dir: string, name: string, records: unknown[], raw: string[] = []): string {
-  const p = join(dir, name);
-  writeFileSync(p, [...records.map((r) => JSON.stringify(r)), ...raw].join("\n") + "\n");
-  return p;
-}
-export function writeJson(dir: string, name: string, body: unknown): string {
-  const p = join(dir, name);
-  writeFileSync(p, JSON.stringify(body));
-  return p;
-}
-const cell = (v: unknown): string => {
-  const s = v === undefined || v === null ? "" : String(v);
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-};
-export function writeCsv(dir: string, name: string, columns: string[], rows: Array<Record<string, unknown>>): string {
-  const p = join(dir, name);
-  writeFileSync(p, [columns.join(","), ...rows.map((r) => columns.map((c) => cell(r[c])).join(","))].join("\n") + "\n");
-  return p;
-}
-/** Records for one synthetic channel: ids 1..n, one minute apart, texts cycling through the given list. */
-export function makeRecords(channel: string, n: number, texts: readonly string[] = [MSG.equity, MSG.completeOption, MSG.noise], start = "2024-03-04T04:00:00Z"): RecordInput[] {
-  const t0 = Date.parse(start);
-  return Array.from({ length: n }, (_, i) => ({ channel, message_id: i + 1, timestamp: new Date(t0 + i * 60_000).toISOString(), text: texts[i % texts.length] as string }));
-}
+export const keysOf = (f: Features = FEATURES) => patternKeys(f).map((k) => k.keyText);
+export const KEY4 = keysOf()[3] as string;
+const daysAgo = (d: number): string => at(-d * 1440);
+export const pattern = (o: Partial<PatternMatch> = {}): PatternMatch => ({
+  keyText: KEY4, level: 4, status: "SUFFICIENT", sampleSize: 120, asOf: daysAgo(5), firstObserved: daysAgo(900), lastObserved: daysAgo(40), regimeMix: { TRENDING: 0.6, RANGE: 0.4 }, volatilityMix: { LOW: 0.2, NORMAL: 0.6, HIGH: 0.2 }, ...o,
+});
+export const outcome = (o: Partial<OutcomeDistribution> = {}): OutcomeDistribution => ({
+  keyText: KEY4, evaluable: 120, entered: 100, wins: 65, losses: 35, noEntry: 15, expiredAfterEntry: 0, unverifiable: 10, netExpectancyR: 0.3, netExpectancyLowerBoundR: 0.1, averageWinnerR: 1.5, averageLoserR: -1, asOf: daysAgo(5), ...o,
+});
+export const patterns = (p: PatternMatch[] = [pattern()], name = "synthetic-patterns"): HistoricalPatternProvider => memoryPatternProvider({ name, asOf: daysAgo(5), patterns: p });
+export const outcomes = (m: Record<string, OutcomeDistribution> = { [KEY4]: outcome() }): HistoricalOutcomeProvider => memoryOutcomeProvider({ name: "synthetic-outcomes", outcomes: m });
+/** 70 daily bars rising one point a day: a TRENDING regime and a NORMAL (about 1.2%) average true range. */
+export const trendingBars = () => fromCloses(Array.from({ length: 70 }, (_, i) => 100 + i));
+export const rulesWithHistory = (over: { historical?: Partial<AgentRulesConfig["historical"]>; challenger?: Partial<AgentRulesConfig["challenger"]> } = {}): AgentRulesConfig => ({
+  ...DEFAULT_AGENT_RULES, historical: { ...DEFAULT_AGENT_RULES.historical, ...over.historical }, challenger: { ...DEFAULT_AGENT_RULES.challenger, ...over.challenger },
+});
+export { NOW, at };

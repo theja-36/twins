@@ -28,7 +28,7 @@ const CHAINS = ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "a
 const AGENT_TABLES = CHAINS;
 const LIVE = ["orders", "fills", "positions", "risk_approvals", "risk_approval_cards", "decisions", "claim_review_cards", "telegram_intake_outbox", "risk_decisions", "signals"];
 // Task 2 scope: the two Task 2 agents are required; the Task 3 agents (calendar, macro) are switched off here and covered by calendarMacroAgents.test.ts
-const OFF = ["index-constituent-impact-v1", "macro-global-v1", "liquidity-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "technical-structure-v1"];
+const OFF = ["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "macro-global-v1", "liquidity-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "technical-structure-v1"];
 const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "instrument-verification-v1,signal-integrity-v1" }), disabledAgents: OFF };
 
 beforeAll(() => { handle = createBoundedDb(DATABASE_URL, { max: 4, idleTimeoutMillis: 10_000 }); state = inMemoryStateSource(); configureRuntimeState({ source: state, ttlMs: 0, failureTtlMs: 0 }); });
