@@ -132,7 +132,7 @@ describe("registry", () => {
 describe("configuration (disabled by default, strict)", () => {
   it("is disabled by default with conservative halting", () => {
     const c = loadAgentEngineConfig({});
-    expect(c).toMatchObject({ enabled: false, requiredAgents: ["index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"], maxConcurrency: 4, haltOn: ["RESEARCH_BLOCKED", "RESEARCH_INCOMPLETE", "RESEARCH_ADVERSE"] });
+    expect(c).toMatchObject({ enabled: false, requiredAgents: ["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"], maxConcurrency: 4, haltOn: ["RESEARCH_BLOCKED", "RESEARCH_INCOMPLETE", "RESEARCH_ADVERSE"] });
   });
   it("parses overrides", () => {
     const c = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "agent_b, agent_a", TWINS_AGENT_ENGINE_DISABLED_AGENTS: "agent_z", TWINS_AGENT_ENGINE_WEIGHTS: '{"agent_a":70}', TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "2", TWINS_AGENT_ENGINE_HALT_ON: "RESEARCH_BLOCKED" });

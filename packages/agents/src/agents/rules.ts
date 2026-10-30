@@ -54,6 +54,13 @@ import { AgentContractError } from "../contract";
  *   TWINS_AGENT_OPT_*  (IV_CAUTION 40 / ADVERSE 70 / EXTREME 120, IV_SPIKE_*_PCT 15 / 30 / 60, IV_ATM_RATIO_CAUTION 1.5, EXPIRY_CAUTION_DAYS 3, EXPIRY_ADVERSE_HOURS 24, EXPIRY_EXTREME_HOURS 3, EXPIRY_CLOSE_UTC 10:00,
  *     THETA_CAUTION_PCT 4 / ADVERSE 8, GAMMA_WINDOW_DAYS 2, GAMMA_CAUTION 0.1 / ADVERSE 0.2, VEGA_CAUTION_PCT 8, DELTA_LOW 0.1, DELTA_HIGH 0.9, OTM_CAUTION_PCT 5 / ADVERSE 10, ITM_CAUTION_PCT 8, MIN_PREMIUM 1,
  *     SPREAD_CAUTION_PCT 5 / ADVERSE 10, ENTRY_DEVIATION_* 10 / 25, MIN_OPEN_INTEREST 500, POOR_OPEN_INTEREST 50, MIN_VOLUME 100, POOR_VOLUME 0, STOP_INVALIDATION BLOCKING, EXTREME_SEVERITY BLOCKING)
+ * Stage 5 / Task 7 (historical pattern + independent challenger):
+ *   TWINS_AGENT_HISTORICAL_PATTERN_PROVIDER / TWINS_AGENT_HISTORICAL_OUTCOME_PROVIDER   none | file:<path> (default none -> UNAVAILABLE, never a pass)
+ *   TWINS_AGENT_HIST_*  (MIN_SAMPLE 30, STALE_CAUTION_DAYS 30, STALE_UNAVAILABLE_DAYS 120, LAST_OBSERVED_MAX_DAYS 365, WILSON_Z 1.96, WIN_LOWER_SUPPORTIVE 0.5, WIN_UPPER_CAUTION 0.5, WIN_UPPER_ADVERSE 0.35,
+ *     EXPECTANCY_* R, MAX_UNVERIFIABLE_RATE 0.4, CRITICAL_* (WIN_UPPER 0.2, EXPECTANCY_R -0.3, MIN_SAMPLE 100, SEVERITY ADVERSE), MIN_REGIME_SHARE 0.2, MIN_VOLATILITY_SHARE 0.2, MIN_LEVEL_FOR_SUPPORT 2,
+ *     REGIME_LOOKBACK 30, REGIME_EFFICIENCY 0.25, ATR_PERIOD 14, VOLATILITY_LOW_PCT 0.5 / HIGH_PCT 1.5)
+ *   TWINS_AGENT_CHAL_*  (MIN_REWARD_RISK 1, ADVERSE_REWARD_RISK 0.5, STOP_RISK_TOLERANCE_PTS 1, ADVERSE_SHARE_CAUTION 0.3 / ADVERSE 0.5, DATA_QUALITY_CAUTION 3 / ADVERSE 6, THIN_EVIDENCE_SHARE 0.5,
+ *     OVERCONFIDENCE_SCORE 70, OVERCONFIDENCE_ADVERSE_SHARE 0.4, CRITICAL_SUPPORTIVE 2, CRITICAL_ADVERSE 2, CRITICAL_CONFIDENCE 80, SUPPORT_MIN_AGENTS 3, SUPPORT_SHARE 0.5, CRITICAL_SEVERITY BLOCKING, INCOHERENCE_SEVERITY BLOCKING)
  * Enable / disable and weights use the engine settings (TWINS_AGENT_ENGINE_DISABLED_AGENTS, TWINS_AGENT_ENGINE_WEIGHTS).
  */
 export const AGENT_RULES_VERSION = "agent-rules-v1";
@@ -106,6 +113,17 @@ export interface AgentRulesConfig {
     minPremium: number; spreadCautionPct: number; spreadAdversePct: number; entryDeviationCautionPct: number; entryDeviationAdversePct: number; minOpenInterest: number; poorOpenInterest: number;
     minVolume: number; poorVolume: number; stopInvalidation: Severity2; extremeSeverity: Severity2;
   };
+  historical: {
+    patternSource: string; outcomeSource: string; minSample: number; staleCautionDays: number; unavailableDays: number; lastObservedMaxDays: number; futureToleranceMinutes: number; wilsonZ: number;
+    winLowerSupportive: number; winUpperCaution: number; winUpperAdverse: number; expectancyLowerSupportiveR: number; expectancyCautionR: number; expectancyAdverseR: number; maxUnverifiableRate: number;
+    criticalWinUpper: number; criticalExpectancyR: number; criticalMinSample: number; criticalSeverity: Severity2; minRegimeShare: number; minVolatilityShare: number; minLevelForSupport: number;
+    regimeLookback: number; regimeEfficiency: number; atrPeriod: number; volatilityLowPct: number; volatilityHighPct: number;
+  };
+  challenger: {
+    minRewardRisk: number; adverseRewardRisk: number; stopRiskTolerancePts: number; adverseShareCaution: number; adverseShareAdverse: number; dataQualityCaution: number; dataQualityAdverse: number;
+    thinEvidenceShare: number; overconfidenceScore: number; overconfidenceAdverseShare: number; criticalSupportive: number; criticalAdverse: number; criticalConfidence: number; supportMinAgents: number;
+    supportShare: number; criticalSeverity: Severity2; incoherenceSeverity: Severity2;
+  };
 }
 export type Severity3 = "CAUTION" | "ADVERSE" | "BLOCKING";
 export type Severity4 = "INFO" | "CAUTION" | "ADVERSE";
@@ -154,6 +172,17 @@ export const DEFAULT_AGENT_RULES: AgentRulesConfig = {
     minPremium: 1, spreadCautionPct: 5, spreadAdversePct: 10, entryDeviationCautionPct: 10, entryDeviationAdversePct: 25, minOpenInterest: 500, poorOpenInterest: 50,
     minVolume: 100, poorVolume: 0, stopInvalidation: "BLOCKING", extremeSeverity: "BLOCKING",
   },
+  historical: {
+    patternSource: "none", outcomeSource: "none", minSample: 30, staleCautionDays: 30, unavailableDays: 120, lastObservedMaxDays: 365, futureToleranceMinutes: 5, wilsonZ: 1.96,
+    winLowerSupportive: 0.5, winUpperCaution: 0.5, winUpperAdverse: 0.35, expectancyLowerSupportiveR: 0, expectancyCautionR: 0, expectancyAdverseR: -0.1, maxUnverifiableRate: 0.4,
+    criticalWinUpper: 0.2, criticalExpectancyR: -0.3, criticalMinSample: 100, criticalSeverity: "ADVERSE", minRegimeShare: 0.2, minVolatilityShare: 0.2, minLevelForSupport: 2,
+    regimeLookback: 30, regimeEfficiency: 0.25, atrPeriod: 14, volatilityLowPct: 0.5, volatilityHighPct: 1.5,
+  },
+  challenger: {
+    minRewardRisk: 1, adverseRewardRisk: 0.5, stopRiskTolerancePts: 1, adverseShareCaution: 0.3, adverseShareAdverse: 0.5, dataQualityCaution: 3, dataQualityAdverse: 6,
+    thinEvidenceShare: 0.5, overconfidenceScore: 70, overconfidenceAdverseShare: 0.4, criticalSupportive: 2, criticalAdverse: 2, criticalConfidence: 80, supportMinAgents: 3,
+    supportShare: 0.5, criticalSeverity: "BLOCKING", incoherenceSeverity: "BLOCKING",
+  },
 };
 const bad = (what: string): never => { throw new AgentContractError("INVALID_ENGINE_CONFIG", `invalid agent rules configuration: ${what}`); };
 const int = (env: Record<string, string | undefined>, name: string, def: number, lo: number, hi: number): number => {
@@ -166,6 +195,12 @@ const dec = (env: Record<string, string | undefined>, name: string, def: number,
   const v = env[name];
   if (v === undefined || v === "") return def;
   if (!/^\d{1,5}(?:\.\d{1,4})?$/.test(v) || Number(v) < lo || Number(v) > hi) bad(name);
+  return Number(v);
+};
+const sdec = (env: Record<string, string | undefined>, name: string, def: number): number => {
+  const v = env[name];
+  if (v === undefined || v === "") return def;
+  if (!/^-?\d{1,3}(?:\.\d{1,4})?$/.test(v) || Number(v) < -10 || Number(v) > 10) bad(name);
   return Number(v);
 };
 const src = (env: Record<string, string | undefined>, name: string): string => { const v = env[name]; return v === undefined || v === "" ? "none" : v; };
@@ -231,6 +266,16 @@ export function validateAgentRules(c: AgentRulesConfig): AgentRulesConfig {
   if (!asc(op.thetaCautionPct, op.thetaAdversePct) || !(op.gammaWindowDays >= 1 && op.gammaWindowDays <= 30) || !asc(op.gammaCaution, op.gammaAdverse) || !(op.vegaCautionPct > 0)) bad("option greek thresholds");
   if (!(op.deltaLow > 0 && op.deltaLow < op.deltaHigh && op.deltaHigh < 1) || !asc(op.otmCautionPct, op.otmAdversePct) || !(op.itmCautionPct > 0) || !(op.minPremium >= 0)) bad("option moneyness thresholds");
   if (!asc(op.spreadCautionPct, op.spreadAdversePct) || !asc(op.entryDeviationCautionPct, op.entryDeviationAdversePct) || !(op.poorOpenInterest >= 0 && op.poorOpenInterest <= op.minOpenInterest) || !(op.poorVolume >= 0 && op.poorVolume <= op.minVolume)) bad("option liquidity thresholds");
+  const h = c.historical, ch = c.challenger;
+  for (const src4 of [h.patternSource, h.outcomeSource]) if (!(src4 === "none" || /^file:.{1,400}$/.test(src4))) bad("provider source");
+  if (!(Number.isInteger(h.minSample) && h.minSample >= 1 && h.minSample <= 100_000) || !(h.staleCautionDays >= 1 && h.staleCautionDays < h.unavailableDays && h.unavailableDays <= 3650) || !(h.lastObservedMaxDays >= 1 && h.lastObservedMaxDays <= 3650) || !(h.futureToleranceMinutes >= 0 && h.futureToleranceMinutes <= 60) || !(h.wilsonZ > 0 && h.wilsonZ <= 4)) bad("historical limits");
+  if (!(h.winLowerSupportive > 0 && h.winLowerSupportive < 1) || !(h.winUpperAdverse > 0 && h.winUpperAdverse < h.winUpperCaution && h.winUpperCaution <= 1) || !(h.criticalWinUpper > 0 && h.criticalWinUpper <= h.winUpperAdverse) || !(h.maxUnverifiableRate >= 0 && h.maxUnverifiableRate <= 1)) bad("historical win-rate thresholds");
+  if (!(h.expectancyAdverseR < h.expectancyCautionR && h.expectancyCautionR <= h.expectancyLowerSupportiveR + 1 && h.expectancyAdverseR >= -10 && h.expectancyLowerSupportiveR <= 10) || !(h.criticalExpectancyR <= h.expectancyAdverseR && h.criticalExpectancyR >= -10) || !(Number.isInteger(h.criticalMinSample) && h.criticalMinSample >= h.minSample && h.criticalMinSample <= 1_000_000)) bad("historical expectancy thresholds");
+  if (!(h.minRegimeShare >= 0 && h.minRegimeShare <= 1) || !(h.minVolatilityShare >= 0 && h.minVolatilityShare <= 1) || !(Number.isInteger(h.minLevelForSupport) && h.minLevelForSupport >= 1 && h.minLevelForSupport <= 4)) bad("historical similarity thresholds");
+  if (!ints(h.regimeLookback, h.atrPeriod) || h.regimeLookback > 500 || h.atrPeriod > 500 || !(h.regimeEfficiency > 0 && h.regimeEfficiency < 1) || !asc(h.volatilityLowPct, h.volatilityHighPct)) bad("historical regime / volatility");
+  if (!(ch.adverseRewardRisk > 0 && ch.adverseRewardRisk < ch.minRewardRisk && ch.minRewardRisk <= 100) || !(ch.stopRiskTolerancePts >= 0 && ch.stopRiskTolerancePts <= 50) || !asc(ch.adverseShareCaution, ch.adverseShareAdverse) || ch.adverseShareAdverse > 1) bad("challenger thresholds");
+  if (!asc(ch.dataQualityCaution, ch.dataQualityAdverse) || !Number.isInteger(ch.dataQualityCaution) || !Number.isInteger(ch.dataQualityAdverse) || !(ch.thinEvidenceShare > 0 && ch.thinEvidenceShare <= 1) || !(ch.overconfidenceScore >= 0 && ch.overconfidenceScore <= 100) || !(ch.overconfidenceAdverseShare > 0 && ch.overconfidenceAdverseShare <= 1)) bad("challenger quality thresholds");
+  if (!ints(ch.criticalSupportive, ch.criticalAdverse, ch.supportMinAgents) || ch.criticalSupportive > 50 || ch.criticalAdverse > 50 || ch.supportMinAgents > 50 || !(ch.criticalConfidence >= 0 && ch.criticalConfidence <= 100) || !(ch.supportShare > 0 && ch.supportShare <= 1)) bad("challenger contradiction thresholds");
   return c;
 }
 export function loadAgentRulesConfig(env: Record<string, string | undefined> = process.env): AgentRulesConfig {
@@ -350,6 +395,32 @@ export function loadAgentRulesConfig(env: Record<string, string | undefined> = p
       minOpenInterest: int(env, P + "OPT_MIN_OPEN_INTEREST", d.optionsRisk.minOpenInterest, 0, 99_999), poorOpenInterest: int(env, P + "OPT_POOR_OPEN_INTEREST", d.optionsRisk.poorOpenInterest, 0, 99_999),
       minVolume: int(env, P + "OPT_MIN_VOLUME", d.optionsRisk.minVolume, 0, 99_999), poorVolume: int(env, P + "OPT_POOR_VOLUME", d.optionsRisk.poorVolume, 0, 99_999),
       stopInvalidation: pick(env, P + "OPT_STOP_INVALIDATION", ["ADVERSE", "BLOCKING"], d.optionsRisk.stopInvalidation), extremeSeverity: pick(env, P + "OPT_EXTREME_SEVERITY", ["ADVERSE", "BLOCKING"], d.optionsRisk.extremeSeverity),
+    },
+    historical: {
+      patternSource: src(env, P + "HISTORICAL_PATTERN_PROVIDER"), outcomeSource: src(env, P + "HISTORICAL_OUTCOME_PROVIDER"), minSample: int(env, P + "HIST_MIN_SAMPLE", d.historical.minSample, 1, 100_000),
+      staleCautionDays: int(env, P + "HIST_STALE_CAUTION_DAYS", d.historical.staleCautionDays, 1, 3650), unavailableDays: int(env, P + "HIST_STALE_UNAVAILABLE_DAYS", d.historical.unavailableDays, 1, 3650),
+      lastObservedMaxDays: int(env, P + "HIST_LAST_OBSERVED_MAX_DAYS", d.historical.lastObservedMaxDays, 1, 3650), futureToleranceMinutes: int(env, P + "HIST_FUTURE_TOLERANCE_MINUTES", d.historical.futureToleranceMinutes, 0, 60),
+      wilsonZ: dec(env, P + "HIST_WILSON_Z", d.historical.wilsonZ, 0.01, 4), winLowerSupportive: dec(env, P + "HIST_WIN_LOWER_SUPPORTIVE", d.historical.winLowerSupportive, 0.01, 0.99),
+      winUpperCaution: dec(env, P + "HIST_WIN_UPPER_CAUTION", d.historical.winUpperCaution, 0.01, 1), winUpperAdverse: dec(env, P + "HIST_WIN_UPPER_ADVERSE", d.historical.winUpperAdverse, 0.01, 1),
+      expectancyLowerSupportiveR: sdec(env, P + "HIST_EXPECTANCY_LOWER_SUPPORTIVE_R", d.historical.expectancyLowerSupportiveR), expectancyCautionR: sdec(env, P + "HIST_EXPECTANCY_CAUTION_R", d.historical.expectancyCautionR),
+      expectancyAdverseR: sdec(env, P + "HIST_EXPECTANCY_ADVERSE_R", d.historical.expectancyAdverseR), maxUnverifiableRate: dec(env, P + "HIST_MAX_UNVERIFIABLE_RATE", d.historical.maxUnverifiableRate, 0, 1),
+      criticalWinUpper: dec(env, P + "HIST_CRITICAL_WIN_UPPER", d.historical.criticalWinUpper, 0.01, 1), criticalExpectancyR: sdec(env, P + "HIST_CRITICAL_EXPECTANCY_R", d.historical.criticalExpectancyR),
+      criticalMinSample: int(env, P + "HIST_CRITICAL_MIN_SAMPLE", d.historical.criticalMinSample, 1, 99_999), criticalSeverity: pick(env, P + "HIST_CRITICAL_SEVERITY", ["ADVERSE", "BLOCKING"], d.historical.criticalSeverity),
+      minRegimeShare: dec(env, P + "HIST_MIN_REGIME_SHARE", d.historical.minRegimeShare, 0, 1), minVolatilityShare: dec(env, P + "HIST_MIN_VOLATILITY_SHARE", d.historical.minVolatilityShare, 0, 1),
+      minLevelForSupport: int(env, P + "HIST_MIN_LEVEL_FOR_SUPPORT", d.historical.minLevelForSupport, 1, 4), regimeLookback: int(env, P + "HIST_REGIME_LOOKBACK", d.historical.regimeLookback, 1, 500),
+      regimeEfficiency: dec(env, P + "HIST_REGIME_EFFICIENCY", d.historical.regimeEfficiency, 0.01, 0.99), atrPeriod: int(env, P + "HIST_ATR_PERIOD", d.historical.atrPeriod, 1, 500),
+      volatilityLowPct: dec(env, P + "HIST_VOLATILITY_LOW_PCT", d.historical.volatilityLowPct, 0.01, 100), volatilityHighPct: dec(env, P + "HIST_VOLATILITY_HIGH_PCT", d.historical.volatilityHighPct, 0.01, 100),
+    },
+    challenger: {
+      minRewardRisk: dec(env, P + "CHAL_MIN_REWARD_RISK", d.challenger.minRewardRisk, 0.01, 100), adverseRewardRisk: dec(env, P + "CHAL_ADVERSE_REWARD_RISK", d.challenger.adverseRewardRisk, 0.01, 100),
+      stopRiskTolerancePts: dec(env, P + "CHAL_STOP_RISK_TOLERANCE_PTS", d.challenger.stopRiskTolerancePts, 0, 50), adverseShareCaution: dec(env, P + "CHAL_ADVERSE_SHARE_CAUTION", d.challenger.adverseShareCaution, 0.01, 1),
+      adverseShareAdverse: dec(env, P + "CHAL_ADVERSE_SHARE_ADVERSE", d.challenger.adverseShareAdverse, 0.01, 1), dataQualityCaution: int(env, P + "CHAL_DATA_QUALITY_CAUTION", d.challenger.dataQualityCaution, 1, 1000),
+      dataQualityAdverse: int(env, P + "CHAL_DATA_QUALITY_ADVERSE", d.challenger.dataQualityAdverse, 1, 1000), thinEvidenceShare: dec(env, P + "CHAL_THIN_EVIDENCE_SHARE", d.challenger.thinEvidenceShare, 0.01, 1),
+      overconfidenceScore: dec(env, P + "CHAL_OVERCONFIDENCE_SCORE", d.challenger.overconfidenceScore, 0, 100), overconfidenceAdverseShare: dec(env, P + "CHAL_OVERCONFIDENCE_ADVERSE_SHARE", d.challenger.overconfidenceAdverseShare, 0.01, 1),
+      criticalSupportive: int(env, P + "CHAL_CRITICAL_SUPPORTIVE", d.challenger.criticalSupportive, 1, 50), criticalAdverse: int(env, P + "CHAL_CRITICAL_ADVERSE", d.challenger.criticalAdverse, 1, 50),
+      criticalConfidence: dec(env, P + "CHAL_CRITICAL_CONFIDENCE", d.challenger.criticalConfidence, 0, 100), supportMinAgents: int(env, P + "CHAL_SUPPORT_MIN_AGENTS", d.challenger.supportMinAgents, 1, 50),
+      supportShare: dec(env, P + "CHAL_SUPPORT_SHARE", d.challenger.supportShare, 0.01, 1), criticalSeverity: pick(env, P + "CHAL_CRITICAL_SEVERITY", ["ADVERSE", "BLOCKING"], d.challenger.criticalSeverity),
+      incoherenceSeverity: pick(env, P + "CHAL_INCOHERENCE_SEVERITY", ["ADVERSE", "BLOCKING"], d.challenger.incoherenceSeverity),
     },
   });
 }

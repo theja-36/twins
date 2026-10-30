@@ -17,6 +17,9 @@ import { priceActionAgent } from "./priceAction";
 import { fileOptionsChainProvider, fileOptionsQuoteProvider, fileQuoteProvider, type OptionsChainProvider, type OptionsQuoteProvider, type QuoteProvider } from "./quoteProviders";
 import { liquidityAgent } from "./liquidity";
 import { optionsRiskAgent } from "./optionsRisk";
+import { fileOutcomeProvider, filePatternProvider, type HistoricalOutcomeProvider, type HistoricalPatternProvider } from "./historicalProviders";
+import { historicalPatternAgent } from "./historicalPattern";
+import { independentChallengerAgent } from "./independentChallenger";
 
 export * from "./common";
 export * from "./rules";
@@ -39,9 +42,12 @@ export * from "./quoteProviders";
 export * from "./quoteCommon";
 export * from "./liquidity";
 export * from "./optionsRisk";
+export * from "./historicalProviders";
+export * from "./historicalPattern";
+export * from "./independentChallenger";
 
-/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-6). Later tasks append to this list; nothing else is registered. */
-export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1"] as const;
+/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-7). Later tasks append to this list; nothing else is registered. */
+export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1", "historical-pattern-v1", "independent-challenger-v1"] as const;
 
 export interface ProductionRegistryOptions {
   rules: AgentRulesConfig; instrumentReference?: InstrumentReference | null; historicalReference?: HistoricalInstrumentReference;
@@ -49,6 +55,7 @@ export interface ProductionRegistryOptions {
   newsProvider?: NewsProvider | null; sentimentProvider?: SentimentProvider | null; constituentProvider?: ConstituentProvider | null; marketDataProvider?: MarketDataProvider | null;
   ohlcProvider?: OhlcProvider | null; lastPriceProvider?: LastPriceProvider | null;
   quoteProvider?: QuoteProvider | null; optionsQuoteProvider?: OptionsQuoteProvider | null; optionsChainProvider?: OptionsChainProvider | null;
+  historicalPatternProvider?: HistoricalPatternProvider | null; historicalOutcomeProvider?: HistoricalOutcomeProvider | null;
 }
 /** Registers the production agents. Used only when the engine is explicitly enabled; a missing provider makes its agent report UNAVAILABLE (never a pass). */
 export function createProductionRegistry(o: ProductionRegistryOptions): AgentRegistry {
@@ -63,6 +70,9 @@ export function createProductionRegistry(o: ProductionRegistryOptions): AgentReg
   r.register(priceActionAgent(o.rules, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
   r.register(liquidityAgent(o.rules, o.quoteProvider ?? null, o.lastPriceProvider ?? null));
   r.register(optionsRiskAgent(o.rules, o.optionsQuoteProvider ?? null, o.optionsChainProvider ?? null, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
+  r.register(historicalPatternAgent(o.rules, o.historicalPatternProvider ?? null, o.historicalOutcomeProvider ?? null, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
+  // the challenger runs after (and reads the results of) every other registered research agent; disabling one of them requires disabling the challenger too
+  r.register(independentChallengerAgent(o.rules, r.snapshot().map((c) => c.agentId)));
   return r;
 }
 /** Resolves `TWINS_AGENT_INSTRUMENT_REFERENCE` (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
@@ -96,4 +106,9 @@ export function resolveOhlcProviders(rules: AgentRulesConfig): { ohlcProvider: O
 export function resolveQuoteProviders(rules: AgentRulesConfig): { quoteProvider: QuoteProvider | null; optionsQuoteProvider: OptionsQuoteProvider | null; optionsChainProvider: OptionsChainProvider | null } {
   const q = fileSource(rules.quotes.source, "quote provider"), o = fileSource(rules.quotes.optionSource, "option quote provider"), c = fileSource(rules.quotes.chainSource, "option chain provider");
   return { quoteProvider: q === null ? null : fileQuoteProvider(q), optionsQuoteProvider: o === null ? null : fileOptionsQuoteProvider(o), optionsChainProvider: c === null ? null : fileOptionsChainProvider(c) };
+}
+/** Resolves the historical pattern / outcome provider settings (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
+export function resolveHistoricalProviders(rules: AgentRulesConfig): { historicalPatternProvider: HistoricalPatternProvider | null; historicalOutcomeProvider: HistoricalOutcomeProvider | null } {
+  const p = fileSource(rules.historical.patternSource, "historical pattern provider"), o = fileSource(rules.historical.outcomeSource, "historical outcome provider");
+  return { historicalPatternProvider: p === null ? null : filePatternProvider(p), historicalOutcomeProvider: o === null ? null : fileOutcomeProvider(o) };
 }

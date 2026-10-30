@@ -113,13 +113,13 @@ describe("rule configuration for the liquidity and options-risk agents", () => {
 });
 
 describe("registration, worker wiring and source hygiene", () => {
-  it("the ten production agents include liquidity-v1 and options-risk-v1; a missing provider never throws at registration", () => {
-    expect([...PRODUCTION_AGENT_IDS].slice(-2)).toEqual(["liquidity-v1", "options-risk-v1"]);
+  it("the twelve production agents include liquidity-v1 and options-risk-v1; a missing provider never throws at registration", () => {
+    expect([...PRODUCTION_AGENT_IDS].slice(-4, -2)).toEqual(["liquidity-v1", "options-risk-v1"]);
     const ids = createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((x) => x.agentId);
-    expect(ids).toHaveLength(10); expect(ids).toEqual(expect.arrayContaining(["liquidity-v1", "options-risk-v1"]));
+    expect(ids).toHaveLength(12); expect(ids).toEqual(expect.arrayContaining(["liquidity-v1", "options-risk-v1"]));
   });
   it("the worker resolves the quote providers only when the engine is enabled", () => {
-    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveQuoteProviders\(agentRules\) \} : null;/);
+    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \} : null;/);
   });
   it("the new agent and provider sources read no message text, import no network / broker / LLM code, read no system clock and write nothing", () => {
     for (const f of ["liquidity.ts", "optionsRisk.ts", "quoteProviders.ts", "quoteCommon.ts"]) {
