@@ -201,7 +201,7 @@ Providers: `TWINS_AGENT_NEWS_PROVIDER`, `TWINS_AGENT_SENTIMENT_PROVIDER`, `TWINS
 * Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
 ## The technical-structure and price-action agents (Stage 5 / Task 5)
-Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all eight production agents, so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected OHLC / last-price providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both judge the **underlying's** candles (for an option, the underlying's series) with the direction derived from side and option type as in `macro-global-v1`. Findings state what the series shows; they do not predict or infer cause.
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all eight production agents - ten after Task 6 - so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected OHLC / last-price providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both judge the **underlying's** candles (for an option, the underlying's series) with the direction derived from side and option type as in `macro-global-v1`. Findings state what the series shows; they do not predict or infer cause.
 
 ### Provider interfaces (`ohlcProviders.ts`, `ohlcCommon.ts`)
 | Interface | Contract | Shipped implementations |
@@ -250,6 +250,63 @@ Providers: `TWINS_AGENT_OHLC_PROVIDER`, `TWINS_AGENT_LAST_PRICE_PROVIDER` (`none
 * Option signals are judged on the underlying only; no option premium, spread or volatility analysis (a separate task). The invalidation check compares price with the stop only for equity and futures.
 * The historical-dataset adapter covers equity price series only and has no snapshot time.
 * Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
+
+## The liquidity and options-risk agents (Stage 5 / Task 6)
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all ten production agents, so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only (never message text) and are validated, redacted, persisted and included in the synthesis like every other agent. A BLOCKING verdict halts at the existing worker halt point. **No migration, no broker, no external API, no order, fill, position or approval-card write, and no change to approval eligibility.** The engine stays disabled by default.
+
+### Provider interfaces (`quoteProviders.ts`, `quoteCommon.ts`)
+| Interface | Contract | Shipped implementations |
+| --- | --- | --- |
+| `QuoteProvider` | `quote({market,symbol,instrumentType,expiry,strike,optionType})` -> `{ bid, ask, last, volume, avgVolume, openInterest, bidDepth, askDepth, asOf }` (unknown fields `null`) or `null` | in-memory; file `twins-quotes-v1` (keys `MARKET:SYMBOL[:EXPIRY[:STRIKE:CE\|PE]]`) |
+| `OptionsQuoteProvider` | same query -> `{ premium, bid, ask, iv, ivPrevious, delta, gamma, theta, vega, openInterest, volume, underlyingPrice, asOf }` or `null` | in-memory; file `twins-option-quotes-v1` |
+| `OptionsChainProvider` | `chain({market,underlying,expiry})` -> `{ underlyingPrice, asOf, rows[{ strike, optionType, iv, openInterest, volume }] }` or `null` | in-memory; file `twins-option-chain-v1` (keys `MARKET:UNDERLYING:EXPIRY`) |
+The OHLC and last-price providers of Task 5 are reused: the options agent takes the underlying price from the quote, then the chain, then the OHLC provider; the liquidity agent cross-checks an equity quote against the last price. Files are validated at load and again by the agents (non-negative finite sizes, positive prices, `ask >= bid`, a call delta in [0, 1] and a put delta in [-1, 0], offset-bearing times); a crossed or malformed quote is **malformed data, not a wide spread**. Nothing is repaired. Files use the shared safe reader (a `.json` regular file, no symlink, no credential-like name).
+
+Staleness (`TWINS_AGENT_QUOTE_*`): a quote older than 5 minutes -> CAUTION; older than 30 minutes or dated more than 2 minutes in the future -> UNAVAILABLE.
+
+### `liquidity-v1` - Liquidity Agent (weight 50, can block)
+Inputs: `risk_decision` (required; `signal_context`, `signal_features`, `source_intelligence` optional, only its status recorded); quote provider (required), last-price provider (optional); the engine clock. Applies to equity, future and option contracts; any other instrument type or an incomplete contract is UNAVAILABLE.
+| Check | Result |
+| --- | --- |
+| no provider / throws / no quote / malformed / crossed / neither bid nor ask / too old / future | **UNAVAILABLE** (never a pass; the provider's message is never stored) |
+| the side the signal needs (BUY: ask, SELL: bid) | missing -> `LIQ_EXTREME_SEVERITY` (**BLOCKING**, configurable ADVERSE); the other side missing -> CAUTION |
+| spread as % of mid | equity / future >= 0.5 CAUTION, >= 1.5 ADVERSE, >= 5 `LIQ_EXTREME_SEVERITY`; options >= 5 / 15 / 40 |
+| displayed depth on the needed side | below `LIQ_MIN_DEPTH_QUANTITY` (1) -> `LIQ_EXTREME_SEVERITY`; depth not provided -> INFO |
+| volume | average volume below `LIQ_POOR_AVG_VOLUME` (1000) -> ADVERSE (poor liquidity); volume under 0.25 x the average -> CAUTION (thin) |
+| open interest (future / option) | below 100 -> ADVERSE; below 1000 -> CAUTION; missing -> CAUTION |
+| price sanity | last price outside the quote by more than 2% -> CAUTION; entry price away from the quote mid by >= 3% CAUTION, >= 10% ADVERSE (x3 for options); equity quote vs last price > 5% -> CAUTION |
+Verdict = the worst level. With nothing cautionary: **SUPPORTIVE** needs at least two assessed dimensions (spread plus volume, open interest or depth); otherwise **NEUTRAL** (confidence 70).
+
+### `options-risk-v1` - Options Risk Agent (weight 50, can block)
+Inputs: `risk_decision` (required); option-quote provider (required), option-chain provider (optional context), OHLC / last-price providers (underlying price fallback only); the engine clock. **Any other instrument type -> NEUTRAL with `applicable: false`** (the providers are never touched).
+| Check | Result |
+| --- | --- |
+| no provider / throws / no quote / malformed (crossed market, negative IV, delta of the wrong sign or beyond 1, ...) / no price / premium not below the underlying / no underlying price from any source / too old / future | **UNAVAILABLE** |
+| contract expiry (close `OPT_EXPIRY_CLOSE_UTC` 10:00 UTC = 15:30 IST) | past -> **BLOCKING**; <= 3 h -> `OPT_EXTREME_SEVERITY` (BLOCKING, configurable ADVERSE); <= 24 h -> ADVERSE; <= 3 days -> CAUTION |
+| implied volatility level | >= 40 CAUTION, >= 70 ADVERSE, >= 120 `OPT_EXTREME_SEVERITY` |
+| implied volatility change vs the previous session | +15% CAUTION, +30% ADVERSE, +60% `OPT_EXTREME_SEVERITY`; IV >= 1.5x the chain's at-the-money IV -> CAUTION |
+| theta (long positions) | decay >= 4% of the premium per day CAUTION, >= 8% ADVERSE, >= 8% with <= 3 h to expiry `OPT_EXTREME_SEVERITY`; for a sale INFO |
+| gamma (inside `OPT_GAMMA_WINDOW_DAYS`, 2) | delta change per 1% underlying move >= 0.10 CAUTION, >= 0.20 ADVERSE, >= 0.20 with <= 3 h to expiry `OPT_EXTREME_SEVERITY`; outside the window INFO |
+| vega | a one-point IV change moving the premium >= 8% while IV >= 40 -> CAUTION |
+| delta | absolute delta < 0.10 or > 0.90 -> CAUTION; missing greeks -> CAUTION |
+| strike distance | long: >= 5% out of the money CAUTION, >= 10% ADVERSE; deep in the money >= 8% CAUTION; a sale only informs |
+| premium sanity | below `OPT_MIN_PREMIUM` (1) or below intrinsic value -> CAUTION; entry premium vs quote >= 10% CAUTION, >= 25% ADVERSE |
+| spread and market | spread >= 5% CAUTION, >= 10% ADVERSE; no market on the needed side -> ADVERSE; one-sided -> CAUTION |
+| open interest / volume | OI < 500 CAUTION, < 50 ADVERSE; volume < 100 CAUTION, zero ADVERSE |
+| premium stop-loss | the stop on the wrong side of the entry -> ADVERSE; premium already through the stop -> `OPT_STOP_INVALIDATION` (**BLOCKING**, configurable ADVERSE); stop distance not larger than the spread -> ADVERSE; smaller than one day of decay (long) -> CAUTION; the implied underlying move is reported (INFO) |
+| chain (optional) | not configured -> INFO; throws / no chain / too old -> CAUTION; malformed -> UNAVAILABLE; strike not listed -> CAUTION |
+Verdict = the worst level. With nothing cautionary: **SUPPORTIVE** needs at least four assessed dimensions (expiry, spread, IV, greeks, chain, open interest, volume); otherwise **NEUTRAL**.
+
+### Configuration (Task 6)
+Providers: `TWINS_AGENT_QUOTE_PROVIDER`, `TWINS_AGENT_OPTION_QUOTE_PROVIDER`, `TWINS_AGENT_OPTION_CHAIN_PROVIDER` (`none` | `file:<path>`, default `none`). Staleness: `TWINS_AGENT_QUOTE_*`. Liquidity thresholds and severities: `TWINS_AGENT_LIQ_*`. IV, theta / gamma windows, expiry proximity, moneyness, premium, spread, OI / volume and severities: `TWINS_AGENT_OPT_*`. Enable / disable and weights use the engine settings (`TWINS_AGENT_ENGINE_DISABLED_AGENTS`, `TWINS_AGENT_ENGINE_WEIGHTS`). Every value is validated at start-up (ordered thresholds, a gamma window, an extreme window below the adverse window); an invalid value stops the process.
+
+### Limitations of these two agents
+* **With the engine enabled, all ten required agents need their providers.** Without a quote provider (and, for options, an option-quote provider) every decision is `INCOMPLETE` and halts; reviewed, refreshed quote snapshots (or a future live adapter, a separate task) must exist first. Quotes are snapshots: depth is the displayed quantity at the best price only.
+* Volume is compared with an average without time-of-day adjustment, so early-session volume looks thin (CAUTION only); the poor-liquidity ADVERSE rule uses the average volume alone.
+* Greeks and IV are taken from the provider as given (theta per calendar day, vega per IV point, IV in percent); the agent does not recompute them, models no volatility surface and does not compare implied with realised volatility.
+* Expiry time is the configured close of the expiry date; the agent has no exchange calendar (a holiday-shifted expiry is the calendar agent's concern).
+* The options agent assumes the premium stop-loss is in premium units, as signal-integrity does; it judges contracts one at a time (no spreads or multi-leg structures).
+* A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.

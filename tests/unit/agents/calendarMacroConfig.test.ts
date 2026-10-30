@@ -145,10 +145,10 @@ describe("rule configuration for the calendar and macro agents (conservative def
 });
 
 describe("registration, required set and worker wiring", () => {
-  it("all eight production agents are registered and the required set is only effective when the engine is explicitly enabled", () => {
-    expect([...PRODUCTION_AGENT_IDS]).toEqual(["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1"]);
-    expect(createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((c) => c.agentId)).toEqual(["index-constituent-impact-v1", "instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
-    expect([...DEFAULT_REQUIRED_AGENTS]).toEqual(["index-constituent-impact-v1", "instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
+  it("all ten production agents are registered and the required set is only effective when the engine is explicitly enabled", () => {
+    expect([...PRODUCTION_AGENT_IDS]).toEqual(["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1"]);
+    expect(createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((c) => c.agentId)).toEqual(["index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
+    expect([...DEFAULT_REQUIRED_AGENTS]).toEqual(["index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
     const off = loadAgentEngineConfig({});
     expect(off.enabled).toBe(false);
     expect(loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" })).toMatchObject({ enabled: true, requiredAgents: [...DEFAULT_REQUIRED_AGENTS] });
@@ -158,7 +158,7 @@ describe("registration, required set and worker wiring", () => {
   });
   it("the worker resolves the providers only when the engine is enabled and otherwise registers nothing", () => {
     const w = readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8");
-    expect(w).toMatch(/const agentProviders = agentRules \? \{ \.\.\.resolveCalendarMacroProviders\(agentRules\), \.\.\.resolveNewsConstituentProviders\(agentRules\), \.\.\.resolveOhlcProviders\(agentRules\) \} : null;/);
+    expect(w).toMatch(/const agentProviders = agentRules \? \{ \.\.\.resolveCalendarMacroProviders\(agentRules\), \.\.\.resolveNewsConstituentProviders\(agentRules\), \.\.\.resolveOhlcProviders\(agentRules\), \.\.\.resolveQuoteProviders\(agentRules\) \} : null;/);
     expect(w).toMatch(/\.\.\.\(agentProviders \?\? \{\}\)/);
     expect(w).toMatch(/if \(!agentRules\) return createDefaultRegistry\(\);/);
     expect(createDefaultRegistry().snapshot()).toEqual([]);

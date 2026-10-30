@@ -46,6 +46,14 @@ import { AgentContractError } from "../contract";
  *     RSI_STRETCHED 75, MOMENTUM_AGAINST 15, RANGE_EFFICIENCY 0.25, BREAKDOWN_AGAINST ADVERSE, INVALIDATION BLOCKING)
  *   TWINS_AGENT_PA_*  (MIN_BARS 30, ATR_PERIOD 14, PATTERN_WINDOW 3, MIN_BODY_ATR 0.5, WICK_RATIO 0.6, STRONG_RANGE_ATR 1.5, GAP_*_PCT 0.5 / 1.5, CONSECUTIVE_* 3 / 5, EXPANSION_* 2 / 3.5, CONTRACTION_RATIO 0.5,
  *     EXTREME_LOOKBACK 20, EXTREME_PROXIMITY_PCT 0.75, EXHAUSTION_RUN 3, CRITICAL_REVERSAL ADVERSE)
+ * Stage 5 / Task 6 (liquidity + options risk):
+ *   TWINS_AGENT_QUOTE_PROVIDER / TWINS_AGENT_OPTION_QUOTE_PROVIDER / TWINS_AGENT_OPTION_CHAIN_PROVIDER   none | file:<path> (default none -> UNAVAILABLE, never a pass); 
+ *     TWINS_AGENT_QUOTE_STALE_CAUTION_MINUTES 5, _STALE_UNAVAILABLE_MINUTES 30, _FUTURE_TOLERANCE_MINUTES 2
+ *   TWINS_AGENT_LIQ_*  (SPREAD_CAUTION_PCT 0.5 / ADVERSE 1.5 / EXTREME 5, OPTION_SPREAD_* 5 / 15 / 40, EXTREME_SEVERITY BLOCKING, VOLUME_THIN_RATIO 0.25, POOR_AVG_VOLUME 1000, MIN_OPEN_INTEREST 1000,
+ *     POOR_OPEN_INTEREST 100, MIN_DEPTH_QUANTITY 1, LAST_OUTSIDE_QUOTE_PCT 2, ENTRY_DEVIATION_CAUTION_PCT 3 / ADVERSE 10, OPTION_DEVIATION_MULTIPLIER 3, LAST_PRICE_DISCONNECT_PCT 5)
+ *   TWINS_AGENT_OPT_*  (IV_CAUTION 40 / ADVERSE 70 / EXTREME 120, IV_SPIKE_*_PCT 15 / 30 / 60, IV_ATM_RATIO_CAUTION 1.5, EXPIRY_CAUTION_DAYS 3, EXPIRY_ADVERSE_HOURS 24, EXPIRY_EXTREME_HOURS 3, EXPIRY_CLOSE_UTC 10:00,
+ *     THETA_CAUTION_PCT 4 / ADVERSE 8, GAMMA_WINDOW_DAYS 2, GAMMA_CAUTION 0.1 / ADVERSE 0.2, VEGA_CAUTION_PCT 8, DELTA_LOW 0.1, DELTA_HIGH 0.9, OTM_CAUTION_PCT 5 / ADVERSE 10, ITM_CAUTION_PCT 8, MIN_PREMIUM 1,
+ *     SPREAD_CAUTION_PCT 5 / ADVERSE 10, ENTRY_DEVIATION_* 10 / 25, MIN_OPEN_INTEREST 500, POOR_OPEN_INTEREST 50, MIN_VOLUME 100, POOR_VOLUME 0, STOP_INVALIDATION BLOCKING, EXTREME_SEVERITY BLOCKING)
  * Enable / disable and weights use the engine settings (TWINS_AGENT_ENGINE_DISABLED_AGENTS, TWINS_AGENT_ENGINE_WEIGHTS).
  */
 export const AGENT_RULES_VERSION = "agent-rules-v1";
@@ -85,6 +93,19 @@ export interface AgentRulesConfig {
     minBars: number; atrPeriod: number; patternWindow: number; minBodyAtr: number; wickRatio: number; strongRangeAtr: number; gapCautionPct: number; gapAdversePct: number; consecutiveCaution: number;
     consecutiveAdverse: number; expansionRatio: number; expansionAdverseRatio: number; contractionRatio: number; extremeLookback: number; extremeProximityPct: number; exhaustionRun: number; criticalReversal: Severity2;
   };
+  quotes: { source: string; optionSource: string; chainSource: string; staleCautionMinutes: number; unavailableMinutes: number; futureToleranceMinutes: number };
+  liquidity: {
+    spreadCautionPct: number; spreadAdversePct: number; spreadExtremePct: number; optionSpreadCautionPct: number; optionSpreadAdversePct: number; optionSpreadExtremePct: number; extremeSeverity: Severity2;
+    volumeThinRatio: number; poorAvgVolume: number; minOpenInterest: number; poorOpenInterest: number; minDepthQuantity: number; lastOutsideQuotePct: number;
+    entryDeviationCautionPct: number; entryDeviationAdversePct: number; optionDeviationMultiplier: number; lastPriceDisconnectPct: number;
+  };
+  optionsRisk: {
+    ivCaution: number; ivAdverse: number; ivExtreme: number; ivSpikeCautionPct: number; ivSpikeAdversePct: number; ivSpikeExtremePct: number; ivAtmRatioCaution: number;
+    expiryCautionDays: number; expiryAdverseHours: number; expiryExtremeHours: number; expiryCloseUtc: string; thetaCautionPct: number; thetaAdversePct: number;
+    gammaWindowDays: number; gammaCaution: number; gammaAdverse: number; vegaCautionPct: number; deltaLow: number; deltaHigh: number; otmCautionPct: number; otmAdversePct: number; itmCautionPct: number;
+    minPremium: number; spreadCautionPct: number; spreadAdversePct: number; entryDeviationCautionPct: number; entryDeviationAdversePct: number; minOpenInterest: number; poorOpenInterest: number;
+    minVolume: number; poorVolume: number; stopInvalidation: Severity2; extremeSeverity: Severity2;
+  };
 }
 export type Severity3 = "CAUTION" | "ADVERSE" | "BLOCKING";
 export type Severity4 = "INFO" | "CAUTION" | "ADVERSE";
@@ -119,6 +140,19 @@ export const DEFAULT_AGENT_RULES: AgentRulesConfig = {
   priceAction: {
     minBars: 30, atrPeriod: 14, patternWindow: 3, minBodyAtr: 0.5, wickRatio: 0.6, strongRangeAtr: 1.5, gapCautionPct: 0.5, gapAdversePct: 1.5, consecutiveCaution: 3, consecutiveAdverse: 5, expansionRatio: 2, expansionAdverseRatio: 3.5,
     contractionRatio: 0.5, extremeLookback: 20, extremeProximityPct: 0.75, exhaustionRun: 3, criticalReversal: "ADVERSE",
+  },
+  quotes: { source: "none", optionSource: "none", chainSource: "none", staleCautionMinutes: 5, unavailableMinutes: 30, futureToleranceMinutes: 2 },
+  liquidity: {
+    spreadCautionPct: 0.5, spreadAdversePct: 1.5, spreadExtremePct: 5, optionSpreadCautionPct: 5, optionSpreadAdversePct: 15, optionSpreadExtremePct: 40, extremeSeverity: "BLOCKING",
+    volumeThinRatio: 0.25, poorAvgVolume: 1000, minOpenInterest: 1000, poorOpenInterest: 100, minDepthQuantity: 1, lastOutsideQuotePct: 2,
+    entryDeviationCautionPct: 3, entryDeviationAdversePct: 10, optionDeviationMultiplier: 3, lastPriceDisconnectPct: 5,
+  },
+  optionsRisk: {
+    ivCaution: 40, ivAdverse: 70, ivExtreme: 120, ivSpikeCautionPct: 15, ivSpikeAdversePct: 30, ivSpikeExtremePct: 60, ivAtmRatioCaution: 1.5,
+    expiryCautionDays: 3, expiryAdverseHours: 24, expiryExtremeHours: 3, expiryCloseUtc: "10:00", thetaCautionPct: 4, thetaAdversePct: 8,
+    gammaWindowDays: 2, gammaCaution: 0.1, gammaAdverse: 0.2, vegaCautionPct: 8, deltaLow: 0.1, deltaHigh: 0.9, otmCautionPct: 5, otmAdversePct: 10, itmCautionPct: 8,
+    minPremium: 1, spreadCautionPct: 5, spreadAdversePct: 10, entryDeviationCautionPct: 10, entryDeviationAdversePct: 25, minOpenInterest: 500, poorOpenInterest: 50,
+    minVolume: 100, poorVolume: 0, stopInvalidation: "BLOCKING", extremeSeverity: "BLOCKING",
   },
 };
 const bad = (what: string): never => { throw new AgentContractError("INVALID_ENGINE_CONFIG", `invalid agent rules configuration: ${what}`); };
@@ -186,6 +220,17 @@ export function validateAgentRules(c: AgentRulesConfig): AgentRulesConfig {
   if (ct.indexUnderlyings.some((x) => !/^[A-Z0-9&._-]{1,30}$/.test(x)) || !/^[A-Z0-9]{2,20}$/.test(ct.quoteMarket)) bad("constituent index underlyings / quote market");
   if (!(ct.newsLookbackMinutes >= 1 && ct.newsLookbackMinutes <= 20_160 && ct.nearTermMinutes >= 1 && ct.nearTermMinutes <= ct.newsLookbackMinutes) || !(ct.sentimentThreshold > 0 && ct.sentimentThreshold <= 1) || !(ct.minReliability >= 0 && ct.minReliability <= 1)) bad("constituent news limits");
   if (!(m.staleCautionMinutes >= 1 && m.staleCautionMinutes < m.unavailableMinutes && m.unavailableMinutes <= 20_160) || !(m.releaseBefore >= 0 && m.releaseBefore <= 1440 && m.releaseAfter >= 0 && m.releaseAfter <= 1440)) bad("macro staleness / release windows");
+  const q = c.quotes, lq = c.liquidity, op = c.optionsRisk;
+  for (const src3 of [q.source, q.optionSource, q.chainSource]) if (!(src3 === "none" || /^file:.{1,400}$/.test(src3))) bad("provider source");
+  if (!(q.staleCautionMinutes >= 1 && q.staleCautionMinutes < q.unavailableMinutes && q.unavailableMinutes <= 1440) || !(q.futureToleranceMinutes >= 0 && q.futureToleranceMinutes <= 60)) bad("quote limits");
+  if (!asc(lq.spreadCautionPct, lq.spreadAdversePct, lq.spreadExtremePct) || !asc(lq.optionSpreadCautionPct, lq.optionSpreadAdversePct, lq.optionSpreadExtremePct) || lq.spreadExtremePct > 100 || lq.optionSpreadExtremePct > 200 || lq.spreadCautionPct <= 0 || lq.optionSpreadCautionPct <= 0) bad("liquidity spread thresholds");
+  if (!(lq.volumeThinRatio > 0 && lq.volumeThinRatio <= 10) || !(lq.poorAvgVolume >= 0) || !(lq.poorOpenInterest >= 0 && lq.poorOpenInterest <= lq.minOpenInterest) || !(lq.minDepthQuantity >= 0) || !(lq.lastOutsideQuotePct > 0 && lq.lastOutsideQuotePct <= 50)) bad("liquidity volume / depth thresholds");
+  if (!asc(lq.entryDeviationCautionPct, lq.entryDeviationAdversePct) || !(lq.optionDeviationMultiplier >= 1 && lq.optionDeviationMultiplier <= 20) || !(lq.lastPriceDisconnectPct > 0 && lq.lastPriceDisconnectPct <= 50)) bad("liquidity price thresholds");
+  if (!asc(op.ivCaution, op.ivAdverse, op.ivExtreme) || !asc(op.ivSpikeCautionPct, op.ivSpikeAdversePct, op.ivSpikeExtremePct) || !(op.ivAtmRatioCaution > 1)) bad("option volatility thresholds");
+  if (!(op.expiryCautionDays >= 1 && op.expiryCautionDays <= 60) || !(op.expiryExtremeHours >= 0 && op.expiryExtremeHours < op.expiryAdverseHours && op.expiryAdverseHours <= op.expiryCautionDays * 24) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(op.expiryCloseUtc)) bad("option expiry windows");
+  if (!asc(op.thetaCautionPct, op.thetaAdversePct) || !(op.gammaWindowDays >= 1 && op.gammaWindowDays <= 30) || !asc(op.gammaCaution, op.gammaAdverse) || !(op.vegaCautionPct > 0)) bad("option greek thresholds");
+  if (!(op.deltaLow > 0 && op.deltaLow < op.deltaHigh && op.deltaHigh < 1) || !asc(op.otmCautionPct, op.otmAdversePct) || !(op.itmCautionPct > 0) || !(op.minPremium >= 0)) bad("option moneyness thresholds");
+  if (!asc(op.spreadCautionPct, op.spreadAdversePct) || !asc(op.entryDeviationCautionPct, op.entryDeviationAdversePct) || !(op.poorOpenInterest >= 0 && op.poorOpenInterest <= op.minOpenInterest) || !(op.poorVolume >= 0 && op.poorVolume <= op.minVolume)) bad("option liquidity thresholds");
   return c;
 }
 export function loadAgentRulesConfig(env: Record<string, string | undefined> = process.env): AgentRulesConfig {
@@ -273,6 +318,38 @@ export function loadAgentRulesConfig(env: Record<string, string | undefined> = p
       contractionRatio: dec(env, P + "PA_CONTRACTION_RATIO", d.priceAction.contractionRatio, 0.01, 0.99), extremeLookback: int(env, P + "PA_EXTREME_LOOKBACK", d.priceAction.extremeLookback, 1, 1000),
       extremeProximityPct: dec(env, P + "PA_EXTREME_PROXIMITY_PCT", d.priceAction.extremeProximityPct, 0.01, 20), exhaustionRun: int(env, P + "PA_EXHAUSTION_RUN", d.priceAction.exhaustionRun, 1, 50),
       criticalReversal: pick(env, P + "PA_CRITICAL_REVERSAL", ["ADVERSE", "BLOCKING"], d.priceAction.criticalReversal),
+    },
+    quotes: {
+      source: src(env, P + "QUOTE_PROVIDER"), optionSource: src(env, P + "OPTION_QUOTE_PROVIDER"), chainSource: src(env, P + "OPTION_CHAIN_PROVIDER"),
+      staleCautionMinutes: int(env, P + "QUOTE_STALE_CAUTION_MINUTES", d.quotes.staleCautionMinutes, 1, 1440), unavailableMinutes: int(env, P + "QUOTE_STALE_UNAVAILABLE_MINUTES", d.quotes.unavailableMinutes, 1, 1440),
+      futureToleranceMinutes: int(env, P + "QUOTE_FUTURE_TOLERANCE_MINUTES", d.quotes.futureToleranceMinutes, 0, 60),
+    },
+    liquidity: {
+      spreadCautionPct: dec(env, P + "LIQ_SPREAD_CAUTION_PCT", d.liquidity.spreadCautionPct, 0.01, 100), spreadAdversePct: dec(env, P + "LIQ_SPREAD_ADVERSE_PCT", d.liquidity.spreadAdversePct, 0.01, 100), spreadExtremePct: dec(env, P + "LIQ_SPREAD_EXTREME_PCT", d.liquidity.spreadExtremePct, 0.01, 100),
+      optionSpreadCautionPct: dec(env, P + "LIQ_OPTION_SPREAD_CAUTION_PCT", d.liquidity.optionSpreadCautionPct, 0.01, 200), optionSpreadAdversePct: dec(env, P + "LIQ_OPTION_SPREAD_ADVERSE_PCT", d.liquidity.optionSpreadAdversePct, 0.01, 200),
+      optionSpreadExtremePct: dec(env, P + "LIQ_OPTION_SPREAD_EXTREME_PCT", d.liquidity.optionSpreadExtremePct, 0.01, 200), extremeSeverity: pick(env, P + "LIQ_EXTREME_SEVERITY", ["ADVERSE", "BLOCKING"], d.liquidity.extremeSeverity),
+      volumeThinRatio: dec(env, P + "LIQ_VOLUME_THIN_RATIO", d.liquidity.volumeThinRatio, 0.01, 10), poorAvgVolume: int(env, P + "LIQ_POOR_AVG_VOLUME", d.liquidity.poorAvgVolume, 0, 99_999),
+      minOpenInterest: int(env, P + "LIQ_MIN_OPEN_INTEREST", d.liquidity.minOpenInterest, 0, 99_999), poorOpenInterest: int(env, P + "LIQ_POOR_OPEN_INTEREST", d.liquidity.poorOpenInterest, 0, 99_999),
+      minDepthQuantity: int(env, P + "LIQ_MIN_DEPTH_QUANTITY", d.liquidity.minDepthQuantity, 0, 99_999), lastOutsideQuotePct: dec(env, P + "LIQ_LAST_OUTSIDE_QUOTE_PCT", d.liquidity.lastOutsideQuotePct, 0.01, 50),
+      entryDeviationCautionPct: dec(env, P + "LIQ_ENTRY_DEVIATION_CAUTION_PCT", d.liquidity.entryDeviationCautionPct, 0.01, 100), entryDeviationAdversePct: dec(env, P + "LIQ_ENTRY_DEVIATION_ADVERSE_PCT", d.liquidity.entryDeviationAdversePct, 0.01, 100),
+      optionDeviationMultiplier: dec(env, P + "LIQ_OPTION_DEVIATION_MULTIPLIER", d.liquidity.optionDeviationMultiplier, 1, 20), lastPriceDisconnectPct: dec(env, P + "LIQ_LAST_PRICE_DISCONNECT_PCT", d.liquidity.lastPriceDisconnectPct, 0.01, 50),
+    },
+    optionsRisk: {
+      ivCaution: dec(env, P + "OPT_IV_CAUTION", d.optionsRisk.ivCaution, 0.01, 1000), ivAdverse: dec(env, P + "OPT_IV_ADVERSE", d.optionsRisk.ivAdverse, 0.01, 1000), ivExtreme: dec(env, P + "OPT_IV_EXTREME", d.optionsRisk.ivExtreme, 0.01, 1000),
+      ivSpikeCautionPct: dec(env, P + "OPT_IV_SPIKE_CAUTION_PCT", d.optionsRisk.ivSpikeCautionPct, 0.01, 1000), ivSpikeAdversePct: dec(env, P + "OPT_IV_SPIKE_ADVERSE_PCT", d.optionsRisk.ivSpikeAdversePct, 0.01, 1000),
+      ivSpikeExtremePct: dec(env, P + "OPT_IV_SPIKE_EXTREME_PCT", d.optionsRisk.ivSpikeExtremePct, 0.01, 1000), ivAtmRatioCaution: dec(env, P + "OPT_IV_ATM_RATIO_CAUTION", d.optionsRisk.ivAtmRatioCaution, 1.01, 20),
+      expiryCautionDays: int(env, P + "OPT_EXPIRY_CAUTION_DAYS", d.optionsRisk.expiryCautionDays, 1, 60), expiryAdverseHours: int(env, P + "OPT_EXPIRY_ADVERSE_HOURS", d.optionsRisk.expiryAdverseHours, 1, 1440),
+      expiryExtremeHours: int(env, P + "OPT_EXPIRY_EXTREME_HOURS", d.optionsRisk.expiryExtremeHours, 0, 1440),
+      expiryCloseUtc: ((): string => { const v = env[P + "OPT_EXPIRY_CLOSE_UTC"]; if (v === undefined || v === "") return d.optionsRisk.expiryCloseUtc; if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) bad(P + "OPT_EXPIRY_CLOSE_UTC"); return v; })(),
+      thetaCautionPct: dec(env, P + "OPT_THETA_CAUTION_PCT", d.optionsRisk.thetaCautionPct, 0.01, 100), thetaAdversePct: dec(env, P + "OPT_THETA_ADVERSE_PCT", d.optionsRisk.thetaAdversePct, 0.01, 100),
+      gammaWindowDays: int(env, P + "OPT_GAMMA_WINDOW_DAYS", d.optionsRisk.gammaWindowDays, 1, 30), gammaCaution: dec(env, P + "OPT_GAMMA_CAUTION", d.optionsRisk.gammaCaution, 0.0001, 1), gammaAdverse: dec(env, P + "OPT_GAMMA_ADVERSE", d.optionsRisk.gammaAdverse, 0.0001, 1),
+      vegaCautionPct: dec(env, P + "OPT_VEGA_CAUTION_PCT", d.optionsRisk.vegaCautionPct, 0.01, 100), deltaLow: dec(env, P + "OPT_DELTA_LOW", d.optionsRisk.deltaLow, 0.0001, 0.99), deltaHigh: dec(env, P + "OPT_DELTA_HIGH", d.optionsRisk.deltaHigh, 0.01, 0.9999),
+      otmCautionPct: dec(env, P + "OPT_OTM_CAUTION_PCT", d.optionsRisk.otmCautionPct, 0.01, 100), otmAdversePct: dec(env, P + "OPT_OTM_ADVERSE_PCT", d.optionsRisk.otmAdversePct, 0.01, 100), itmCautionPct: dec(env, P + "OPT_ITM_CAUTION_PCT", d.optionsRisk.itmCautionPct, 0.01, 100),
+      minPremium: dec(env, P + "OPT_MIN_PREMIUM", d.optionsRisk.minPremium, 0, 99_999), spreadCautionPct: dec(env, P + "OPT_SPREAD_CAUTION_PCT", d.optionsRisk.spreadCautionPct, 0.01, 200), spreadAdversePct: dec(env, P + "OPT_SPREAD_ADVERSE_PCT", d.optionsRisk.spreadAdversePct, 0.01, 200),
+      entryDeviationCautionPct: dec(env, P + "OPT_ENTRY_DEVIATION_CAUTION_PCT", d.optionsRisk.entryDeviationCautionPct, 0.01, 1000), entryDeviationAdversePct: dec(env, P + "OPT_ENTRY_DEVIATION_ADVERSE_PCT", d.optionsRisk.entryDeviationAdversePct, 0.01, 1000),
+      minOpenInterest: int(env, P + "OPT_MIN_OPEN_INTEREST", d.optionsRisk.minOpenInterest, 0, 99_999), poorOpenInterest: int(env, P + "OPT_POOR_OPEN_INTEREST", d.optionsRisk.poorOpenInterest, 0, 99_999),
+      minVolume: int(env, P + "OPT_MIN_VOLUME", d.optionsRisk.minVolume, 0, 99_999), poorVolume: int(env, P + "OPT_POOR_VOLUME", d.optionsRisk.poorVolume, 0, 99_999),
+      stopInvalidation: pick(env, P + "OPT_STOP_INVALIDATION", ["ADVERSE", "BLOCKING"], d.optionsRisk.stopInvalidation), extremeSeverity: pick(env, P + "OPT_EXTREME_SEVERITY", ["ADVERSE", "BLOCKING"], d.optionsRisk.extremeSeverity),
     },
   });
 }
