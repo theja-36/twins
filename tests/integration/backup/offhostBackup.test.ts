@@ -67,7 +67,7 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
     expect(drill.checks["row_counts"]).toMatch(/tables match/);
     expect(drill.checks["chain_heads"]).toBe("32 chains match");
     expect(drill.checks["audit_chain"]).toMatch(/PASS/);
-    expect(drill.checks["verify_migrations"]).toMatch(/27 migrations/);
+    expect(drill.checks["verify_migrations"]).toMatch(/28 migrations/);
     expect(drill.crossHost).toBe(true);
     expect((await readStatus(statusDir, "drill", new Date(), 100)).ok).toBe(true);
     // the scratch database is gone and no plaintext is left behind
