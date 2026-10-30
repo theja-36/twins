@@ -27,7 +27,9 @@ const MARKER = "SECRET-MESSAGE-TEXT-DO-NOT-LEAK";
 const CHAINS = ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "agent_findings", "agent_evidence_references", "agent_orchestrator_syntheses"];
 const AGENT_TABLES = CHAINS;
 const LIVE = ["orders", "fills", "positions", "risk_approvals", "risk_approval_cards", "decisions", "claim_review_cards", "telegram_intake_outbox", "risk_decisions", "signals"];
-const ENGINE = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" }); // the real default path: both production agents are REQUIRED
+// Task 2 scope: the two Task 2 agents are required; the Task 3 agents (calendar, macro) are switched off here and covered by calendarMacroAgents.test.ts
+const OFF = ["macro-global-v1", "market-calendar-v1"];
+const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "instrument-verification-v1,signal-integrity-v1" }), disabledAgents: OFF };
 
 beforeAll(() => { handle = createBoundedDb(DATABASE_URL, { max: 4, idleTimeoutMillis: 10_000 }); state = inMemoryStateSource(); configureRuntimeState({ source: state, ttlMs: 0, failureTtlMs: 0 }); });
 afterEach(() => { state.set({ INTAKE_ENABLED: true, KILL_SWITCH_ACTIVE: false }); state.failWith(null); });
@@ -172,9 +174,9 @@ describe("failures fail closed (the required agents' results must exist)", () =>
   });
   it("a disabled required agent is a missing result => INCOMPLETE", async () => {
     const d = await make();
-    const out = await runAgentEngine(db(), d.id, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES, instrumentReference: equityRef(d.symbol) }), config: { ...ENGINE, disabledAgents: ["signal-integrity-v1"], requiredAgents: ENGINE.requiredAgents.filter((x) => x !== "signal-integrity-v1").concat([]) } });
+    const out = await runAgentEngine(db(), d.id, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES, instrumentReference: equityRef(d.symbol) }), config: { ...ENGINE, disabledAgents: [...OFF, "signal-integrity-v1"], requiredAgents: ENGINE.requiredAgents.filter((x) => x !== "signal-integrity-v1").concat([]) } });
     expect(out).toMatchObject({ assessment: "RESEARCH_SUPPORTIVE" }); // not required once removed from the required list: its absence is an explicit configuration choice
-    const strict = await runAgentEngine(db(), (await make()).id, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES, instrumentReference: null }), config: { ...ENGINE, disabledAgents: ["signal-integrity-v1"], requiredAgents: ["instrument-verification-v1", "signal-integrity-v1"] } });
+    const strict = await runAgentEngine(db(), (await make()).id, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES, instrumentReference: null }), config: { ...ENGINE, disabledAgents: [...OFF, "signal-integrity-v1"], requiredAgents: ["instrument-verification-v1", "signal-integrity-v1"] } });
     expect(strict).toMatchObject({ assessment: "RESEARCH_INCOMPLETE", halt: true });
   });
   it("the kill switch refuses before either agent runs", async () => {

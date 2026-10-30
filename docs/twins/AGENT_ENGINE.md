@@ -54,7 +54,7 @@ No message text is read (inputs are parsed fields, tiers and numbers); agent tex
 
 ## The first two research agents (Stage 5 / Task 2)
 
-Both are **production agents**, registered **only when the engine is explicitly enabled** (`TWINS_AGENT_ENGINE_ENABLED=true`; otherwise the worker uses the empty registry and loads nothing). When enabled and `TWINS_AGENT_ENGINE_REQUIRED` is not set, **both are required** (a missing result is `RESEARCH_INCOMPLETE` and halts - set it to an empty value to make them optional). They are independent (no `dependsOn`), so they run in parallel in one level. Both can block, neither is advisory, default weight 60 (override with `TWINS_AGENT_ENGINE_WEIGHTS`, switch off with `TWINS_AGENT_ENGINE_DISABLED_AGENTS`). A BLOCKING verdict yields `RESEARCH_BLOCKED`, which stops the worker at the existing halt point; **approval eligibility is unchanged** and nothing here grants approval.
+Both are **production agents**, registered **only when the engine is explicitly enabled** (`TWINS_AGENT_ENGINE_ENABLED=true`; otherwise the worker uses the empty registry and loads nothing). When enabled and `TWINS_AGENT_ENGINE_REQUIRED` is not set, **both are required** (since Stage 5 / Task 3 the default required set is all four production agents) (a missing result is `RESEARCH_INCOMPLETE` and halts - set it to an empty value to make them optional). They are independent (no `dependsOn`), so they run in parallel in one level. Both can block, neither is advisory, default weight 60 (override with `TWINS_AGENT_ENGINE_WEIGHTS`, switch off with `TWINS_AGENT_ENGINE_DISABLED_AGENTS`). A BLOCKING verdict yields `RESEARCH_BLOCKED`, which stops the worker at the existing halt point; **approval eligibility is unchanged** and nothing here grants approval.
 
 **Inputs are sanitized parsed fields only.** `signal_context` is new: the signal time and the revision state of its message (`current` / `superseded` / `ambiguous`, other-version count, whether earlier versions had different levels), computed from stored rows with the existing revision classifier (`classifyRevisions`); messages are read by an explicit metadata-only column list. No message text, raw payload or author reaches an agent, an event or a table (asserted by source tests and by a marker-text integration test over all six agent tables). Agents get the engine's clock (`ctx.now`) and never read the system clock.
 
@@ -96,6 +96,59 @@ Engine: `TWINS_AGENT_ENGINE_ENABLED`, `_REQUIRED`, `_DISABLED_AGENTS`, `_WEIGHTS
 * Live signals carry a single entry price; the entry is treated as a level entry (no breakout / pullback distinction).
 * The reference is only as good as its snapshot; the historical-dataset adapter only shows that a contract appeared in imported data.
 * A supportive result from both agents does not make a decision eligible: every later gate still runs.
+
+## The calendar and macro agents (Stage 5 / Task 3)
+Two more production agents, registered (with the Task 2 agents) only when the engine is explicitly enabled and required by default, so a missing result fails closed. They run in the same parallel level, receive parsed fields and the engine clock only (never message text), use **injected providers** (no external API, no model), never write anything but their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both read the engine clock (`ctx.now`), never the system clock.
+
+### Provider interfaces (`packages/agents/src/agents/calendarProviders.ts`, `macroProvider.ts`)
+| Interface | Contract | Shipped implementations |
+| --- | --- | --- |
+| `HolidayCalendarProvider` | `day(market, date)` -> `{ date, holiday, holidayName, earlyCloseLocal }` or `null` when the market / date is not covered; `asOf` | in-memory (tests); file `twins-holiday-calendar-v1` (per market a covered range and the exceptional days: holidays and early closes) |
+| `EconomicCalendarProvider` | `coverage {from,to}`, `events({from,to})` -> `{ id, name, at (ISO with offset), impact LOW/MEDIUM/HIGH/CRITICAL, markets[] ("ALL" = every market) }`; `asOf` | in-memory; file `twins-economic-calendar-v1` |
+| `MacroContextProvider` | `context({ market, underlying })` -> snapshot `{ asOf, index {level, previousClose, open, recentCloses[]}, breadth, volatilityIndex, currency, global[], releases[] }` or `null` | in-memory; file `twins-macro-context-v1` (keys `MARKET:UNDERLYING` or `MARKET:*`) |
+Files are read with the historical import safety checks (regular file, no credential-like name, no binary, size cap), validated strictly (malformed data is rejected, nothing is repaired) and an unreadable or invalid file stops the worker at start-up. A provider returns `null` for what it does not cover and throws on failure; the agents re-validate whatever a provider returns.
+
+### `market-calendar-v1` - Market Calendar Agent (weight 50, can block)
+Inputs: `risk_decision`, `signal_context` (required), the holiday and economic calendars, the market session configuration, the engine clock.
+| Check | Result |
+| --- | --- |
+| market | missing or not in the session configuration -> **BLOCKING** (`MARKET_MISSING`, `MARKET_UNKNOWN`). Defaults: NSE, BSE, NFO, BFO 09:15-15:30 IST, Monday-Friday (`TWINS_AGENT_CALENDAR_SESSIONS` overrides) |
+| session at the engine clock | weekend, holiday, before the open, at or after the close -> **BLOCKING** (`MARKET_WEEKEND`, `MARKET_HOLIDAY`, `MARKET_NOT_OPEN`, `MARKET_CLOSED`). An early close (from the holiday calendar) moves the close: `EARLY_CLOSE_SESSION` -> CAUTION; closing within `TWINS_AGENT_NEAR_CLOSE_MINUTES` (15) -> CAUTION |
+| signal time | sent outside trading hours -> `TWINS_AGENT_SIGNAL_OUTSIDE_SESSION` (default CAUTION); unknown time / uncovered day -> CAUTION |
+| expiry (derivatives) | already expired -> **BLOCKING** `EXPIRY_PASSED`; expiry day -> `TWINS_AGENT_EXPIRY_DAY_SEVERITY` (CAUTION); within `TWINS_AGENT_EXPIRY_APPROACHING_DAYS` (2) -> `..._APPROACHING_SEVERITY` (INFO); expiry on a weekend / holiday -> CAUTION. Judged in the market's local calendar |
+| scheduled events (relative to the engine clock, for the market or `ALL`) | CRITICAL inside the blackout (`60` min before / `30` after) -> **BLOCKING** (`TWINS_AGENT_CRITICAL_EVENT_BLACKOUT`: BLOCKING or ADVERSE); CRITICAL later inside the look-ahead (240 min) -> ADVERSE; HIGH inside its window (120 before / 30 after) -> ADVERSE, later in the look-ahead -> CAUTION; MEDIUM in the look-ahead -> CAUTION; LOW -> INFO |
+| the calendars | snapshot older than `TWINS_AGENT_CALENDAR_MAX_AGE_DAYS` (30) or undated -> CAUTION; economic coverage ending before the look-ahead -> CAUTION |
+| failures | no holiday / economic calendar configured, a provider that throws, a date not covered by the holiday calendar, an economic calendar not covering the current time, malformed data -> **UNAVAILABLE** (never a pass; fixed error codes, the provider's message is never stored) |
+Verdict = the worst level; a clean calendar = SUPPORTIVE. "Near the signal time": the agent runs when the decision is made, so events are judged against the engine clock; the signal's own time is checked against the session separately.
+
+### `macro-global-v1` - Macro / Global Market Agent (weight 50, can block)
+Inputs: `risk_decision` (required), `signal_features`, `source_intelligence` (optional; only its status is recorded), the macro provider, the engine clock. Deterministic thresholds only; findings state what the data shows and do not infer causation.
+Signal direction is derived from the signal's own fields: BUY equity / future / CE and SELL PE are BULLISH exposure; SELL equity / future / CE and BUY PE are BEARISH (an unknown side or option type -> CAUTION `DIRECTION_UNKNOWN`, alignment not assessed).
+| Check | Result |
+| --- | --- |
+| required context | no provider, no context for the market, no index level, fewer closes than the trend lookback, malformed data, a context from the future or older than `TWINS_AGENT_MACRO_STALE_UNAVAILABLE_MINUTES` (1440), a provider that throws -> **UNAVAILABLE** (never a pass) |
+| staleness | older than `TWINS_AGENT_MACRO_STALE_CAUTION_MINUTES` (60) -> CAUTION |
+| trend alignment (over `TWINS_AGENT_MACRO_TREND_LOOKBACK_SESSIONS`, default 5) | against the direction by >= 2% -> ADVERSE; >= 0.75% -> CAUTION; aligned by >= 0.5% -> INFO `TREND_ALIGNED` (the only way to be SUPPORTIVE) |
+| one-day index move (absolute) | >= 7% -> **BLOCKING**; >= 3% -> ADVERSE; >= 1.5% -> CAUTION |
+| gap (open vs previous close, absolute) | >= 2% -> ADVERSE; >= 1% -> CAUTION |
+| volatility index | level >= 40 -> **BLOCKING**; >= 25 -> ADVERSE; >= 20 -> CAUTION; one-day rise >= 15% -> ADVERSE |
+| risk-off / risk-on | advancing share <= 0.3 (or a volatility spike with a falling index) against a bullish signal -> CAUTION, ADVERSE together with a spike; share >= 0.7 against a bearish signal -> CAUTION |
+| global indices | a one-day move against the direction >= 2% -> ADVERSE; >= 1% -> CAUTION |
+| currency | absolute one-day move >= 1% -> CAUTION |
+| macro releases (market or `ALL`) | CRITICAL inside the window (60 min before / 15 after) -> `TWINS_AGENT_MACRO_CRITICAL_RELEASE` (BLOCKING); HIGH -> ADVERSE; MEDIUM -> CAUTION |
+| completeness | missing optional sections are noted (INFO); all four missing -> CAUTION `CONTEXT_THIN` |
+Verdict = the worst level; with nothing adverse the verdict is **SUPPORTIVE** if the trend is aligned and **NEUTRAL** (confidence 70) otherwise.
+
+### Configuration (Tasks 3)
+Providers: `TWINS_AGENT_HOLIDAY_CALENDAR`, `TWINS_AGENT_ECONOMIC_CALENDAR`, `TWINS_AGENT_MACRO_PROVIDER` (`none` | `file:<path>`, default `none`). Sessions, look-ahead, blackout / high-event windows, severities, expiry, near-close and calendar-age settings: `TWINS_AGENT_CALENDAR_*`, `TWINS_AGENT_CRITICAL_*`, `TWINS_AGENT_HIGH_EVENT_*`, `TWINS_AGENT_SIGNAL_OUTSIDE_SESSION`, `TWINS_AGENT_EXPIRY_*`, `TWINS_AGENT_NEAR_CLOSE_MINUTES`. Macro thresholds: `TWINS_AGENT_MACRO_*` (lookback, trend, volatility, move, gap, breadth, global, currency, staleness, release window, critical-release severity). Enable / disable and weights use the engine settings. Every setting is listed in `rules.ts`; defaults are conservative and a malformed value throws at start-up. Note: disabling a default-required agent requires an explicit `TWINS_AGENT_ENGINE_REQUIRED` (otherwise start-up fails).
+
+### Limitations of these two agents
+* **With the engine enabled, all four required agents need their providers**: with no holiday calendar, economic calendar or macro context every decision is `INCOMPLETE` and halts. Reviewed, regularly refreshed snapshot files (or a future live adapter, a separate task) must exist before enabling.
+* They describe session, calendar and market conditions; they do not predict, do not know the signal's merit, and the macro agent infers no cause. Index, breadth, volatility and global data are only as good (and as fresh) as the provider's snapshot; staleness is flagged, not repaired.
+* Time zones: sessions use fixed UTC offsets per market (no daylight-saving rules); a market that observes DST needs its offset kept current in `TWINS_AGENT_CALENDAR_SESSIONS`. Weekend days are Saturday and Sunday. Holiday and early-close data come only from the holiday calendar.
+* The economic calendar's `markets` are matched by code; the holiday calendar must use the same market code as the signal (e.g. `NSE`).
+* Events are judged against the engine clock; a re-run of the same decision version returns the stored result and does not re-measure.
+* A supportive result from the agents does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.
