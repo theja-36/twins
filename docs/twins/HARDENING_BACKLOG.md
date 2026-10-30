@@ -1,0 +1,152 @@
+# Stage 5 hardening backlog
+
+> Written 2026-10-30 from the Stage 5 closing review ([STAGE5_CLOSING_REVIEW.md](STAGE5_CLOSING_REVIEW.md)). **Nothing here is scheduled or authorized**: it is a prioritized, evidence-based proposal for the owner (D-075). No time estimates are given. Each item names the current behaviour (verified in the repository at the merge of PR #45), the risk, the proposed work and an acceptance test. Requested areas: process isolation / CPU limits HB-07; agent code-hash detection HB-08; learned / adaptive weights HB-09; DST-aware calendars HB-14; time-of-day volume HB-15; volatility surface and implied-versus-realised HB-16; exchange-calendar expiry HB-17; alert routing HB-18; snapshot exporter / scheduler HB-11; provider settings / snapshot directory unification HB-12; concurrent snapshot writes HB-13; approval-eligibility edge cases HB-01 .. HB-04 and the consolidated table at the end. HB-05, HB-06, HB-10, HB-19, HB-20 and HB-21 were found during the review.
+
+## Priority scale
+* **P0 - before the engine is enabled on anything but synthetic data in staging.** Closes a way an unacceptable decision could become approvable or a halt could be bypassed.
+* **P1 - before any enablement with real data.** Operational safety and supply of data.
+* **P2 - model fidelity.** Improves judgement quality; does not open a safety gap.
+* **P3 - governance-heavy or speculative.**
+
+## Summary
+| ID | Item | P | Depends on |
+| --- | --- | --- | --- |
+| HB-01 | Bind an approval to the specific assessment run it relied on | P0 | - |
+| HB-02 | "Latest assessment wins" can launder an ADVERSE / BLOCKED result | P0 | HB-01 |
+| HB-03 | Make "engine enabled" visible to the database so a missing assessment is refused there too | P0 | - |
+| HB-04 | Role grants for the agent tables and `risk_decisions` in eligibility checks | P0 | deployment |
+| HB-05 | Challenger dependency on every agent; all-or-nothing activation | P1 | - |
+| HB-06 | Staged / shadow activation (engine enabled without halting) | P1 | HB-05 |
+| HB-07 | Process isolation and CPU / memory limits for agents | P1 | - |
+| HB-08 | Agent code-hash detection | P1 | - |
+| HB-09 | Calibration of thresholds and weights; learned / adaptive weights | P2 / P3 | outcome data |
+| HB-10 | Single-agent ADVERSE veto policy review | P1 | HB-09 |
+| HB-11 | Snapshot exporter and scheduler | P1 | owner: Q-004 |
+| HB-12 | Unify provider settings and the snapshot directory | P1 | - |
+| HB-13 | Concurrent snapshot write policy | P1 | HB-12 |
+| HB-14 | DST-aware / per-market calendars | P2 | - |
+| HB-15 | Time-of-day volume adjustment | P2 | - |
+| HB-16 | Volatility surface and implied-versus-realised comparison | P2 | - |
+| HB-17 | Exchange-calendar expiry handling | P2 | HB-14 |
+| HB-18 | Alert routing for `agent_engine.*` events | P1 | owner: Q-018 / D-042 |
+| HB-19 | Challenger, agent and indicator calibration evidence | P2 | HB-09 |
+| HB-20 | Test gaps: real data, performance, bot callback end-to-end | P1 | - |
+| HB-21 | Synthesis version and old rows | P3 | - |
+
+## P0
+
+### HB-01 Bind an approval to the specific assessment run it relied on
+* **Now:** eligibility re-checks "the latest assessment of the lineage" at the moment of approval; the approval record does not say which run that was, and the card does not show it.
+* **Risk:** the audit trail cannot prove which research result an approval relied on; two operators could see different "latest" results.
+* **Work:** record the orchestrator run id and its synthesis hash in the approval's decision snapshot (the approval function already stores a snapshot); show the assessment category and run id on the approval card; refuse an approval whose card cites a run that is no longer the latest.
+* **Acceptance:** a test creates a card on run A, creates a newer run B, and the tap is refused (`research_assessment_changed`); the approval row carries run id and hash; audit chain verifies.
+
+### HB-02 "Latest assessment wins" can launder an ADVERSE / BLOCKED result
+* **Now:** a newer run on a newer version supersedes an older one in either direction (D-073 a). Re-running with a different configuration (for example another weight set or halt list) creates a new run key and may turn ADVERSE into CAUTION.
+* **Risk:** an operator or a configuration change can remove an adverse finding without any evidence changing; the earlier run stays in the audit trail but no longer stops the approval.
+* **Work:** policy options for the owner: (a) keep latest-wins but require the newer run to use the **same agent set, configuration hash and input hash family** as the one it supersedes, or an explicit, audited `supersede` record by an operator; (b) refuse if **any** run in the lineage is BLOCKED / INCOMPLETE / ADVERSE unless superseded by such a record. Implement in the application layer and the database function together.
+* **Acceptance:** a test with a config-change re-run that improves the verdict is refused without the supersede record; with it, allowed; both layers agree.
+
+### HB-03 Make "engine enabled" visible to the database
+* **Now:** the database function refuses a bad assessment but cannot refuse a missing one, because "engine enabled" is an environment setting of the worker; only the application layer refuses `research_assessment_missing`. A direct call to the function (not via the service or the bot) for a decision with no assessment is not refused for that reason. (A card cannot exist for a decision that failed the application check, so the bot path is covered in practice.)
+* **Work:** a `system_controls`-style flag (`AGENT_ENGINE_ENABLED`, audited like the kill switch) written by an operator command; the function refuses a missing assessment while it is set. Keep the environment setting as the source for the worker and add a start-up consistency check.
+* **Acceptance:** with the flag set, a direct function call for a decision with no run returns `refused:research_assessment_missing`; with it clear, behaviour is unchanged.
+
+### HB-04 Role grants for the agent tables and `risk_decisions`
+* **Now:** the application-layer check reads `agent_orchestrator_runs`, `agent_orchestrator_syntheses` and `risk_decisions` with the evaluating role. If the role lacks SELECT, the check fails closed (`research_assessment_unavailable`) while the engine is enabled and is skipped while it is disabled.
+* **Risk:** a deployment without the grants either refuses everything or silently skips the check.
+* **Work:** add the grants to the role setup scripts, a deployment verification step (`verify-migrations`-style) that reads each table as the runtime role, and a start-up probe in the API / worker that logs `agent_engine.config.invalid` if the probe fails with the engine enabled.
+* **Acceptance:** a test creates the runtime role with and without the grant; the probe reports the difference.
+
+## P1
+
+### HB-05 Challenger dependency on every agent; all-or-nothing activation
+* **Now:** the challenger depends on every other registered agent; disabling one without the challenger makes the engine refuse to start (`DEPENDENCY_DISABLED`); all twelve are required by default; one missing snapshot makes every decision INCOMPLETE.
+* **Work:** let the challenger declare *optional* dependencies (it skips an agent that is disabled, but a *required* agent that did not complete still skips it); a required-agent profile per activation stage (HB-06).
+* **Acceptance:** disabling a non-required agent no longer requires disabling the challenger; a required agent's failure still yields INCOMPLETE.
+
+### HB-06 Staged / shadow activation
+* **Now:** enabled means halting. There is no mode that records assessments without halting.
+* **Work:** a `SHADOW` mode: the engine runs and records, the worker never halts on it, eligibility ignores it; the observability record says `shadow`. Switching from shadow to enforcing is an audited control change.
+* **Acceptance:** in shadow mode an ADVERSE assessment is recorded and logged but the flow continues and eligibility is unchanged; in enforcing mode both halt.
+
+### HB-07 Process isolation and CPU / memory limits
+* **Now:** agents run in the worker process; the timeout is cooperative (the result is ignored, but a CPU-bound agent blocks the event loop). Today every agent is first-party and deterministic.
+* **Work:** run agents in worker threads or a child process with a hard kill timeout, memory limit and no network / no filesystem beyond the snapshot directory; required before any agent not written and reviewed in this repository, or any LLM-assisted agent, is allowed.
+* **Acceptance:** an agent in an infinite loop is killed at its timeout without delaying other agents; resource limits are enforced; results cross the boundary only as validated JSON.
+
+### HB-08 Agent code-hash detection
+* **Now:** the registry stores a hash of each agent's *contract*; a change to the agent's code with the same version is not detected.
+* **Work:** hash the agent's compiled module (or a source manifest) at build time, store it in `agent_definitions`, and refuse to start (or log an error) if a registered agent's hash differs from the pinned manifest for its version.
+* **Acceptance:** changing an agent's logic without bumping its version fails the start-up check.
+
+### HB-10 Single-agent ADVERSE veto policy review
+* **Now:** an ADVERSE verdict from any scoring agent of weight >= 50 halts the flow (eleven of the twelve agents have weight >= 50; the challenger has 30). One miscalibrated agent can therefore halt every decision, and the thresholds that decide ADVERSE are uncalibrated.
+* **Work:** owner review of which agents may veto; per-agent veto flag separate from weight; evidence from shadow runs (HB-06) to set it.
+
+### HB-11 Snapshot exporter and scheduler
+* **Now:** snapshots must be produced elsewhere and installed with `agents:snapshots write`. No exporter, no scheduler, no external fetch.
+* **Work (separately reviewed, after Q-004):** one exporter per provider, each writing through `writeSnapshot`; a scheduler (or an operator runbook) with an explicit freshness SLO and failure alert; egress allow-list for the exporter only; no exporter inside the worker.
+* **Acceptance:** each exporter produces a snapshot that `validate` accepts; a failed export leaves the previous snapshot in place and raises an alert.
+
+### HB-12 Unify provider settings and the snapshot directory
+* **Now:** the worker reads the files named by `TWINS_AGENT_*_PROVIDER`; the manager validates `<dir>/<kind>.json`; the manager reports a setting that does not read the managed file (`notServed`) but nothing makes them agree.
+* **Work:** a single `TWINS_AGENT_SNAPSHOT_DIR` resolving each provider to `<dir>/<kind>.json` unless explicitly overridden; the worker validates the required snapshots at start-up and refuses to enable the engine if they are not acceptable under the configured strictness (log `agent_engine.config.invalid`).
+* **Acceptance:** with the engine enabled and a required snapshot expired, the worker does not start the engine and says why.
+
+### HB-13 Concurrent snapshot write policy
+* **Now:** writes are atomic and need a typed confirmation, but two operators confirming the same kind both succeed; the last write wins and the first previous-version copy is overwritten (`.previous/` keeps one generation).
+* **Work:** an exclusive lock file per kind, a compare-and-swap option (`--expect-sha256`), and more than one retained generation with an audit log line per write.
+* **Acceptance:** a concurrent write is refused or serialized; `--expect-sha256` with a stale hash is refused.
+
+### HB-18 Alert routing for `agent_engine.*` events
+* **Now:** records go to the structured log only. The alert destination is deferred (Q-018 / D-042).
+* **Work:** map `agent_engine.run.failed`, `config.invalid`, repeated `run.completed` with INCOMPLETE, and a missing-provider `providers` warning to the existing alerting package once the destination is approved; rate-limit and de-duplicate.
+* **Acceptance:** a simulated failure produces exactly one alert per window; nothing is sent while the destination is unconfigured.
+
+### HB-20 Test gaps
+Real-provider data (none exists), performance with many agents and large snapshots (16 MB cap, 200k-bar series), the approval bot's callback end-to-end with the new refusal codes against a running bot, and a deployment rehearsal of migrations 0025-0027 on a copy of the staging database.
+
+## P2 - model fidelity
+
+### HB-14 DST-aware / per-market calendars
+* **Now:** sessions are configuration with fixed UTC offsets (default NSE / BSE 09:15-15:30 IST, no DST); weekends are Saturday / Sunday; the macro agent treats global sessions as open or closed from the snapshot.
+* **Work:** per-market time zones (IANA) with DST, market-specific weekends and half days from the holiday snapshot; tests across DST changes.
+
+### HB-15 Time-of-day volume adjustment
+* **Now:** the liquidity agent compares volume with the average without regard to the time of day, so early-session volume looks thin (CAUTION only).
+* **Work:** an intraday volume profile (cumulative fraction expected by time), applied to the thin-volume ratio.
+
+### HB-16 Volatility surface and implied-versus-realised comparison
+* **Now:** the options agent takes IV, greeks and the chain as supplied; it compares IV with the previous session and the at-the-money IV only; it does not recompute greeks, build a surface or compare with realised volatility.
+* **Work:** realised volatility from the OHLC snapshot, an IV percentile / term-structure view from the chain, skew; thresholds calibrated on history.
+
+### HB-17 Exchange-calendar expiry handling
+* **Now:** the expiry is the configured close time (10:00 UTC) of the expiry date; a holiday-shifted expiry is not applied (the calendar agent flags the day, the options agent does not move the expiry).
+* **Work:** resolve the effective expiry from the exchange calendar and the contract record; tests for holiday-shifted weekly and monthly expiries.
+
+### HB-19 Calibration evidence
+Agent thresholds (spread, IV, theta, gamma, trend, RSI, pattern, news) are conservative round numbers. Work: back-test the verdict distribution on historical data, report false-halt and miss rates per agent, and adjust only through reviewed configuration changes.
+
+## P3
+
+### HB-09 Learned / adaptive weights
+* **Now:** weights are static configuration (50 / 60 / 30). Nothing learns.
+* **Work:** only after outcome data, shadow runs and governance exist: propose weight changes offline, review them, apply them as a versioned configuration with the audit trail. **No online adaptation, and no weight change that can lower a veto, without owner approval.** The synthesis output must keep stating the weights used.
+
+### HB-21 Synthesis version and old rows
+Runs stored under `research-synthesis-v1` have no `halt` block (`haltReasonCode` is `UNKNOWN` for them). Work, only if needed: a read-time adapter, never a rewrite of append-only rows.
+
+## Approval-eligibility edge cases (consolidated)
+| Case | Current behaviour | Item |
+| --- | --- | --- |
+| Newer run improves the verdict | allowed (latest wins) | HB-02 |
+| Approval relies on a run that is later superseded | not detected after the fact | HB-01 |
+| No assessment, engine enabled, direct function call | not refused in the database | HB-03 |
+| No assessment, engine disabled | unchanged (by design) | - |
+| Engine disabled after a bad assessment exists | still refused (by design) | - |
+| `ENFORCED=false` | only the application layer is off; the database floor stays | D-073 c |
+| Customised halt list | does not weaken eligibility (three mandatory refusals) | - |
+| Role cannot read the agent tables | engine enabled: refused (`unavailable`); disabled: skipped | HB-04 |
+| Assessment older than the decision's validity | not checked; the decision's own window applies | HB-01 |
+| Run on a version older than the approvable one with unchanged inputs | counted (lineage rule) | D-073 a |
