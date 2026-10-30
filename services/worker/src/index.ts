@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveInstrumentReference, runAgentEngine } from "@twins/agents";
+import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveInstrumentReference, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -346,10 +346,11 @@ const agentEngineConfig = loadAgentEngineConfig();
 const agentRules = agentEngineConfig.enabled ? loadAgentRulesConfig() : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? resolveInstrumentReference(agentRules.instrument.referenceSource) : null;
+const agentProviders = agentRules ? resolveCalendarMacroProviders(agentRules) : null;
 const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
   if (!agentRules) return createDefaultRegistry();
   let r = agentRegistries.get(db);
-  if (!r) { r = createProductionRegistry({ rules: agentRules, instrumentReference: agentReference, historicalReference: historicalDatasetReference(db) }); agentRegistries.set(db, r); }
+  if (!r) { r = createProductionRegistry({ rules: agentRules, instrumentReference: agentReference, historicalReference: historicalDatasetReference(db), ...(agentProviders ?? {}) }); agentRegistries.set(db, r); }
   return r;
 };
 const agentEngineFor = (log: StructuredLogger, db: Db) => (decisionId: string) => runAgentEngine(db, decisionId, { registry: agentRegistryFor(db), config: agentEngineConfig, emit: (e) => log.info("worker.agent_engine.event", { ...e }) });
