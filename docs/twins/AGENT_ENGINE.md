@@ -441,5 +441,8 @@ Each report carries the file name, required flag, a fixed reason code, `as_of`, 
 * There is no exporter, scheduler or fetcher: snapshots must be produced elsewhere and installed with `write` (each a separate, reviewed task). Two operators writing the same kind concurrently each get an atomic replace but the last confirmed write wins.
 * The log volume bound applies to the engine's own records; the worker's other lines are unchanged.
 
+## Stage 5 closure
+The stage is reviewed in [STAGE5_CLOSING_REVIEW.md](STAGE5_CLOSING_REVIEW.md); remaining hardening work is prioritized in [HARDENING_BACKLOG.md](HARDENING_BACKLOG.md) and the proposed next stage in [STAGE6_PLAN.md](STAGE6_PLAN.md).
+
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.
