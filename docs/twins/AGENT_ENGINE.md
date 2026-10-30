@@ -200,5 +200,56 @@ Providers: `TWINS_AGENT_NEWS_PROVIDER`, `TWINS_AGENT_SENTIMENT_PROVIDER`, `TWINS
 * The index-underlying list is configuration, not discovery: an index missing from it is treated as not applicable (the instrument agent still verifies the underlying).
 * Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
 
+## The technical-structure and price-action agents (Stage 5 / Task 5)
+Two more production agents, registered with the earlier ones only when the engine is explicitly enabled and **required by default** (the default required set is now all eight production agents, so a missing result fails closed). They run in the same parallel level (default concurrency limit 4), receive parsed fields and the engine clock only, use **injected OHLC / last-price providers** (no external API, no model), write only their own run records and never grant approval. A BLOCKING verdict halts at the existing worker halt point; approval eligibility is unchanged. Both judge the **underlying's** candles (for an option, the underlying's series) with the direction derived from side and option type as in `macro-global-v1`. Findings state what the series shows; they do not predict or infer cause.
+
+### Provider interfaces (`ohlcProviders.ts`, `ohlcCommon.ts`)
+| Interface | Contract | Shipped implementations |
+| --- | --- | --- |
+| `OhlcProvider` | `candles({market,symbol,limit,to})` -> `{ symbol, intervalSeconds, bars[{ t (ISO with offset), open, high, low, close, volume|null }] }` oldest first, or `null`; `asOf` | in-memory; file `twins-ohlc-v1` (keys `MARKET:SYMBOL`); a read-only adapter over the imported historical datasets (`equity_price` series; undated snapshot, so it is a CAUTION) |
+| `LastPriceProvider` (optional) | `price({market,symbol})` -> `{ price, asOf }` or `null` | in-memory; file `twins-last-price-v1` |
+Candles are validated at file load and again by the agents (positive finite prices, high >= low, open / close inside the range, strictly increasing offset-bearing times, non-negative volume); nothing is repaired. Candle queries use `TWINS_AGENT_OHLC_MARKET` (default `NSE`, the cash-market code).
+
+Shared data rules (`loadMarketBars`): no provider, a throwing provider, no candles, a symbol mismatch, malformed candles, fewer bars than the agent's `MIN_BARS`, a snapshot older than `TWINS_AGENT_OHLC_STALE_UNAVAILABLE_MINUTES` (1440) or dated in the future, a latest candle older than `TWINS_AGENT_OHLC_MAX_BAR_AGE_DAYS` (5) or in the future -> **UNAVAILABLE** (never a pass). A snapshot older than `..._STALE_CAUTION_MINUTES` (120) or undated -> CAUTION. The reference price is the last-price provider's price when present and fresh (stale -> CAUTION, unusable -> falls back with CAUTION, differing from the latest close by more than `..._PRICE_DISCONNECT_PCT` (5) -> CAUTION), otherwise the latest close.
+
+### `technical-structure-v1` - Technical Structure Agent (weight 50, can block)
+Inputs: `risk_decision` (required); `signal_context`, `signal_features`, `source_intelligence` (optional; only its status is recorded); OHLC provider (required), last-price provider (optional); the engine clock.
+| Check | Result |
+| --- | --- |
+| trend over `TWINS_AGENT_TECH_LONG_LOOKBACK` (30 bars) | against the direction by >= `TREND_ADVERSE_PCT` (4%) -> ADVERSE; >= `TREND_CAUTION_PCT` (1%) -> CAUTION; aligned by >= 1% -> supportive evidence. The short lookback (10) disagreeing with the long one by >= 1% each way -> CAUTION |
+| swing structure (`SWING_STRENGTH` 2) | the last two swing highs and lows: lower highs and lower lows against a long (or the mirror) -> CAUTION; aligned -> supportive evidence |
+| break of the prior `BREAKOUT_LOOKBACK` (20) bars | a break in the signal direction -> supportive evidence; a break against it -> `TECH_BREAKDOWN_AGAINST` (ADVERSE, configurable BLOCKING) |
+| support / resistance | a swing level on the wrong side within `SR_PROXIMITY_PCT` (0.75%) -> CAUTION; a supporting level nearby -> INFO |
+| moving averages (10 / 30 simple) | stacked against the direction -> CAUTION; aligned -> supportive evidence |
+| momentum (Wilder RSI 14) | stretched in the direction (>= 75 for a long, <= 25 for a short) or 15+ points against -> CAUTION; 15+ points aligned -> supportive evidence |
+| regime | Kaufman efficiency over the long lookback below 0.25 -> RANGE (never SUPPORTIVE); otherwise TRENDING |
+| invalidation (equity / future only; option stops are premiums) | price already beyond the signal's stop-loss -> `TECH_INVALIDATION` (**BLOCKING**, configurable ADVERSE) |
+Verdict = the worst level. With nothing cautionary: **SUPPORTIVE** needs a trending regime and at least two aligned signals; otherwise **NEUTRAL** (confidence 70).
+
+### `price-action-v1` - Price-Action Agent (weight 50, can block)
+Same inputs and data rules. Looks at the last `PA_PATTERN_WINDOW` (3) candles against the average range of the preceding `PA_ATR_PERIOD` (14) bars.
+| Check | Result |
+| --- | --- |
+| engulfing | bullish / bearish engulfing with a body >= `MIN_BODY_ATR` (0.5) x the average range |
+| hammer / shooting star | a small body with a long wick (>= 2x the body, <= 25% on the other side) after a 3-bar decline / advance |
+| rejection wicks | a wick >= `WICK_RATIO` (0.6) of the range on a candle at least `MIN_BODY_ATR` x the average range (not already a hammer / star) |
+| inside / outside bars | INFO; a strong outside bar closing against the direction -> CAUTION |
+| pattern verdicts | aligned patterns are supportive evidence; an opposing pattern is CAUTION, ADVERSE when the candle is strong (range >= `STRONG_RANGE_ATR` 1.5 x average); **critical** (a strong opposing pattern right after >= `EXHAUSTION_RUN` (3) aligned candles and at the `EXTREME_LOOKBACK` (20-bar) extreme) -> `PA_CRITICAL_REVERSAL` (ADVERSE, configurable BLOCKING); patterns older than the previous candle are capped at CAUTION; aligned and opposing together -> CAUTION |
+| gap (latest open vs previous close) | against the direction >= `GAP_ADVERSE_PCT` (1.5%) -> ADVERSE, >= `GAP_CAUTION_PCT` (0.5%) -> CAUTION; aligned -> INFO |
+| consecutive candles | against: >= 5 -> ADVERSE, >= 3 -> CAUTION; aligned >= 3 -> supportive evidence, >= 5 -> CAUTION (extended run) |
+| volatility | the latest range >= 2x the average -> CAUTION (ADVERSE when >= 3.5x and closing against the direction); <= 0.5x -> INFO |
+| entry proximity | the distance to the recent extreme in the signal's favour is reported (INFO) and feeds the critical-reversal rule |
+Verdict = the worst level. With nothing cautionary: **SUPPORTIVE** needs an aligned pattern or an aligned run; otherwise **NEUTRAL**.
+
+### Configuration (Task 5)
+Providers: `TWINS_AGENT_OHLC_PROVIDER`, `TWINS_AGENT_LAST_PRICE_PROVIDER` (`none` | `file:<path>`, default `none`). Staleness and market: `TWINS_AGENT_OHLC_*`. Lookbacks, thresholds and severities: `TWINS_AGENT_TECH_*` (min bars, lookbacks, trend, swing, breakout, proximity, averages, RSI, regime, break and invalidation severities) and `TWINS_AGENT_PA_*` (min bars, ATR period, pattern window, body / wick / range thresholds, gaps, runs, volatility, extremes, critical-reversal severity). Enable / disable and weights use the engine settings. All settings are listed in `rules.ts`; defaults are conservative; a malformed value (including `MIN_BARS` smaller than the lookbacks it must cover) throws at start-up.
+
+### Limitations of these two agents
+* **With the engine enabled, all eight required agents need their providers.** Without an OHLC provider every decision is `INCOMPLETE` and halts; reviewed, refreshed candle snapshots (or a future live adapter, a separate task) must exist first. The snapshot's interval is whatever it provides; lookbacks are in bars, so daily and intraday series are not interchangeable without re-tuning.
+* The indicators are textbook and unoptimised (simple averages, Wilder RSI, strict swing pivots, a fixed pattern set). They describe the series; they are not a forecast, a strategy or evidence of cause.
+* Option signals are judged on the underlying only; no option premium, spread or volatility analysis (a separate task). The invalidation check compares price with the stop only for equity and futures.
+* The historical-dataset adapter covers equity price series only and has no snapshot time.
+* Events are judged against the engine clock; a re-run of the same decision version returns the stored result. A supportive result does not make a decision eligible: every later gate still runs, and eligibility does not yet re-check the research assessment.
+
 ## Future agent roadmap (not in this task)
 Each is a separate, reviewed task registering through this contract: data verification, market / news context, strategy applicability and invalidation, cost / spread / liquidity, probability and calibration, independent challenge, adaptive-management proposals (see the phase plans). LLM-based agents, if ever added, would be advisory-first, auditable layers beside the deterministic confidence - never the source of a numeric confidence.

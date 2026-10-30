@@ -214,8 +214,8 @@ describe("worker wiring: the production agents exist only when the engine is exp
 describe("registration", () => {
   it("the production agents register with valid, unique contracts; all can block, none is advisory, weights are the engine's to override", () => {
     const r = createProductionRegistry({ rules: DEFAULT_AGENT_RULES, instrumentReference: REF() });
-    expect(r.snapshot().map((c) => [c.agentId, c.version, c.canBlock, c.advisoryOnly, c.weight])).toEqual([["index-constituent-impact-v1", "1.0.0", true, false, 50], ["instrument-verification-v1", "1.0.0", true, false, 60], ["macro-global-v1", "1.0.0", true, false, 50], ["market-calendar-v1", "1.0.0", true, false, 50], ["news-sentiment-v1", "1.0.0", true, false, 50], ["signal-integrity-v1", "1.0.0", true, false, 60]]);
-    expect(r.resolve({ disabledAgents: [], requiredAgents: [] }).levels).toEqual([["index-constituent-impact-v1", "instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "signal-integrity-v1"]]); // independent: one parallel level
+    expect(r.snapshot().map((c) => [c.agentId, c.version, c.canBlock, c.advisoryOnly, c.weight])).toEqual([["index-constituent-impact-v1", "1.0.0", true, false, 50], ["instrument-verification-v1", "1.0.0", true, false, 60], ["macro-global-v1", "1.0.0", true, false, 50], ["market-calendar-v1", "1.0.0", true, false, 50], ["news-sentiment-v1", "1.0.0", true, false, 50], ["price-action-v1", "1.0.0", true, false, 50], ["signal-integrity-v1", "1.0.0", true, false, 60], ["technical-structure-v1", "1.0.0", true, false, 50]]);
+    expect(r.resolve({ disabledAgents: [], requiredAgents: [] }).levels).toEqual([["index-constituent-impact-v1", "instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]]); // independent: one parallel level
     expect(r.resolve({ disabledAgents: ["instrument-verification-v1"], requiredAgents: ["instrument-verification-v1"] }).missingRequired).toEqual([{ agentId: "instrument-verification-v1", reason: "DISABLED" }]);
   });
 });

@@ -41,6 +41,8 @@ Stage 5 / Task 2 (Signal Integrity and Instrument Verification agents; engine st
 Stage 5 / Task 3 (Market Calendar and Macro/Global agents; engine still disabled by default; no migration) is implemented on branch `feat/stage5-calendar-macro-agents`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
 
 Stage 5 / Task 4 (News/Sentiment and Index-Constituent Impact agents; engine still disabled by default; no migration) is implemented on branch `feat/stage5-news-constituent-agents`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
+
+Stage 5 / Task 5 (Technical Structure and Price-Action agents; engine still disabled by default; no migration) is implemented on branch `feat/stage5-technical-price-action`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
 Stage 3 / Task 6 (risk decision API and approval integration) is implemented on branch `feat/stage3-risk-approval` (migration 0019); see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md).
 Stage 3 / Task 5 (market, liquidity and event-risk gates) is implemented on branch `feat/stage3-market-risk-gates` (migration 0018); see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md).
 Stage 3 / Task 4 (risk-decision expiry and loss circuit breakers) is implemented on branch `feat/stage3-expiry-circuit-breakers` (migration 0017); see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md).

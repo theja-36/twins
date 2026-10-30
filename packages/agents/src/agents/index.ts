@@ -11,6 +11,9 @@ import { fileNewsProvider, fileSentimentProvider, type NewsProvider, type Sentim
 import { fileConstituentProvider, fileMarketData, type ConstituentProvider, type MarketDataProvider } from "./constituentProviders";
 import { newsSentimentAgent } from "./newsSentiment";
 import { indexConstituentAgent } from "./indexConstituent";
+import { fileLastPriceProvider, fileOhlcProvider, type LastPriceProvider, type OhlcProvider } from "./ohlcProviders";
+import { technicalStructureAgent } from "./technicalStructure";
+import { priceActionAgent } from "./priceAction";
 
 export * from "./common";
 export * from "./rules";
@@ -25,14 +28,19 @@ export * from "./newsProviders";
 export * from "./constituentProviders";
 export * from "./newsSentiment";
 export * from "./indexConstituent";
+export * from "./ohlcProviders";
+export * from "./ohlcCommon";
+export * from "./technicalStructure";
+export * from "./priceAction";
 
-/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-4). Later tasks append to this list; nothing else is registered. */
-export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1"] as const;
+/** The production research agents, in the order they are listed (Stage 5 / Tasks 2-5). Later tasks append to this list; nothing else is registered. */
+export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1"] as const;
 
 export interface ProductionRegistryOptions {
   rules: AgentRulesConfig; instrumentReference?: InstrumentReference | null; historicalReference?: HistoricalInstrumentReference;
   holidayCalendar?: HolidayCalendarProvider | null; economicCalendar?: EconomicCalendarProvider | null; macroProvider?: MacroContextProvider | null;
   newsProvider?: NewsProvider | null; sentimentProvider?: SentimentProvider | null; constituentProvider?: ConstituentProvider | null; marketDataProvider?: MarketDataProvider | null;
+  ohlcProvider?: OhlcProvider | null; lastPriceProvider?: LastPriceProvider | null;
 }
 /** Registers the production agents. Used only when the engine is explicitly enabled; a missing provider makes its agent report UNAVAILABLE (never a pass). */
 export function createProductionRegistry(o: ProductionRegistryOptions): AgentRegistry {
@@ -43,6 +51,8 @@ export function createProductionRegistry(o: ProductionRegistryOptions): AgentReg
   r.register(macroGlobalAgent(o.rules, o.macroProvider ?? null));
   r.register(newsSentimentAgent(o.rules, o.newsProvider ?? null, o.sentimentProvider ?? null));
   r.register(indexConstituentAgent(o.rules, o.constituentProvider ?? null, o.marketDataProvider ?? null, o.newsProvider ?? null));
+  r.register(technicalStructureAgent(o.rules, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
+  r.register(priceActionAgent(o.rules, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
   return r;
 }
 /** Resolves `TWINS_AGENT_INSTRUMENT_REFERENCE` (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
@@ -66,4 +76,9 @@ export function resolveCalendarMacroProviders(rules: AgentRulesConfig): { holida
 export function resolveNewsConstituentProviders(rules: AgentRulesConfig): { newsProvider: NewsProvider | null; sentimentProvider: SentimentProvider | null; constituentProvider: ConstituentProvider | null; marketDataProvider: MarketDataProvider | null } {
   const n = fileSource(rules.news.source, "news provider"), s = fileSource(rules.news.sentimentSource, "sentiment provider"), c = fileSource(rules.constituent.constituentSource, "constituent provider"), m = fileSource(rules.constituent.marketDataSource, "market-data provider");
   return { newsProvider: n === null ? null : fileNewsProvider(n), sentimentProvider: s === null ? null : fileSentimentProvider(s), constituentProvider: c === null ? null : fileConstituentProvider(c), marketDataProvider: m === null ? null : fileMarketData(m) };
+}
+/** Resolves the OHLC and last-price provider settings (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */
+export function resolveOhlcProviders(rules: AgentRulesConfig): { ohlcProvider: OhlcProvider | null; lastPriceProvider: LastPriceProvider | null } {
+  const o = fileSource(rules.ohlc.source, "OHLC provider"), p = fileSource(rules.ohlc.priceSource, "last-price provider");
+  return { ohlcProvider: o === null ? null : fileOhlcProvider(o), lastPriceProvider: p === null ? null : fileLastPriceProvider(p) };
 }

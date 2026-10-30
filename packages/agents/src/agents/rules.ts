@@ -39,6 +39,13 @@ import { AgentContractError } from "../contract";
  *   TWINS_AGENT_SENTIMENT_AGGREGATE_CAUTION / _ADVERSE / TWINS_AGENT_SENTIMENT_MIN_SAMPLE   0.2 / 0.5 / 5
  *   TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS (default BANKNIFTY,FINNIFTY,MIDCPNIFTY,NIFTY,SENSEX: other underlyings -> the constituent agent is not applicable), TWINS_AGENT_CONSTITUENT_QUOTE_MARKET (NSE)
  *   TWINS_AGENT_CONSTITUENT_*  (TOP_COUNT 10, MIN_WEIGHT 1, MIN_COVERED_WEIGHT 60, MIN_USABLE_SHARE 0.7, MOVE_*, IMPACT_*, CRITICAL_WEIGHT 5, CRITICAL_EVENT BLOCKING, STALE_*, NEWS_*, ...)
+ * Stage 5 / Task 5 (technical structure + price action):
+ *   TWINS_AGENT_OHLC_PROVIDER / TWINS_AGENT_LAST_PRICE_PROVIDER   none | file:<path> (default none -> UNAVAILABLE, never a pass); TWINS_AGENT_OHLC_MARKET (NSE), TWINS_AGENT_OHLC_STALE_CAUTION_MINUTES 120,
+ *     _STALE_UNAVAILABLE_MINUTES 1440, _MAX_BAR_AGE_DAYS 5, _FUTURE_TOLERANCE_MINUTES 5, _PRICE_DISCONNECT_PCT 5
+ *   TWINS_AGENT_TECH_*  (MIN_BARS 60, SHORT_LOOKBACK 10, LONG_LOOKBACK 30, TREND_CAUTION_PCT 1, TREND_ADVERSE_PCT 4, SWING_STRENGTH 2, BREAKOUT_LOOKBACK 20, SR_PROXIMITY_PCT 0.75, FAST_MA 10, SLOW_MA 30, RSI_PERIOD 14,
+ *     RSI_STRETCHED 75, MOMENTUM_AGAINST 15, RANGE_EFFICIENCY 0.25, BREAKDOWN_AGAINST ADVERSE, INVALIDATION BLOCKING)
+ *   TWINS_AGENT_PA_*  (MIN_BARS 30, ATR_PERIOD 14, PATTERN_WINDOW 3, MIN_BODY_ATR 0.5, WICK_RATIO 0.6, STRONG_RANGE_ATR 1.5, GAP_*_PCT 0.5 / 1.5, CONSECUTIVE_* 3 / 5, EXPANSION_* 2 / 3.5, CONTRACTION_RATIO 0.5,
+ *     EXTREME_LOOKBACK 20, EXTREME_PROXIMITY_PCT 0.75, EXHAUSTION_RUN 3, CRITICAL_REVERSAL ADVERSE)
  * Enable / disable and weights use the engine settings (TWINS_AGENT_ENGINE_DISABLED_AGENTS, TWINS_AGENT_ENGINE_WEIGHTS).
  */
 export const AGENT_RULES_VERSION = "agent-rules-v1";
@@ -69,6 +76,15 @@ export interface AgentRulesConfig {
     /** Underlyings treated as INDEX signals (others: the agent is not applicable) and the cash-market code used for quotes and news. */
     indexUnderlyings: string[]; quoteMarket: string;
   };
+  ohlc: { source: string; priceSource: string; market: string; staleCautionMinutes: number; unavailableMinutes: number; maxBarAgeDays: number; futureToleranceMinutes: number; priceDisconnectPct: number };
+  technical: {
+    minBars: number; shortLookback: number; longLookback: number; trendCautionPct: number; trendAdversePct: number; swingStrength: number; breakoutLookback: number; srProximityPct: number;
+    fastMa: number; slowMa: number; rsiPeriod: number; rsiStretched: number; momentumAgainst: number; rangeEfficiency: number; breakdownAgainst: Severity2; invalidation: Severity2;
+  };
+  priceAction: {
+    minBars: number; atrPeriod: number; patternWindow: number; minBodyAtr: number; wickRatio: number; strongRangeAtr: number; gapCautionPct: number; gapAdversePct: number; consecutiveCaution: number;
+    consecutiveAdverse: number; expansionRatio: number; expansionAdverseRatio: number; contractionRatio: number; extremeLookback: number; extremeProximityPct: number; exhaustionRun: number; criticalReversal: Severity2;
+  };
 }
 export type Severity3 = "CAUTION" | "ADVERSE" | "BLOCKING";
 export type Severity4 = "INFO" | "CAUTION" | "ADVERSE";
@@ -94,6 +110,15 @@ export const DEFAULT_AGENT_RULES: AgentRulesConfig = {
     constituentSource: "none", marketDataSource: "none", topCount: 10, minWeight: 1, minCoveredWeight: 60, minUsableShare: 0.7, moveCaution: 1, moveAdverse: 2, extremeMove: 10, impactCaution: 0.3, impactAdverse: 0.75,
     singleContributionAdverse: 0.4, sectorConcentration: 0.5, staleCautionMinutes: 60, unavailableMinutes: 1440, criticalWeight: 5, criticalEvent: "BLOCKING", newsLookbackMinutes: 1440, nearTermMinutes: 120,
     sentimentThreshold: 0.3, minReliability: 0.5, indexUnderlyings: ["BANKNIFTY", "FINNIFTY", "MIDCPNIFTY", "NIFTY", "SENSEX"], quoteMarket: "NSE",
+  },
+  ohlc: { source: "none", priceSource: "none", market: "NSE", staleCautionMinutes: 120, unavailableMinutes: 1440, maxBarAgeDays: 5, futureToleranceMinutes: 5, priceDisconnectPct: 5 },
+  technical: {
+    minBars: 60, shortLookback: 10, longLookback: 30, trendCautionPct: 1, trendAdversePct: 4, swingStrength: 2, breakoutLookback: 20, srProximityPct: 0.75, fastMa: 10, slowMa: 30, rsiPeriod: 14, rsiStretched: 75,
+    momentumAgainst: 15, rangeEfficiency: 0.25, breakdownAgainst: "ADVERSE", invalidation: "BLOCKING",
+  },
+  priceAction: {
+    minBars: 30, atrPeriod: 14, patternWindow: 3, minBodyAtr: 0.5, wickRatio: 0.6, strongRangeAtr: 1.5, gapCautionPct: 0.5, gapAdversePct: 1.5, consecutiveCaution: 3, consecutiveAdverse: 5, expansionRatio: 2, expansionAdverseRatio: 3.5,
+    contractionRatio: 0.5, extremeLookback: 20, extremeProximityPct: 0.75, exhaustionRun: 3, criticalReversal: "ADVERSE",
   },
 };
 const bad = (what: string): never => { throw new AgentContractError("INVALID_ENGINE_CONFIG", `invalid agent rules configuration: ${what}`); };
@@ -150,6 +175,14 @@ export function validateAgentRules(c: AgentRulesConfig): AgentRulesConfig {
   if (!(n.aggregateMinSample >= 1 && n.aggregateMinSample <= 10_000) || !(n.minReliability >= 0 && n.minReliability <= 1) || !(n.staleCautionMinutes >= 1 && n.staleCautionMinutes < n.unavailableMinutes && n.unavailableMinutes <= 20_160) || !(n.futureToleranceMinutes >= 0 && n.futureToleranceMinutes <= 60) || !(n.maxItems >= 1 && n.maxItems <= 5000)) bad("news limits");
   if (!(ct.topCount >= 1 && ct.topCount <= 100) || !(ct.minWeight >= 0 && ct.minWeight <= 100) || !(ct.minCoveredWeight > 0 && ct.minCoveredWeight <= 100) || !(ct.minUsableShare > 0 && ct.minUsableShare <= 1) || !asc(ct.moveCaution, ct.moveAdverse, ct.extremeMove) || !asc(ct.impactCaution, ct.impactAdverse)) bad("constituent thresholds");
   if (!(ct.singleContributionAdverse > 0) || !(ct.sectorConcentration > 0 && ct.sectorConcentration <= 1) || !(ct.staleCautionMinutes >= 1 && ct.staleCautionMinutes < ct.unavailableMinutes && ct.unavailableMinutes <= 20_160) || !(ct.criticalWeight >= 0 && ct.criticalWeight <= 100)) bad("constituent limits");
+  const o = c.ohlc, t = c.technical, pa = c.priceAction;
+  for (const src2 of [o.source, o.priceSource]) if (!(src2 === "none" || /^file:.{1,400}$/.test(src2))) bad("provider source");
+  if (!/^[A-Z0-9]{2,20}$/.test(o.market) || !(o.staleCautionMinutes >= 1 && o.staleCautionMinutes < o.unavailableMinutes && o.unavailableMinutes <= 20_160) || !(o.maxBarAgeDays >= 1 && o.maxBarAgeDays <= 400) || !(o.futureToleranceMinutes >= 0 && o.futureToleranceMinutes <= 60) || !(o.priceDisconnectPct > 0 && o.priceDisconnectPct <= 50)) bad("ohlc limits");
+  const ints = (...x: number[]): boolean => x.every((v) => Number.isInteger(v) && v >= 1);
+  if (!ints(t.minBars, t.shortLookback, t.longLookback, t.swingStrength, t.breakoutLookback, t.fastMa, t.slowMa, t.rsiPeriod) || t.minBars > 1000 || !(t.shortLookback < t.longLookback) || !(t.fastMa < t.slowMa) || t.minBars < Math.max(t.longLookback + 1, t.slowMa + 1, t.breakoutLookback + 1, t.rsiPeriod + 2, 4 * t.swingStrength + 2)) bad("technical lookbacks (minBars must cover every lookback)");
+  if (!asc(t.trendCautionPct, t.trendAdversePct) || !(t.srProximityPct > 0 && t.srProximityPct <= 20) || !(t.rsiStretched > 50 && t.rsiStretched <= 100) || !(t.momentumAgainst > 0 && t.momentumAgainst <= 50) || !(t.rangeEfficiency > 0 && t.rangeEfficiency < 1)) bad("technical thresholds");
+  if (!ints(pa.minBars, pa.atrPeriod, pa.patternWindow, pa.consecutiveCaution, pa.consecutiveAdverse, pa.extremeLookback, pa.exhaustionRun) || pa.minBars > 1000 || pa.minBars < Math.max(pa.atrPeriod + 2, pa.extremeLookback + 1, pa.consecutiveAdverse + 1) || pa.consecutiveCaution >= pa.consecutiveAdverse) bad("price-action windows");
+  if (!(pa.minBodyAtr > 0 && pa.minBodyAtr <= 5) || !(pa.wickRatio > 0.3 && pa.wickRatio < 1) || !(pa.strongRangeAtr > 0 && pa.strongRangeAtr <= 10) || !asc(pa.gapCautionPct, pa.gapAdversePct) || !(pa.expansionRatio > 1 && pa.expansionRatio < pa.expansionAdverseRatio) || !(pa.contractionRatio > 0 && pa.contractionRatio < 1) || !(pa.extremeProximityPct > 0 && pa.extremeProximityPct <= 20)) bad("price-action thresholds");
   if (ct.indexUnderlyings.some((x) => !/^[A-Z0-9&._-]{1,30}$/.test(x)) || !/^[A-Z0-9]{2,20}$/.test(ct.quoteMarket)) bad("constituent index underlyings / quote market");
   if (!(ct.newsLookbackMinutes >= 1 && ct.newsLookbackMinutes <= 20_160 && ct.nearTermMinutes >= 1 && ct.nearTermMinutes <= ct.newsLookbackMinutes) || !(ct.sentimentThreshold > 0 && ct.sentimentThreshold <= 1) || !(ct.minReliability >= 0 && ct.minReliability <= 1)) bad("constituent news limits");
   if (!(m.staleCautionMinutes >= 1 && m.staleCautionMinutes < m.unavailableMinutes && m.unavailableMinutes <= 20_160) || !(m.releaseBefore >= 0 && m.releaseBefore <= 1440 && m.releaseAfter >= 0 && m.releaseAfter <= 1440)) bad("macro staleness / release windows");
@@ -157,6 +190,7 @@ export function validateAgentRules(c: AgentRulesConfig): AgentRulesConfig {
 }
 export function loadAgentRulesConfig(env: Record<string, string | undefined> = process.env): AgentRulesConfig {
   const d = DEFAULT_AGENT_RULES;
+  const P = "TWINS_AGENT_";
   return validateAgentRules({
     version: AGENT_RULES_VERSION,
     signal: {
@@ -215,6 +249,30 @@ export function loadAgentRulesConfig(env: Record<string, string | undefined> = p
       sentimentThreshold: dec(env, "TWINS_AGENT_CONSTITUENT_SENTIMENT_THRESHOLD", d.constituent.sentimentThreshold, 0.01, 1), minReliability: dec(env, "TWINS_AGENT_CONSTITUENT_MIN_RELIABILITY", d.constituent.minReliability, 0, 1),
       indexUnderlyings: ((): string[] => { const v = env["TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS"]; if (v === undefined || v.trim() === "") return d.constituent.indexUnderlyings; const l = v.split(",").map((x) => x.trim()); if (l.some((x) => !/^[A-Z0-9&._-]{1,30}$/.test(x)) || new Set(l).size !== l.length) bad("TWINS_AGENT_CONSTITUENT_INDEX_UNDERLYINGS"); return l.sort(); })(),
       quoteMarket: ((): string => { const v = env["TWINS_AGENT_CONSTITUENT_QUOTE_MARKET"]; if (v === undefined || v === "") return d.constituent.quoteMarket; if (!/^[A-Z0-9]{2,20}$/.test(v)) bad("TWINS_AGENT_CONSTITUENT_QUOTE_MARKET"); return v; })(),
+    },
+    ohlc: {
+      source: src(env, P + "OHLC_PROVIDER"), priceSource: src(env, P + "LAST_PRICE_PROVIDER"), market: ((): string => { const v = env[P + "OHLC_MARKET"]; if (v === undefined || v === "") return d.ohlc.market; if (!/^[A-Z0-9]{2,20}$/.test(v)) bad(P + "OHLC_MARKET"); return v; })(),
+      staleCautionMinutes: int(env, P + "OHLC_STALE_CAUTION_MINUTES", d.ohlc.staleCautionMinutes, 1, 20_160), unavailableMinutes: int(env, P + "OHLC_STALE_UNAVAILABLE_MINUTES", d.ohlc.unavailableMinutes, 1, 20_160),
+      maxBarAgeDays: int(env, P + "OHLC_MAX_BAR_AGE_DAYS", d.ohlc.maxBarAgeDays, 1, 400), futureToleranceMinutes: int(env, P + "OHLC_FUTURE_TOLERANCE_MINUTES", d.ohlc.futureToleranceMinutes, 0, 60),
+      priceDisconnectPct: dec(env, P + "OHLC_PRICE_DISCONNECT_PCT", d.ohlc.priceDisconnectPct, 0.01, 50),
+    },
+    technical: {
+      minBars: int(env, P + "TECH_MIN_BARS", d.technical.minBars, 1, 1000), shortLookback: int(env, P + "TECH_SHORT_LOOKBACK", d.technical.shortLookback, 1, 1000), longLookback: int(env, P + "TECH_LONG_LOOKBACK", d.technical.longLookback, 1, 1000),
+      trendCautionPct: dec(env, P + "TECH_TREND_CAUTION_PCT", d.technical.trendCautionPct, 0, 100), trendAdversePct: dec(env, P + "TECH_TREND_ADVERSE_PCT", d.technical.trendAdversePct, 0, 100),
+      swingStrength: int(env, P + "TECH_SWING_STRENGTH", d.technical.swingStrength, 1, 20), breakoutLookback: int(env, P + "TECH_BREAKOUT_LOOKBACK", d.technical.breakoutLookback, 1, 1000), srProximityPct: dec(env, P + "TECH_SR_PROXIMITY_PCT", d.technical.srProximityPct, 0.01, 20),
+      fastMa: int(env, P + "TECH_FAST_MA", d.technical.fastMa, 1, 500), slowMa: int(env, P + "TECH_SLOW_MA", d.technical.slowMa, 1, 500), rsiPeriod: int(env, P + "TECH_RSI_PERIOD", d.technical.rsiPeriod, 1, 200),
+      rsiStretched: dec(env, P + "TECH_RSI_STRETCHED", d.technical.rsiStretched, 50.01, 100), momentumAgainst: dec(env, P + "TECH_MOMENTUM_AGAINST", d.technical.momentumAgainst, 0.01, 50), rangeEfficiency: dec(env, P + "TECH_RANGE_EFFICIENCY", d.technical.rangeEfficiency, 0.01, 0.99),
+      breakdownAgainst: pick(env, P + "TECH_BREAKDOWN_AGAINST", ["ADVERSE", "BLOCKING"], d.technical.breakdownAgainst), invalidation: pick(env, P + "TECH_INVALIDATION", ["ADVERSE", "BLOCKING"], d.technical.invalidation),
+    },
+    priceAction: {
+      minBars: int(env, P + "PA_MIN_BARS", d.priceAction.minBars, 1, 1000), atrPeriod: int(env, P + "PA_ATR_PERIOD", d.priceAction.atrPeriod, 1, 500), patternWindow: int(env, P + "PA_PATTERN_WINDOW", d.priceAction.patternWindow, 1, 20),
+      minBodyAtr: dec(env, P + "PA_MIN_BODY_ATR", d.priceAction.minBodyAtr, 0.01, 5), wickRatio: dec(env, P + "PA_WICK_RATIO", d.priceAction.wickRatio, 0.31, 0.99), strongRangeAtr: dec(env, P + "PA_STRONG_RANGE_ATR", d.priceAction.strongRangeAtr, 0.01, 10),
+      gapCautionPct: dec(env, P + "PA_GAP_CAUTION_PCT", d.priceAction.gapCautionPct, 0, 50), gapAdversePct: dec(env, P + "PA_GAP_ADVERSE_PCT", d.priceAction.gapAdversePct, 0, 50),
+      consecutiveCaution: int(env, P + "PA_CONSECUTIVE_CAUTION", d.priceAction.consecutiveCaution, 1, 100), consecutiveAdverse: int(env, P + "PA_CONSECUTIVE_ADVERSE", d.priceAction.consecutiveAdverse, 1, 100),
+      expansionRatio: dec(env, P + "PA_EXPANSION_RATIO", d.priceAction.expansionRatio, 1.01, 50), expansionAdverseRatio: dec(env, P + "PA_EXPANSION_ADVERSE_RATIO", d.priceAction.expansionAdverseRatio, 1.02, 50),
+      contractionRatio: dec(env, P + "PA_CONTRACTION_RATIO", d.priceAction.contractionRatio, 0.01, 0.99), extremeLookback: int(env, P + "PA_EXTREME_LOOKBACK", d.priceAction.extremeLookback, 1, 1000),
+      extremeProximityPct: dec(env, P + "PA_EXTREME_PROXIMITY_PCT", d.priceAction.extremeProximityPct, 0.01, 20), exhaustionRun: int(env, P + "PA_EXHAUSTION_RUN", d.priceAction.exhaustionRun, 1, 50),
+      criticalReversal: pick(env, P + "PA_CRITICAL_REVERSAL", ["ADVERSE", "BLOCKING"], d.priceAction.criticalReversal),
     },
   });
 }
