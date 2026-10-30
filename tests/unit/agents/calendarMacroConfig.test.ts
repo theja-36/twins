@@ -7,6 +7,7 @@ import {
   loadAgentRulesConfig, MACRO_CONTEXT_FORMAT, parseEconomicCalendar, parseHolidayCalendar, parseMacroContext, PRODUCTION_AGENT_IDS, resolveCalendarMacroProviders, type AgentContractError,
 } from "../../../packages/agents/src/index";
 
+type Rec = Record<string, ReturnType<typeof JSON.parse>>;
 const tmp = (name: string, body: unknown): string => { const d = mkdtempSync(join(tmpdir(), "twins-cal-")); const p = join(d, name); writeFileSync(p, typeof body === "string" ? body : JSON.stringify(body)); return p; };
 const holidays = () => ({ format: HOLIDAY_CALENDAR_FORMAT, source: "synthetic", as_of: "2025-01-01T00:00:00Z", markets: { NSE: { from: "2025-01-01", to: "2025-12-31", days: [{ date: "2025-03-14", holiday: true, name: "Synthetic Holiday" }, { date: "2025-01-08", early_close: "13:30" }] } } });
 const economic = () => ({ format: ECONOMIC_CALENDAR_FORMAT, source: "synthetic", as_of: "2025-01-01T00:00:00Z", coverage: { from: "2025-01-01T00:00:00Z", to: "2025-12-31T00:00:00Z" }, events: [{ id: "evt-1", name: "Synthetic decision", at: "2025-01-06T09:00:00+05:30", impact: "CRITICAL", markets: ["NSE"], category: "central_bank" }] });
@@ -25,7 +26,7 @@ describe("holiday calendar file (twins-holiday-calendar-v1)", () => {
     expect(await p.day("NSE", "2026-01-01")).toBeNull();
     expect(await p.day("LSE", "2025-01-07")).toBeNull();
   });
-  it.each<[string, (b: Record<string, any>) => void]>([
+  it.each<[string, (b: Rec) => void]>([
     ["a wrong format", (b) => { b["format"] = "v0"; }], ["no as_of", (b) => { delete b["as_of"]; }], ["an as_of without an offset", (b) => { b["as_of"] = "2025-01-01T00:00:00"; }],
     ["no markets", (b) => { b["markets"] = {}; }], ["a lower-case market", (b) => { b["markets"]["nse"] = b["markets"]["NSE"]; delete b["markets"]["NSE"]; }],
     ["a reversed range", (b) => { b["markets"]["NSE"].from = "2026-01-01"; }], ["an impossible date", (b) => { b["markets"]["NSE"].days[0].date = "2025-02-30"; }],
@@ -33,7 +34,7 @@ describe("holiday calendar file (twins-holiday-calendar-v1)", () => {
     ["a holiday with an early close", (b) => { b["markets"]["NSE"].days[0].early_close = "13:30"; }], ["a bad early close", (b) => { b["markets"]["NSE"].days[1].early_close = "25:99"; }],
     ["a day that is neither", (b) => { b["markets"]["NSE"].days.push({ date: "2025-05-01" }); }], ["a non-boolean holiday", (b) => { b["markets"]["NSE"].days[0].holiday = "yes"; }],
   ])("rejects %s (nothing is repaired)", (_n, mutate) => {
-    const b = structuredClone(holidays()) as Record<string, any>;
+    const b = structuredClone(holidays()) as Rec;
     mutate(b);
     expect(() => parseHolidayCalendar(b)).toThrowError(expect.objectContaining({ code: "INVALID_CALENDAR_DATA" }) as AgentContractError);
   });
@@ -47,12 +48,12 @@ describe("economic calendar file (twins-economic-calendar-v1)", () => {
     expect(ev).toEqual([{ id: "evt-1", name: "Synthetic decision", at: "2025-01-06T03:30:00.000Z", impact: "CRITICAL", markets: ["NSE"], category: "central_bank" }]);
     expect(await p.events({ from: "2025-02-01T00:00:00Z", to: "2025-02-02T00:00:00Z" })).toEqual([]);
   });
-  it.each<[string, (b: Record<string, any>) => void]>([
+  it.each<[string, (b: Rec) => void]>([
     ["a wrong format", (b) => { b["format"] = "x"; }], ["a missing coverage", (b) => { delete b["coverage"]; }], ["a reversed coverage", (b) => { b["coverage"] = { from: "2026-01-01T00:00:00Z", to: "2025-01-01T00:00:00Z" }; }],
     ["an event without an offset", (b) => { b["events"][0].at = "2025-01-06T09:00:00"; }], ["an unknown impact", (b) => { b["events"][0].impact = "HUGE"; }], ["no markets", (b) => { b["events"][0].markets = []; }],
     ["a duplicate id", (b) => { b["events"].push({ ...b["events"][0] }); }], ["events that are not a list", (b) => { b["events"] = {}; }],
   ])("rejects %s", (_n, mutate) => {
-    const b = structuredClone(economic()) as Record<string, any>;
+    const b = structuredClone(economic()) as Rec;
     mutate(b);
     expect(() => parseEconomicCalendar(b)).toThrowError(expect.objectContaining({ code: "INVALID_CALENDAR_DATA" }) as AgentContractError);
   });
@@ -60,7 +61,7 @@ describe("economic calendar file (twins-economic-calendar-v1)", () => {
 
 describe("macro context file (twins-macro-context-v1)", () => {
   it("parses a valid file; the market-wide key serves any underlying and an exact key wins", async () => {
-    const b = macro() as Record<string, any>;
+    const b = macro() as Rec;
     b["contexts"]["NSE:NIFTY"] = { index: { symbol: "NIFTY", level: 1, recent_closes: [1] } };
     const p = parseMacroContext(b);
     expect((await p.context({ market: "NSE", underlying: "RELIANCE" }))?.index?.symbol).toBe("SYNTHIDX");
@@ -70,13 +71,13 @@ describe("macro context file (twins-macro-context-v1)", () => {
     expect(s).toMatchObject({ asOf: "2025-01-06T04:00:00.000Z", breadth: { advancers: 1200 }, volatilityIndex: { name: "SYNTHVIX", level: 14, changePct1d: -1 }, currency: { pair: "SYNTHFX" }, releases: [{ id: "rel-1", impact: "HIGH" }] });
     expect(fileMacroProvider(tmp("m.json", macro())).name).toBe("file:synthetic");
   });
-  it.each<[string, (b: Record<string, any>) => void]>([
+  it.each<[string, (b: Rec) => void]>([
     ["a wrong format", (b) => { b["format"] = "x"; }], ["no as_of", (b) => { delete b["as_of"]; }], ["no contexts", (b) => { b["contexts"] = {}; }], ["a bad context key", (b) => { b["contexts"]["nse"] = b["contexts"]["NSE:*"]; delete b["contexts"]["NSE:*"]; }],
     ["a non-finite level", (b) => { b["contexts"]["NSE:*"].index.level = null; }], ["a negative close", (b) => { b["contexts"]["NSE:*"].index.recent_closes[0] = -1; }], ["a bad breadth", (b) => { b["contexts"]["NSE:*"].breadth.advancers = 1.5; }],
     ["a bad volatility level", (b) => { b["contexts"]["NSE:*"].volatility_index.level = "high"; }], ["a bad global session", (b) => { b["contexts"]["NSE:*"].global[0].session_status = "lunch"; }],
     ["a malformed release", (b) => { delete b["contexts"]["NSE:*"].releases[0].impact; }], ["an unsafe label", (b) => { b["contexts"]["NSE:*"].index.symbol = "A<b>"; }],
   ])("rejects %s", (_n, mutate) => {
-    const b = structuredClone(macro()) as Record<string, any>;
+    const b = structuredClone(macro()) as Rec;
     mutate(b);
     expect(() => parseMacroContext(b)).toThrowError(expect.objectContaining({ code: "INVALID_MACRO_DATA" }) as AgentContractError);
   });

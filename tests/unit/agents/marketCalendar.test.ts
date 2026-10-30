@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AgentUnavailableError, marketCalendarAgent, MARKET_CALENDAR_AGENT_ID, type AgentRulesConfig, type EconomicCalendarProvider, type HolidayCalendarProvider } from "../../../packages/agents/src/index";
-import { codesOf, evalAgents, inputs, optionInputs, NOW, SIGNAL_TIME, type InputOverrides } from "../../support/agentFixtures";
+import { codesOf, evalAgents, inputs, optionInputs, NOW, SIGNAL_TIME } from "../../support/agentFixtures";
 import { at, economicCalendar, event, holidayCalendar, rulesWith } from "../../support/calendarMacroFixtures";
 
 const run = async (inp: Record<string, unknown> = inputs(), o: { rules?: AgentRulesConfig; holidays?: HolidayCalendarProvider | null; economic?: EconomicCalendarProvider | null; now?: Date } = {}) =>

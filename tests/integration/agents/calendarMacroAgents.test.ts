@@ -11,7 +11,7 @@ import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages
 import { verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
 import {
   createProductionRegistry, DEFAULT_AGENT_RULES, getLatestAgentAssessment, loadAgentEngineConfig, memoryInstrumentReference, runAgentEngine, type AgentEvent, type EconomicCalendarProvider, type HolidayCalendarProvider, type InstrumentRecord,
-  type MacroContextProvider, type MacroSnapshot,
+  type MacroContextProvider,
 } from "../../../packages/agents/src/index";
 import { assessApprovalEligibility, createRiskDecision, recordSourceIntelligence, type IntelligenceResolver, type RiskDecisionInput } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
