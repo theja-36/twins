@@ -19,7 +19,7 @@ import { economicCalendar, holidayCalendar, macroProvider } from "../../support/
 import { constituentSet, constituents, newsFeed, rulesWithNews } from "../../support/newsConstituentFixtures";
 import { ohlc, uptrendBars } from "../../support/ohlcFixtures";
 import { goodQuote, quotes } from "../../support/quoteFixtures";
-import { FEATURES, keysOf, outcome, pattern, rulesWithHistory, trendingBars } from "../../support/historicalFixtures";
+import { FEATURES, keysOf, outcome, pattern, rulesWithHistory, trendingBars } from "../../support/agentHistoryFixtures";
 import { NOW } from "../../support/agentFixtures";
 import { randomLetters } from "../../support/randomLetters";
 import { requireTestDatabaseUrl } from "../targetConfig";

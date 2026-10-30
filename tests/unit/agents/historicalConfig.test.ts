@@ -6,7 +6,7 @@ import {
   createProductionRegistry, DEFAULT_AGENT_RULES, DEFAULT_REQUIRED_AGENTS, fileOutcomeProvider, filePatternProvider, HISTORICAL_OUTCOMES_FORMAT, HISTORICAL_PATTERNS_FORMAT, loadAgentRulesConfig, outcomeProblem, patternProblem,
   PRODUCTION_AGENT_IDS, resolveHistoricalProviders, type AgentContractError,
 } from "../../../packages/agents/src/index";
-import { KEY4, outcome, pattern } from "../../support/historicalFixtures";
+import { KEY4, outcome, pattern } from "../../support/agentHistoryFixtures";
 
 type Rec = Record<string, ReturnType<typeof JSON.parse>>;
 const tmp = (name: string, body: unknown): string => { const d = mkdtempSync(join(tmpdir(), "twins-hist-")); const p = join(d, name); writeFileSync(p, typeof body === "string" ? body : JSON.stringify(body)); return p; };

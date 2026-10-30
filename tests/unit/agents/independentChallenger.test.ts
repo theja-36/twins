@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { independentChallengerAgent, INDEPENDENT_CHALLENGER_AGENT_ID, type AgentDefinition, type AgentFinding, type AgentRulesConfig, type AgentVerdict } from "../../../packages/agents/src/index";
 import { codesOf, evalAgents, inputs, NOW, optionInputs } from "../../support/agentFixtures";
-import { rulesWithHistory } from "../../support/historicalFixtures";
+import { rulesWithHistory } from "../../support/agentHistoryFixtures";
 
 interface Fake { id: string; verdict: AgentVerdict; confidence?: number; evidence?: boolean; direction?: string; out?: Record<string, number | string | boolean | string[]>; findings?: AgentFinding[]; applicable?: boolean }
 /** A fake research agent returning a fixed result (so the challenger can be tested against exact upstream evidence). */

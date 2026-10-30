@@ -3,7 +3,7 @@ import {
   historicalPatternAgent, HISTORICAL_PATTERN_AGENT_ID, type AgentRulesConfig, type HistoricalOutcomeProvider, type HistoricalPatternProvider, type LastPriceProvider, type OhlcProvider, type OutcomeDistribution, type PatternMatch,
 } from "../../../packages/agents/src/index";
 import { codesOf, evalAgents, inputs, NOW } from "../../support/agentFixtures";
-import { FEATURES, keysOf, KEY4, outcome, outcomes, pattern, patterns, rulesWithHistory, trendingBars, at } from "../../support/historicalFixtures";
+import { FEATURES, keysOf, KEY4, outcome, outcomes, pattern, patterns, rulesWithHistory, trendingBars, at } from "../../support/agentHistoryFixtures";
 import { ohlc, quiet } from "../../support/ohlcFixtures";
 
 interface Opt { rules?: AgentRulesConfig; patterns?: HistoricalPatternProvider | null; outcomes?: HistoricalOutcomeProvider | null; ohlc?: OhlcProvider | null; price?: LastPriceProvider | null; inp?: Record<string, unknown> }
