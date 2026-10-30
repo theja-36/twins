@@ -26,7 +26,7 @@ export interface EngineDeps extends OrchestrationDeps {
 }
 export type EngineResult =
   | { skipped: "ENGINE_DISABLED" }
-  | { skipped?: undefined; runId: string; created: boolean; riskDecisionId: string; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment; halt: boolean; agents: number };
+  | { skipped?: undefined; runId: string; created: boolean; riskDecisionId: string; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment; halt: boolean; /** Why the flow halts or continues (`HALT_<rule>` | `NO_HALT`); `UNKNOWN` for a run stored before synthesis v2. */ haltReasonCode: string; agents: number };
 
 /** Allow-listed, text-free inputs for the agents. */
 export async function buildDecisionInputs(db: Db, d: RiskDecisionRecord): Promise<Record<ContextInputKey, unknown>> {
@@ -109,9 +109,10 @@ export async function runAgentEngine(db: Db, decisionId: string, deps: EngineDep
   const agentSet = [...contracts.map((c) => ({ agentId: c.contract.agentId, version: c.contract.version, contractSha256: c.sha })), ...plan.missingRequired.map((m) => ({ agentId: m.agentId, version: "0.0.0", contractSha256: null, missing: m.reason }))].sort((a, b) => (a.agentId < b.agentId ? -1 : 1));
   const runKey = hashOf({ decisionId: decision.id, decisionVersion: decision.decisionVersion, agentSet, configSha256, inputSha256 });
   const O = schema.agentOrchestratorRuns, S = schema.agentOrchestratorSyntheses;
-  const outputOf = (runId: string, assessment: ResearchAssessment, status: "COMPLETED" | "INCOMPLETE" | "FAILED", created: boolean): EngineResult => ({ runId, created, riskDecisionId: decision.id, status, assessment, halt: config.haltOn.includes(assessment), agents: agentSet.length });
-  const [existing] = await db.select({ id: O.id, status: O.status, assessment: S.assessment }).from(O).innerJoin(S, eq(S.orchestratorRunId, O.id)).where(eq(O.runKey, runKey));
-  if (existing) return outputOf(existing.id, existing.assessment as ResearchAssessment, existing.status as "COMPLETED" | "INCOMPLETE", false); // the same evaluation: no agent is re-run
+  const reasonOf = (result: unknown, assessment: ResearchAssessment): string => { const code = (result as { halt?: { reasonCode?: unknown } } | null)?.halt?.reasonCode; return typeof code === "string" && /^[A-Z_]{1,60}$/.test(code) ? code : config.haltOn.includes(assessment) ? "UNKNOWN" : "NO_HALT"; };
+  const outputOf = (runId: string, assessment: ResearchAssessment, status: "COMPLETED" | "INCOMPLETE" | "FAILED", created: boolean, result?: unknown): EngineResult => ({ runId, created, riskDecisionId: decision.id, status, assessment, halt: config.haltOn.includes(assessment), haltReasonCode: reasonOf(result, assessment), agents: agentSet.length });
+  const [existing] = await db.select({ id: O.id, status: O.status, assessment: S.assessment, result: S.result }).from(O).innerJoin(S, eq(S.orchestratorRunId, O.id)).where(eq(O.runKey, runKey));
+  if (existing) return outputOf(existing.id, existing.assessment as ResearchAssessment, existing.status as "COMPLETED" | "INCOMPLETE", false, existing.result); // the same evaluation: no agent is re-run
 
   const outcome = await orchestrate(plan, config, inputs, { riskDecisionId: decision.id, decisionVersion: decision.decisionVersion }, deps);
 
@@ -126,14 +127,14 @@ export async function runAgentEngine(db: Db, decisionId: string, deps: EngineDep
     const tx = txRaw as unknown as Db;
     const [dup] = await tx.select({ id: O.id }).from(O).where(eq(O.runKey, runKey));
     if (dup) { // a concurrent worker finished the same evaluation first
-      const [s] = await tx.select({ assessment: S.assessment }).from(S).where(eq(S.orchestratorRunId, dup.id));
-      return outputOf(dup.id, (s?.assessment ?? "RESEARCH_INCOMPLETE") as ResearchAssessment, "COMPLETED", false);
+      const [s] = await tx.select({ assessment: S.assessment, result: S.result }).from(S).where(eq(S.orchestratorRunId, dup.id));
+      return outputOf(dup.id, (s?.assessment ?? "RESEARCH_INCOMPLETE") as ResearchAssessment, "COMPLETED", false, s?.result);
     }
     const [run] = await tx.insert(O).values({
       runKey, riskDecisionId: decision.id, decisionVersion: decision.decisionVersion, trigger: deps.trigger ?? "WORKER_PIPELINE", triggerContext: { source: "risk_decision_flow", afterStage: decision.createdBy.replace(/^service:/, "") }, agentSet,
       config: cfg, configSha256, inputSnapshot: inputs, inputSha256, status: outcome.status, startedAt: outcome.startedAt, completedAt: outcome.completedAt, durationMs: Math.max(0, outcome.completedAt.getTime() - outcome.startedAt.getTime()), createdBy: AGENT_ENGINE_ACTOR,
     }).onConflictDoNothing({ target: O.runKey }).returning({ id: O.id });
-    if (!run) return outputOf((await tx.select({ id: O.id }).from(O).where(eq(O.runKey, runKey)))[0]?.id as string, outcome.synthesis.assessment, outcome.status, false);
+    if (!run) return outputOf((await tx.select({ id: O.id }).from(O).where(eq(O.runKey, runKey)))[0]?.id as string, outcome.synthesis.assessment, outcome.status, false, outcome.synthesis);
     for (const r of outcome.results) {
       const [ar] = await tx.insert(schema.agentRuns).values({
         orchestratorRunId: run.id, definitionId: definitionIds.get(r.agentId) ?? null, agentId: r.agentId, agentVersion: r.agentVersion, status: r.status, verdict: r.verdict, confidence: r.confidence === null ? null : r.confidence.toFixed(2), attempts: r.attempts,
@@ -147,7 +148,7 @@ export async function runAgentEngine(db: Db, decisionId: string, deps: EngineDep
     await tx.insert(S).values({
       orchestratorRunId: run.id, assessment: s.assessment, score: s.score === null ? null : s.score.toFixed(6), algorithmVersion: s.algorithmVersion, synthesisInput: outcome.synthesisInput, synthesisInputSha256: s.inputSha256, result: s, grantsApproval: false, createdBy: AGENT_ENGINE_ACTOR,
     });
-    return outputOf(run.id, s.assessment, outcome.status, true);
+    return outputOf(run.id, s.assessment, outcome.status, true, s);
   });
 }
 

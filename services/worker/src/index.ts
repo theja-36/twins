@@ -25,7 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createDefaultRegistry, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine } from "@twins/agents";
+import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -342,18 +342,31 @@ function alertMarket(log: StructuredLogger, a: MarketAlert): void {
 // Stage 5: the agent engine. DISABLED by default (TWINS_AGENT_ENGINE_ENABLED): then the registry is empty, nothing is loaded and the risk flow below is exactly as before. Only when it is
 // explicitly enabled are the production agents (signal integrity, instrument verification) registered - with the configured rules and instrument reference. A malformed configuration
 // or an unreadable instrument-reference file throws here, at start-up (fail closed).
-const agentEngineConfig = loadAgentEngineConfig();
-const agentRules = agentEngineConfig.enabled ? loadAgentRulesConfig() : null;
+// Stage 5 / Task 9: a malformed configuration is logged (redacted: setting names, never values) before start-up fails; the engine's records are bounded (see observability.ts).
+const observabilityConfig = observeConfigLoad(defaultWorkerLogger, "agent-observability", () => loadObservabilityConfig());
+const agentEngineConfig = observeConfigLoad(defaultWorkerLogger, "agent-engine", () => loadAgentEngineConfig());
+const agentRules = agentEngineConfig.enabled ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
-const agentReference = agentRules ? resolveInstrumentReference(agentRules.instrument.referenceSource) : null;
-const agentProviders = agentRules ? { ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules), ...resolveHistoricalProviders(agentRules) } : null;
+const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
+const agentProviders = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-providers", () => ({ ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules), ...resolveHistoricalProviders(agentRules) })) : null;
+if (agentRules) logProviderAvailability(defaultWorkerLogger, observabilityConfig, { ...(agentProviders ?? {}), instrumentReference: agentReference }, true);
 const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
   if (!agentRules) return createDefaultRegistry();
   let r = agentRegistries.get(db);
   if (!r) { r = createProductionRegistry({ rules: agentRules, instrumentReference: agentReference, historicalReference: historicalDatasetReference(db), ...(agentProviders ?? {}) }); agentRegistries.set(db, r); }
   return r;
 };
-const agentEngineFor = (log: StructuredLogger, db: Db) => (decisionId: string) => runAgentEngine(db, decisionId, { registry: agentRegistryFor(db), config: agentEngineConfig, emit: (e) => log.info("worker.agent_engine.event", { ...e }) });
+const agentEngineFor = (log: StructuredLogger, db: Db) => async (decisionId: string) => {
+  const observer = createRunObserver(log, observabilityConfig, { riskDecisionId: decisionId });
+  try {
+    const result = await runAgentEngine(db, decisionId, { registry: agentRegistryFor(db), config: agentEngineConfig, emit: observer.emit });
+    observer.completed(result);
+    return result;
+  } catch (error) {
+    observer.failed(error);
+    throw error;
+  }
+};
 
 async function recordPendingRiskDecision(
   log: StructuredLogger,

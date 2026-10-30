@@ -158,7 +158,7 @@ describe("registration, required set and worker wiring", () => {
   });
   it("the worker resolves the providers only when the engine is enabled and otherwise registers nothing", () => {
     const w = readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8");
-    expect(w).toMatch(/const agentProviders = agentRules \? \{ \.\.\.resolveCalendarMacroProviders\(agentRules\), \.\.\.resolveNewsConstituentProviders\(agentRules\), \.\.\.resolveOhlcProviders\(agentRules\), \.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \} : null;/);
+    expect(w).toMatch(/const agentProviders = agentRules \? observeConfigLoad\(defaultWorkerLogger, \"agent-providers\", \(\) => \(\{ \.\.\.resolveCalendarMacroProviders\(agentRules\), \.\.\.resolveNewsConstituentProviders\(agentRules\), \.\.\.resolveOhlcProviders\(agentRules\), \.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \}\)\) : null;/);
     expect(w).toMatch(/\.\.\.\(agentProviders \?\? \{\}\)/);
     expect(w).toMatch(/if \(!agentRules\) return createDefaultRegistry\(\);/);
     expect(createDefaultRegistry().snapshot()).toEqual([]);

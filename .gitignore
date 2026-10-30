@@ -49,3 +49,6 @@ audit-anchor.json
 audit-verify.json
 backup.json
 
+
+# agent engine provider snapshots (local exports, never committed)
+data/agent-snapshots/

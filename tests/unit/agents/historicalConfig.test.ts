@@ -96,7 +96,7 @@ describe("registration, worker wiring and source hygiene", () => {
     expect([...DEFAULT_REQUIRED_AGENTS]).toHaveLength(12);
   });
   it("the worker resolves the historical providers only when the engine is enabled", () => {
-    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveHistoricalProviders\(agentRules\) \} : null;/);
+    expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveHistoricalProviders\(agentRules\) \}\)\) : null;/);
   });
   it("the new agent and provider sources read no message text, import no network / broker / LLM code, read no system clock and write nothing", () => {
     for (const f of ["historicalPattern.ts", "independentChallenger.ts", "historicalProviders.ts"]) {
