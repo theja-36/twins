@@ -34,8 +34,8 @@ const CHAINS = ["agent_definitions", "agent_orchestrator_runs", "agent_runs", "a
 const LIVE = ["orders", "fills", "positions", "risk_approvals", "risk_approval_cards", "decisions", "claim_review_cards", "telegram_intake_outbox", "risk_decisions", "signals"];
 const NC = ["index-constituent-impact-v1", "news-sentiment-v1"];
 // Task 4 scope: news + constituent are required, the earlier agents are switched off here (covered by their own files); the "all six" test enables everything.
-const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: NC.join(",") }), disabledAgents: ["instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "signal-integrity-v1"] };
-const ALL6 = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" }); // the real default path: all six production agents REQUIRED
+const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: NC.join(",") }), disabledAgents: ["instrument-verification-v1", "macro-global-v1", "market-calendar-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"] };
+const ALL6 = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "index-constituent-impact-v1,instrument-verification-v1,macro-global-v1,market-calendar-v1,news-sentiment-v1,signal-integrity-v1" }), disabledAgents: ["price-action-v1", "technical-structure-v1"] }; // the six Task 2-4 agents REQUIRED
 const clock = (d: Date = NOW) => ({ now: () => d, sleep: async () => undefined });
 
 beforeAll(() => { handle = createBoundedDb(DATABASE_URL, { max: 4, idleTimeoutMillis: 10_000 }); state = inMemoryStateSource(); configureRuntimeState({ source: state, ttlMs: 0, failureTtlMs: 0 }); });

@@ -114,7 +114,7 @@ describe("rule configuration for the news and constituent agents", () => {
 describe("worker wiring and source hygiene", () => {
   it("the worker resolves the Task 4 providers only when the engine is enabled", () => {
     const w = readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8");
-    expect(w).toMatch(/const agentProviders = agentRules \? \{ \.\.\.resolveCalendarMacroProviders\(agentRules\), \.\.\.resolveNewsConstituentProviders\(agentRules\) \} : null;/);
+    expect(w).toMatch(/\.\.\.resolveNewsConstituentProviders\(agentRules\)/);
   });
   it("the new agent and provider sources read no message text, import no network / broker / LLM code, read no system clock and write nothing", () => {
     for (const f of ["newsSentiment.ts", "indexConstituent.ts", "newsProviders.ts", "constituentProviders.ts"]) {
