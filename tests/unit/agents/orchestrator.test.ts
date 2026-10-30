@@ -196,7 +196,7 @@ describe("synthesis (pure, deterministic, never an approval)", () => {
     agentId: id, agentVersion: "1.0.0", weight: 50, canBlock: false, advisoryOnly: false, required: false, status: "COMPLETED", verdict: "NEUTRAL", confidence: 100, findings: [], outputSha256: "0".repeat(64), errorCode: null, ...over,
   });
   const input = (agents: SynthesisInput["agents"], over: Partial<SynthesisInput> = {}): SynthesisInput => ({
-    algorithmVersion: "research-synthesis-v1", riskDecisionId: REF.riskDecisionId, decisionVersion: 2, thresholds: { supportiveMin: 0.35, neutralMin: -0.15, cautionMin: -0.5, adverseVetoWeight: 50 }, requiredAgents: [], agents, ...over,
+    algorithmVersion: "research-synthesis-v2", riskDecisionId: REF.riskDecisionId, decisionVersion: 2, thresholds: { supportiveMin: 0.35, neutralMin: -0.15, cautionMin: -0.5, adverseVetoWeight: 50 }, requiredAgents: [], agents, ...over,
   });
   it.each<[string, SynthesisInput["agents"], string, number | null]>([
     ["all supportive", [A("agent_a", { verdict: "SUPPORTIVE" }), A("agent_b", { verdict: "SUPPORTIVE" })], "RESEARCH_SUPPORTIVE", 1],

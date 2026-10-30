@@ -47,6 +47,8 @@ Stage 5 / Task 5 (Technical Structure and Price-Action agents; engine still disa
 Stage 5 / Task 6 (Liquidity and Options Risk agents; engine still disabled by default; no migration) is implemented on branch `feat/stage5-liquidity-options-risk`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
 
 Stage 5 / Task 7 (Historical Pattern and Independent Challenger agents; engine still disabled by default; no migration) is implemented on branch `feat/stage5-historical-challenger`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
+
+Stage 5 / Task 8 (synthesis transparency and the approval-eligibility re-check of the research assessment; engine still disabled by default; migration 0027) is implemented on branch `feat/stage5-synthesis-eligibility`; see [AGENT_ENGINE.md](AGENT_ENGINE.md).
 Stage 3 / Task 6 (risk decision API and approval integration) is implemented on branch `feat/stage3-risk-approval` (migration 0019); see [RISK_APPROVAL_WORKFLOW.md](RISK_APPROVAL_WORKFLOW.md).
 Stage 3 / Task 5 (market, liquidity and event-risk gates) is implemented on branch `feat/stage3-market-risk-gates` (migration 0018); see [MARKET_RISK_GATES.md](MARKET_RISK_GATES.md).
 Stage 3 / Task 4 (risk-decision expiry and loss circuit breakers) is implemented on branch `feat/stage3-expiry-circuit-breakers` (migration 0017); see [CIRCUIT_BREAKERS.md](CIRCUIT_BREAKERS.md).

@@ -6,6 +6,7 @@ import { breakerGate } from "../breakers/record";
 import { loadExpiryConfig } from "../expiry/config";
 import { getRiskDecision, listRiskDecisions, refuseUnlessSafe, RiskDecisionError, type RiskDecisionRecord } from "../riskDecisions";
 import { buildApprovalCardData, renderApprovalCard, type ApprovalCardData } from "./card";
+import { loadResearchEligibilityConfig, researchEligibilityReasons, type ResearchEligibilityConfig } from "./researchEligibility";
 import { assessApprovalEligibility, validUntilOf, type EligibilityAssessment, type EligibilityOptions } from "./eligibility";
 
 /**
@@ -46,7 +47,7 @@ export type ApprovalRecordOutcome = { outcome: "recorded"; approvalId: string } 
  * Records an APPROVE or REJECT through the database function (the single enforcement point). `actor` is `operator:<name>` (self-declared, like the other
  * operations paths; the API endpoint additionally requires the bearer token). A REJECT needs a reason. A duplicate is reported, never overwritten.
  */
-export async function recordRiskApproval(db: Db, input: { decisionId: string; action: "APPROVE" | "REJECT"; actor: string; reason?: string; context?: Record<string, unknown>; expiry?: ReturnType<typeof loadExpiryConfig> }): Promise<ApprovalRecordOutcome> {
+export async function recordRiskApproval(db: Db, input: { decisionId: string; action: "APPROVE" | "REJECT"; actor: string; reason?: string; context?: Record<string, unknown>; expiry?: ReturnType<typeof loadExpiryConfig>; research?: ResearchEligibilityConfig }): Promise<ApprovalRecordOutcome> {
   if (input.action !== "APPROVE" && input.action !== "REJECT") throw new RiskDecisionError("invalid_input", "action must be APPROVE or REJECT");
   if (!/^operator:[A-Za-z0-9._-]{1,64}$/.test(input.actor)) throw new RiskDecisionError("invalid_input", "actor must be operator:<name>");
   if (input.action === "REJECT" && !(input.reason ?? "").trim()) throw new RiskDecisionError("invalid_input", "a REJECT needs a reason");
@@ -58,6 +59,11 @@ export async function recordRiskApproval(db: Db, input: { decisionId: string; ac
   }
   const decision = await getRiskDecision(db, input.decisionId);
   if (!decision) return { outcome: "refused", reason: "decision_not_found" };
+  if (input.action === "APPROVE") {
+    // Stage 5 / Task 8: an unacceptable (or, with the engine enabled, missing) research assessment refuses before the database function is even called; the function enforces the BLOCKED / INCOMPLETE / ADVERSE refusal again
+    const research = await researchEligibilityReasons(db, decision, input.research ?? loadResearchEligibilityConfig());
+    if (research[0]) return { outcome: "refused", reason: research[0] };
+  }
   const validUntil = validUntilOf(decision, input.expiry ?? loadExpiryConfig());
   const context = JSON.stringify({ ...(input.context ?? {}), via: "api" });
   const r = await db.execute(sql`select twins_record_risk_approval(${input.decisionId}::uuid, null::uuid, ${input.action}, ${input.actor}, ${context}::jsonb, ${input.reason ?? null}, ${validUntil.toISOString()}::timestamptz) as outcome`);

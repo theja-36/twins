@@ -1,5 +1,7 @@
 # Risk decisions - Stage 3 / Task 1
 
+> **Stage 5 / Task 8:** approval eligibility additionally re-checks the latest research assessment of the decision's lineage (`research_assessment_blocked` / `_incomplete` / `_adverse` refuse; `research_assessment_missing` refuses when the agent engine is enabled; with the engine disabled behaviour is unchanged). The refusal is enforced in the application layer and again inside `twins_record_risk_approval` (migration 0027). Risk decisions are not modified: the assessment is read from the append-only agent tables. See [AGENT_ENGINE.md](AGENT_ENGINE.md#approval-eligibility-re-check-stage-5--task-8).
+
 > Decision [D-055](DECISION_LOG.md); requirement [SZ-12](REQUIREMENTS_TRACEABILITY.md) (new) and the foundations of SZ-01…SZ-11, AP-xx, EX-xx. Related: [MANDATORY_STOP_LOSS.md](MANDATORY_STOP_LOSS.md), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md), [RUNTIME_SAFETY_STATE.md](RUNTIME_SAFETY_STATE.md), [DURABLE_INTAKE_OUTBOX.md](DURABLE_INTAKE_OUTBOX.md). Code: `packages/risk`, migration `0014_risk_decisions_foundation`, `packages/database/src/schema/riskDecisions.ts`.
 
 ## 1. What this is - and is not

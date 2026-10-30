@@ -122,7 +122,7 @@ describe("a full orchestration is recorded, append-only", () => {
     expect(evidence[0]).toMatchObject({ kind: "scorecard", ref: "scorecard:abc", ref_sha256: "a".repeat(64) });
 
     const [syn] = await q("select * from agent_orchestrator_syntheses where orchestrator_run_id = $1", [out.runId]);
-    expect(syn).toMatchObject({ assessment: "RESEARCH_SUPPORTIVE", grants_approval: false, algorithm_version: "research-synthesis-v1" });
+    expect(syn).toMatchObject({ assessment: "RESEARCH_SUPPORTIVE", grants_approval: false, algorithm_version: "research-synthesis-v2" });
     expect(syn!["result"]).toMatchObject({ grantsApproval: false, unavailableOptional: ["agent_broken", "agent_slow"] });
     expect(syn!["synthesis_input"].agents.map((a: { agentId: string }) => a.agentId)).toEqual([TREND("a"), TREND("b"), "agent_broken", "agent_slow"].sort());
     expect((await q("select count(*)::int as n from agent_definitions where agent_id = any($1)", [[TREND("a"), TREND("b"), "agent_slow", "agent_broken"]]))[0]!["n"]).toBeGreaterThanOrEqual(4);
