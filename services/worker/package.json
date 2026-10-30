@@ -23,13 +23,13 @@
     "@twins/shared": "*",
     "@twins/signals": "*",
     "@twins/types": "*",
-    "bullmq": "^6.3.11",
+    "bullmq": "^6.5.0",
     "ioredis": "^5.11.1",
     "@twins/agents": "*",
     "@twins/alerting": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {
-    "tsx": "^4.16.0"
+    "tsx": "^4.23.15"
   }
 }

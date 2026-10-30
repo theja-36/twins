@@ -9,6 +9,6 @@
     "@twins/database": "*",
     "@twins/signals": "*",
     "@twins/stop-loss": "*",
-    "drizzle-orm": "^0.45.2"
+    "drizzle-orm": "^0.45.4"
   }
 }
