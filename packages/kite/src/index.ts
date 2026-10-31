@@ -6,3 +6,6 @@ export * from "./rateLimit";
 export * from "./session";
 export * from "./client";
 export * from "./instruments";
+export * from "./timestamps";
+export * from "./marketData";
+export * from "./historical";

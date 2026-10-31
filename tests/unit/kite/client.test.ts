@@ -200,3 +200,61 @@ describe("configuration and redaction", () => {
     expect(redact("x".repeat(500)).length).toBeLessThan(210);
   });
 });
+
+describe("bounded retries (safe reads only)", () => {
+  const sess = (c: ReturnType<typeof clientWith>): void => c.session.setToken(ACCESS_TOKEN);
+  it("retries a 503 and a network error with doubling back-off, then succeeds", async () => {
+    const c = clientWith([json({ status: "error", message: "x" }, 503), new TypeError("fetch failed"), ok({ fine: true })], { maxRetries: 2, backoffMs: 250, limiter: new RateLimiter(instantClock()) }); // separate limiter clock: sleeps below are back-off only
+    sess(c);
+    expect(await c.client.getJson("/quote", { i: "x" })).toEqual({ fine: true });
+    expect(c.calls).toHaveLength(3);
+    expect(c.clock.sleeps).toEqual([250, 500]);
+  });
+  it("stops after maxRetries (so at most 1 + maxRetries requests) with the last error", async () => {
+    const c = clientWith([json({}, 500), json({}, 500), json({}, 500), json({}, 500)], { maxRetries: 2 });
+    sess(c);
+    expect(await code(c.client.getJson("/quote", { i: "x" }))).toBe("SERVER_ERROR");
+    expect(c.calls).toHaveLength(3);
+  });
+  it("honours Retry-After on 429, capped at 5 s", async () => {
+    const limited = (seconds: string): Response => new Response(JSON.stringify({ status: "error", message: "slow" }), { status: 429, headers: { "retry-after": seconds } });
+    const a = clientWith([limited("2"), ok({})], { maxRetries: 1 });
+    sess(a);
+    await a.client.getJson("/quote", { i: "x" });
+    expect(a.clock.sleeps).toContain(2000);
+    const b = clientWith([limited("120"), ok({})], { maxRetries: 1 });
+    sess(b);
+    await b.client.getJson("/quote", { i: "x" });
+    expect(b.clock.sleeps).toContain(5000);
+  });
+  it("never retries authentication failures, bad requests, refusals, or the token exchange", async () => {
+    const t = clientWith([json({ status: "error", error_type: "TokenException", message: "x" }, 403), ok({})], { maxRetries: 3 });
+    sess(t);
+    expect(await code(t.client.getJson("/quote", { i: "x" }))).toBe("SESSION_INVALID");
+    expect(t.calls).toHaveLength(1);
+    const b = clientWith([json({ status: "error", error_type: "InputException", message: "x" }, 400), ok({})], { maxRetries: 3 });
+    sess(b);
+    expect(await code(b.client.getJson("/quote", { i: "x" }))).toBe("BAD_REQUEST");
+    expect(b.calls).toHaveLength(1);
+    const x = clientWith([json({ status: "error", message: "boom" }, 500), ok({ access_token: ACCESS_TOKEN })], { maxRetries: 3 });
+    expect(await code(x.client.exchangeRequestToken(REQUEST_TOKEN))).toBe("AUTH_FAILED");
+    expect(x.calls).toHaveLength(1);
+    const n = clientWith([], { maxRetries: 3 });
+    sess(n);
+    expect(await code(n.client.getJson("/orders/regular"))).toBe("NOT_ALLOWED");
+    expect(n.calls).toHaveLength(0);
+  });
+  it("a retry that meets an invalidated session stops at once", async () => {
+    const c = clientWith([json({}, 503), json({ status: "error", error_type: "TokenException", message: "x" }, 403), ok({})], { maxRetries: 3 });
+    sess(c);
+    expect(await code(c.client.getJson("/quote", { i: "x" }))).toBe("SESSION_INVALID");
+    expect(c.calls).toHaveLength(2);
+    expect(c.session.state().status).toBe("invalid");
+  });
+  it("caps the configured retries at 5 and treats a loopback transport as test-only: real-looking credentials are refused", () => {
+    const s = new Session();
+    expect(() => new KiteClient({ apiKey: "abcdefgh1234", session: s, baseUrl: "http://127.0.0.1:9" })).toThrow(KiteError);
+    expect(() => new KiteClient({ apiKey: "testkey12345", apiSecret: "abcdefgh1234", session: s, baseUrl: "http://127.0.0.1:9" })).toThrow(KiteError);
+    expect(() => new KiteClient({ apiKey: "testkey12345", apiSecret: "testsecret1", session: s, baseUrl: "http://127.0.0.1:9" })).not.toThrow();
+  });
+});

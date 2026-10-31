@@ -1,0 +1,35 @@
+{
+ "status": "success",
+ "data": {
+  "NSE:NIFTY 50": {
+   "instrument_token": 256265,
+   "last_price": 24350.5,
+   "ohlc": {
+    "open": 24300,
+    "high": 24400,
+    "low": 24280,
+    "close": 24310
+   }
+  },
+  "NFO:NIFTY26NOVFUT": {
+   "instrument_token": 9000001,
+   "last_price": 24400,
+   "ohlc": {
+    "open": 24350,
+    "high": 24450,
+    "low": 24300,
+    "close": 24330
+   }
+  },
+  "NFO:NIFTY26NOV24000CE": {
+   "instrument_token": 9000002,
+   "last_price": 412.35,
+   "ohlc": {
+    "open": 0,
+    "high": 0,
+    "low": 0,
+    "close": 405
+   }
+  }
+ }
+}

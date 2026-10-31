@@ -1,0 +1,257 @@
+{
+ "status": "success",
+ "data": {
+  "NSE:NIFTY 50": {
+   "instrument_token": 256265,
+   "timestamp": "2026-11-02 15:45:56",
+   "last_price": 24350.5,
+   "volume": 0,
+   "net_change": 0,
+   "ohlc": {
+    "open": 24300,
+    "high": 24400,
+    "low": 24280,
+    "close": 24310
+   },
+   "depth": {
+    "buy": [
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ],
+    "sell": [
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ]
+   }
+  },
+  "NFO:NIFTY26NOVFUT": {
+   "instrument_token": 9000001,
+   "timestamp": "2026-11-02 15:45:56",
+   "last_trade_time": "2026-11-02 15:45:52",
+   "last_price": 24400.0,
+   "last_quantity": 75,
+   "buy_quantity": 9000,
+   "sell_quantity": 8000,
+   "volume": 1234500,
+   "average_price": 24380.4,
+   "oi": 15432000,
+   "oi_day_high": 15500000,
+   "oi_day_low": 15000000,
+   "net_change": 0,
+   "lower_circuit_limit": 21960,
+   "upper_circuit_limit": 26840,
+   "ohlc": {
+    "open": 24350,
+    "high": 24450,
+    "low": 24300,
+    "close": 24330
+   },
+   "depth": {
+    "buy": [
+     {
+      "price": 24399.9,
+      "quantity": 150,
+      "orders": 3
+     },
+     {
+      "price": 24399.8,
+      "quantity": 225,
+      "orders": 2
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ],
+    "sell": [
+     {
+      "price": 24400.1,
+      "quantity": 300,
+      "orders": 4
+     },
+     {
+      "price": 24400.2,
+      "quantity": 75,
+      "orders": 1
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ]
+   }
+  },
+  "NFO:NIFTY26NOV24000CE": {
+   "instrument_token": 9000002,
+   "timestamp": "2026-11-02 15:45:30",
+   "last_trade_time": "2026-11-02 15:30:10",
+   "last_price": 412.35,
+   "volume": 0,
+   "oi": 0,
+   "ohlc": {
+    "open": 0,
+    "high": 0,
+    "low": 0,
+    "close": 405
+   },
+   "depth": {
+    "buy": [
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ],
+    "sell": [
+     {
+      "price": 413.0,
+      "quantity": 75,
+      "orders": 1
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     },
+     {
+      "price": 0,
+      "quantity": 0,
+      "orders": 0
+     }
+    ]
+   }
+  },
+  "NFO:BANKNIFTY26NOVFUT": {
+   "instrument_token": 9000005,
+   "timestamp": "2026-10-30 15:29:59",
+   "last_price": 52010.0,
+   "volume": 88000,
+   "oi": 1200000,
+   "ohlc": {
+    "open": 52000,
+    "high": 52100,
+    "low": 51900,
+    "close": 51950
+   },
+   "depth": {
+    "buy": [
+     {
+      "price": 52009.0,
+      "quantity": 60,
+      "orders": 1
+     }
+    ],
+    "sell": [
+     {
+      "price": 52011.0,
+      "quantity": 30,
+      "orders": 1
+     }
+    ]
+   }
+  },
+  "NSE:NOT-REQUESTED": {
+   "instrument_token": 1,
+   "timestamp": "2026-11-02 15:45:56",
+   "last_price": 10
+  }
+ }
+}

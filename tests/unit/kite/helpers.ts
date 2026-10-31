@@ -1,10 +1,13 @@
 import { readFileSync } from "node:fs";
+import { parseInstrumentsCsv } from "../../../packages/kite/src/index";
 import { KiteClient, RateLimiter, Session, type Clock } from "../../../packages/kite/src/index";
 
 export const API_KEY = "testkey12345";
 export const API_SECRET = "testsecret67890";
 export const REQUEST_TOKEN = "reqtok1234567890";
 export const ACCESS_TOKEN = "acc_token_0123456789abcdef";
+export const fixture = (name: string): unknown => JSON.parse(readFileSync(new URL(`../../fixtures/kite/${name}`, import.meta.url), "utf8"));
+export const catalog = () => parseInstrumentsCsv(csv());
 export const csv = (): string => readFileSync(new URL("../../fixtures/kite/instruments.synthetic.csv", import.meta.url), "utf8");
 
 export interface Call { url: string; init: RequestInit }
@@ -28,9 +31,10 @@ export function instantClock(): Clock & { t: number; sleeps: number[] } {
   const c = { t: 1_000_000, sleeps: [] as number[], now: () => c.t, sleep: async (ms: number) => { c.sleeps.push(ms); c.t += ms; } };
   return c;
 }
-export function clientWith(responses: Parameters<typeof fakeFetch>[0], over: Partial<ConstructorParameters<typeof KiteClient>[0]> = {}): { client: KiteClient; session: Session; calls: Call[] } {
+export function clientWith(responses: Parameters<typeof fakeFetch>[0], over: Partial<ConstructorParameters<typeof KiteClient>[0]> = {}): { client: KiteClient; session: Session; calls: Call[]; clock: ReturnType<typeof instantClock> } {
   const { fetch: f, calls } = fakeFetch(responses);
   const session = new Session(() => new Date("2026-11-02T04:00:00Z"));
-  const client = new KiteClient({ apiKey: API_KEY, apiSecret: API_SECRET, session, fetch: f, limiter: new RateLimiter(instantClock()), ...over });
-  return { client, session, calls };
+  const clock = instantClock();
+  const client = new KiteClient({ apiKey: API_KEY, apiSecret: API_SECRET, session, fetch: f, limiter: new RateLimiter(clock), clock, maxRetries: 0, ...over });
+  return { client, session, calls, clock };
 }

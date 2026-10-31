@@ -13,7 +13,8 @@ export type KiteErrorCode =
   | "RESPONSE_TOO_LARGE"
   | "INSTRUMENTS_INVALID" // the instruments dump is unusable as a whole
   | "UNSUPPORTED_UNDERLYING"
-  | "UNSUPPORTED_CONTRACT";
+  | "UNSUPPORTED_CONTRACT"
+  | "INVALID_REQUEST"; // a request parameter is outside what this package will send (range, interval, expired contract, ...)
 
 const FIXED: Record<KiteErrorCode, string> = {
   CONFIG: "invalid Kite configuration",
@@ -31,11 +32,12 @@ const FIXED: Record<KiteErrorCode, string> = {
   INSTRUMENTS_INVALID: "instruments dump is invalid",
   UNSUPPORTED_UNDERLYING: "underlying is outside the supported scope (NIFTY, BANKNIFTY, SENSEX)",
   UNSUPPORTED_CONTRACT: "contract is not listed in the instruments catalog",
+  INVALID_REQUEST: "request parameters refused before sending",
 };
 
 /** The message is a fixed string per code. Server text is kept (redacted, bounded) in `serverMessage` only; it is never interpolated into `message`. */
 export class KiteError extends Error {
-  constructor(readonly code: KiteErrorCode, readonly detail: { status?: number; errorType?: string; serverMessage?: string } = {}) {
+  constructor(readonly code: KiteErrorCode, readonly detail: { status?: number; errorType?: string; serverMessage?: string; retryAfterMs?: number } = {}) {
     super(FIXED[code]);
     this.name = "KiteError";
   }
