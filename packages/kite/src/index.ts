@@ -9,3 +9,5 @@ export * from "./instruments";
 export * from "./timestamps";
 export * from "./marketData";
 export * from "./historical";
+export * from "./ticks";
+export * from "./ticker";
