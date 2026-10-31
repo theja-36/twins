@@ -1,10 +1,11 @@
 import { KiteError } from "./errors";
 
 /** Variable NAMES only; values come from the environment of the process (an env file outside the repo) and are never logged. */
+const PREFIX = "TWINS_KITE_";
 export const KITE_ENV = {
-  apiKey: "TWINS_KITE_API_KEY",
-  apiSecret: "TWINS_KITE_API_SECRET",
-  accessToken: "TWINS_KITE_ACCESS_TOKEN", // optional: a token obtained by the documented exchange; the server still decides whether it is valid
+  apiKey: `${PREFIX}API_KEY`,
+  apiSecret: `${PREFIX}API_SECRET`,
+  accessToken: `${PREFIX}ACCESS_TOKEN`, // optional: a token obtained by the documented exchange; the server still decides whether it is valid
 } as const;
 
 export interface KiteConfig { apiKey: string; apiSecret?: string; accessToken?: string }
