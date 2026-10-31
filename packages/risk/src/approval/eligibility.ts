@@ -19,6 +19,7 @@ export const ELIGIBILITY_REASONS = [
   "decision_not_found", "decision_superseded", "decision_not_approved_for_review", "decision_expired", "stop_loss_not_valid", "sizing_missing", "portfolio_not_passed", "market_not_passed",
   "circuit_breaker_open", "kill_switch_active", "state_unavailable", "breaker_state_unavailable", "source_intelligence_not_valid",
   "research_assessment_blocked", "research_assessment_incomplete", "research_assessment_adverse", "research_assessment_caution", "research_assessment_neutral", "research_assessment_missing", "research_assessment_unavailable",
+  "research_reference_missing", "research_assessment_changed", "research_adverse_not_superseded", "research_blocked_not_superseded",
 ] as const;
 export type EligibilityReason = (typeof ELIGIBILITY_REASONS)[number];
 

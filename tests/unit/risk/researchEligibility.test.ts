@@ -5,8 +5,9 @@ import type { Db } from "../../../packages/database/src/index";
 
 /** A fake Db whose `execute` returns the given assessment row (or none), or throws. */
 const dbWith = (assessment: string | null | "throw"): Db => ({
-  execute: async () => { if (assessment === "throw") throw new Error("relation does not exist SECRET-DETAIL"); return { rows: assessment === null ? [] : [{ run_id: "r1", assessment, run_version: 2, created_at: "2025-01-06T04:00:00Z" }] }; },
+  execute: async () => { if (assessment === "throw") throw new Error("relation does not exist SECRET-DETAIL"); return { rows: assessment === null ? [] : [{ run_id: "r1", assessment, sha: "a".repeat(64), refusal: refusalOf[assessment] ?? null, run_version: 2, created_at: "2025-01-06T04:00:00Z" }] }; },
 }) as unknown as Db;
+const refusalOf: Record<string, string> = { RESEARCH_BLOCKED: "research_assessment_blocked", RESEARCH_INCOMPLETE: "research_assessment_incomplete", RESEARCH_ADVERSE: "research_assessment_adverse" }; // what twins_research_assessment returns
 const d = { signalId: "11111111-1111-4111-8111-111111111111", optionsClaimId: null, decisionVersion: 5 };
 const cfg = (over: Partial<ResearchEligibilityConfig> = {}): ResearchEligibilityConfig => ({ ...DEFAULT_RESEARCH_ELIGIBILITY, engineEnabled: true, ...over });
 
@@ -63,5 +64,23 @@ describe("research eligibility reasons", () => {
   it("an unknown stored assessment is an error (fail closed), not a pass", async () => {
     await expect(latestResearchAssessment(dbWith("RESEARCH_GREAT"), d)).rejects.toThrow();
     expect(await researchEligibilityReasons(dbWith("RESEARCH_GREAT"), d, cfg())).toEqual(["research_assessment_unavailable"]);
+  });
+});
+
+describe("HB-01 / HB-02 reasons (the database function decides; the application layer relays and checks the cited run)", () => {
+  it("an acceptable assessment needs the cited run to be the latest one", async () => {
+    expect(await researchEligibilityReasons(dbWith("RESEARCH_SUPPORTIVE"), d, cfg(), "r1")).toEqual([]);
+    expect(await researchEligibilityReasons(dbWith("RESEARCH_SUPPORTIVE"), d, cfg(), null)).toEqual(["research_reference_missing"]);
+    expect(await researchEligibilityReasons(dbWith("RESEARCH_SUPPORTIVE"), d, cfg(), "r0")).toEqual(["research_assessment_changed"]);
+    expect(await researchEligibilityReasons(dbWith("RESEARCH_SUPPORTIVE"), d, cfg())).toEqual([]); // no citation in play (an eligibility read, not an approval)
+  });
+  it("a refusal returned by the database (including an adverse result not superseded by new evidence) wins over the citation check", async () => {
+    const db = { execute: async () => ({ rows: [{ run_id: "r1", assessment: "RESEARCH_SUPPORTIVE", sha: "b".repeat(64), refusal: "research_adverse_not_superseded", run_version: 2, created_at: "2025-01-06T04:00:00Z" }] }) } as unknown as Db;
+    expect(await researchEligibilityReasons(db, d, cfg(), "r1")).toEqual(["research_adverse_not_superseded"]);
+    expect(await researchEligibilityReasons(db, d, cfg({ engineEnabled: false }))).toEqual(["research_adverse_not_superseded"]);
+  });
+  it("an unknown refusal code from the database is an error, not a silent pass", async () => {
+    const db = { execute: async () => ({ rows: [{ run_id: "r1", assessment: "RESEARCH_SUPPORTIVE", sha: "b".repeat(64), refusal: "made_up", run_version: 2, created_at: "2025-01-06T04:00:00Z" }] }) } as unknown as Db;
+    expect(await researchEligibilityReasons(db, d, cfg(), "r1")).toEqual(["research_assessment_unavailable"]);
   });
 });
