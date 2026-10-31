@@ -176,7 +176,7 @@ function wsRig() {
   const timers = new Timers();
   const socks: Sock[] = [];
   const session = new Session(); session.setToken(ACCESS_TOKEN);
-  const ticker = new KiteTicker({ apiKey: API_KEY, session, catalog: cat, timers, factory: () => { const s = new Sock(); socks.push(s); return s; }, inactivityMs: 3_600_000, baseBackoffMs: 1000 });
+  const ticker = new KiteTicker({ plan: "connect", apiKey: API_KEY, session, catalog: cat, timers, factory: () => { const s = new Sock(); socks.push(s); return s; }, inactivityMs: 3_600_000, baseBackoffMs: 1000 });
   ticker.subscribe([niftyFut, nifty], "full");
   ticker.start();
   const sock = (): Sock => socks[socks.length - 1] as Sock;

@@ -116,7 +116,7 @@ export function mapFullQuote(instrument: KiteInstrument, entry: RawFullQuote, fe
   }
   let lastTradeTime: string | null = null;
   if (r["last_trade_time"] !== undefined && r["last_trade_time"] !== null) lastTradeTime = parseQuoteTimestamp(r["last_trade_time"]); // unparsable -> null, never guessed
-  const quote: InstrumentQuote = { bid, ask, last: last === "bad" ? null : last, volume, avgVolume: null, openInterest, bidDepth, askDepth, asOf };
+  const quote: InstrumentQuote = { bid, ask, last, volume, avgVolume: null, openInterest, bidDepth, askDepth, asOf };
   const problem = quoteProblem(quote); // the existing validator, unchanged
   if (problem) return fail(`quote_${problem}`);
   return { ok: true, value: { quote, upstreamTimestamp: asOf, lastTradeTime, fetchedAt, ageMs } };

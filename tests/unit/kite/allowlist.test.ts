@@ -7,16 +7,20 @@ const refused = (m: string, p: string): void => { expect(() => classify(m, p)).t
 
 describe("request allowlist", () => {
   it("allows exactly the read-only market-data GETs", () => {
-    for (const p of ["/instruments", "/instruments/NFO", "/instruments/historical/256265/day", "/instruments/historical/256265/15minute", "/quote", "/quote/ltp", "/quote/ohlc", "/user/profile"]) expect(classify("GET", p)).toBe("read");
+    for (const p of ["/instruments", "/instruments/NFO", "/instruments/historical/256265/day", "/instruments/historical/256265/15minute", "/quote", "/quote/ltp", "/quote/ohlc"]) expect(classify("GET", p)).toBe("read");
+  });
+  it("allows account READS as GET only, labelled \"account\"", () => {
+    for (const p of ["/user/profile", "/user/margins", "/user/margins/equity", "/portfolio/holdings", "/portfolio/positions", "/orders", "/orders/123456", "/orders/123456/trades", "/trades", "/gtt/triggers", "/gtt/triggers/42"]) expect(classify("GET", p)).toBe("account");
   });
   it("allows POST only for the authentication exchange, and labels it so", () => {
     expect(classify("POST", "/session/token")).toBe("auth");
     for (const p of ["/orders/regular", "/quote", "/instruments", "/gtt/triggers", "/portfolio/positions", "/margins/orders", "/mf/orders"]) refused("POST", p);
   });
-  it("refuses order, GTT, portfolio, position, holding, margin, mutual-fund and logout paths for every method", () => {
-    for (const m of ["GET", "POST", "PUT", "DELETE", "PATCH"]) {
-      for (const p of ["/orders", "/orders/regular", "/orders/regular/123", "/trades", "/portfolio/holdings", "/portfolio/positions", "/gtt/triggers", "/margins", "/margins/equity", "/mf/orders", "/mf/holdings", "/user/margins"]) refused(m, p);
+  it("refuses every WRITE verb on order, GTT, portfolio, position, holding, margin and trade paths, and every verb on order variants, mutual funds and logout", () => {
+    for (const m of ["POST", "PUT", "DELETE", "PATCH"]) {
+      for (const p of ["/orders", "/orders/123", "/orders/regular", "/orders/regular/123", "/trades", "/portfolio/holdings", "/portfolio/holdings/authorise", "/portfolio/positions", "/gtt/triggers", "/gtt/triggers/42", "/user/margins", "/user/margins/equity", "/margins/orders", "/mf/orders", "/mf/holdings", "/session/token/x"]) refused(m, p);
     }
+    for (const p of ["/orders/regular", "/orders/regular/123", "/orders/iceberg", "/portfolio/holdings/authorise", "/margins", "/margins/equity", "/mf/orders", "/mf/holdings", "/user/margins/futures", "/gtt/triggers/abc"]) refused("GET", p);
     refused("DELETE", "/session/token");
     refused("PUT", "/session/token");
     refused("GET", "/session/token");

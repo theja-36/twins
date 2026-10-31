@@ -1,7 +1,9 @@
 import { KiteError } from "./errors";
 import type { InstrumentCatalog, KiteInstrument } from "./instruments";
 import type { Session } from "./session";
-import { decodeFrame, MAX_FUTURE_SKEW_MS, type DecodedTick } from "./ticks";
+import { MAX_FUTURE_SKEW_MS } from "./marketData";
+import { PLAN_CAPABILITIES, type KitePlan } from "./plans";
+import { decodeFrame, type DecodedTick } from "./ticks";
 
 export type TickerMode = "ltp" | "quote" | "full";
 export type TickerState = "idle" | "connecting" | "connected" | "reconnecting" | "stopped" | "auth_failed" | "failed" | "disposed";
@@ -41,7 +43,7 @@ export function builtinWebSocketFactory(): WsFactory {
     return {
       onOpen: (cb) => { ws.onopen = () => cb(); },
       onMessage: (cb) => { ws.onmessage = (e: MessageEvent) => cb(typeof e.data === "string" ? e.data : new Uint8Array(e.data as ArrayBuffer)); },
-      onClose: (cb) => { ws.onclose = (e: CloseEvent) => cb(e.code); },
+      onClose: (cb) => { ws.onclose = (e: { code: number }) => cb(e.code); },
       onError: (cb) => { ws.onerror = () => cb(); },
       send: (t) => ws.send(t),
       close: () => ws.close(),
@@ -71,6 +73,8 @@ export interface TickerOptions {
    * Any other failure of the check does not stop the backoff schedule.
    */
   checkSession?: () => Promise<void>;
+  /** The configured Kite plan; default "personal" (fail closed): the WebSocket needs "connect". */
+  plan?: KitePlan;
 }
 
 export interface ValidatedTick { instrumentKey: string; layout: DecodedTick["layout"]; quote: NonNullable<DecodedTick["quote"]>; exchangeTimestamp: string; lastTradeTime: string | null; receivedAt: string; dayOhlc: DecodedTick["dayOhlc"] }
@@ -212,6 +216,7 @@ export class KiteTicker {
   // ───────────── connection ─────────────
 
   private connect(isReconnect: boolean): void {
+    if (!PLAN_CAPABILITIES[this.o.plan ?? "personal"].websocket) { this.fail("failed", "plan_restricted"); return; } // checked locally: no socket is opened
     const token = this.o.session.usableToken();
     if (!token) { this.fail("auth_failed", "no_usable_session"); return; }
     const gen = ++this.generation;

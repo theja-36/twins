@@ -22,7 +22,7 @@ export type SessionState =
 export class Session {
   private token: string | undefined;
   private current: SessionState = { status: "none" };
-  constructor(private readonly now: () => Date = () => new Date()) {}
+  constructor(private readonly now: () => Date = () => new Date(), private readonly onInvalidate?: (reason: "server_rejected" | "replaced") => void) {}
 
   state(): SessionState { return this.current; }
   /** Only a held, not-rejected token is returned. */
@@ -37,6 +37,7 @@ export class Session {
   markInvalid(): void {
     this.token = undefined;
     this.current = { status: "invalid", at: this.now().toISOString(), reason: "server_rejected" };
+    try { this.onInvalidate?.("server_rejected"); } catch { /* an alert hook must never break the request path */ }
   }
 }
 

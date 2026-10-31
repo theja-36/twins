@@ -153,7 +153,7 @@ describe("requests and error handling", () => {
     const { fetch: f, calls } = fakeFetch([ok({})]);
     const session = new Session();
     session.setToken(ACCESS_TOKEN);
-    await new KiteClient({ apiKey: API_KEY, session, fetch: f, limiter: new RateLimiter(instantClock()) }).getJson("/user/profile");
+    await new KiteClient({ apiKey: API_KEY, session, fetch: f, limiter: new RateLimiter(instantClock()) }).getAccountJson("/user/profile");
     expect(calls).toHaveLength(1);
   });
 });

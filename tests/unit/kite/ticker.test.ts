@@ -59,6 +59,7 @@ function rig(over: Partial<TickerOptions> = {}) {
   const session = new Session();
   session.setToken(ACCESS_TOKEN);
   const ticker = new KiteTicker({
+    plan: "connect",
     apiKey: API_KEY, session, catalog: cat, timers, log: (event, fields) => { logs.push({ event, ...(fields ? { fields } : {}) }); },
     factory: (url) => { const s = new FakeSocket(url); sockets.push(s); return s; },
     baseBackoffMs: 1000, maxBackoffMs: 8000, maxReconnectAttempts: 4, inactivityMs: 9000, ...over,
@@ -355,7 +356,7 @@ describe("authentication", () => {
     const timers = new FakeTimers();
     const logs: string[] = [];
     const session = new Session(); session.setToken(ACCESS_TOKEN);
-    const ticker = new KiteTicker({ apiKey: API_KEY, session, catalog: cat, timers, log: (e, f) => logs.push(JSON.stringify({ e, f })), factory: (url) => { throw new Error(`cannot connect to ${url}`); }, maxReconnectAttempts: 2 });
+    const ticker = new KiteTicker({ plan: "connect", apiKey: API_KEY, session, catalog: cat, timers, log: (e, f) => logs.push(JSON.stringify({ e, f })), factory: (url) => { throw new Error(`cannot connect to ${url}`); }, maxReconnectAttempts: 2 });
     ticker.start();
     await timers.advance(100_000);
     expect(ticker.state()).toBe("failed");

@@ -1,4 +1,5 @@
-import { classify, rateClassOf } from "./allowlist";
+import { classify, rateClassOf, type RequestKind } from "./allowlist";
+import { requireCapability, type KitePlan } from "./plans";
 import { KiteError } from "./errors";
 import { RateLimiter, systemClock, type Clock } from "./rateLimit";
 import { redact } from "./redact";
@@ -21,6 +22,8 @@ export interface KiteClientOptions {
   maxBytes?: number;
   /** Retries for SAFE READS only (GET), for network errors, timeouts, 5xx and 429. Default 2; 0 disables. Never applied to the token exchange. */
   maxRetries?: number;
+  /** The configured Kite plan. Default "personal" (fail closed): market data and historical candles are refused locally unless the plan is "connect". */
+  plan?: KitePlan;
   /** First back-off in ms (doubles each retry; a Retry-After header is honoured, capped at 5 s). */
   backoffMs?: number;
   clock?: Clock;
@@ -59,9 +62,17 @@ export class KiteClient {
 
   /** GET a read-only endpoint and return `data` of a `{status:"success"}` envelope. */
   async getJson<T = unknown>(path: string, query: Query = {}): Promise<T> {
+    if (classify("GET", path) !== "read") throw new KiteError("NOT_ALLOWED"); // market data only; account reads go through getAccountJson
     const body = await this.send("GET", path, query);
     const parsed = this.parseEnvelope(body);
     return parsed.data as T;
+  }
+
+  /** GET an ACCOUNT read (profile, margins, holdings, positions, orders, trades, GTT list). Refuses market-data paths; there is no write method on this class. */
+  async getAccountJson<T = unknown>(path: string, query: Query = {}): Promise<T> {
+    if (classify("GET", path) !== "account") throw new KiteError("NOT_ALLOWED");
+    const body = await this.send("GET", path, query);
+    return this.parseEnvelope(body).data as T;
   }
 
   /** GET a read-only endpoint that returns text (the instruments CSV). */
@@ -71,7 +82,7 @@ export class KiteClient {
 
   /** Asks the SERVER whether the held token works. The only way a session becomes "verified". */
   async verifySession(): Promise<void> {
-    await this.getJson("/user/profile");
+    await this.getAccountJson("/user/profile");
     this.o.session.markVerified();
   }
 
@@ -110,9 +121,13 @@ export class KiteClient {
     }
   }
 
-  private async once(kind: "read" | "auth", method: string, path: string, query: Query, text: boolean, body: string | undefined, extraSecrets: readonly string[]): Promise<string> {
+  private async once(kind: RequestKind, method: string, path: string, query: Query, text: boolean, body: string | undefined, extraSecrets: readonly string[]): Promise<string> {
     const headers: Record<string, string> = { "X-Kite-Version": "3", Accept: text ? "text/csv, application/json" : "application/json" };
     if (kind === "read") {
+      requireCapability(this.o.plan ?? "personal", "marketData");
+      if (rateClassOf(path) === "historical") requireCapability(this.o.plan ?? "personal", "historical");
+    }
+    if (kind === "read" || kind === "account") {
       const token = this.o.session.usableToken();
       if (!token) throw new KiteError(this.o.session.state().status === "invalid" ? "SESSION_INVALID" : "NO_SESSION");
       headers["Authorization"] = `token ${this.o.apiKey}:${token}`;

@@ -1,5 +1,6 @@
 import { quoteProblem, type InstrumentQuote } from "@twins/agents/src/agents/quoteProviders";
 import type { KiteInstrument } from "./instruments";
+import { MAX_FUTURE_SKEW_MS } from "./marketData";
 
 /**
  * Strict decoder for Kite's binary WebSocket frames (big-endian). Layouts follow the public protocol description:
@@ -14,7 +15,7 @@ import type { KiteInstrument } from "./instruments";
  */
 export type TickLayout = "ltp" | "index_quote" | "index_full" | "quote" | "full";
 
-export interface DayOhlc { open: number; high: number; low: number; close: number }
+export interface TickDayOhlc { open: number; high: number; low: number; close: number }
 export interface DecodedTick {
   instrument: KiteInstrument;
   layout: TickLayout;
@@ -26,7 +27,7 @@ export interface DecodedTick {
   /** Upstream time of the last trade (full layout only); may be far older than the exchange timestamp. */
   lastTradeTime: string | null;
   volume: number | null;
-  dayOhlc: DayOhlc | null;
+  dayOhlc: TickDayOhlc | null;
   /** Only when an exchange timestamp is present AND the existing `quoteProblem` validator accepts it. */
   quote: InstrumentQuote | null;
 }
@@ -42,7 +43,6 @@ export interface DecodedFrame {
 }
 
 export const MAX_PACKETS_PER_FRAME = 4000;
-export const MAX_FUTURE_SKEW_MS = 120_000;
 const MIN_EPOCH_MS = Date.UTC(2020, 0, 1);
 
 const PRICE_DIVISOR = 100;
@@ -102,10 +102,10 @@ function decodePacket(p: Uint8Array, resolve: (token: number) => KiteInstrument 
   let exchangeTimestamp: string | null = null;
   let lastTradeTime: string | null = null;
   let volume: number | null = null;
-  let dayOhlc: DayOhlc | null = null;
+  let dayOhlc: TickDayOhlc | null = null;
   let bid: number | null = null, ask: number | null = null, bidDepth: number | null = null, askDepth: number | null = null, openInterest: number | null = null;
 
-  const ohlc = (o: number, h: number, l: number, c: number): DayOhlc | null | "bad" => {
+  const ohlc = (o: number, h: number, l: number, c: number): TickDayOhlc | null | "bad" => {
     const [op, hi, lo, cl] = [price(o), price(h), price(l), price(c)];
     if (op === "bad" || hi === "bad" || lo === "bad" || cl === "bad") return "bad";
     if (op === null || hi === null || lo === null || cl === null) return null; // not yet traded today: absent, not a price of zero

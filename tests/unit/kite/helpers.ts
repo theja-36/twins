@@ -36,7 +36,7 @@ export function clientWith(responses: Parameters<typeof fakeFetch>[0], over: Par
   const { fetch: f, calls } = fakeFetch(responses);
   const session = new Session(() => new Date("2026-11-02T04:00:00Z"));
   const clock = instantClock();
-  const client = new KiteClient({ apiKey: API_KEY, apiSecret: API_SECRET, session, fetch: f, limiter: new RateLimiter(clock), clock, maxRetries: 0, ...over });
+  const client = new KiteClient({ apiKey: API_KEY, apiSecret: API_SECRET, session, fetch: f, limiter: new RateLimiter(clock), clock, maxRetries: 0, plan: "connect", ...over });
   return { client, session, calls, clock };
 }
 

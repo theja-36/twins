@@ -14,6 +14,7 @@ export type KiteErrorCode =
   | "INSTRUMENTS_INVALID" // the instruments dump is unusable as a whole
   | "UNSUPPORTED_UNDERLYING"
   | "UNSUPPORTED_CONTRACT"
+  | "PLAN_RESTRICTED" // the configured Kite plan does not include this capability (checked locally, before anything is sent)
   | "INVALID_REQUEST"; // a request parameter is outside what this package will send (range, interval, expired contract, ...)
 
 const FIXED: Record<KiteErrorCode, string> = {
@@ -32,6 +33,7 @@ const FIXED: Record<KiteErrorCode, string> = {
   INSTRUMENTS_INVALID: "instruments dump is invalid",
   UNSUPPORTED_UNDERLYING: "underlying is outside the supported scope (NIFTY, BANKNIFTY, SENSEX)",
   UNSUPPORTED_CONTRACT: "contract is not listed in the instruments catalog",
+  PLAN_RESTRICTED: "the configured Kite plan does not include this capability",
   INVALID_REQUEST: "request parameters refused before sending",
 };
 

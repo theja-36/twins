@@ -53,3 +53,10 @@ Composition lives in `packages/kite` (it depends on `@twins/agents`; the reverse
 Only the allowlisted GET paths and `POST /session/token` can be sent (checked before the rate limiter or `fetch`); a source-scan test fails on any order/GTT/portfolio/margin path or extra write method. Errors carry fixed messages; server text is redacted and bounded. Instruments naming is verified against synthetic fixtures only and must be reconciled with a first live dump before wiring (B).
 
 Tests: `tests/unit/kite/` (no network; fake `fetch`).
+
+## P0 spine additions (2026-10-31)
+
+- **Account reads (GET only):** profile, margins (`/user/margins[/equity|commodity]`), holdings, positions, order book and per-order history/trades, trades, GTT list/detail. Reached through `KiteClient.getAccountJson`; market data stays on `getJson`. Every write verb, order/GTT placement, modification, cancellation, holdings authorisation, mutual funds and logout remain refused for all methods. LIVE_TRADING stays false.
+- **Plan matrix** (`packages/kite/src/plans.ts`, from zerodha.com/products/api read 2026-10-31): Personal (free) lists order/GTT/alerts management, margin computation and portfolio management, and does NOT list market data; Connect (INR 500/month) lists realtime WebSocket streaming and historical candles. The vendor page does not enumerate every endpoint per plan, so the table is conservative: unlisted means refused locally (`PLAN_RESTRICTED`) before any request or socket. The default plan is `personal`; the owner's actual plan is configuration, never inferred. Buying Connect needs explicit owner approval.
+- **Alerts:** `telegram.capture.gap` (via `detectCaptureGap`), `kite.session.invalidated` (via the `Session` invalidation hook) and exhausted `worker.queue.job_failed` map to CRITICAL alerts. The detector and hook are code only; scheduling the capture-gap check on the host needs approval.
+- **Not done:** daily-token persistence (0600 atomic store) and typed account-response parsers; live connection still requires owner approval.
