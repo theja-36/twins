@@ -11,3 +11,8 @@ export * from "./marketData";
 export * from "./historical";
 export * from "./ticks";
 export * from "./ticker";
+export * from "./twinsMapping";
+export * from "./quoteBook";
+export * from "./twinsProviders";
+export * from "./twinsExport";
+export * from "./twinsPublish";

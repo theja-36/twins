@@ -38,6 +38,12 @@ describe("no-order guard over the package source", () => {
       expect(code, file).not.toMatch(/["'`]\/(orders|trades|portfolio|gtt|margins|mf)\b/);
     }
   });
+  it("keeps the dependency direction: kite depends on agents, never the reverse", () => {
+    const walk = (d: string): string[] => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (e.name === "node_modules" || e.name === "dist" ? [] : walk(join(d, e.name))) : e.name.endsWith(".ts") ? [join(d, e.name)] : []));
+    const offenders = walk(join(process.cwd(), "packages/agents")).filter((f) => /from "@twins\/kite|packages\/kite/.test(readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
+    expect(JSON.parse(readFileSync(join(process.cwd(), "packages/agents/package.json"), "utf8")).dependencies["@twins/kite"]).toBeUndefined();
+  });
   it("uses exactly one non-GET method, in the authentication exchange", () => {
     const all = sources.map(([, t]) => t).join("\n");
     expect([...all.matchAll(/"(POST|PUT|DELETE|PATCH)"/g)].map((m) => m[1])).toEqual(["POST", "POST"]); // allowlist.ts + client.ts exchange

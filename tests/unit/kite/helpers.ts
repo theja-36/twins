@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { parseInstrumentsCsv } from "../../../packages/kite/src/index";
-import { KiteClient, RateLimiter, Session, type Clock } from "../../../packages/kite/src/index";
+import { getFullQuotes, KiteClient, RateLimiter, restSource, Session, type Clock, type QuoteSource } from "../../../packages/kite/src/index";
 
 export const API_KEY = "testkey12345";
 export const API_SECRET = "testsecret67890";
@@ -37,4 +37,20 @@ export function clientWith(responses: Parameters<typeof fakeFetch>[0], over: Par
   const clock = instantClock();
   const client = new KiteClient({ apiKey: API_KEY, apiSecret: API_SECRET, session, fetch: f, limiter: new RateLimiter(clock), clock, maxRetries: 0, ...over });
   return { client, session, calls, clock };
+}
+
+export const NOW_MS = Date.parse("2026-11-02T10:16:00.000Z");
+const quotesData = (): Record<string, unknown> => ({ ...((fixture("b-quotes.json") as { data: Record<string, unknown> }).data) });
+
+/** A REST source over the b-quotes fixture, fetched through the real client (fake fetch). `drop` removes keys from the response; `edit` changes entries. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function rest(o: { drop?: string[]; edit?: (d: Record<string, any>) => void; maxAgeMs?: number; now?: number } = {}): Promise<QuoteSource> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = quotesData() as Record<string, any>;
+  for (const k of o.drop ?? []) delete data[k];
+  o.edit?.(data);
+  const { client, session } = clientWith([ok(data)]);
+  session.setToken(ACCESS_TOKEN);
+  const batch = await getFullQuotes(client, catalog().instruments, () => new Date("2026-11-02T10:16:00.000Z"));
+  return restSource(batch, { now: () => o.now ?? NOW_MS, maxAgeMs: o.maxAgeMs ?? 60_000 });
 }
