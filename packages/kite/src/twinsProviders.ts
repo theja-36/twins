@@ -4,6 +4,7 @@ import { memoryInstrumentReference, type InstrumentRecord, type InstrumentRefere
 import type { MappedCandles } from "./historical";
 import type { InstrumentCatalog, KiteInstrument, KiteUnderlying } from "./instruments";
 import type { QuoteSource, Reading } from "./quoteBook";
+import { requireWiring } from "./wiringConfig";
 import { resolveQuery, spotKey, twinsKey, UNDERLYING_MARKET } from "./twinsMapping";
 
 /** Why an adapter returned null, per contract key (bounded, fixed codes). Nothing is hidden: a null always has an entry here. */
@@ -15,9 +16,6 @@ export class Diagnostics {
 }
 
 // ───────────── conversions shared by the providers and the snapshot exporter ─────────────
-
-/** Concurrency window within which an index price may be attached to an option quote as its underlying price. */
-export const DEFAULT_UNDERLYING_TOLERANCE_MS = 60_000;
 
 export function toOptionQuote(reading: Extract<Reading, { status: "usable" }>, optionType: "CE" | "PE", spot: Reading | undefined, toleranceMs: number): { quote: OptionQuote; underlying: "attached" | "no_spot" | "not_concurrent" } | { problem: string } {
   const q = reading.quote;
@@ -103,7 +101,8 @@ export function kiteLastPriceProvider(catalog: InstrumentCatalog, source: QuoteS
   };
 }
 
-export function kiteOptionsQuoteProvider(catalog: InstrumentCatalog, source: QuoteSource, o: { name?: string; underlyingToleranceMs?: number } = {}): OptionsQuoteProvider & { diagnostics: Diagnostics } {
+export function kiteOptionsQuoteProvider(catalog: InstrumentCatalog, source: QuoteSource, o: { name?: string; underlyingToleranceMs: number }): OptionsQuoteProvider & { diagnostics: Diagnostics } {
+  requireWiring({ underlyingWindowMs: o.underlyingToleranceMs });
   const diagnostics = new Diagnostics();
   return {
     name: o.name ?? `kite-options-${source.kind}`, diagnostics,
@@ -115,14 +114,15 @@ export function kiteOptionsQuoteProvider(catalog: InstrumentCatalog, source: Quo
       const reading = source.read(r.instrument);
       if (reading.status !== "usable") { diagnostics.record(key, reading.reason); return null; }
       const spotInstrument = catalog.lookup({ underlying: r.instrument.underlying, kind: "index" });
-      const built = toOptionQuote(reading, r.instrument.optionType as "CE" | "PE", spotInstrument ? source.read(spotInstrument) : undefined, o.underlyingToleranceMs ?? DEFAULT_UNDERLYING_TOLERANCE_MS);
+      const built = toOptionQuote(reading, r.instrument.optionType as "CE" | "PE", spotInstrument ? source.read(spotInstrument) : undefined, o.underlyingToleranceMs);
       if ("problem" in built) { diagnostics.record(key, `option_quote_${built.problem}`); return null; }
       return built.quote;
     },
   };
 }
 
-export function kiteOptionsChainProvider(catalog: InstrumentCatalog, source: QuoteSource, o: { name?: string; strikesEachSide?: number } = {}): OptionsChainProvider & { diagnostics: Diagnostics } {
+export function kiteOptionsChainProvider(catalog: InstrumentCatalog, source: QuoteSource, o: { name?: string; strikesEachSide: number }): OptionsChainProvider & { diagnostics: Diagnostics } {
+  requireWiring({ strikesEachSide: o.strikesEachSide });
   const diagnostics = new Diagnostics();
   return {
     name: o.name ?? `kite-chain-${source.kind}`, diagnostics,
@@ -130,7 +130,7 @@ export function kiteOptionsChainProvider(catalog: InstrumentCatalog, source: Quo
       const key = `${q.market}:${q.underlying}:${q.expiry}`.toUpperCase();
       const r = resolveQuery(catalog, { market: q.market, symbol: q.underlying, instrumentType: "equity", expiry: null, strike: null, optionType: null });
       if (!r.ok) { diagnostics.record(key, r.reason); return null; }
-      const built = buildChain(catalog, source, r.instrument.underlying, q.expiry, o.strikesEachSide ?? 5);
+      const built = buildChain(catalog, source, r.instrument.underlying, q.expiry, o.strikesEachSide);
       if ("problem" in built) { diagnostics.record(key, built.problem); return null; }
       return built.chain;
     },

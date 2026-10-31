@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { parseInstrumentsCsv } from "../../../packages/kite/src/index";
-import { getFullQuotes, KiteClient, RateLimiter, restSource, Session, type Clock, type QuoteSource } from "../../../packages/kite/src/index";
+import { DEFAULT_AGENT_RULES } from "../../../packages/agents/src/index";
+import { getFullQuotes, KiteClient, loadKiteWiringConfig, RateLimiter, restSource, Session, type Clock, type QuoteSource } from "../../../packages/kite/src/index";
 
 export const API_KEY = "testkey12345";
 export const API_SECRET = "testsecret67890";
@@ -52,5 +53,8 @@ export async function rest(o: { drop?: string[]; edit?: (d: Record<string, any>)
   const { client, session } = clientWith([ok(data)]);
   session.setToken(ACCESS_TOKEN);
   const batch = await getFullQuotes(client, catalog().instruments, () => new Date("2026-11-02T10:16:00.000Z"));
-  return restSource(batch, { now: () => o.now ?? NOW_MS, maxAgeMs: o.maxAgeMs ?? 60_000 });
+  return restSource(batch, { now: () => o.now ?? NOW_MS, maxAgeMs: o.maxAgeMs ?? 60_000, futureToleranceMs: WIRING.futureToleranceMs });
 }
+
+/** The validated wiring configuration with every default (product rules + unapproved placeholders). */
+export const WIRING = loadKiteWiringConfig(DEFAULT_AGENT_RULES, {});

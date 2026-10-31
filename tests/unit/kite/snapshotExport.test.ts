@@ -7,7 +7,7 @@ import { fileLastPriceProvider, fileOhlcProvider } from "../../../packages/agent
 import { fileOptionsChainProvider, fileOptionsQuoteProvider, fileQuoteProvider } from "../../../packages/agents/src/agents/quoteProviders";
 import { loadSnapshotConfig, listSnapshots, type SnapshotConfig } from "../../../packages/agents/src/snapshots";
 import { buildSnapshotDocuments, mapCandles, publishGeneration, verifyGeneration, GENERATION_FILE, type ExportRequest, type ExportResult, type KiteInstrument, type QuoteSource } from "../../../packages/kite/src/index";
-import { catalog, rest } from "./helpers";
+import { catalog, rest, WIRING } from "./helpers";
 
 const cat = catalog();
 const EXPORT_NOW = new Date("2026-11-02T10:16:30.000Z");
@@ -22,7 +22,7 @@ const tmp = (): string => mkdtempSync(join(tmpdir(), "twins-kite-snap-"));
 async function exportWith(source: QuoteSource, over: Partial<ExportRequest> = {}): Promise<ExportResult> {
   return buildSnapshotDocuments({
     catalog: cat, source, generationId: "gen-1", now: EXPORT_NOW, referenceAsOf: "2026-11-02T10:00:00.000Z",
-    quoteInstruments: cat.instruments as readonly KiteInstrument[], chains: [{ underlying: "NIFTY", expiry: "2026-11-26" }], candleKeys: ["NSE:NIFTY"], candles, ...over,
+    quoteInstruments: cat.instruments as readonly KiteInstrument[], chains: [{ underlying: "NIFTY", expiry: "2026-11-26" }], candleKeys: ["NSE:NIFTY"], candles, strikesEachSide: WIRING.chainStrikesEachSide, underlyingToleranceMs: WIRING.underlyingWindowMs, ...over,
   });
 }
 
@@ -104,7 +104,7 @@ describe("publication", () => {
     const dir = tmp(); const cfg = cfgFor(dir);
     const src = await rest({ maxAgeMs: 3_600_000, now: EXPORT_NOW.getTime() + 20 * 60_000 }); // usable by the adapter's own limit, but 20+ minutes old
     const late = new Date(EXPORT_NOW.getTime() + 20 * 60_000);
-    const result = buildSnapshotDocuments({ catalog: cat, source: src, generationId: "gen-late", now: late, referenceAsOf: "2026-11-02T10:00:00.000Z", quoteInstruments: cat.instruments, chains: [], candleKeys: [], candles: new Map() });
+    const result = buildSnapshotDocuments({ catalog: cat, source: src, generationId: "gen-late", now: late, referenceAsOf: "2026-11-02T10:00:00.000Z", quoteInstruments: cat.instruments, chains: [], candleKeys: [], candles: new Map(), strikesEachSide: WIRING.chainStrikesEachSide, underlyingToleranceMs: WIRING.underlyingWindowMs });
     const p = publishGeneration(cfg, result, { now: late, requireComplete: false });
     expect(p).toMatchObject({ published: false, reason: "STAGED_SNAPSHOT_NOT_OK", touched: false });
     expect((p as { detail: string[] }).detail.some((d) => d.startsWith("quotes:"))).toBe(true);

@@ -1,19 +1,12 @@
 import { createHash, randomBytes } from "node:crypto";
 import { closeSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, unlinkSync, writeFileSync, writeSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { inspectSnapshot, listSnapshots, snapshotFileName, writeSnapshot, type SnapshotConfig, type SnapshotIo, type SnapshotKind, type SnapshotReport } from "@twins/agents/src/snapshots";
+import { checkGeneration, GENERATION_FILE, PUBLISH_LOCK_FILE, readManifest, type GenerationManifest } from "@twins/agents/src/snapshotGeneration";
+import { inspectSnapshot, listSnapshots, snapshotFileName, writeSnapshot, type SnapshotConfig, type SnapshotIo, type SnapshotReport } from "@twins/agents/src/snapshots";
 import type { ExportResult, KiteSnapshotKind } from "./twinsExport";
 
-export const GENERATION_FILE = ".kite-generation.json";
+export { GENERATION_FILE, PUBLISH_LOCK_FILE, type GenerationManifest };
 const ORDER: KiteSnapshotKind[] = ["instrument-reference", "ohlc", "last-price", "quotes", "option-quotes", "option-chain"];
-
-export interface GenerationManifest {
-  generation: string;
-  status: "publishing" | "complete";
-  complete: boolean; // false = the export itself was incomplete (only possible with requireComplete=false)
-  startedAt: string;
-  kinds: Partial<Record<KiteSnapshotKind, string>>; // sha256 of each file of this generation
-}
 
 export type PublishResult =
   | { published: true; generation: string; kinds: KiteSnapshotKind[]; complete: boolean }
@@ -72,7 +65,28 @@ export function publishGeneration(cfg: SnapshotConfig, result: ExportResult, opt
     if (problems.length) return fail("STAGED_SNAPSHOT_NOT_OK", problems);
   } finally { rmSync(staging, { recursive: true, force: true }); }
 
-  // 2. publish: manifest "publishing" -> replace each file (previous kept) -> verify -> manifest "complete"
+  // 2. exclusive publication: one publisher at a time, and never on top of an unresolved crashed publication that this generation does not fully replace
+  const lockPath = join(dir, PUBLISH_LOCK_FILE);
+  let lockFd: number;
+  try { lockFd = openSync(lockPath, "wx", 0o600); } catch { return fail("PUBLISH_IN_PROGRESS", [PUBLISH_LOCK_FILE]); }
+  try { writeSync(lockFd, `${JSON.stringify({ generation: gen, pid: process.pid, at: opts.now.toISOString() })}\n`); } finally { closeSync(lockFd); }
+  const releaseLock = (): void => { try { unlinkSync(lockPath); } catch { /* already gone */ } };
+  try {
+    const existing = readManifest(dir);
+    if (existing === "unreadable") { return fail("GENERATION_RECOVERY_REQUIRED", ["manifest_unreadable"]); }
+    if (existing !== null && existing.manifest.status === "publishing") {
+      const uncovered = Object.keys(existing.manifest.kinds).filter((k) => !kinds.includes(k as KiteSnapshotKind));
+      if (uncovered.length) return fail("GENERATION_RECOVERY_REQUIRED", uncovered);
+    }
+    return publishLocked(cfg, dir, gen, kinds, texts, result, opts, fail);
+  } finally { releaseLock(); }
+}
+
+function publishLocked(
+  cfg: SnapshotConfig, dir: string, gen: string, kinds: KiteSnapshotKind[], texts: Partial<Record<KiteSnapshotKind, string>>, result: ExportResult, opts: PublishOptions,
+  fail: (reason: string, detail: string[], rolledBack?: boolean, touched?: boolean) => PublishResult,
+): PublishResult {
+  // publish: manifest "publishing" -> replace each file (previous kept) -> manifest "complete" -> verify with the consumer's own validation
   const manifest: GenerationManifest = { generation: gen, status: "publishing", complete: result.report.complete, startedAt: opts.now.toISOString(), kinds: Object.fromEntries(kinds.map((k) => [k, sha(texts[k] as string)])) };
   const written: Array<{ kind: KiteSnapshotKind; replaced: boolean }> = [];
   let previousManifest: string | null = null;
@@ -95,10 +109,11 @@ export function publishGeneration(cfg: SnapshotConfig, result: ExportResult, opt
       const w = writeSnapshot(cfg, k, texts[k] as string, { confirmOverwrite: k, now: opts.now, ...(opts.io ? { io: opts.io } : {}) });
       written.push({ kind: k, replaced: w.replaced });
     }
-    const verdict = listSnapshots(cfg, opts.now);
+    writeManifest(dir, { ...manifest, status: "complete" });
+    // the consumer's own validation, which also enforces the generation: it must accept every kind of this generation
+    const verdict = listSnapshots({ ...cfg, requireCompleteGeneration: false }, opts.now);
     const bad = kinds.filter((k) => verdict.reports.find((r) => r.kind === k)?.status !== "OK");
     if (bad.length) { const ok = rollback(); return fail("PUBLISHED_SNAPSHOT_NOT_OK", bad, ok, true); }
-    writeManifest(dir, { ...manifest, status: "complete" });
     return { published: true, generation: gen, kinds, complete: result.report.complete };
   } catch (e) {
     const ok = rollback();
@@ -106,17 +121,12 @@ export function publishGeneration(cfg: SnapshotConfig, result: ExportResult, opt
   }
 }
 
-export interface GenerationCheck { consistent: boolean; status: GenerationManifest["status"] | "none"; generation: string | null; mismatched: string[] }
+export interface GenerationStatus { consistent: boolean; status: "complete" | "publishing" | "none" | "unreadable"; generation: string | null; mismatched: string[] }
 
-/** Does the directory hold exactly one complete generation? Detects an interrupted publish (manifest still "publishing") and files that differ from the manifest. */
-export function verifyGeneration(cfg: SnapshotConfig): GenerationCheck {
-  const dir = resolve(cfg.dir);
-  let m: GenerationManifest;
-  try { m = JSON.parse(readFileSync(join(dir, GENERATION_FILE), "utf8")) as GenerationManifest; } catch { return { consistent: false, status: "none", generation: null, mismatched: [] }; }
-  const mismatched: string[] = [];
-  for (const [kind, hash] of Object.entries(m.kinds)) {
-    try { if (sha(readFileSync(join(dir, snapshotFileName(kind as SnapshotKind)), "utf8")) !== hash) mismatched.push(kind); } catch { mismatched.push(kind); }
-  }
-  return { consistent: m.status === "complete" && mismatched.length === 0, status: m.status, generation: m.generation, mismatched };
+/** Operator view of the directory's generation (the same check the readers enforce). */
+export function verifyGeneration(cfg: SnapshotConfig): GenerationStatus {
+  const c = checkGeneration(resolve(cfg.dir));
+  if (c.state === "none") return { consistent: false, status: "none", generation: null, mismatched: [] };
+  if (c.state === "ok") return { consistent: true, status: "complete", generation: c.manifest.generation, mismatched: [] };
+  return { consistent: false, status: c.code === "MANIFEST_UNREADABLE" ? "unreadable" : c.manifest?.status ?? "publishing", generation: c.manifest?.generation ?? null, mismatched: c.mismatched };
 }
-

@@ -1,9 +1,9 @@
-import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { checkFile } from "@twins/historical";
 import { AgentContractError } from "../contract";
+import { readVerifiedFile } from "../snapshotGeneration";
 
 /**
  * Instrument reference (Stage 5 / Task 2): the INJECTABLE interface the Instrument Verification Agent uses to check that a market, underlying and contract exist. No live API (Zerodha,
@@ -101,7 +101,12 @@ export function fileInstrumentReference(path: string): InstrumentReference {
   try { info = checkFile(path); } catch { throw new AgentContractError("INVALID_INSTRUMENT_REFERENCE", `instrument reference file ${basename(path)} is unreadable or refused`); }
   if (info.format !== "json") throw new AgentContractError("INVALID_INSTRUMENT_REFERENCE", "the instrument reference must be a .json file");
   let raw: unknown;
-  try { raw = JSON.parse(readFileSync(path, "utf8")); } catch { throw new AgentContractError("INVALID_INSTRUMENT_REFERENCE", "the instrument reference is not valid JSON"); }
+  let text: string;
+  try { text = readVerifiedFile(path); } catch (e) {
+    if (e instanceof AgentContractError) throw e;
+    throw new AgentContractError("INVALID_INSTRUMENT_REFERENCE", "the instrument reference is unreadable");
+  }
+  try { raw = JSON.parse(text); } catch { throw new AgentContractError("INVALID_INSTRUMENT_REFERENCE", "the instrument reference is not valid JSON"); }
   return parseInstrumentReference(raw);
 }
 

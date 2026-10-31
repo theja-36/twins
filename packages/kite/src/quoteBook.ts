@@ -1,8 +1,9 @@
 import type { InstrumentQuote } from "@twins/agents/src/agents/quoteProviders";
 import { KiteError } from "./errors";
-import { mapFullQuote, MAX_FUTURE_SKEW_MS, type Batch, type RawFullQuote } from "./marketData";
+import { mapFullQuote, type Batch, type RawFullQuote } from "./marketData";
 import type { KiteInstrument } from "./instruments";
 import type { KiteTicker } from "./ticker";
+import { requireWiring } from "./wiringConfig";
 
 export type SourceKind = "rest" | "websocket";
 export type Reading =
@@ -15,10 +16,11 @@ export type Reading =
  */
 export interface QuoteSource { readonly kind: SourceKind; readonly name: string; read(instrument: KiteInstrument): Reading }
 
-export interface RestSourceOptions { now: () => number; maxAgeMs: number }
+export interface RestSourceOptions { now: () => number; maxAgeMs: number; futureToleranceMs: number }
 
 /** REST: a batch from `getFullQuotes`. Missing, invalid, limited (no timestamp) and stale entries are each reported with their own reason. */
 export function restSource(batch: Batch<RawFullQuote>, o: RestSourceOptions): QuoteSource {
+  requireWiring({ maxAgeMs: o.maxAgeMs, futureToleranceMs: o.futureToleranceMs });
   const byToken = new Map(batch.entries.map((e) => [e.instrument.token, e]));
   return {
     kind: "rest", name: "kite-rest",
@@ -30,7 +32,7 @@ export function restSource(batch: Batch<RawFullQuote>, o: RestSourceOptions): Qu
       const m = mapFullQuote(instrument, e.raw, batch.fetchedAt);
       if (!m.ok) return { status: "unusable", source: "rest", reason: m.reason };
       const ageMs = o.now() - Date.parse(m.value.upstreamTimestamp);
-      if (ageMs < -MAX_FUTURE_SKEW_MS) return { status: "unusable", source: "rest", reason: "timestamp_in_future" };
+      if (ageMs < -o.futureToleranceMs) return { status: "unusable", source: "rest", reason: "timestamp_in_future" };
       if (ageMs > o.maxAgeMs) return { status: "unusable", source: "rest", reason: "stale" };
       return { status: "usable", source: "rest", quote: m.value.quote, upstreamTimestamp: m.value.upstreamTimestamp, lastTradeTime: m.value.lastTradeTime, ageMs };
     },
@@ -39,6 +41,7 @@ export function restSource(batch: Batch<RawFullQuote>, o: RestSourceOptions): Qu
 
 /** WebSocket: the ticker's own freshness verdict decides (connected + young exchange timestamp). Limited, disconnected, stale and unknown states are unusable. */
 export function websocketSource(ticker: KiteTicker, o: { maxAgeMs: number }): QuoteSource {
+  requireWiring({ maxAgeMs: o.maxAgeMs });
   return {
     kind: "websocket", name: "kite-websocket",
     read(instrument) {

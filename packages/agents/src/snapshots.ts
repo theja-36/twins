@@ -3,6 +3,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { join, resolve } from "node:path";
 import { AgentContractError } from "./contract";
 import { sanitizeText } from "./sanitize";
+import { checkGeneration, ownsFile } from "./snapshotGeneration";
 import {
   parseConstituentsFile, parseEconomicCalendar, parseHolidayCalendar, parseInstrumentQuotesFile, parseInstrumentReference, parseLastPriceFile, parseMacroContext, parseNewsFile, parseOhlcFile, parseOptionChainFile,
   parseOptionQuotesFile, parsePatternsFile, parseOutcomesFile, parseQuotesFile, parseSentimentFile, type AgentRulesConfig,
@@ -63,7 +64,11 @@ export const snapshotFileName = (kind: SnapshotKind): string => `${kind}.json`;
  *   TWINS_AGENT_SNAPSHOT_STRICTNESS       STRICT | LENIENT (default STRICT: a required snapshot must be OK; any MALFORMED / UNSAFE snapshot fails. LENIENT: a required snapshot may also be STALE, and a malformed one that is not required only warns)
  *   TWINS_AGENT_SNAPSHOT_FRESHNESS_HOURS  JSON { "<kind>": { "warn": hours, "max": hours } } overriding the per-kind defaults (warn < max, both positive)
  */
-export interface SnapshotConfig { dir: string; required: SnapshotKind[]; strictness: Strictness; freshness: Record<SnapshotKind, { warnHours: number; maxHours: number }> }
+export interface SnapshotConfig {
+  dir: string; required: SnapshotKind[]; strictness: Strictness; freshness: Record<SnapshotKind, { warnHours: number; maxHours: number }>;
+  /** Default true: a snapshot that belongs to a generation published as INCOMPLETE is MALFORMED (GENERATION_INCOMPLETE), so it cannot satisfy a consumer that needs complete data. */
+  requireCompleteGeneration?: boolean;
+}
 export const DEFAULT_SNAPSHOT_DIR = "data/agent-snapshots";
 const bad = (what: string): never => { throw new AgentContractError("INVALID_SNAPSHOT_CONFIG", `invalid snapshot configuration: ${what}`); };
 export function defaultFreshness(): SnapshotConfig["freshness"] {
@@ -97,7 +102,9 @@ export function loadSnapshotConfig(env: Record<string, string | undefined> = pro
       freshness[k as SnapshotKind] = { warnHours: warn, maxHours: max };
     }
   }
-  return { dir: dirRaw === undefined || dirRaw === "" ? DEFAULT_SNAPSHOT_DIR : dirRaw, required, strictness: sRaw === "LENIENT" ? "LENIENT" : "STRICT", freshness };
+  const cRaw = env["TWINS_AGENT_SNAPSHOT_REQUIRE_COMPLETE_GENERATION"];
+  if (cRaw !== undefined && cRaw !== "" && cRaw !== "true" && cRaw !== "false") bad("TWINS_AGENT_SNAPSHOT_REQUIRE_COMPLETE_GENERATION");
+  return { dir: dirRaw === undefined || dirRaw === "" ? DEFAULT_SNAPSHOT_DIR : dirRaw, required, strictness: sRaw === "LENIENT" ? "LENIENT" : "STRICT", freshness, requireCompleteGeneration: cRaw !== "false" };
 }
 
 // ── reports ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -162,6 +169,12 @@ export function inspectSnapshot(dir: string, kind: SnapshotKind, cfg: SnapshotCo
   try { text = readFileSync(path, "utf8"); } catch (e) { return { ...base, status: "UNSAFE", code: unsafeCode(e), detail: "the snapshot cannot be read" }; }
   const sha256 = createHash("sha256").update(text).digest("hex");
   const withFile = { ...base, bytes: st.size, sha256 };
+  // generation enforcement: a snapshot owned by a generation that is publishing, mixed, or (when required) incomplete is never accepted
+  const gen = checkGeneration(dir);
+  if (gen.state !== "none" && ownsFile(gen, snapshotFileName(kind))) {
+    if (gen.state === "inconsistent") return { ...withFile, status: "MALFORMED", code: "GENERATION_INCONSISTENT", detail: `the snapshot generation is not consistent (${gen.code})` };
+    if (!gen.manifest.complete && (cfg.requireCompleteGeneration ?? true)) return { ...withFile, status: "MALFORMED", code: "GENERATION_INCOMPLETE", detail: "the snapshot belongs to a generation that was published incomplete" };
+  }
   let raw: unknown;
   try { raw = JSON.parse(text); } catch { return { ...withFile, status: "MALFORMED", code: "NOT_JSON", detail: "the snapshot is not valid JSON" }; }
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return { ...withFile, status: "MALFORMED", code: "NOT_AN_OBJECT", detail: "the snapshot is not a JSON object" };

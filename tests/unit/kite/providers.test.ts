@@ -5,7 +5,7 @@ import {
   chooseSource, kiteInstrumentReference, kiteLastPriceProvider, kiteOhlcProvider, kiteOptionsChainProvider, kiteOptionsQuoteProvider, kiteQuoteProvider, KiteTicker,
   mapCandles, resolveQuery, Session, twinsKey, websocketSource, type KiteInstrument, type QuoteSource, type RawCandles, type TickerTimers, type WsConnection,
 } from "../../../packages/kite/src/index";
-import { ACCESS_TOKEN, API_KEY, catalog, NOW_MS, rest } from "./helpers";
+import { ACCESS_TOKEN, API_KEY, catalog, NOW_MS, rest, WIRING } from "./helpers";
 
 const cat = catalog();
 const get = (u: string, k: "index" | "future" | "option", extra: { expiry?: string; strike?: number; optionType?: string } = {}): KiteInstrument => cat.require({ underlying: u, kind: k, ...extra });
@@ -97,26 +97,26 @@ describe("quote, last-price and option adapters over REST", () => {
     expect(await stale.price({ market: "NSE", symbol: "NIFTY" })).toBeNull();
   });
   it("option quotes: premium, bid/ask, OI, volume from Kite; IV and greeks are null (never derived); the underlying price is attached only when concurrent", async () => {
-    const op = kiteOptionsQuoteProvider(cat, await rest());
+    const op = kiteOptionsQuoteProvider(cat, await rest(), { underlyingToleranceMs: WIRING.underlyingWindowMs });
     const q = await op.quote({ market: "NSE", symbol: "NIFTY", instrumentType: "option", expiry: "2026-11-26", strike: 24000, optionType: "CE" });
     expect(q).toEqual({ premium: 412.35, bid: 412, ask: 413, iv: null, ivPrevious: null, delta: null, gamma: null, theta: null, vega: null, openInterest: 1250000, volume: 52000, underlyingPrice: 24350.5, asOf: "2026-11-02T10:15:56.000Z" });
     expect(optionQuoteProblem(q, "CE")).toBeNull();
-    const skewed = kiteOptionsQuoteProvider(cat, await rest({ edit: (d) => { d["NSE:NIFTY 50"].timestamp = "2026-11-02 15:44:00"; } }));
+    const skewed = kiteOptionsQuoteProvider(cat, await rest({ edit: (d) => { d["NSE:NIFTY 50"].timestamp = "2026-11-02 15:44:00"; } }), { underlyingToleranceMs: WIRING.underlyingWindowMs });
     expect((await skewed.quote({ market: "NSE", symbol: "NIFTY", instrumentType: "option", expiry: "2026-11-26", strike: 24000, optionType: "CE" }))?.underlyingPrice).toBeNull();
     expect(await op.quote({ market: "NSE", symbol: "NIFTY", instrumentType: "future", expiry: "2026-11-26", strike: null, optionType: null })).toBeNull();
     expect(op.diagnostics.list()).toEqual([{ key: "NSE:NIFTY:2026-11-26:NULL:NULL", reason: "not_an_option" }]);
   });
   it("option chain: listed contracts only, volume/OI from Kite, IV null, asOf = the OLDEST row; all-or-nothing", async () => {
-    const cp = kiteOptionsChainProvider(cat, await rest({ edit: (d) => { d["NFO:NIFTY26NOV24000PE"].timestamp = "2026-11-02 15:45:30"; } }));
+    const cp = kiteOptionsChainProvider(cat, await rest({ edit: (d) => { d["NFO:NIFTY26NOV24000PE"].timestamp = "2026-11-02 15:45:30"; } }), { strikesEachSide: WIRING.chainStrikesEachSide });
     const c = await cp.chain({ market: "NSE", underlying: "NIFTY", expiry: "2026-11-26" });
     expect(c).toEqual({ underlyingPrice: 24350.5, asOf: "2026-11-02T10:15:30.000Z", rows: [{ strike: 24000, optionType: "CE", iv: null, openInterest: 1250000, volume: 52000 }, { strike: 24000, optionType: "PE", iv: null, openInterest: 1800000, volume: 91000 }] });
     expect(chainProblem(c)).toBeNull();
-    const holey = kiteOptionsChainProvider(cat, await rest({ drop: ["NFO:NIFTY26NOV24000PE"] }));
+    const holey = kiteOptionsChainProvider(cat, await rest({ drop: ["NFO:NIFTY26NOV24000PE"] }), { strikesEachSide: WIRING.chainStrikesEachSide });
     expect(await holey.chain({ market: "NSE", underlying: "NIFTY", expiry: "2026-11-26" })).toBeNull();
     expect(holey.diagnostics.list()[0]?.reason).toBe("row_missing_in_response");
     expect(await cp.chain({ market: "NSE", underlying: "NIFTY", expiry: "2027-06-24" })).toBeNull();
     expect(cp.diagnostics.list().some((d) => d.reason === "expiry_not_listed")).toBe(true);
-    const noSpot = kiteOptionsChainProvider(cat, await rest({ drop: ["NSE:NIFTY 50"] }));
+    const noSpot = kiteOptionsChainProvider(cat, await rest({ drop: ["NSE:NIFTY 50"] }), { strikesEachSide: WIRING.chainStrikesEachSide });
     expect(await noSpot.chain({ market: "NSE", underlying: "NIFTY", expiry: "2026-11-26" })).toBeNull();
     expect(await cp.chain({ market: "NSE", underlying: "FINNIFTY", expiry: "2026-11-26" })).toBeNull();
   });

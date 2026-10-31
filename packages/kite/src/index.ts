@@ -16,3 +16,4 @@ export * from "./quoteBook";
 export * from "./twinsProviders";
 export * from "./twinsExport";
 export * from "./twinsPublish";
+export * from "./wiringConfig";

@@ -2,8 +2,9 @@ import { SNAPSHOT_SPECS, type SnapshotKind } from "@twins/agents/src/snapshots";
 import type { MappedCandles } from "./historical";
 import type { InstrumentCatalog, KiteInstrument, KiteUnderlying } from "./instruments";
 import type { QuoteSource } from "./quoteBook";
-import { buildChain, DEFAULT_UNDERLYING_TOLERANCE_MS, kiteOhlcProvider, toOptionQuote } from "./twinsProviders";
+import { buildChain, kiteOhlcProvider, toOptionQuote } from "./twinsProviders";
 import { spotKey, twinsKey, UNDERLYING_MARKET } from "./twinsMapping";
+import { requireWiring } from "./wiringConfig";
 
 export type KiteSnapshotKind = Extract<SnapshotKind, "instrument-reference" | "quotes" | "option-quotes" | "option-chain" | "last-price" | "ohlc">;
 
@@ -18,11 +19,11 @@ export interface ExportRequest {
   /** Indices, futures and options to include in `quotes` (options are additionally exported as option-quotes). */
   quoteInstruments: readonly KiteInstrument[];
   chains: ReadonlyArray<{ underlying: KiteUnderlying; expiry: string }>;
-  strikesEachSide?: number;
+  strikesEachSide: number;
   /** Spot keys ("NSE:NIFTY") expected in the OHLC snapshot, and the candles that were fetched for them. */
   candleKeys: readonly string[];
   candles: ReadonlyMap<string, MappedCandles>;
-  underlyingToleranceMs?: number;
+  underlyingToleranceMs: number;
 }
 
 export interface KindReport {
@@ -48,6 +49,7 @@ const iso = (ms: number): string => new Date(ms).toISOString();
 
 /** Builds the six Kite-fed snapshot documents in the existing versioned schemas and validates each with the consumer's own strict parser. Pure: nothing is written. */
 export function buildSnapshotDocuments(req: ExportRequest): ExportResult {
+  requireWiring({ strikesEachSide: req.strikesEachSide, underlyingWindowMs: req.underlyingToleranceMs });
   const source = `kite-${req.source.kind}`;
   const documents: ExportResult["documents"] = {};
   const kinds: KindReport[] = [];
@@ -96,7 +98,7 @@ export function buildSnapshotDocuments(req: ExportRequest): ExportResult {
     quotes[key] = { bid: q.bid, ask: q.ask, last: q.last, volume: q.volume, avg_volume: q.avgVolume, open_interest: q.openInterest, bid_depth: q.bidDepth, ask_depth: q.askDepth, as_of: q.asOf };
     tsQ.push(Date.parse(q.asOf));
     if (i.kind === "option") {
-      const built = toOptionQuote(r, i.optionType as "CE" | "PE", spotOf(i.underlying), req.underlyingToleranceMs ?? DEFAULT_UNDERLYING_TOLERANCE_MS);
+      const built = toOptionQuote(r, i.optionType as "CE" | "PE", spotOf(i.underlying), req.underlyingToleranceMs);
       if ("problem" in built) missingO.push({ key, reason: `option_quote_${built.problem}` });
       else {
         const o = built.quote;
@@ -122,7 +124,7 @@ export function buildSnapshotDocuments(req: ExportRequest): ExportResult {
   const missingC: KindReport["missing"] = [], tsC: number[] = [];
   for (const c of req.chains) {
     const key = `${UNDERLYING_MARKET[c.underlying]}:${c.underlying}:${c.expiry}`;
-    const built = buildChain(req.catalog, req.source, c.underlying, c.expiry, req.strikesEachSide ?? 5);
+    const built = buildChain(req.catalog, req.source, c.underlying, c.expiry, req.strikesEachSide);
     if ("problem" in built) { missingC.push({ key, reason: built.problem }); continue; }
     chains[key] = { underlying_price: built.chain.underlyingPrice, as_of: built.chain.asOf, rows: built.chain.rows.map((r) => ({ strike: r.strike, option_type: r.optionType, iv: r.iv, open_interest: r.openInterest, volume: r.volume })) };
     tsC.push(Date.parse(built.chain.asOf));
