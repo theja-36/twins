@@ -1,0 +1,46 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { classify, KiteError, rateClassOf } from "../../../packages/kite/src/index";
+
+const refused = (m: string, p: string): void => { expect(() => classify(m, p)).toThrow(KiteError); };
+
+describe("request allowlist", () => {
+  it("allows exactly the read-only market-data GETs", () => {
+    for (const p of ["/instruments", "/instruments/NFO", "/instruments/historical/256265/day", "/instruments/historical/256265/15minute", "/quote", "/quote/ltp", "/quote/ohlc", "/user/profile"]) expect(classify("GET", p)).toBe("read");
+  });
+  it("allows POST only for the authentication exchange, and labels it so", () => {
+    expect(classify("POST", "/session/token")).toBe("auth");
+    for (const p of ["/orders/regular", "/quote", "/instruments", "/gtt/triggers", "/portfolio/positions", "/margins/orders", "/mf/orders"]) refused("POST", p);
+  });
+  it("refuses order, GTT, portfolio, position, holding, margin, mutual-fund and logout paths for every method", () => {
+    for (const m of ["GET", "POST", "PUT", "DELETE", "PATCH"]) {
+      for (const p of ["/orders", "/orders/regular", "/orders/regular/123", "/trades", "/portfolio/holdings", "/portfolio/positions", "/gtt/triggers", "/margins", "/margins/equity", "/mf/orders", "/mf/holdings", "/user/margins"]) refused(m, p);
+    }
+    refused("DELETE", "/session/token");
+    refused("PUT", "/session/token");
+    refused("GET", "/session/token");
+  });
+  it("refuses path tricks: traversal, query/fragment/encoding smuggling, double slashes, relative paths, unknown exchanges and intervals", () => {
+    for (const p of ["/instruments/../orders", "/quote?x=/orders", "/quote#/orders", "/quote%2Forders", "//orders", "quote", "/instruments//NFO", "/instruments/MCX", "/instruments/historical/abc/day", "/instruments/historical/1/week", "/instruments/historical/1/day/extra", "/quote/ltp/", ""]) refused("GET", p);
+  });
+  it("classifies rate classes", () => {
+    expect([rateClassOf("/quote/ltp"), rateClassOf("/instruments/historical/1/day"), rateClassOf("/instruments")]).toEqual(["quote", "historical", "default"]);
+  });
+});
+
+describe("no-order guard over the package source", () => {
+  const dir = join(process.cwd(), "packages/kite/src");
+  const sources = readdirSync(dir).filter((f) => f.endsWith(".ts")).map((f) => [f, readFileSync(join(dir, f), "utf8")] as const);
+  it("contains no order/GTT/portfolio/margin endpoint strings outside the allowlist's own refusal", () => {
+    for (const [file, text] of sources) {
+      const code = text.replace(/\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(code, file).not.toMatch(/["'`]\/(orders|trades|portfolio|gtt|margins|mf)\b/);
+    }
+  });
+  it("uses exactly one non-GET method, in the authentication exchange", () => {
+    const all = sources.map(([, t]) => t).join("\n");
+    expect([...all.matchAll(/"(POST|PUT|DELETE|PATCH)"/g)].map((m) => m[1])).toEqual(["POST", "POST"]); // allowlist.ts + client.ts exchange
+    expect(all).not.toMatch(/placeOrder|modifyOrder|cancelOrder|order_id|transaction_type/i);
+  });
+});

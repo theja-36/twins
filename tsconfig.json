@@ -8,6 +8,7 @@
     { "path": "packages/runtime-state" },
     { "path": "packages/audit-chain" },
     { "path": "packages/backup" },
+    { "path": "packages/kite" },
     { "path": "packages/alerting" },
     { "path": "packages/risk" },
     { "path": "packages/historical" },
