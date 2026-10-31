@@ -2,6 +2,8 @@
 
 > Scope fixed by the owner: **NIFTY 50, BANKNIFTY, SENSEX** (index references and their listed futures/options). Anything else fails closed. `LIVE_TRADING=false`. No order code exists or is authorized.
 
+See [KITE_LIVE_CONNECTIVITY_RUN.md](KITE_LIVE_CONNECTIVITY_RUN.md) for the redacted record of the first read-only live connectivity run (2026-10-31, market closed; connectivity only, not fresh-market validation; live activity paused).
+
 ## Delivery split
 | Part | Content | State |
 | --- | --- | --- |
