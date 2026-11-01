@@ -60,6 +60,9 @@
 * **Work:** add the grants to the role setup scripts, a deployment verification step (`verify-migrations`-style) that reads each table as the runtime role, and a start-up probe in the API / worker that logs `agent_engine.config.invalid` if the probe fails with the engine enabled.
 * **Acceptance:** a test creates the runtime role with and without the grant; the probe reports the difference.
 
+## Closed outside the original list
+* **Audit-chain verifier empty-chain anchor (found 2026-11-01 on staging; D-078).** An empty chain's anchor (index 0) made the next run report a deleted row. Fixed in `evaluateAnchor` with regression tests. Not deployed: staging keeps reporting the false failure until the fixed verifier is deployed. Follow-up (open, P1): alert-fatigue review - a permanently failing hourly check hid for 2.6 days that it was a false positive; confirm failure alerts were delivered and add "failing for more than N runs" escalation.
+
 ## P1
 
 ### HB-05 Challenger dependency on every agent; all-or-nothing activation
