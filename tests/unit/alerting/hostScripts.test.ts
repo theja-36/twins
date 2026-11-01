@@ -48,6 +48,22 @@ describe("twins-alert.sh (host alert sender)", () => {
       expect(m?.headers["x-twins-signature"]).toBe(`sha256=${createHmac("sha256", "top-secret-value").update(m?.raw ?? "").digest("hex")}`);
     } finally { s.close(); }
   });
+  it("sends a bearer token (from the env file) as an Authorization header without printing it, and refuses a malformed one", async () => {
+    const s = await sink();
+    const dir = tmp();
+    const token = "relay-token-0123456789abcdef";
+    writeFileSync(join(dir, "alert.env"), `TWINS_ALERT_WEBHOOK_URL=${s.url}\nTWINS_ALERT_WEBHOOK_BEARER=${token}\n`);
+    try {
+      const r = await run(ALERT, ["a.b", "INFO", "svc", "code", "ok"], { TWINS_ALERT_ENV_FILE: join(dir, "alert.env"), TWINS_ALERT_STATE_DIR: join(dir, "s") });
+      expect(r.code).toBe(0);
+      expect(r.out).not.toContain(token);
+      expect(s.got[0]?.headers["authorization"]).toBe(`Bearer ${token}`);
+      writeFileSync(join(dir, "bad.env"), `TWINS_ALERT_WEBHOOK_URL=${s.url}\nTWINS_ALERT_WEBHOOK_BEARER=short bad value\n`);
+      const bad = await run(ALERT, ["a.b", "INFO", "svc", "code", "ok"], { TWINS_ALERT_ENV_FILE: join(dir, "bad.env"), TWINS_ALERT_STATE_DIR: join(dir, "s2") });
+      expect(bad.out).toMatch(/bad_bearer_format/);
+      expect(s.got).toHaveLength(1);
+    } finally { s.close(); }
+  });
   it("derives event and code from a failed systemd unit (OnFailure)", async () => {
     const s = await sink();
     const dir = tmp();
