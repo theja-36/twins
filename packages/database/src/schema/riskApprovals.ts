@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { agentOrchestratorRuns } from "./agents";
 import { riskDecisions } from "./riskDecisions";
 
 /**
@@ -23,6 +24,10 @@ export const riskApprovalCards = pgTable(
     cardTextSha256: text("card_text_sha256"),
     /** The decision's validity: the card (and any approval through it) is void after this instant. */
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    /** HB-01: the exact agent-engine run (and its assessment and synthesis hash) the card was created against. Immutable like the rest of the content; NULL on cards created before migration 0028 or with no run. */
+    researchRunId: uuid("research_run_id").references(() => agentOrchestratorRuns.id, { onDelete: "restrict" }),
+    researchAssessment: text("research_assessment"),
+    researchSynthesisSha256: text("research_synthesis_sha256"),
     createdBy: text("created_by").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     sentAt: timestamp("sent_at", { withTimezone: true }),
@@ -34,6 +39,7 @@ export const riskApprovalCards = pgTable(
     stateCheck: check("risk_approval_cards_state_check", sql`${table.state} in ('pending', 'sent', 'decided', 'expired')`),
     shapeCheck: check("risk_approval_cards_shape_check", sql`${table.nonce} ~ '^[0-9a-f]{32}$' and ${table.cardContentSha256} ~ '^[0-9a-f]{64}$' and length(${table.cardText}) between 1 and 3800 and (${table.cardTextSha256} is null or ${table.cardTextSha256} = ${table.cardContentSha256})`),
     sentCheck: check("risk_approval_cards_sent_check", sql`(${table.state} in ('pending', 'expired')) or ${table.telegramMessageId} is not null`),
+    researchCheck: check("risk_approval_cards_research_check", sql`(${table.researchRunId} is null) = (${table.researchAssessment} is null) and (${table.researchRunId} is null) = (${table.researchSynthesisSha256} is null) and (${table.researchSynthesisSha256} is null or ${table.researchSynthesisSha256} ~ '^[0-9a-f]{64}$')`),
     actorCheck: check("risk_approval_cards_actor_check", sql`${table.createdBy} ~ '^(service|operator):[a-z0-9][a-z0-9._-]{1,40}$'`),
   }),
 );

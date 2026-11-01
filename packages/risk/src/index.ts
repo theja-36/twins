@@ -22,3 +22,4 @@ export * from "./approval/eligibility";
 export * from "./approval/researchEligibility";
 export * from "./approval/card";
 export * from "./approval/service";
+export * from "./approval/researchProbe";

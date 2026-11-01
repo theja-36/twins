@@ -145,6 +145,25 @@ interface AnchorFile {
   anchors: Record<string, { index: number; hash: string; verifiedAt: string }>;
 }
 
+export interface AnchorEntry { index: number; hash: string; verifiedAt: string }
+/**
+ * Compares ONE chain with its external anchor. Returns the failure, or null when the chain agrees with it.
+ *  - An anchor at index 0 means "the chain was EMPTY when anchored" (no row has chain_index 0: rows start at 1, and the empty head carries the genesis hash). There is no row to look up; the only thing to
+ *    check is that the chain has not moved backwards, which an empty anchor can never contradict. The index-0 / genesis-hash pairing is strict: an anchor with index 0 and a real hash, or a real index
+ *    with the genesis hash, cannot have come from a verifier run and is reported as a malformed anchor instead of being skipped.
+ *  - Otherwise the anchored row must still exist, at that index, with that hash (a deleted tail or rewritten history is caught here even if the chain head was rewritten too).
+ */
+export async function evaluateAnchor(chain: string, a: AnchorEntry, currentLastIndex: number, hashAt: (index: number) => Promise<string | null>): Promise<Failure | null> {
+  const empty = a.index === 0;
+  if (empty !== (a.hash === GENESIS_HASH) || !Number.isInteger(a.index) || a.index < 0) return { code: "anchor_mismatch", chain, chainIndex: a.index, detail: `the anchor for this chain is malformed (index ${a.index} does not match its hash); refusing to treat it as an empty-chain anchor` };
+  if (empty) return currentLastIndex < 0 ? { code: "anchor_mismatch", chain, chainIndex: 0, detail: "the chain is shorter than its anchor" } : null;
+  if (currentLastIndex < a.index) return { code: "anchor_mismatch", chain, chainIndex: a.index, detail: `the chain ends at chain_index ${currentLastIndex}, before the anchored chain_index ${a.index} (rows were removed)` };
+  const hash = await hashAt(a.index);
+  if (hash === null) return { code: "anchor_mismatch", chain, chainIndex: a.index, detail: `the anchored row (chain_index ${a.index}, verified ${a.verifiedAt}) no longer exists` };
+  if (hash !== a.hash) return { code: "anchor_mismatch", chain, chainIndex: a.index, detail: `the row at chain_index ${a.index} differs from the externally anchored hash (history was rewritten)` };
+  return null;
+}
+
 function readAnchor(path: string): AnchorFile {
   const parsed = JSON.parse(readFileSync(path, "utf8")) as AnchorFile;
   if (parsed.version !== 1 || typeof parsed.anchors !== "object") throw new Error("anchor file has an unsupported format");
@@ -196,9 +215,11 @@ export async function verifyAuditChains(db: Queryable, options: VerifyOptions = 
       const a = anchor.anchors[report.chain];
       if (!a || !report.ok) continue;
       const spec = specs.find((s) => s.chain === report.chain) as ChainSpec;
-      const row = await db.query(`select event_hash from ${spec.table} where chain_index = $1::bigint`, [a.index]);
-      if (row.rows.length === 0) failures.push({ code: "anchor_mismatch", chain: report.chain, chainIndex: a.index, detail: `the anchored row (chain_index ${a.index}, verified ${a.verifiedAt}) no longer exists` });
-      else if (String(row.rows[0]?.["event_hash"]) !== a.hash) failures.push({ code: "anchor_mismatch", chain: report.chain, chainIndex: a.index, detail: `the row at chain_index ${a.index} differs from the externally anchored hash (history was rewritten)` });
+      const failure = await evaluateAnchor(report.chain, a, report.lastIndex, async (index) => {
+        const row = await db.query(`select event_hash from ${spec.table} where chain_index = $1::bigint`, [index]);
+        return row.rows.length === 0 ? null : String(row.rows[0]?.["event_hash"]);
+      });
+      if (failure) failures.push(failure);
     }
   }
 

@@ -4,7 +4,7 @@
  * shared test database is never left tampered. Committed appends (valid flows) only extend the chains.
  */
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, existsSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -448,6 +448,52 @@ describe("tamper evidence: every kind of tampering is detected, at the first fai
       return verifyAuditChains(c);
     });
     expect(r2.firstFailure).toMatchObject({ code: "protection_missing", chain: "options_claims" });
+  });
+  it("an EMPTY chain anchored on one run passes on the next (it used to fail: index 0 is never a row), while the other chains keep their anchors", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "twins-anchor-empty-"));
+    const anchorFile = join(dir, "anchor.json");
+    try {
+      const first = await verifyAuditChainsWithPool(pool, { anchorFile });
+      expect(first.ok).toBe(true);
+      const emptyChains = first.chains.filter((c) => c.rows === 0).map((c) => c.chain);
+      const anchors = JSON.parse(readFileSync(anchorFile, "utf8")).anchors as Record<string, { index: number; hash: string }>;
+      for (const name of emptyChains) expect(anchors[name], name).toMatchObject({ index: 0, hash: GENESIS_HASH });
+      for (let run = 0; run < 2; run += 1) expect((await verifyAuditChainsWithPool(pool, { anchorFile })).ok, `run ${run + 2}`).toBe(true);
+      // a crafted empty-chain anchor for a chain that HAS rows also passes (the chain has only grown), but a malformed one fails
+      const populated = first.chains.find((c) => c.rows > 0)?.chain as string;
+      const crafted = JSON.parse(readFileSync(anchorFile, "utf8"));
+      crafted.anchors[populated] = { index: 0, hash: GENESIS_HASH, verifiedAt: "2026-10-29T14:44:20.312Z" };
+      writeFileSync(anchorFile, JSON.stringify(crafted));
+      expect((await verifyAuditChainsWithPool(pool, { anchorFile })).ok).toBe(true);
+      crafted.anchors[populated] = { index: 0, hash: "a".repeat(64), verifiedAt: "2026-10-29T14:44:20.312Z" };
+      writeFileSync(anchorFile, JSON.stringify(crafted));
+      const bad = await verifyAuditChainsWithPool(pool, { anchorFile });
+      expect(bad.ok).toBe(false);
+      expect(bad.firstFailure).toMatchObject({ code: "anchor_mismatch", chain: populated });
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+  it("an anchored row that is DELETED or REWRITTEN is still caught on a non-empty chain; an unchanged chain passes", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "twins-anchor-rows-"));
+    const anchorFile = join(dir, "anchor.json");
+    try {
+      await pool.query("insert into audit_events (id, event_type, entity_type, actor_type) values ($1, 'itest.anchor.rows', 'x', 'system')", [randomUUID()]);
+      expect((await verifyAuditChainsWithPool(pool, { anchorFile })).ok).toBe(true);
+      expect((await verifyAuditChainsWithPool(pool, { anchorFile })).ok).toBe(true); // unchanged
+      const idx = Number(JSON.parse(readFileSync(anchorFile, "utf8")).anchors.audit_events.index);
+      expect(idx).toBeGreaterThan(0);
+      const deleted = await inRolledBackTx(async (c) => {
+        await c.query("alter table audit_events disable trigger audit_events_no_update_delete");
+        await c.query("delete from audit_events where chain_index = $1", [idx]);
+        return verifyAuditChains(c, { chains: ["audit_events"], anchorFile });
+      });
+      expect(deleted.ok).toBe(false);
+      const rewritten = await inRolledBackTx(async (c) => {
+        await c.query("alter table audit_events disable trigger audit_events_no_update_delete");
+        await c.query("update audit_events set event_hash = repeat('f', 64) where chain_index = $1", [idx]);
+        return verifyAuditChains(c, { chains: ["audit_events"], anchorFile });
+      });
+      expect(rewritten.ok).toBe(false);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
   });
   it("hiding a tail deletion by also rewriting the chain head is caught by the external anchor file", async () => {
     const dir = mkdtempSync(join(tmpdir(), "twins-anchor-"));

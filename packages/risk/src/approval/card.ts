@@ -52,6 +52,8 @@ export interface ApprovalCardData {
   liquidity: { bidQty: number | null; askQty: number | null; volume: number | null; openInterest: number | null; spreadPct: number | null; dataAgeSeconds: number | null };
   blackout: { status: "NONE" | "WARNING" | "CRITICAL"; count: number };
   breaker: { daily: string; weekly: string };
+  /** HB-01: the research assessment and the (short) id of the agent-engine run the card was created against; absent when no run existed. */
+  research?: { assessment: string; runId: string } | null;
   validUntil: string;
   keyRisks: string[];
   evidence: { riskDecision: string; stopLossValidation: string; previousVersions: string[]; marketInputHash: string; portfolioInputHash: string };
@@ -133,6 +135,7 @@ export function renderApprovalCard(c: ApprovalCardData): RenderedRiskCard {
     `Liquidity: bid qty ${fmt(c.liquidity.bidQty, 0)}, ask qty ${fmt(c.liquidity.askQty, 0)}, volume ${fmt(c.liquidity.volume, 0)}${c.liquidity.openInterest !== null ? `, OI ${fmt(c.liquidity.openInterest, 0)}` : ""}; spread ${pct(c.liquidity.spreadPct)}; data age ${c.liquidity.dataAgeSeconds === null ? "n/a" : `${fmt(c.liquidity.dataAgeSeconds, 0)} s`}`,
     `Event blackout: ${c.blackout.status}${c.blackout.count ? ` (${c.blackout.count} window${c.blackout.count > 1 ? "s" : ""})` : ""}`,
     `Loss circuit breakers: daily ${c.breaker.daily}, weekly ${c.breaker.weekly}`,
+    ...(c.research ? [`Research assessment: ${c.research.assessment} (run ${c.research.runId})`] : []),
     `Valid until: ${c.validUntil.slice(0, 16).replace("T", " ")} UTC (after that it cannot be approved)`,
     "",
     "Key risks:",

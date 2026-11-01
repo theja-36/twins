@@ -11,10 +11,10 @@
 ## Summary
 | ID | Item | P | Depends on |
 | --- | --- | --- | --- |
-| HB-01 | Bind an approval to the specific assessment run it relied on | P0 | - |
-| HB-02 | "Latest assessment wins" can launder an ADVERSE / BLOCKED result | P0 | HB-01 |
-| HB-03 | Make "engine enabled" visible to the database so a missing assessment is refused there too | P0 | - |
-| HB-04 | Role grants for the agent tables and `risk_decisions` in eligibility checks | P0 | deployment |
+| HB-01 | Bind an approval to the specific assessment run it relied on | P0 - **CLOSED** (migration 0028) | - |
+| HB-02 | "Latest assessment wins" can launder an ADVERSE / BLOCKED result | P0 - **CLOSED** (migration 0028; the explicit operator supersede record remains an option) | HB-01 |
+| HB-03 | Make "engine enabled" visible to the database so a missing assessment is refused there too | P0 - **CLOSED** (migration 0028) | - |
+| HB-04 | Role grants for the agent tables and `risk_decisions` in eligibility checks | P0 - **CLOSED in code** (grants and probe exist; the grants are applied only when `app-role.sql` is run at a deployment) | deployment |
 | HB-05 | Challenger dependency on every agent; all-or-nothing activation | P1 | - |
 | HB-06 | Staged / shadow activation (engine enabled without halting) | P1 | HB-05 |
 | HB-07 | Process isolation and CPU / memory limits for agents | P1 | - |
@@ -34,6 +34,8 @@
 | HB-21 | Synthesis version and old rows | P3 | - |
 
 ## P0
+
+> **Closure note (P0 hardening task, 2026-10-31; decision D-077).** HB-01 .. HB-04 are implemented and tested on branch `feat/p0-hardening` (migration 0028). The sections below keep the original "Now / Risk / Work / Acceptance" text for the record; "Now" describes the behaviour BEFORE this task. What was built: (HB-01) `risk_approval_cards` carry `research_run_id`, `research_assessment` and `research_synthesis_sha256` (immutable), the card text shows the assessment and a short run id, `twins_record_risk_approval` refuses `research_assessment_changed` / `research_reference_missing`, and the approval row stores the run in `decision_snapshot.research` and `evidence_references.researchRun*` (inside the hash-chain payload). The API path (no card) cites the run in the context; when the caller names none, the run that stands is cited and recorded. (HB-02) `twins_research_assessment` - used by the database function AND the application layer - treats an earlier ADVERSE / BLOCKED run as standing unless a later run's adverse agents cite different, non-empty evidence (`research_adverse_not_superseded` / `research_blocked_not_superseded`); a configuration change, a re-run or a new decision version over the same evidence does not clear it. (HB-03) `agent_engine_state` (one audited row, seeded `false`, changed only by `scripts/ops/agent-engine-control.ts`) lets the function refuse `research_assessment_missing` while it is true; the start-up probe refuses `TWINS_AGENT_ENGINE_ENABLED=true` while it is false. (HB-04) `infrastructure/staging/app-role.sql` grants SELECT on the agent tables, `risk_decisions` and `agent_engine_state` and EXECUTE on the two helper functions; `runResearchProbe` runs at API and worker start-up and stops the process (`agent_engine.config.invalid`) when the check applies and a grant or the flag is wrong. **Remaining (not closed):** there is no explicit audited operator "supersede" record (only changed evidence clears an adverse result); evidence fingerprints are only as discriminating as the evidence references agents cite (an agent that cites none can never clear its own adverse result); nothing here is deployed or enabled.
 
 ### HB-01 Bind an approval to the specific assessment run it relied on
 * **Now:** eligibility re-checks "the latest assessment of the lineage" at the moment of approval; the approval record does not say which run that was, and the card does not show it.
@@ -57,6 +59,9 @@
 * **Risk:** a deployment without the grants either refuses everything or silently skips the check.
 * **Work:** add the grants to the role setup scripts, a deployment verification step (`verify-migrations`-style) that reads each table as the runtime role, and a start-up probe in the API / worker that logs `agent_engine.config.invalid` if the probe fails with the engine enabled.
 * **Acceptance:** a test creates the runtime role with and without the grant; the probe reports the difference.
+
+## Closed outside the original list
+* **Audit-chain verifier empty-chain anchor (found 2026-11-01 on staging; D-078).** An empty chain's anchor (index 0) made the next run report a deleted row. Fixed in `evaluateAnchor` with regression tests. Not deployed: staging keeps reporting the false failure until the fixed verifier is deployed. Follow-up (open, P1): alert-fatigue review - a permanently failing hourly check hid for 2.6 days that it was a false positive; confirm failure alerts were delivered and add "failing for more than N runs" escalation.
 
 ## P1
 
@@ -140,13 +145,13 @@ Runs stored under `research-synthesis-v1` have no `halt` block (`haltReasonCode`
 ## Approval-eligibility edge cases (consolidated)
 | Case | Current behaviour | Item |
 | --- | --- | --- |
-| Newer run improves the verdict | allowed (latest wins) | HB-02 |
-| Approval relies on a run that is later superseded | not detected after the fact | HB-01 |
-| No assessment, engine enabled, direct function call | not refused in the database | HB-03 |
+| Newer run improves the verdict | allowed only if the adverse agents cite different evidence; otherwise `research_*_not_superseded` (closed) | HB-02 |
+| Approval relies on a run that is later superseded | the run is recorded in the approval; a card citing a no-longer-latest run is refused `research_assessment_changed` (closed); a superseding run AFTER the approval is still not detected | HB-01 |
+| No assessment, engine enabled, direct function call | refused `research_assessment_missing` when `agent_engine_state` is true (closed) | HB-03 |
 | No assessment, engine disabled | unchanged (by design) | - |
 | Engine disabled after a bad assessment exists | still refused (by design) | - |
 | `ENFORCED=false` | only the application layer is off; the database floor stays | D-073 c |
 | Customised halt list | does not weaken eligibility (three mandatory refusals) | - |
-| Role cannot read the agent tables | engine enabled: refused (`unavailable`); disabled: skipped | HB-04 |
+| Role cannot read the agent tables | the start-up probe stops the process when the check applies (closed); per request still `unavailable` / skipped | HB-04 |
 | Assessment older than the decision's validity | not checked; the decision's own window applies | HB-01 |
 | Run on a version older than the approvable one with unchanged inputs | counted (lineage rule) | D-073 a |

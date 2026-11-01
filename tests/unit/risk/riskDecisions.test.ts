@@ -117,7 +117,7 @@ describe("architecture: the schema, the chain and the boundaries", () => {
   it("only the worker, the scheduler, the risk and intelligence API routes and the risk-control and source-intelligence CLIs (and tests) import the risk module; it writes nothing but risk_decisions", () => {
     const walk = (d: string): string[] => readdirSync(join(ROOT, d)).flatMap((n) => { const p = `${d}/${n}`; return statSync(join(ROOT, p)).isDirectory() ? (n === "node_modules" || n === "dist" ? [] : walk(p)) : /\.ts$/.test(n) ? [p] : []; });
     const importers = ["apps", "services", "adapters", "scripts"].flatMap(walk).filter((f) => /@twins\/risk|packages\/risk/.test(strip(read(f))));
-    expect(importers).toEqual(["apps/api/src/intelligenceApi.ts", "apps/api/src/riskApi.ts", "services/scheduler/src/index.ts", "services/worker/src/index.ts", "scripts/ops/risk-control.ts", "scripts/ops/source-intelligence.ts"]); // (Stage 4 / Task 5 added the read-only intelligence API routes and CLI)
+    expect(importers).toEqual(["apps/api/src/index.ts", "apps/api/src/intelligenceApi.ts", "apps/api/src/riskApi.ts", "services/scheduler/src/index.ts", "services/worker/src/index.ts", "scripts/ops/risk-control.ts", "scripts/ops/source-intelligence.ts"]); // (Stage 4 / Task 5 added the read-only intelligence API routes and CLI)
     for (const f of walk("packages/risk/src")) expect(strip(read(f)), f).not.toMatch(/\.(insert|update|delete)\(\s*schema\.(?!riskDecisions\b|lossEvents\b|circuitBreakerEvents\b|eventBlackoutWindows\b|riskApprovalCards\b)\w+/); // loss events and breaker events are the Task 4 tables, written only by breakers/record.ts (asserted below)
   });
 });
