@@ -23,7 +23,7 @@ describe("staging packaging (static)", () => {
     expect(service("worker")).not.toMatch(/^\s+ports:/m);
     const ports = [...compose.matchAll(/^\s+- "([^"]*:\d+)"$/gm)].map((m) => m[1]);
     // the API (reverse-proxy loopback port) and the alert relay (host jobs post their alerts to it; token-protected) are the only published ports, both loopback-only
-    expect(ports).toEqual(["127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000", "127.0.0.1:8099:8099"]);
+    expect(ports).toEqual(["127.0.0.1:8099:8099", "127.0.0.1:${TWINS_API_HOST_PORT:-4110}:4000"]);
     expect(service("alert-relay")).toMatch(/ports:\s*\n\s+- "127\.0\.0\.1:8099:8099"/);
   });
   it("fixes the safety posture as literals and never takes it from the env file", () => {
