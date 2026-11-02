@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   twins-postgres-test:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: twins-postgres-test
     environment:
       POSTGRES_USER: twins
