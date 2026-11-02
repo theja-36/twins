@@ -50,7 +50,7 @@ Composition lives in `packages/kite` (it depends on `@twins/agents`; the reverse
 - **With IV and greeks null**: Options Risk reports `IV_MISSING` and `GREEKS_INCOMPLETE` (CAUTION) and its IV level / IV spike / IV-above-ATM, theta, gamma, vega and delta families cannot fire; spread, open interest, volume, strike distance, expiry proximity and premium-versus-stop still work. Liquidity reports `AVG_VOLUME_MISSING` (INFO); its average-volume comparisons cannot fire. Nothing is modelled or relaxed.
 
 ## Guards
-Only the allowlisted GET paths and `POST /session/token` can be sent (checked before the rate limiter or `fetch`); a source-scan test fails on any order/GTT/portfolio/margin path or extra write method. Errors carry fixed messages; server text is redacted and bounded. Instruments naming is verified against synthetic fixtures only and must be reconciled with a first live dump before wiring (B).
+Only the allowlisted GET paths and `POST /session/token` can be sent (checked before the rate limiter or `fetch`); a source-scan test fails on any order/GTT/portfolio/margin path string or extra write method in the package source (the account READ paths live only in the allowlist's regex list, GET only). Errors carry fixed messages; server text is redacted and bounded. Instruments naming is verified against synthetic fixtures only and must be reconciled with a first live dump before wiring (B).
 
 Tests: `tests/unit/kite/` (no network; fake `fetch`).
 
@@ -60,3 +60,26 @@ Tests: `tests/unit/kite/` (no network; fake `fetch`).
 - **Plan matrix** (`packages/kite/src/plans.ts`, from zerodha.com/products/api read 2026-10-31): Personal (free) lists order/GTT/alerts management, margin computation and portfolio management, and does NOT list market data; Connect (INR 500/month) lists realtime WebSocket streaming and historical candles. The vendor page does not enumerate every endpoint per plan, so the table is conservative: unlisted means refused locally (`PLAN_RESTRICTED`) before any request or socket. The default plan is `personal`; the owner's actual plan is configuration, never inferred. Buying Connect needs explicit owner approval.
 - **Alerts:** `telegram.capture.gap` (via `detectCaptureGap`), `kite.session.invalidated` (via the `Session` invalidation hook) and exhausted `worker.queue.job_failed` map to CRITICAL alerts. The detector and hook are code only; scheduling the capture-gap check on the host needs approval.
 - **Not done:** daily-token persistence (0600 atomic store) and typed account-response parsers; live connection still requires owner approval.
+
+## Merge prep (2026-11-02): what the merged code is, what it needs, what is missing
+
+**Branch history reconciled.** `feat/kite-readonly-foundation` (A, A2, A3, B) had four `tsc -b` errors (BR-01). `feat/p0-spine` carried the four fixes plus the account reads and the plan gate on top of it, so it was used as the base, and current `main` (through PR #51, migrations 0000-0029) was merged in without conflicts. `tsc -b` is clean, lint has 0 errors, and the unit suite passes (148 files, 3016 tests).
+
+**Included (all offline-tested with fixtures and a fake `fetch`; the test network guard fails any real network call, so CI never touches Kite):**
+* Read-only gateway: request allowlist (exact method + path), login/token exchange with checksum, server-verified sessions, 403 / `TokenException` invalidation, rate-limit classes (quote 1/s, historical 3/s, default 10/s), bounded retries for safe reads only.
+* **Account reads, GET only:** profile, margins, holdings, positions, order book, per-order history / trades, trades, GTT list. **Every write is refused for every method:** placing, modifying or cancelling an order or a GTT, converting a position, authorising holdings, mutual funds, logout.
+* Instruments loader (CSV dump parser and catalog), quote / LTP / OHLC and historical-candle clients with contract mappings, strict binary WebSocket decoder and ticker (injectable transport, bounded reconnect), provider adapters, local snapshot exporter / publisher with reader-enforced snapshot generations.
+* Plan gate (`plans.ts`) and the alert rules for capture gap, Kite session invalidation and exhausted queue jobs.
+* One recorded read-only connectivity run (`KITE_LIVE_CONNECTIVITY_RUN.md`): connectivity only; the callback origin was never explained.
+
+**Plan requirement (owner decision pending).** Zerodha's plan page (read 2026-10-31) lists for **Personal (free)** order / GTT / alerts management, margin computation and portfolio management, and **no market data**; **Connect (INR 500 per month)** lists the realtime WebSocket and historical candles. The code therefore refuses market data, historical candles and the WebSocket on the default plan `personal` (`PLAN_RESTRICTED`, checked before anything is sent); account reads work on both. Real market data needs Connect (a purchase that needs the owner's explicit approval) and `TWINS_KITE_PLAN=connect`. The vendor page does not enumerate every endpoint per plan, so the table is deliberately conservative.
+
+**Not in this merge / still missing for real market data:**
+1. The owner's plan decision and, for market data, the Connect subscription.
+2. Daily access-token handling on the host: a 0600 atomic token store, the morning login step and expiry hand-off (tokens lapse around 06:00 IST); the session invalidation alert exists, the store does not.
+3. A running ticker / poller on the host with market-hours validation, and the scheduled snapshot exporter (HB-11) that lands snapshots in the directory the agents read (HB-12 / HB-13).
+4. Wiring the agents' providers to the snapshots, then a `shadow` rollout (HB-06) before anything uses real data; the engine stays disabled.
+5. Typed parsers for the account-read responses (they are returned as parsed JSON).
+6. Owner approval of a live run, with the unexplained callback origin of the earlier run resolved.
+7. Hosted CI never makes a live call; a live run is a manual, approved operation.
+8. No order, GTT, basket or position write exists or is planned here; execution is Stage 6+.
