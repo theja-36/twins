@@ -1,7 +1,7 @@
-import { readFileSync } from "node:fs";
 import { basename } from "node:path";
 import { checkFile } from "@twins/historical";
 import { AgentContractError } from "../contract";
+import { readVerifiedFile } from "../snapshotGeneration";
 import { sanitizeText } from "../sanitize";
 import type { Level } from "./common";
 import type { EventImpact } from "./calendarProviders";
@@ -141,7 +141,12 @@ export function readJsonFile(path: string, what: string): unknown {
   let info;
   try { info = checkFile(path); } catch { throw new AgentContractError("INVALID_NEWS_DATA", `${what} ${basename(path)} is unreadable or refused`); }
   if (info.format !== "json") throw new AgentContractError("INVALID_NEWS_DATA", `${what} must be a .json file`);
-  try { return JSON.parse(readFileSync(path, "utf8")); } catch { throw new AgentContractError("INVALID_NEWS_DATA", `${what} is not valid JSON`); }
+  let text: string;
+  try { text = readVerifiedFile(path); } catch (e) {
+    if (e instanceof AgentContractError) throw e; // a generation that is not consistent is refused with its own code
+    throw new AgentContractError("INVALID_NEWS_DATA", `${what} is unreadable`);
+  }
+  try { return JSON.parse(text); } catch { throw new AgentContractError("INVALID_NEWS_DATA", `${what} is not valid JSON`); }
 }
 export const fileNewsProvider = (path: string): NewsProvider => parseNewsFile(readJsonFile(path, "the news file"));
 export const fileSentimentProvider = (path: string): SentimentProvider => parseSentimentFile(readJsonFile(path, "the sentiment file"));

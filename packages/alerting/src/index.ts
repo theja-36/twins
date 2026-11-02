@@ -6,3 +6,4 @@ export * from "./observe";
 export * from "./restartLoop";
 export * from "./relay";
 export * from "./telegram";
+export * from "./captureGap";

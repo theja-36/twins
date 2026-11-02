@@ -36,6 +36,16 @@ describe("secret scan", () => {
     }
     expect(patterns("services/x/src/a.ts", `postgresql://u:${"ci_only_not_a_secret"}X@h/db`)).toContain("url_with_password"); // an almost-equal value is NOT allowed
   });
+  it("allows the exact Kite environment-variable NAMES in runtime code, but still flags real-looking values and near-miss names", () => {
+    const runtime = "packages/kite/src/config.ts";
+    for (const name of ["TWINS_KITE_API_KEY", "TWINS_KITE_API_SECRET", "TWINS_KITE_ACCESS_TOKEN"]) {
+      expect(patterns(runtime, `apiKey: "${name}",`), name).toEqual([]);
+      expect(patterns(runtime, `accessToken: "${name}X",`), `${name}X`).toContain("quoted_secret_assignment"); // a near-miss is not allowed
+    }
+    expect(patterns(runtime, `api_key: "${"kz81Qw93LmAb72PtXy"}"`)).toContain("quoted_secret_assignment");
+    expect(patterns(runtime, `access_token: "${"kz81Qw93LmAb72PtXy"}"`)).toContain("quoted_secret_assignment");
+    expect(patterns(runtime, `const t = "${"kz81Qw93LmAb72PtXy"}"; secret = "${"Zk81Qw93LmAb72PtXyQ"}"`)).toContain("quoted_secret_assignment");
+  });
   it("refuses tracked secret material by path but not templates", () => {
     const hit = (p: string) => (scanPaths([p]) as unknown[]).length === 1;
     for (const p of [".env", ".env.production", "infrastructure/staging/staging.env", "infrastructure/staging/bot.env", "keys/a.pem", "x/id.key", "a.session", "backup.dump", "backup.dump.enc", "a.sqlite"]) expect(hit(p), p).toBe(true);

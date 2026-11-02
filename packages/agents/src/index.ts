@@ -8,4 +8,5 @@ export * from "./record";
 export * from "./agents/index";
 
 export * from "./snapshots";
+export * from "./snapshotGeneration";
 export * from "./observability";

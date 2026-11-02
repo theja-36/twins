@@ -70,6 +70,9 @@ describe("severity routing (every policy event)", () => {
   const cases: Array<[string, Record<string, unknown>, string, string]> = [
     ["safety.outbox.dead_lettered", { outboxId: "a7a3af84-31e0-4588-8db9-314b25563f3f", attempt: 8, errorCode: "INGESTION_FAILED" }, "outbox.dead_lettered", "CRITICAL"],
     ["safety.outbox.stuck", { count: 2, oldestAgeSeconds: 4000 }, "outbox.stuck", "CRITICAL"],
+    ["telegram.capture.gap", { ageSeconds: 9000, windowSeconds: 3600 }, "telegram.capture_gap", "CRITICAL"],
+    ["kite.session.invalidated", { reason: "server_rejected" }, "kite.session_invalidated", "CRITICAL"],
+    ["worker.queue.job_failed", { queue: "ingest", jobId: "j1", attemptsMade: 5, maxAttempts: 5 }, "queue.job_exhausted", "CRITICAL"],
     ["safety.kill_switch.activated", { version: 4, changedBy: "operator:ops" }, "safety.kill_switch_activated", "CRITICAL"],
     ["safety.control.changed", { control: "TRADING_ENABLED", newValue: true, version: 2 }, "safety.trading_enabled", "CRITICAL"],
     ["safety.state_unavailable", { cause: "timeout" }, "runtime_state.unavailable", "CRITICAL"],

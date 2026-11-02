@@ -32,6 +32,9 @@ const GENERIC_EXEMPT = /^(tests\/|docs\/|README\.md$|.*\.example$|TWINS_BUILD_AU
 export const ALLOWED_VALUES = new Map([
   ["ci_only_not_a_secret", "password of the throwaway Postgres service container in CI and local disposable databases"],
   ["secret-pw", "dummy password used by tests that prove connection strings are never printed"],
+  ["TWINS_KITE_API_KEY", "name of the environment variable that holds the Kite API key (the NAME is not a credential; the scanner's key=value pattern matches it by shape)"],
+  ["TWINS_KITE_API_SECRET", "name of the environment variable that holds the Kite API secret (a name, not a value)"],
+  ["TWINS_KITE_ACCESS_TOKEN", "name of the environment variable that holds the Kite access token (a name, not a value)"],
   ["123456789:AAFakeTokenForTestsOnly_abcdefghijklmnopqrstu", "synthetic Telegram-shaped token for the approval-bot tests (does not authenticate anywhere)"],
 ]);
 
