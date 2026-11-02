@@ -730,6 +730,28 @@ describe("role separation: the runtime role (infrastructure/staging/app-role.sql
     client?.release();
   });
 
+  it("the runtime role cannot write the execution tables (orders, fills, positions): SELECT only; migration 0029 removes any older grant", async () => {
+    for (const table of ["orders", "fills", "positions"]) {
+      expect(await asCode(`select count(*) from ${table}`), `select ${table}`).toBe("ok");
+      expect(await asCode(`insert into ${table} default values`), `insert ${table}`).toBe("42501");
+      expect(await asCode(`update ${table} set id = id`), `update ${table}`).toBe("42501");
+      expect(await asCode(`delete from ${table}`), `delete ${table}`).toBe("42501");
+    }
+    // an older deployment (before this change) had the generic grant: simulate it, then run the migration's DO block
+    const mig = readFileSync("packages/database/drizzle/0029_p1_revoke_runtime_execution_writes.sql", "utf8");
+    const doBlock = must(/DO \$\$[\s\S]*?\$\$;/.exec(mig))[0];
+    await client.query("savepoint mig");
+    try {
+      for (const table of ["orders", "fills", "positions"]) await client.query(`grant select, insert, update on ${table} to ${ROLE}`);
+      expect(await asCode("insert into orders default values")).not.toBe("42501"); // the gap this migration closes
+      await client.query(doBlock);
+      for (const table of ["orders", "fills", "positions"]) {
+        expect(await asCode(`insert into ${table} default values`), `insert ${table} after migration`).toBe("42501");
+        expect(await asCode(`update ${table} set id = id`), `update ${table} after migration`).toBe("42501");
+        expect(await asCode(`select count(*) from ${table}`), `select ${table} after migration`).toBe("ok");
+      }
+    } finally { await client.query("rollback to savepoint mig"); }
+  });
   it("passes the runtime privilege self-check; the owner/superuser role does not", async () => {
     expect(await asApp(() => checkRuntimeRolePrivileges(client))).toEqual([]);
     const ownerProblems = await checkRuntimeRolePrivileges(client);
