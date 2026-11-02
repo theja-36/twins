@@ -6,7 +6,7 @@ import { breakerGate } from "../breakers/record";
 import { loadExpiryConfig } from "../expiry/config";
 import { getRiskDecision, listRiskDecisions, refuseUnlessSafe, RiskDecisionError, type RiskDecisionRecord } from "../riskDecisions";
 import { buildApprovalCardData, renderApprovalCard, type ApprovalCardData } from "./card";
-import { loadResearchEligibilityConfig, researchEligibilityReasons, type ResearchEligibilityConfig } from "./researchEligibility";
+import { latestResearchAssessment, loadResearchEligibilityConfig, researchEligibilityReasons, type ResearchEligibilityConfig } from "./researchEligibility";
 import { assessApprovalEligibility, validUntilOf, type EligibilityAssessment, type EligibilityOptions } from "./eligibility";
 
 /**
@@ -30,10 +30,14 @@ export async function createApprovalCard(db: Db, decisionId: string, opts: Eligi
   const gate = await breakerGate(db, capital, { asOf: a.assessedAt, expiry });
   if (gate.blocked) throw new RiskDecisionError("not_approval_eligible", "the decision is not approval-eligible: circuit_breaker_open");
   const data = buildApprovalCardData(d, { breaker: gate, validUntil: a.validUntil as Date });
+  // HB-01: the card cites the exact research run it is created against (immutable); the approval refuses unless that run is still the latest
+  const research = await latestResearchAssessment(db, d).catch(() => null);
+  if (research) data.research = { assessment: research.assessment, runId: research.runId.replace(/-/g, "").slice(0, 8) };
   const rendered = renderApprovalCard(data);
   const id = randomUUID();
   const inserted = await db.insert(schema.riskApprovalCards).values({
     id, riskDecisionId: d.id, decisionVersion: d.decisionVersion, nonce: randomBytes(16).toString("hex"), cardText: rendered.text, cardContentSha256: rendered.sha256, expiresAt: a.validUntil as Date, createdBy: APPROVAL_ACTOR,
+    ...(research ? { researchRunId: research.runId, researchAssessment: research.assessment, researchSynthesisSha256: research.synthesisSha256 } : {}),
   }).onConflictDoNothing({ target: schema.riskApprovalCards.riskDecisionId }).returning({ id: schema.riskApprovalCards.id });
   if (inserted[0]) return { cardId: id, created: true, decisionId: d.id, decisionVersion: d.decisionVersion, expiresAt: a.validUntil as Date, cardSha256: rendered.sha256, data };
   const [existing] = await db.select().from(schema.riskApprovalCards).where(eq(schema.riskApprovalCards.riskDecisionId, d.id));
@@ -59,13 +63,18 @@ export async function recordRiskApproval(db: Db, input: { decisionId: string; ac
   }
   const decision = await getRiskDecision(db, input.decisionId);
   if (!decision) return { outcome: "refused", reason: "decision_not_found" };
+  let researchRunId: string | null = null;
   if (input.action === "APPROVE") {
     // Stage 5 / Task 8: an unacceptable (or, with the engine enabled, missing) research assessment refuses before the database function is even called; the function enforces the BLOCKED / INCOMPLETE / ADVERSE refusal again
-    const research = await researchEligibilityReasons(db, decision, input.research ?? loadResearchEligibilityConfig());
+    // HB-01: the API path has no card, so the operator cites the run in the context; when the caller names none, the run that stands now is cited (and recorded), which keeps the audit trail exact
+    const latest = await latestResearchAssessment(db, decision).catch(() => null);
+    const cited = typeof input.context?.["researchRunId"] === "string" ? (input.context["researchRunId"] as string) : (latest?.runId ?? null);
+    const research = await researchEligibilityReasons(db, decision, input.research ?? loadResearchEligibilityConfig(), latest ? cited : undefined);
     if (research[0]) return { outcome: "refused", reason: research[0] };
+    researchRunId = latest ? cited : null;
   }
   const validUntil = validUntilOf(decision, input.expiry ?? loadExpiryConfig());
-  const context = JSON.stringify({ ...(input.context ?? {}), via: "api" });
+  const context = JSON.stringify({ ...(input.context ?? {}), ...(researchRunId ? { researchRunId } : {}), via: "api" });
   const r = await db.execute(sql`select twins_record_risk_approval(${input.decisionId}::uuid, null::uuid, ${input.action}, ${input.actor}, ${context}::jsonb, ${input.reason ?? null}, ${validUntil.toISOString()}::timestamptz) as outcome`);
   const outcome = String((r.rows[0] as { outcome: string }).outcome);
   if (outcome === "recorded") {

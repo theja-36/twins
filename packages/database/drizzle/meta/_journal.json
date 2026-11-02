@@ -197,6 +197,20 @@
       "when": 1793404287848,
       "tag": "0027_research_eligibility",
       "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1793464762255,
+      "tag": "0028_p0_hardening",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1793569299859,
+      "tag": "0029_p1_revoke_runtime_execution_writes",
+      "breakpoints": true
     }
   ]
 }

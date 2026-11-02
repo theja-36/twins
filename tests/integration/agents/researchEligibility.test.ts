@@ -5,16 +5,18 @@
  */
 import { randomUUID } from "node:crypto";
 import pg from "pg";
+import { drizzle } from "drizzle-orm/node-postgres";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages/database/src/index";
+import { createBoundedDb, schema, type BoundedDbHandle, type Db } from "../../../packages/database/src/index";
 import { verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
 import { AgentRegistry, loadAgentEngineConfig, runAgentEngine, type AgentDefinition, type AgentEvent } from "../../../packages/agents/src/index";
 import {
   assessApprovalEligibility, createApprovalCard, createRiskDecision, DEFAULT_RESEARCH_ELIGIBILITY, evaluateMarketRisk, evaluatePortfolioRisk, latestResearchAssessment, loadPortfolioConfig, recordRiskApproval, sizeRiskDecision,
-  type ResearchEligibilityConfig, type RiskDecisionInput,
+  probeResearchAccess, runResearchProbe, ResearchProbeError, type ResearchEligibilityConfig, type RiskDecisionInput,
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { PgBotDb } from "../../../services/approval-bot/src/db";
+import { runCli } from "../../../scripts/ops/agent-engine-control";
 import { validIntelligence } from "../../support/intelligenceFixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
@@ -72,6 +74,7 @@ const counts = async (tables: string[]) => Promise.all(tables.map(async (t) => N
 
 type Verdict = "SUPPORTIVE" | "NEUTRAL" | "CAUTION" | "ADVERSE" | "BLOCKING";
 let calls = 0;
+let evidenceTag = ""; // HB-02: the fake agent cites different evidence when this changes
 /** A fake research agent with a fixed verdict (weight 50, may block). */
 const fake = (verdict: Verdict): AgentDefinition => ({
   contract: {
@@ -82,7 +85,7 @@ const fake = (verdict: Verdict): AgentDefinition => ({
   async run() {
     calls += 1;
     return { verdict, confidence: 100, findings: verdict === "SUPPORTIVE" || verdict === "NEUTRAL" ? [] : [{ code: "FAKE_FINDING", severity: verdict === "BLOCKING" ? "CRITICAL" : verdict === "ADVERSE" ? "HIGH" : "MEDIUM", summary: "fake finding" }],
-      evidence: [{ kind: "risk_decision", ref: "risk_decision:fake" }], output: { checksRun: 1, blockingCount: 0, adverseCount: 0, cautionCount: 0, failedCodes: [], truncatedFindings: false } };
+      evidence: [{ kind: "risk_decision", ref: `risk_decision:fake${evidenceTag}` }], output: { checksRun: 1, blockingCount: 0, adverseCount: 0, cautionCount: 0, failedCodes: [], truncatedFindings: false } };
   },
 });
 const ENGINE = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent" });
@@ -210,7 +213,12 @@ describe("the LATEST assessment of the lineage decides", () => {
     expect(await assessApprovalEligibility(db(), head, { research: research() })).toMatchObject({ eligible: false, reasons: ["research_assessment_adverse"] });
     expect(await approve(head)).toEqual({ outcome: "refused", reason: "research_assessment_adverse" });
     expect(await approve(head, research({ enforced: false }))).toEqual({ outcome: "refused", reason: "research_assessment_adverse" }); // the database floor
-    await runOn(head, "SUPPORTIVE", loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent", TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "2" })); // a different configuration => a new run
+    // HB-02: a different configuration alone is a new run but NOT new evidence: the ADVERSE result is not cleared
+    await runOn(head, "SUPPORTIVE", loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent", TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "2" }));
+    expect(await assessApprovalEligibility(db(), head, { research: research() })).toMatchObject({ eligible: false, reasons: ["research_adverse_not_superseded"] });
+    // ... a run whose adverse agent cites DIFFERENT evidence does
+    evidenceTag = `-new${sfx()}`;
+    try { await runOn(head, "SUPPORTIVE", loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent", TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "3" })); } finally { evidenceTag = ""; }
     expect(await assessApprovalEligibility(db(), head, { research: research() })).toMatchObject({ eligible: true });
   });
 });
@@ -251,5 +259,182 @@ describe("idempotency, audit chain, privacy and inertness", () => {
     try { await runOn(m.v1, "BLOCKING"); await assessApprovalEligibility(db(), must(m.approved), { research: research() }); } finally { globalThis.fetch = real; }
     expect(seen).toEqual([]);
     expect(await counts(LIVE)).toEqual(live);
+  });
+});
+
+// ─── P0 hardening: HB-01 .. HB-04 ───────────────────────────────────────────
+const setEngine = (v: boolean) => pool.query("update agent_engine_state set enabled = $1, version = version + 1, reason = $2, changed_by = 'operator:itest' where id = 1", [v, `itest flip ${sfx()}`]);
+const NEXT_HOUR = "now() + interval '1 hour'";
+const fnApprove = async (decisionId: string, cardId: string | null, context: Record<string, unknown> = {}) => String(must((await pool.query(`select twins_record_risk_approval($1::uuid, $2::uuid, 'APPROVE', 'telegram:42', $3::jsonb, null, ${cardId ? "null" : NEXT_HOUR}) as o`, [decisionId, cardId, JSON.stringify(context)])).rows[0]).o);
+const markSent = async (cardId: string, messageId: number) => { const c = must((await q("select card_content_sha256 as sha from risk_approval_cards where id = $1", [cardId]))[0]); await pool.query("select twins_risk_card_mark_sent($1::uuid, $2::bigint, $3)", [cardId, messageId, c["sha"]]); };
+const afterFlag = async () => { if (must((await q("select enabled from agent_engine_state where id = 1"))[0])["enabled"] === true) await setEngine(false); };
+
+describe("HB-01: an approval cites the exact research run it relied on", () => {
+  it("a card records the run, assessment and synthesis hash (immutably) and shows them; an approval through it stores the run in the immutable record", async () => {
+    const d = await assessed("SUPPORTIVE");
+    const card = await createApprovalCard(db(), d.head, { research: research() });
+    const row = must((await q("select research_run_id, research_assessment, research_synthesis_sha256, card_text from risk_approval_cards where id = $1", [card.cardId]))[0]);
+    expect(row).toMatchObject({ research_run_id: d.runId, research_assessment: "RESEARCH_SUPPORTIVE" });
+    expect(row["research_synthesis_sha256"]).toMatch(/^[0-9a-f]{64}$/);
+    expect(row["card_text"]).toContain("Research assessment: RESEARCH_SUPPORTIVE (run ");
+    await expect(pool.query("update risk_approval_cards set research_assessment = 'RESEARCH_NEUTRAL' where id = $1", [card.cardId])).rejects.toThrow(/immutable/);
+    await expect(pool.query("update risk_approval_cards set research_run_id = null, research_assessment = null, research_synthesis_sha256 = null where id = $1", [card.cardId])).rejects.toThrow(/immutable/);
+    await markSent(card.cardId, 7001);
+    expect(await fnApprove(d.head, card.cardId, { cardMessageId: 7001 })).toBe("recorded");
+    const a = must((await q("select decision_snapshot->'research' as r, evidence_references->>'researchRunId' as run, evidence_references->>'researchAssessment' as asm from risk_approvals where risk_decision_id = $1", [d.head]))[0]);
+    expect(a["r"]).toMatchObject({ runId: d.runId, assessment: "RESEARCH_SUPPORTIVE", engineEnabled: false });
+    expect(a).toMatchObject({ run: d.runId, asm: "RESEARCH_SUPPORTIVE" });
+  });
+  it("a newer run after the card was made refuses the approval (research_assessment_changed)", async () => {
+    const d = await assessed("SUPPORTIVE");
+    const card = await createApprovalCard(db(), d.head, { research: research() });
+    await markSent(card.cardId, 7002);
+    await runOn(d.v1, "SUPPORTIVE", loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent", TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "2" }));
+    const before = await counts(["risk_approvals"]);
+    expect(await fnApprove(d.head, card.cardId, { cardMessageId: 7002 })).toBe("refused:research_assessment_changed");
+    expect(await counts(["risk_approvals"])).toEqual(before);
+  });
+  it("a card created before any run cannot be approved once a run exists (research_reference_missing); a decision with no run is unaffected while the engine is off", async () => {
+    const d = await assessed(null);
+    const card = await createApprovalCard(db(), d.head, { research: research({ engineEnabled: false }) });
+    expect(must((await q("select research_run_id from risk_approval_cards where id = $1", [card.cardId]))[0])["research_run_id"]).toBeNull();
+    await runOn(d.v1, "SUPPORTIVE");
+    await markSent(card.cardId, 7003);
+    expect(await fnApprove(d.head, card.cardId, { cardMessageId: 7003 })).toBe("refused:research_reference_missing");
+    const none = await assessed(null);
+    expect(await fnApprove(none.head, null)).toBe("recorded");
+  });
+  it("the API path: a wrong cited run is refused, a direct call that cites nothing is refused by the database, and the right run is recorded", async () => {
+    const d = await assessed("SUPPORTIVE");
+    expect(await recordRiskApproval(db(), { decisionId: d.head, action: "APPROVE", actor: "operator:itest", research: research(), context: { researchRunId: randomUUID() } })).toEqual({ outcome: "refused", reason: "research_assessment_changed" });
+    expect(await fnApprove(d.head, null)).toBe("refused:research_reference_missing");
+    expect(await recordRiskApproval(db(), { decisionId: d.head, action: "APPROVE", actor: "operator:itest", research: research(), context: { researchRunId: d.runId } })).toMatchObject({ outcome: "recorded" });
+    expect(must((await q("select evidence_references->>'researchRunId' as run from risk_approvals where risk_decision_id = $1", [d.head]))[0])["run"]).toBe(d.runId);
+  });
+});
+
+describe("HB-02: a re-run cannot launder an ADVERSE or BLOCKED result", () => {
+  it.each([["ADVERSE", "research_adverse_not_superseded"], ["BLOCKING", "research_blocked_not_superseded"]] as const)("%s then a better re-run on the same evidence stays refused in the application layer and the database; new evidence clears it", async (bad, code) => {
+    const m = await make("approved");
+    const head = must(m.approved);
+    await runOn(m.v1, bad);
+    const rerun = (n: string) => loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "fake_agent", TWINS_AGENT_ENGINE_MAX_CONCURRENCY: n });
+    await runOn(m.v1, "SUPPORTIVE"); // same agents, configuration and inputs => the same run key: the stored ADVERSE run is returned, nothing new is recorded
+    await runOn(m.v1, "SUPPORTIVE", rerun("2")); // a different configuration, same evidence
+    expect(await assessApprovalEligibility(db(), head, { research: research() })).toMatchObject({ eligible: false, reasons: [code] });
+    expect(await approve(head)).toEqual({ outcome: "refused", reason: code });
+    expect(await approve(head, research({ enforced: false }))).toEqual({ outcome: "refused", reason: code }); // the database floor
+    evidenceTag = `-fresh${sfx()}`;
+    try { await runOn(m.v1, "SUPPORTIVE", rerun("3")); } finally { evidenceTag = ""; }
+    expect(await assessApprovalEligibility(db(), head, { research: research() })).toMatchObject({ eligible: true });
+    expect((await approve(head)).outcome).toBe("recorded");
+  });
+  it("a new decision version over the same evidence does not clear an ADVERSE result either", async () => {
+    const m = await make("approved");
+    await runOn(m.v1, "ADVERSE");
+    await runOn(must(m.approved), "SUPPORTIVE"); // a run on the later decision version, same fake evidence
+    expect(await approve(must(m.approved))).toEqual({ outcome: "refused", reason: "research_adverse_not_superseded" });
+  });
+});
+
+describe("HB-03: the database knows whether the engine is enabled", () => {
+  afterEach(afterFlag);
+  it("engine enabled + no assessment: a DIRECT call to the function is refused (research_assessment_missing); with the flag off it is not", async () => {
+    const d = await assessed(null);
+    await setEngine(true);
+    expect(await fnApprove(d.head, null)).toBe("refused:research_assessment_missing");
+    await setEngine(false);
+    expect(await fnApprove(d.head, null)).toBe("recorded");
+  });
+  it("the state is one audited row: a change needs a new version, a flip and a new reason; it is never deleted; every change leaves an append-only event", async () => {
+    const eventsBefore = Number(must((await q("select count(*)::int as n from agent_engine_state_events"))[0])["n"]);
+    await setEngine(true); await setEngine(false);
+    expect(Number(must((await q("select count(*)::int as n from agent_engine_state_events"))[0])["n"])).toBe(eventsBefore + 2);
+    await expect(pool.query("update agent_engine_state set enabled = false, version = version + 1, reason = 'itest same value' where id = 1")).rejects.toThrow(/flip/);
+    await expect(pool.query("update agent_engine_state set enabled = true, reason = 'itest no version bump' where id = 1")).rejects.toThrow(/version/);
+    await expect(pool.query("delete from agent_engine_state")).rejects.toThrow(/not permitted/);
+    await expect(pool.query("truncate agent_engine_state")).rejects.toThrow(/not permitted/);
+    await expect(pool.query("update agent_engine_state_events set reason = 'tamper reason'")).rejects.toThrow(/not permitted/);
+    await expect(pool.query("insert into agent_engine_state (id, enabled, reason, changed_by) values (2, true, 'a second row', 'itest')")).rejects.toThrow();
+  });
+  it("the owner CLI reads and changes the flag; bad usage and a stale version are refused; the live-trading guard is the CLI's first statement", async () => {
+    const out: string[] = []; const err: string[] = [];
+    const deps = { env: { DATABASE_URL }, out: (l: string) => out.push(l), err: (l: string) => err.push(l), openPool: () => ({ pool: pool as never, close: async () => undefined }) };
+    expect(await runCli(["status"], deps)).toBe(0);
+    expect(JSON.parse(must(out[0]))).toMatchObject({ enabled: false });
+    expect(await runCli(["set", "--value", "true", "--reason", "itest enabling", "--changed-by", "operator:itest"], deps)).toBe(0);
+    expect(JSON.parse(must(out[1]))).toMatchObject({ changed: true, enabled: true });
+    expect(await runCli(["set", "--value", "false", "--reason", "itest stale", "--changed-by", "operator:itest", "--expected-version", "1"], deps)).toBe(3);
+    expect(await runCli(["set", "--value", "maybe", "--reason", "itest bad value", "--changed-by", "operator:itest"], deps)).toBe(2);
+    expect(await runCli(["set", "--value", "false", "--reason", "short", "--changed-by", "operator:itest"], deps)).toBe(2);
+    expect(await runCli(["set", "--value", "false", "--reason", "itest disabling", "--changed-by", "someone"], deps)).toBe(2);
+    expect(await runCli(["set", "--value", "false", "--reason", "itest disabling", "--changed-by", "operator:itest"], deps)).toBe(0);
+    expect(await runCli(["bogus"], deps)).toBe(2);
+    expect(err.join("\n")).not.toContain(DATABASE_URL);
+  });
+});
+
+describe("HB-04: runtime-role grants and the start-up probe", () => {
+  const ROLE = `twins_probe_${sfx()}`;
+  const RELS = ["agent_orchestrator_runs", "agent_orchestrator_syntheses", "agent_runs", "agent_evidence_references", "risk_decisions", "agent_engine_state"];
+  let rolePool: pg.Pool;
+  let roleDb: Db;
+  beforeAll(async () => {
+    await pool.query(`create role ${ROLE} nologin`);
+    await pool.query(`grant usage on schema public to ${ROLE}`);
+    await pool.query(`grant select on ${RELS.join(", ")} to ${ROLE}`);
+    rolePool = new pg.Pool({ connectionString: DATABASE_URL, max: 1 });
+    rolePool.on("connect", (c) => { void c.query(`set role ${ROLE}`); });
+    roleDb = drizzle(rolePool, { schema }) as unknown as Db;
+  });
+  afterAll(async () => { await rolePool?.end(); await pool.query(`drop owned by ${ROLE}`); await pool.query(`drop role ${ROLE}`); });
+  afterEach(afterFlag);
+  const logs: Array<[string, Record<string, unknown> | undefined]> = [];
+  const logger = { error: (e: string, f?: Record<string, unknown>) => { logs.push([e, f]); }, warn: (e: string, f?: Record<string, unknown>) => { logs.push([e, f]); } };
+
+  it("with every grant (and the database flag agreeing) the probe passes", async () => {
+    await setEngine(true);
+    expect(await probeResearchAccess(roleDb, research())).toMatchObject({ ok: true, fatal: false, databaseEngineEnabled: true });
+    await setEngine(false);
+    expect(await probeResearchAccess(roleDb, research({ engineEnabled: false }))).toMatchObject({ ok: true, databaseEngineEnabled: false });
+  });
+  it("a missing grant makes start-up FAIL CLOSED when the check applies, logging a setting/code only", async () => {
+    await pool.query(`revoke select on agent_runs from ${ROLE}`);
+    logs.length = 0;
+    expect(await probeResearchAccess(roleDb, research())).toMatchObject({ ok: false, fatal: true, code: "research_access_denied", relation: "agent_runs" });
+    await expect(runResearchProbe(roleDb, logger, research())).rejects.toBeInstanceOf(ResearchProbeError);
+    expect(logs[0]?.[0]).toBe("agent_engine.config.invalid");
+    expect(JSON.stringify(logs)).not.toMatch(/postgres|password|SELECT/i);
+    // REQUIRE also makes it apply with the engine off
+    await expect(runResearchProbe(roleDb, logger, research({ engineEnabled: false, whenEngineDisabled: "REQUIRE" }))).rejects.toBeInstanceOf(ResearchProbeError);
+    // engine off + IGNORE: reported, not fatal, the process starts
+    logs.length = 0;
+    expect(await runResearchProbe(roleDb, logger, research({ engineEnabled: false }))).toMatchObject({ ok: false, fatal: false, code: "research_access_denied" });
+    expect(logs[0]).toEqual(["agent_engine.config.invalid", expect.objectContaining({ fatal: false })]);
+    await pool.query(`grant select on agent_runs to ${ROLE}`);
+    expect(await probeResearchAccess(roleDb, research({ engineEnabled: false }))).toMatchObject({ ok: true });
+  });
+  it("the environment enabling the engine while the database flag is off is fatal; the owner enabling both passes", async () => {
+    expect(await probeResearchAccess(roleDb, research())).toMatchObject({ ok: false, fatal: true, code: "engine_enabled_but_database_flag_off" });
+    await expect(runResearchProbe(roleDb, logger, research())).rejects.toBeInstanceOf(ResearchProbeError);
+    await setEngine(true);
+    expect(await probeResearchAccess(roleDb, research())).toMatchObject({ ok: true });
+  });
+  it("the staging role script grants exactly these relations explicitly", async () => {
+    const { readFileSync } = await import("node:fs");
+    const sqlText = readFileSync(new URL("../../../infrastructure/staging/app-role.sql", import.meta.url), "utf8");
+    for (const rel of RELS) expect(sqlText, rel).toMatch(new RegExp(`GRANT SELECT ON [^;]*\\b${rel}\\b`));
+    expect(sqlText).toMatch(/read_only text\[\][^;]*'agent_engine_state'/);
+    expect(sqlText).toMatch(/none_for_runtime text\[\][^;]*'agent_engine_state_events'/);
+  });
+});
+
+describe("P0 hardening: inertness and integrity", () => {
+  it("nothing here creates an order, fill or position, and the audit chains (including risk_approvals and the agent chains) verify", async () => {
+    const live = await counts(["orders", "fills", "positions"]);
+    const d = await assessed("SUPPORTIVE");
+    expect((await approve(d.head)).outcome).toBe("recorded");
+    expect(await counts(["orders", "fills", "positions"])).toEqual(live);
+    expect((await verifyAuditChainsWithPool(pool, { chains: CHAINS })).ok).toBe(true);
   });
 });

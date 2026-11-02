@@ -24,6 +24,7 @@ import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
+import { runResearchProbe } from "@twins/risk";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
@@ -94,6 +95,9 @@ if (process.env["NODE_ENV"] !== "test") {
   configureRuntimeState({ source: pgStateSource(workerDb.pool), logger: observed.logger });
   // Role separation (Stage 1 / Task 3): outside local development the worker must run as the least-privilege role, or it refuses to start (exit 82).
   if (config.appEnv !== "development") await enforceRuntimeRoleSeparation("worker", workerDb.pool);
+  // P0 hardening (HB-03 / HB-04): the research-assessment check needs read access to the agent tables and a database engine flag that agrees with TWINS_AGENT_ENGINE_ENABLED. When the check applies
+  // a missing grant or a mismatch stops the process here (fail closed) instead of failing per request or being skipped.
+  await runResearchProbe(workerDb.db, observed.logger);
 }
 
 // ─── Register concrete adapters ────────────────────────────────────────────

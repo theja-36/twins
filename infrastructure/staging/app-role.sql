@@ -21,9 +21,9 @@ DECLARE
 	r text := current_setting('twins.app_role');
 	t record;
 	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch
-	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads'];
+	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads', 'agent_engine_state_events'];
 	-- read only: the runtime safety controls are changed only through the owner-run safety-control CLI
-	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
+	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals', 'agent_engine_state', 'orders', 'fills', 'positions']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); orders / fills / positions are the execution tables: no execution service exists and the runtime role gets SELECT only (P1 hardening, migration 0029); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
 	-- insert only: the approval card is created by the application and then only ever advanced by the approval bot's SECURITY DEFINER functions
 	insert_only text[] := ARRAY['risk_approval_cards'];
 BEGIN
@@ -47,5 +47,9 @@ BEGIN
 	END LOOP;
 END
 $$;
+-- HB-04: the research-assessment check (application layer and start-up probe) reads these with this role; they are also covered by the loop above, and the explicit grants make the dependency visible and fail the
+-- script (not a request) if one of the tables is ever renamed. agent_engine_state is read-only here: only the owner-run agent-engine-control CLI changes it.
+GRANT SELECT ON agent_orchestrator_runs, agent_orchestrator_syntheses, agent_runs, agent_evidence_references, risk_decisions, agent_engine_state TO :"app_role";
+GRANT EXECUTE ON FUNCTION twins_research_assessment(uuid, uuid, integer), twins_agent_evidence_fp(uuid, text) TO :"app_role";
 -- the one door through which the API records a risk APPROVE / REJECT (it re-checks eligibility inside the database); the card-state doors are for the approval bot only
 GRANT EXECUTE ON FUNCTION twins_record_risk_approval(uuid, uuid, text, text, jsonb, text, timestamptz) TO :"app_role";

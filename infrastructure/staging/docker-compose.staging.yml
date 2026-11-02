@@ -186,6 +186,9 @@ services:
     volumes:
       - /var/lib/twins-monitor/alert-relay:/status
     networks: [twins_data, twins_alert_egress]
+    # HOST jobs (backup, audit verification, health check, systemd OnFailure) send their alerts here through twins-alert.sh with the relay bearer token. Loopback only: the port is not reachable from outside the host.
+    ports:
+      - "127.0.0.1:8099:8099"
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8099/health').then(r=>process.exit(r.ok?0:1),()=>process.exit(1))"]
       interval: 15s

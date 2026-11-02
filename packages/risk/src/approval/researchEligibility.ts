@@ -23,6 +23,8 @@ const MANDATORY: readonly RefusableAssessment[] = ["RESEARCH_ADVERSE", "RESEARCH
 export const RESEARCH_REFUSAL_CODES = {
   RESEARCH_BLOCKED: "research_assessment_blocked", RESEARCH_INCOMPLETE: "research_assessment_incomplete", RESEARCH_ADVERSE: "research_assessment_adverse", RESEARCH_CAUTION: "research_assessment_caution", RESEARCH_NEUTRAL: "research_assessment_neutral",
   missing: "research_assessment_missing", unavailable: "research_assessment_unavailable",
+  /** HB-01: the approval cites no run although one exists, or cites a run that is no longer the latest. HB-02: a better run did not bring new evidence over an earlier ADVERSE / BLOCKED one. */
+  referenceMissing: "research_reference_missing", changed: "research_assessment_changed", adverseNotSuperseded: "research_adverse_not_superseded", blockedNotSuperseded: "research_blocked_not_superseded",
 } as const;
 export type ResearchRefusalCode = (typeof RESEARCH_REFUSAL_CODES)[keyof typeof RESEARCH_REFUSAL_CODES];
 
@@ -65,28 +67,37 @@ export function loadResearchEligibilityConfig(env: Record<string, string | undef
   };
 }
 
-export interface LatestResearchAssessment { runId: string; assessment: ResearchAssessmentName; runDecisionVersion: number; createdAt: Date }
-/** The most recent research assessment among the versions of the decision's subject that are not newer than the decision, or null. */
+export interface LatestResearchAssessment { runId: string; assessment: ResearchAssessmentName; runDecisionVersion: number; createdAt: Date; synthesisSha256: string; /** The database function's refusal (BLOCKED / INCOMPLETE / ADVERSE, or an adverse result not superseded by new evidence); null = does not stand in the way. */ refusal: ResearchRefusalCode | null }
+/**
+ * The research assessment that stands for the decision: computed by the DATABASE function `twins_research_assessment` (migration 0028), the same function the approval function uses, so both layers
+ * agree. It is the latest run among the versions of the subject that are not newer than the decision, and carries the HB-02 rule: a later, better run does not clear an earlier ADVERSE / BLOCKED run
+ * unless the agents that were adverse now cite different evidence. Null = no run.
+ */
 export async function latestResearchAssessment(db: Db, decision: { signalId: string | null; optionsClaimId: string | null; decisionVersion: number }): Promise<LatestResearchAssessment | null> {
   const r = await db.execute(sql`
-    select o.id as run_id, s.assessment as assessment, o.decision_version as run_version, o.created_at as created_at
-    from agent_orchestrator_runs o
-    join agent_orchestrator_syntheses s on s.orchestrator_run_id = o.id
-    join risk_decisions d on d.id = o.risk_decision_id
-    where d.signal_id is not distinct from ${decision.signalId}::uuid and d.options_claim_id is not distinct from ${decision.optionsClaimId}::uuid and d.decision_version <= ${decision.decisionVersion}
-    order by o.created_at desc, o.id desc limit 1`);
-  const row = r.rows[0] as { run_id: string; assessment: string; run_version: number; created_at: string | Date } | undefined;
+    select a.run_id as run_id, a.assessment as assessment, a.synthesis_sha256 as sha, a.refusal as refusal, o.decision_version as run_version, o.created_at as created_at
+    from twins_research_assessment(${decision.signalId}::uuid, ${decision.optionsClaimId}::uuid, ${decision.decisionVersion}::int) a
+    join agent_orchestrator_runs o on o.id = a.run_id`);
+  const row = r.rows[0] as { run_id: string; assessment: string; sha: string; refusal: string | null; run_version: number; created_at: string | Date } | undefined;
   if (!row) return null;
   if (!(RESEARCH_ASSESSMENTS as readonly string[]).includes(row.assessment)) throw new Error("unknown research assessment");
-  return { runId: row.run_id, assessment: row.assessment as ResearchAssessmentName, runDecisionVersion: Number(row.run_version), createdAt: new Date(row.created_at) };
+  const known = Object.values(RESEARCH_REFUSAL_CODES) as string[];
+  if (row.refusal !== null && !known.includes(row.refusal)) throw new Error("unknown research refusal code");
+  return { runId: row.run_id, assessment: row.assessment as ResearchAssessmentName, runDecisionVersion: Number(row.run_version), createdAt: new Date(row.created_at), synthesisSha256: row.sha, refusal: row.refusal as ResearchRefusalCode | null };
 }
 
 /** The refusal codes for a decision (empty = the research assessment does not stand in the way). An unreadable assessment store fails closed whenever a check applies. */
-export async function researchEligibilityReasons(db: Db, decision: { signalId: string | null; optionsClaimId: string | null; decisionVersion: number }, cfg: ResearchEligibilityConfig = loadResearchEligibilityConfig()): Promise<ResearchRefusalCode[]> {
+export async function researchEligibilityReasons(db: Db, decision: { signalId: string | null; optionsClaimId: string | null; decisionVersion: number }, cfg: ResearchEligibilityConfig = loadResearchEligibilityConfig(), cited?: string | null): Promise<ResearchRefusalCode[]> {
   if (!cfg.enforced) return [];
   const applies = cfg.engineEnabled || cfg.whenEngineDisabled === "REQUIRE";
   let latest: LatestResearchAssessment | null;
   try { latest = await latestResearchAssessment(db, decision); } catch { return applies ? [RESEARCH_REFUSAL_CODES.unavailable] : []; }
-  if (latest) return (cfg.refuseOn as string[]).includes(latest.assessment) ? [RESEARCH_REFUSAL_CODES[latest.assessment as RefusableAssessment]] : [];
+  if (latest) {
+    if (latest.refusal) return [latest.refusal];
+    if ((cfg.refuseOn as string[]).includes(latest.assessment)) return [RESEARCH_REFUSAL_CODES[latest.assessment as RefusableAssessment]];
+    // HB-01: the approval must cite the exact run it relied on (`cited` is passed whenever an approval is being recorded)
+    if (cited !== undefined) { if (cited === null || cited === "") return [RESEARCH_REFUSAL_CODES.referenceMissing]; if (cited !== latest.runId) return [RESEARCH_REFUSAL_CODES.changed]; }
+    return [];
+  }
   return applies && cfg.onMissing === "REFUSE" ? [RESEARCH_REFUSAL_CODES.missing] : [];
 }

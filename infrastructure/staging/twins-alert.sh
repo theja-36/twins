@@ -68,6 +68,9 @@ done
 getvar() { [ -r "$ENV_FILE" ] && sed -n "s/^$1=//p" "$ENV_FILE" | tail -1 | sed 's/^"\(.*\)"$/\1/'; }
 URL="${TWINS_ALERT_WEBHOOK_URL:-$(getvar TWINS_ALERT_WEBHOOK_URL)}"
 SECRET="${TWINS_ALERT_WEBHOOK_SECRET:-$(getvar TWINS_ALERT_WEBHOOK_SECRET)}"
+# Optional bearer token, for a destination that authenticates the caller (the staging alert-relay on loopback). Like the URL it is passed to curl through a descriptor, never on a command line.
+BEARER="${TWINS_ALERT_WEBHOOK_BEARER:-$(getvar TWINS_ALERT_WEBHOOK_BEARER)}"
+[[ -z "$BEARER" || "$BEARER" =~ ^[A-Za-z0-9._~+=-]{16,200}$ ]] || { log warn alert.undelivered '"reason":"bad_bearer_format"'; [ "$TEST" = 1 ] && exit 2; exit 0; }
 ENVNAME="${TWINS_ENV_NAME:-$(getvar TWINS_ENV_NAME)}"; ENVNAME="${ENVNAME:-unknown}"
 BUILD="${TWINS_BUILD:-$(getvar TWINS_BUILD)}"; BUILD="${BUILD:-unknown}"
 [[ "$ENVNAME" =~ ^[A-Za-z0-9_.:-]{1,40}$ ]] || ENVNAME="unknown"
@@ -99,7 +102,7 @@ if [ -n "$SECRET" ]; then
   SIG="$(printf '%s' "$BODY" | HMAC_SECRET="$SECRET" "$PYTHON" -c 'import hmac,hashlib,os,sys;print(hmac.new(os.environ["HMAC_SECRET"].encode(),sys.stdin.buffer.read(),hashlib.sha256).hexdigest())')"
   SIGHDR=(-H "x-twins-signature: sha256=$SIG")
 fi
-code="$(printf '%s' "$BODY" | "$CURL" -sS --max-time 8 --retry 1 --retry-delay 1 -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -H 'user-agent: twins-alert/1' ${SIGHDR[@]+"${SIGHDR[@]}"} --data-binary @- -K <(printf 'url = "%s"\n' "$URL") 2>/dev/null || true)"
+code="$(printf '%s' "$BODY" | "$CURL" -sS --max-time 8 --retry 1 --retry-delay 1 -o /dev/null -w '%{http_code}' -X POST -H 'content-type: application/json' -H 'user-agent: twins-alert/1' ${SIGHDR[@]+"${SIGHDR[@]}"} --data-binary @- -K <(printf 'url = "%s"\n' "$URL"; [ -n "$BEARER" ] && printf 'header = "authorization: Bearer %s"\n' "$BEARER") 2>/dev/null || true)"
 if [[ "$code" =~ ^2[0-9][0-9]$ ]]; then
   log info alert.sent
   exit 0

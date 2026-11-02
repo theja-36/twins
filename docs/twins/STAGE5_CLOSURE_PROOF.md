@@ -18,6 +18,8 @@ Every Stage 5 pull request was merged by `theja-36` (merge commits, no history r
 | #46 | 10 - closing review, backlog, Stage 6 plan | `73289ef` | 2026-10-30 23:20 | success (14 of 14 checks on the PR before merge) |
 `ci-failure-alert` was skipped on each (it fires only on failure).
 
+**Correction (2026-10-31 / 2026-11-01, P0 hardening task).** The first `ci` run on the PR #47 merge (`8993623`, run 41151112895, 2026-10-31 00:36 UTC) failed on every job within seconds with the GitHub annotation "The job was not started because recent account payments have failed or your spending limit needs to be increased": a billing block, not a code failure; a second re-run (41221241565, 2026-10-31 16:45 UTC) failed the same way. After the billing block was lifted, re-running run 41151112895 on 2026-11-01 completed with **success on all seven jobs** (static, unit Node 20 / 22, integration Node 20 / 22, crash recovery, `ci-gate`). So the **latest green hosted run on `main` is run 41151112895 on `8993623`** (a re-run; #47 is documentation only and changed no code). Hosted CI has NOT yet run on the P0 hardening branch (unpushed).
+
 ## 2. Verification at the close
 Last full local run (Task 10, identical to Task 9 because Task 10 changed no code), on a freshly migrated PostgreSQL 16 test database:
 | Command | Result |

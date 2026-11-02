@@ -70,6 +70,15 @@ describe("role separation in the staging stack", () => {
     expect(code).toMatch(/event_hash/); // a table that has chain columns is treated as append-only automatically
     expect(code).toMatch(/_no\\_update\\_delete/);
   });
+  it("app-role.sql lists the execution tables (orders, fills, positions) as read-only, and migration 0029 revokes writes on them from the runtime and bot roles", () => {
+    const readOnly = /read_only text\[\] := ARRAY\[([^\]]*)\]/.exec(role)?.[1] ?? "";
+    for (const t of ["orders", "fills", "positions"]) expect(readOnly, t).toContain(`'${t}'`);
+    const mig = read("packages/database/drizzle/0029_p1_revoke_runtime_execution_writes.sql");
+    expect(mig).toMatch(/REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON %I FROM %I/);
+    expect(mig).toMatch(/ARRAY\['twins_app', 'twins_bot'\]/);
+    expect(mig).toMatch(/ARRAY\['orders', 'fills', 'positions'\]/);
+    expect(mig.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n")).not.toMatch(/\bGRANT\b/i); // it only ever takes privileges away
+  });
   it("the API and the worker refuse to start (exit 82) outside development unless they run as the least-privilege role", () => {
     expect(read("apps/api/src/index.ts")).toMatch(/appEnv !== "development"\) await enforceRuntimeRoleSeparation\("api", getPool\(\)\)/);
     expect(read("services/worker/src/index.ts")).toMatch(/appEnv !== "development"\) await enforceRuntimeRoleSeparation\("worker", workerDb\.pool\)/);

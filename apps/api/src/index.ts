@@ -38,6 +38,7 @@ import { Redis } from "ioredis";
 import { eq, sql } from "drizzle-orm";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { getDb, getPool, schema, type Db } from "@twins/database";
+import { runResearchProbe } from "@twins/risk";
 import { configureRuntimeState, evaluateSafety, pgStateSource, type SafetyRefusalError } from "@twins/runtime-state";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { getValidationEligibility } from "@twins/signals";
@@ -688,6 +689,8 @@ if (isDirectRun) {
   // Role separation (Stage 1 / Task 3): outside local development the API must run as the least-privilege role (cannot update, delete or truncate
   // the audit tables, cannot alter them); otherwise it refuses to start (exit 82).
   if (loadConfig().appEnv !== "development") await enforceRuntimeRoleSeparation("api", getPool());
+  // P0 hardening (HB-03 / HB-04): same research-eligibility probe as the worker; fatal only when the check applies
+  await runResearchProbe(getDb(), observedApi.logger);
   const port = Number(readEnv("PORT") ?? "4000");
   const server = await buildApp();
   // HOST defaults to 0.0.0.0 (previous behaviour); set HOST=127.0.0.1 for loopback-only local runs.
