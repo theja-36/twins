@@ -10,7 +10,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages/database/src/index";
 import { verifyAuditChains, verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
 import {
-  computeRiskReward, createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, createRiskDecision, getLatestRiskDecisionForOptionsClaim, getLatestRiskDecisionForSignal,
+  computeRiskReward, positiveOrNull, createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, createRiskDecision, getLatestRiskDecisionForOptionsClaim, getLatestRiskDecisionForSignal,
   getRiskDecision, listRiskDecisions, recordRiskApproval, RiskDecisionError, supersedeRiskDecision, type RiskDecisionInput,
 } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
@@ -309,6 +309,45 @@ describe("runtime-state behaviour (fail closed)", () => {
   it("a database failure while checking the evidence is a store_failure, never a silent success", async () => {
     const broken = new Proxy(db(), { get: (t, p, r) => (p === "execute" ? () => Promise.reject(new Error("connection reset")) : Reflect.get(t, p, r)) }) as typeof handle.db;
     expect((await err(createRiskDecision(broken, input({ signalId: randomUUID() }, randomUUID())))).code).toBe("store_failure");
+  });
+});
+
+describe("K1 regression: a zero or negative level parsed from text records a PENDING decision, it never throws", () => {
+  it("signal with stop-loss 0 (INVALID evidence): a PENDING decision with the invalid-stop reason and no stop level; repeating it is idempotent", async () => {
+    const { signal } = await makeSignal({ stopLoss: "0" });
+    const ev = await evidence({ signalId: signal.id }, "INVALID");
+    const first = await createPendingRiskDecisionForSignal(db(), signal.id);
+    expect(first.skipped).toBeUndefined();
+    const rec = must(await getRiskDecision(db(), (first as { id: string }).id));
+    expect(rec).toMatchObject({ status: "PENDING", stopLossValidationId: ev.id, decisionReasonCode: "stop_loss_invalid", stopLoss: null });
+    expect(rec.inputSnapshot).toMatchObject({ subject: "signal", stopLossValidation: { id: ev.id, result: "INVALID" } }); // the raw evidence is kept
+    expect(await createPendingRiskDecisionForSignal(db(), signal.id)).toMatchObject({ id: rec.id, created: false });
+  });
+  it("signal with a negative stop-loss, a zero entry and a zero target: still PENDING, those levels recorded as absent", async () => {
+    const { signal } = await makeSignal({ stopLoss: "-5", entry: "0" });
+    await db().update(schema.signals).set({ targets: [0, 110] }).where(eq(schema.signals.id, signal.id));
+    await evidence({ signalId: signal.id }, "INVALID");
+    const r = await createPendingRiskDecisionForSignal(db(), signal.id);
+    const rec = must(await getRiskDecision(db(), (r as { id: string }).id));
+    expect(rec).toMatchObject({ status: "PENDING", stopLoss: null, entryPrice: null, target1: null });
+    expect(Number(rec.target2)).toBe(110);
+  });
+  it("options claim with stop-loss 0, strike 0, entry price 0 and targets [0, -3]: PENDING, no throw, none of those levels recorded; a valid claim is unchanged", async () => {
+    const claim = await makeClaim({ action: "BUY", underlying: "NIFTY", strike: 0, optionType: "PE", expiry: { status: "full", day: 3, month: 11, year: 2031, raw: "03NOV2031" }, entry: { type: "above", price: 0 }, stopLoss: 0, targets: [0, -3], levelBasis: "unspecified" });
+    const ev = await evidence({ optionsClaimId: claim.id }, "INVALID");
+    const r = await createPendingRiskDecisionForOptionsClaim(db(), claim.id);
+    expect(r.skipped).toBeUndefined();
+    const rec = must(await getRiskDecision(db(), (r as { id: string }).id));
+    expect(rec).toMatchObject({ status: "PENDING", optionsClaimId: claim.id, stopLossValidationId: ev.id, decisionReasonCode: "stop_loss_invalid", stopLoss: null, strike: null, entryPrice: null, target1: null, target2: null });
+    const good = await makeClaim();
+    await evidence({ optionsClaimId: good.id }, "VALID", { stop: "90", entry: "120" });
+    const g = await createPendingRiskDecisionForOptionsClaim(db(), good.id);
+    expect(must(await getRiskDecision(db(), (g as { id: string }).id))).toMatchObject({ status: "PENDING", decisionReasonCode: "awaiting_risk_gates" });
+  });
+  it("positiveOrNull: only finite positive numbers survive", () => {
+    for (const v of [0, -1, -0.0001, NaN, Infinity, null, undefined, "abc", "", "0", "-5"]) expect(positiveOrNull(v), String(v)).toBeNull();
+    expect(positiveOrNull(2.5)).toBe(2.5);
+    expect(positiveOrNull("12.5")).toBe(12.5);
   });
 });
 
