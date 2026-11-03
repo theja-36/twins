@@ -1,0 +1,13 @@
+# Weekday mornings 08:30 IST (= 03:00 UTC), before the 08:55 IST feed window. NOT installed or enabled until the owner starts the Kite feed (see docs/twins/KITE_INTEGRATION.md): without the feed
+# it would raise a daily "no token" alert.
+[Unit]
+Description=TWINS Kite access-token check timer
+
+[Timer]
+OnCalendar=Mon..Fri 03:00:00 UTC
+Persistent=false
+RandomizedDelaySec=30
+Unit=twins-kite-token-check.service
+
+[Install]
+WantedBy=timers.target

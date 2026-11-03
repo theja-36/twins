@@ -1,0 +1,9 @@
+[Unit]
+Description=TWINS Kite access-token check (reads file metadata only)
+OnFailure=twins-alert-on-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/twins-kite-token-check
+TimeoutStartSec=60
+Nice=10

@@ -33,7 +33,7 @@
 | HB-20 | Test gaps: real data, performance, bot callback end-to-end | P1 | - |
 | HB-21 | Synthesis version and old rows | P3 | - |
 | HB-22 | Longer retention for audit evidence in the host journal (relay delivery records, host job logs) | P2 | owner decision |
-| HB-23 | Dead-letter replay still needs the manual job-record cleanup until the replay job-id fix is deployed (code merged, D-083) | P1 | next deployment |
+| HB-23 | Dead-letter replay needed the manual job-record cleanup until the replay job-id fix was deployed (**CLOSED 2026-11-03**, Deploy 3, D-085) | P1 | - |
 | HB-24 | Capture-gap window tuned to the channel's real cadence (default 14 days) | P2 | observation |
 
 ## P0
