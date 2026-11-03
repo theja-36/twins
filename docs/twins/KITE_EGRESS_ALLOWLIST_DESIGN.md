@@ -1,5 +1,7 @@
 # Kite egress allow-list: design (nothing applied; no firewall change was made)
 
+> **Decision 2026-11-03 (D-087): Option B selected** (hostname-pinned address set, 30 s refresh, 10 min entry expiry, one reversible chain, staleness alert, start-up check). Still design only: the implementation task (script, units, DRY_RUN tests) has not started and no firewall change has been made.
+
 > Written 2026-11-03 for the owner's decision. Observations below were DNS queries only (no Kite request). Prerequisite for the first live feed run (see KITE_INTEGRATION.md "Feed readiness"); the feed stays off until the owner decides on Connect (decision of 2026-11-03: wait).
 
 ## 1. What must be reachable, and what must not

@@ -43,4 +43,6 @@ I cannot choose between 1, 2 and 3 from what is retained; the discriminating evi
 * The one-shot runner of 2026-10-31 must not be reused. It stays outside the repository and is not part of any build.
 
 ## 7. Status
+**Update 2026-11-03 (D-087):** action 3 (precaution): the owner decided to regenerate the Connect app's API secret and the local credentials file `~/.twins-kite/kite.env` was **deleted** (not read) on the same day; the secret regeneration itself is the owner's action in the developer console and is **not yet confirmed**. Action 4 (redirect URL): decided - the new `kite-login` flow (no listener, no automatic browser launch) is the only supported login. Actions 1 and 2 (browser history, Zerodha records) are with the owner. Closure still requires their recorded conclusion and the confirmed secret regeneration.
+
 **Open (P0 blocker for any live Kite run).** Closure criteria: actions 1-2 done with a conclusion recorded here, action 3 done or explicitly declined by the owner, and the redirect URL decision (action 4) recorded. Recorded in D-086.
