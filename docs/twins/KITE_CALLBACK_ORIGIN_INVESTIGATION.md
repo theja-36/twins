@@ -1,6 +1,6 @@
 # Kite connectivity run of 2026-10-31: the "unexplained callback origin" - investigation (read-only)
 
-> Written 2026-11-03. Scope: explain, as far as the retained evidence allows, why the one-shot live run received a valid login callback although the owner saw no login tab. **Nothing was run against Kite and no browser or account data was read.** This is a P0 blocker for any live Kite run until the owner closes the actions in section 5.
+> **STATUS: CLOSED on 2026-11-04 by the owner (D-089); see section 8.** Written 2026-11-03. Scope: explain, as far as the retained evidence allows, why the one-shot live run received a valid login callback although the owner saw no login tab. **Nothing was run against Kite and no browser or account data was read.** This is a P0 blocker for any live Kite run until the owner closes the actions in section 5.
 
 ## 1. What is certain (from the runner's source and the file timestamps)
 | Fact | Evidence |
@@ -46,3 +46,11 @@ I cannot choose between 1, 2 and 3 from what is retained; the discriminating evi
 **Update 2026-11-03 (D-087):** action 3 (precaution): the owner decided to regenerate the Connect app's API secret and the local credentials file `~/.twins-kite/kite.env` was **deleted** (not read) on the same day; the secret regeneration itself is the owner's action in the developer console and is **not yet confirmed**. Action 4 (redirect URL): decided - the new `kite-login` flow (no listener, no automatic browser launch) is the only supported login. Actions 1 and 2 (browser history, Zerodha records) are with the owner. Closure still requires their recorded conclusion and the confirmed secret regeneration.
 
 **Open (P0 blocker for any live Kite run).** Closure criteria: actions 1-2 done with a conclusion recorded here, action 3 done or explicitly declined by the owner, and the redirect URL decision (action 4) recorded. Recorded in D-086.
+
+## 8. Closure (2026-11-04, owner, D-089)
+Evidence reported by the owner (not read by the assistant):
+1. **Browser history:** for 2026-10-31 the browser holds the Kite `connect/login` and `connect/authorize` entries and a `127.0.0.1:8765/callback` entry with `status=success`, in the sequence hypothesis 1 predicts.
+2. **Zerodha console:** the Connect app is Active and its registered redirect URL matches `127.0.0.1:8765/callback`.
+3. **API secret regenerated** in the developer console; the old `~/.twins-kite/kite.env` was deleted on 2026-11-03.
+
+**Conclusion accepted:** the browser already held a Kite session, so the login redirected straight back to the local listener (hypothesis 1); no indication of compromise. The P0 blocker for a live Kite run is **closed**. Kept as design decisions: the supported login is the new `kite-login` flow (no listener, no automatic browser launch); the registered redirect URL stays `127.0.0.1:8765/callback`, so with nothing listening the browser shows a connection error whose address bar holds the `request_token`, which the owner types into the tool. This closure does not start any live step: Connect remains WAIT, the egress allow-list stays uninstalled, and every other live-run gate stands.
