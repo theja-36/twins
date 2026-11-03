@@ -32,6 +32,9 @@
 | HB-19 | Challenger, agent and indicator calibration evidence | P2 | HB-09 |
 | HB-20 | Test gaps: real data, performance, bot callback end-to-end | P1 | - |
 | HB-21 | Synthesis version and old rows | P3 | - |
+| HB-22 | Longer retention for audit evidence in the host journal (relay delivery records, host job logs) | P2 | owner decision |
+| HB-23 | Dead-letter replay still needs the manual job-record cleanup until the replay job-id fix is deployed (code merged, D-083) | P1 | next deployment |
+| HB-24 | Capture-gap window tuned to the channel's real cadence (default 14 days) | P2 | observation |
 
 ## P0
 
@@ -114,6 +117,13 @@
 Real-provider data (none exists), performance with many agents and large snapshots (16 MB cap, 200k-bar series), the approval bot's callback end-to-end with the new refusal codes against a running bot, and a deployment rehearsal of migrations 0025-0027 on a copy of the staging database.
 
 ## P2 - model fidelity
+
+### HB-22 Longer retention for audit evidence in the host journal
+* **Now (decision 2026-11-03: keep 7 days for now):** the alert relay logs to the host journal (D-084). `/etc/systemd/journald.conf` keeps `MaxRetentionSec=7day`, `SystemMaxUse=1G` (about 174 MB used), so the record of whether an alert reached Telegram, and the host jobs' logs, age out after a week. The two backup-failure alerts of 2026-11-02 / 11-03 could not be proven delivered partly because their log was already gone.
+* **Risk:** audit questions about an alert, a backup or a verification older than seven days cannot be answered from logs.
+* **Work:** evaluate (owner decision) a longer retention, either for the whole journal or only for TWINS: a persistent copy of the delivery lines (a small append-only file or the status export), a `MaxRetentionSec` of 30-90 days with a size cap check, or a journal namespace for the TWINS units. Weigh disk (the journal and the 193 GB disk), the privacy rule that alert lines carry codes only, and whether the audit-chain `audit_events` should also receive an alert-delivery event.
+* **Acceptance:** a stated retention target with its reason, a test or runbook step that reads an alert's delivery record after the old window, and a disk-use check.
+
 
 ### HB-14 DST-aware / per-market calendars
 * **Now:** sessions are configuration with fixed UTC offsets (default NSE / BSE 09:15-15:30 IST, no DST); weekends are Saturday / Sunday; the macro agent treats global sessions as open or closed from the snapshot.
