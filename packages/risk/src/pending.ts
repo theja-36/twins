@@ -18,6 +18,12 @@ function reason(stopResult: string, stopReason: string | null, extra?: string): 
 }
 
 const asNum = (v: unknown): number | null => (v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v));
+/**
+ * A price level read from untrusted text can be zero or negative (a parser artefact such as "SL 0"). The decision record only accepts positive levels, and throwing here made the worker job fail, retry
+ * eight times and dead-letter (found on staging 2026-11-03, K1). Such a level is NOT a usable level: record it as absent. The raw value is not lost: the input snapshot keeps the claim / signal and the
+ * stop-loss validation (`INVALID` / `MISSING` ...), and the decision is PENDING with the stop-loss reason, so it can never be sized or approved.
+ */
+export const positiveOrNull = (v: unknown): number | null => { const n = asNum(v); return n !== null && Number.isFinite(n) && n > 0 ? n : null; };
 
 export async function createPendingRiskDecisionForSignal(db: Db, signalId: string): Promise<PendingResult> {
   const [signal] = await db.select().from(schema.signals).where(eq(schema.signals.id, signalId));
@@ -38,12 +44,12 @@ export async function createPendingRiskDecisionForSignal(db: Db, signalId: strin
     market: instrument?.exchange ?? null,
     symbol: instrument?.symbol ?? "UNKNOWN",
     side: signal.direction.toUpperCase(),
-    entryPrice: asNum(stop.entryPrice) ?? asNum(signal.entryPrice),
-    stopLoss: stop.result === "VALID" ? asNum(stop.normalizedStopLoss) : asNum(signal.stopLoss),
+    entryPrice: positiveOrNull(stop.entryPrice) ?? positiveOrNull(signal.entryPrice),
+    stopLoss: stop.result === "VALID" ? positiveOrNull(stop.normalizedStopLoss) : positiveOrNull(signal.stopLoss),
     stopLossBasis: stop.levelBasis ?? null,
-    target1: targets[0] ?? null,
-    target2: targets[1] ?? null,
-    target3: targets[2] ?? null,
+    target1: positiveOrNull(targets[0]),
+    target2: positiveOrNull(targets[1]),
+    target3: positiveOrNull(targets[2]),
     confidenceScore: validation ? asNum(validation.decisionConfidence) : null,
     sourceTrustTier: validation?.sourceReliability ?? "UNKNOWN",
     decisionReasonCode: why.code,
@@ -83,15 +89,15 @@ export async function createPendingRiskDecisionForOptionsClaim(db: Db, optionsCl
     market: MARKET_OF[claim.underlying] ?? "NSE",
     symbol: claim.underlying,
     expiry,
-    strike: claim.strike,
+    strike: positiveOrNull(claim.strike),
     optionType: claim.optionType,
     side: claim.action ? claim.action.toUpperCase() : null,
-    entryPrice: asNum(stop.entryPrice) ?? (claim.entry.type !== "range" && claim.entry.type !== "market" && claim.entry.type !== "unspecified" ? (claim.entry.price ?? null) : null),
-    stopLoss: stop.result === "VALID" ? asNum(stop.normalizedStopLoss) : claim.stopLoss,
+    entryPrice: positiveOrNull(stop.entryPrice) ?? (claim.entry.type !== "range" && claim.entry.type !== "market" && claim.entry.type !== "unspecified" ? positiveOrNull(claim.entry.price) : null),
+    stopLoss: stop.result === "VALID" ? positiveOrNull(stop.normalizedStopLoss) : positiveOrNull(claim.stopLoss),
     stopLossBasis: stop.levelBasis ?? claim.levelBasis,
-    target1: claim.targets[0] ?? null,
-    target2: claim.targets[1] ?? null,
-    target3: claim.targets[2] ?? null,
+    target1: positiveOrNull(claim.targets[0]),
+    target2: positiveOrNull(claim.targets[1]),
+    target3: positiveOrNull(claim.targets[2]),
     confidenceScore: null,
     sourceTrustTier: "UNKNOWN",
     decisionReasonCode: why.code,
