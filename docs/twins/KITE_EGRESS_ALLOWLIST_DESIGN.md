@@ -50,3 +50,23 @@ Design of B (all of it new, none of it applied):
 * Accept Option B (and its up-to-30-second window for a brand-new address), or prefer the broader Option A for simplicity, or invest in Option C?
 * Should Zerodha be asked in writing about published address ranges or a static egress arrangement?
 * Is it acceptable that DNS is not restricted for this network?
+
+## 7. Implementation status (2026-11-04, D-088): code and dry-run tests only - NOT applied, NOT installed
+| Piece | File | Notes |
+|---|---|---|
+| Firewall + set + refresh script | `infrastructure/staging/twins-kite-egress.sh` | `apply` / `refresh` / `status` / `check-stale` / `simulate` / `remove`; `DRY_RUN=1` prints every command and simulates the set, its expiry and the chain in files, so the whole lifecycle is testable without iptables, ipset or DNS |
+| Boot unit | `twins-kite-egress.service` | removes a leftover chain, applies, then fails unless `status` passes; `ExecStop` removes the rules |
+| Refresh timer | `twins-kite-egress-refresh.{service,timer}` | every 30 s: `refresh`, then `check-stale`; alerts on failure |
+| Start-up check | `twins-kite-feed-start.sh` | the only supported way to start `kite-ticker`: refuses (exit 3) unless `twins-kite-egress.sh status` passes |
+| Tests | `tests/unit/infrastructure/kiteEgress.test.ts` (13 tests) | commands, rollback, allow/block simulation, rotation, expiry, fail-closed, resolution failure, poisoned DNS, units, start gate |
+
+Behaviour as built:
+* **Set:** `hash:ip timeout 600`, filled by `refresh` (A records of exactly `api.kite.trade` and `ws.kite.trade`; the host list is a constant, not configuration). Entries are only ever added or renewed; they leave by expiry after 10 minutes, so a stopped refresh job fails closed.
+* **Validation:** only public unicast IPv4 is accepted. Private (10/8, 172.16/12, 192.168/16), loopback, link-local (including the cloud metadata address), CGNAT (100.64/10), multicast, zero and malformed answers are discarded, at most 16 addresses per host; a poisoned DNS answer therefore cannot open an internal address.
+* **Chain** (`TWINS-KITE-EGRESS`, jumped to from `DOCKER-USER` for 10.0.28.0/24, inserted LAST): ACCEPT established/related; ACCEPT tcp/443 to the set; rate-limited LOG; DROP. `apply` fills the set before the chain exists, and refuses if the chain exists.
+* **Staleness:** the status file records `last_ok_epoch` (the last refresh in which BOTH names resolved). `check-stale` raises WARNING `kite.egress_stale` (details `ageSeconds`, `windowSeconds`, `reason` only; throttled to 1 per hour) when it is older than 5 minutes or missing; `status` fails for the same reason or an empty set.
+* **Resolution failure:** recorded as `resolution_failed`, never fatal, existing entries untouched.
+
+Deviation from section 4: the design listed "ACCEPT DNS to the Docker resolver" in the chain. Docker's embedded resolver (127.0.0.11) lives INSIDE the container's network namespace and forwards from the host's own namespace, so container DNS never crosses `DOCKER-USER`; no DNS rule is needed (or possible) in this chain, and none was written. The DNS-exposure limit of section 4.5 stands.
+
+Not done, deliberately: nothing was installed or enabled on the host, no iptables/ipset command ran outside a dry run, and no Kite endpoint received a request. Remaining before the first live start: an owner-approved host install (with the owner reviewing `DRY_RUN` output), acceptance tests 2-5 of section 5 on the host with a throwaway container (TCP connects only), and the other live-run gates (Connect decision, callback-origin closure, login, supervised first run).
