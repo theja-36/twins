@@ -405,6 +405,62 @@ services:
     mem_limit: 192m
     cpus: 0.25
 
+  # ── Kite Connect (Integration 2): READY BUT OFF. Neither service is part of `up`; both need the owner's explicit start after the Connect decision. ───────────────────────────────────────────────
+  # Host prerequisites (not created by compose): /var/lib/twins-kite (uid 1000, 0700: the daily token file) and /var/lib/twins-snapshots (uid 1000, 0700: the published snapshot generation), a host-only
+  # `kite.env` (0600) with TWINS_KITE_API_KEY (+ TWINS_KITE_API_SECRET for the login) and TWINS_KITE_PLAN, and an egress allow-list on twins_kite_egress (api.kite.trade / ws.kite.trade on tcp/443)
+  # in the style of capture-egress-firewall.sh BEFORE the first start. The morning login is a human step; see docs/twins/KITE_INTEGRATION.md.
+  #   docker compose ... --profile ops run --rm kite-login url | status
+  #   echo "<request_token>" | docker compose ... --profile ops run --rm -T kite-login exchange        (ONE live call)
+  kite-login:
+    <<: *hardening
+    restart: "no"
+    profiles: ["ops"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    user: "1000:1000"
+    entrypoint: ["node", "--import", "tsx", "/app/scripts/ops/kite-login.ts"]
+    env_file:
+      - path: ./kite.env
+        required: false
+    environment:
+      APP_ENV: staging
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
+      NODE_ENV: production
+      TWINS_KITE_TOKEN_FILE: /var/lib/twins-kite/kite-token.json
+    volumes:
+      - /var/lib/twins-kite:/var/lib/twins-kite
+    networks: [twins_kite_egress]
+    mem_limit: 192m
+    cpus: 0.25
+
+  kite-ticker:
+    <<: *hardening
+    restart: unless-stopped
+    profiles: ["kite"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    user: "1000:1000"
+    command: ["node", "--import", "tsx", "/app/scripts/ops/kite-ticker.ts", "run"]
+    env_file:
+      - path: ./kite.env
+        required: false
+    environment:
+      APP_ENV: staging
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
+      NODE_ENV: production
+      TWINS_KITE_TOKEN_FILE: /var/lib/twins-kite/kite-token.json
+      TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
+      TWINS_AGENT_SNAPSHOT_REQUIRED: instrument-reference,quotes,option-quotes,option-chain,last-price,ohlc
+    volumes:
+      - /var/lib/twins-kite:/var/lib/twins-kite
+      - /var/lib/twins-snapshots:/var/lib/twins-snapshots
+    networks: [twins_kite_egress]
+    stop_grace_period: 20s
+    mem_limit: 256m
+    cpus: 0.5
+
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks
@@ -420,6 +476,10 @@ networks:
     ipam:
       config:
         - subnet: 10.0.27.0/24   # 10.0.26.0/24 is taken by another stack on the host; verify this one is free before creating
+  twins_kite_egress:             # ordinary outbound (NAT) for the Kite login / ticker ONLY; to be narrowed to api.kite.trade and ws.kite.trade by a host firewall before the first start
+    ipam:
+      config:
+        - subnet: 10.0.28.0/24   # 10.0.24-27 are taken (capture, bot, other stack, alert relay); verified free on the host 2026-11-03
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true

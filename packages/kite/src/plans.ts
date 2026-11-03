@@ -17,3 +17,12 @@ export const isPlan = (v: unknown): v is KitePlan => v === "personal" || v === "
 export function requireCapability(plan: KitePlan, cap: "marketData" | "websocket" | "historical"): void {
   if (!PLAN_CAPABILITIES[plan][cap]) throw new KiteError("PLAN_RESTRICTED");
 }
+
+/** The only variable that selects the plan. Unset = "personal" (fail closed); an unknown value THROWS (a typo must not silently grant or deny market data). */
+export const KITE_PLAN_ENV = "TWINS_KITE_PLAN" as const;
+export function loadKitePlan(env: Record<string, string | undefined> = process.env): KitePlan {
+  const raw = env[KITE_PLAN_ENV];
+  if (raw === undefined || raw === "") return "personal";
+  if (!isPlan(raw)) throw new KiteError("CONFIG");
+  return raw;
+}

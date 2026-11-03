@@ -11,12 +11,32 @@ const dockerfile = read("infrastructure/staging/Dockerfile");
 
 /** The text of one top-level service block. */
 function service(name: string): string {
-  const m = new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z]+:\\n|^networks:)`, "m").exec(compose);
+  const m = new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  [a-z-]+:\\n|^networks:)`, "m").exec(compose);
   if (!m) throw new Error(`service ${name} not found`);
   return m[1] ?? "";
 }
 
 describe("staging packaging (static)", () => {
+  it("Kite login and ticker are off by default (profiles), hardened, read-only, on their own egress network, with the live-trading literals, no published port and no secret literal", () => {
+    for (const name of ["kite-login", "kite-ticker"]) {
+      const c = service(name);
+      expect(c, name).toMatch(/profiles: \["(ops|kite)"\]/);
+      expect(c, name).toMatch(/<<: \*hardening/);
+      expect(c, name).toMatch(/user: "1000:1000"/);
+      expect(c, name).toMatch(/LIVE_TRADING: "false"/);
+      expect(c, name).toMatch(/TRADING_MODE: paper/);
+      expect(c, name).toMatch(/networks: \[twins_kite_egress\]/);
+      expect(c, name).not.toMatch(/ports:|coolify|twins_edge|twins_data|TWINS_KITE_API_(KEY|SECRET)=|TWINS_KITE_ACCESS_TOKEN/);
+      expect(c, name).toMatch(/pull_policy: never/);
+    }
+    expect(service("kite-ticker")).toMatch(/profiles: \["kite"\]/); // a plain `up` never starts it
+    expect(service("kite-login")).toMatch(/restart: "no"/);
+    expect(compose).toMatch(/twins_kite_egress:[\s\S]*?subnet: 10\.0\.28\.0\/24/);
+    expect(compose).not.toMatch(/twins_kite_egress:[^\n]*\n\s+internal: true/); // it must route out (that is its only purpose)
+    for (const name of ["api", "worker", "postgres", "redis", "capture", "alert-relay", "scheduler", "migrate", "approval-bot"]) expect(service(name), name).not.toMatch(/twins_kite_egress/); // Kite services ONLY
+    // the Kite services have no database or Redis access at all
+    expect(service("kite-ticker")).not.toMatch(/DATABASE_URL|REDIS_URL/);
+  });
   it("the alert relay logs to the host journal (its log is the alert delivery record and must survive a container recreate); every other service keeps the rotated json-file log", () => {
     expect(service("alert-relay")).toMatch(/logging:\s*\n\s+driver: journald\s*\n\s+options:\s*\n\s+tag: twins-alert-relay/);
     for (const name of ["api", "worker", "postgres", "redis", "capture", "approval-bot"]) expect(service(name), name).not.toMatch(/driver: journald/);
@@ -181,11 +201,11 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the nine shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(9);
+  it("a new image gets its own tag and never overwrites the running one: the eleven shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler, kite-login, kite-ticker) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(11);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(11); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(13); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -245,7 +265,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(11);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(13);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);
