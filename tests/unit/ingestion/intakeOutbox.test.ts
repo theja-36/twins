@@ -52,6 +52,10 @@ describe("outbox identity", () => {
     expect(edit).toMatchObject({ messageType: "edit", sourceMessageId: "42_rev_x" });
     expect(OUTBOX_JOB_ID("abc", 0)).not.toBe(OUTBOX_JOB_ID("abc", 1));
     expect(OUTBOX_JOB_ID("abc", 1)).toBe("outbox-abc-1");
+    // replays: a never-replayed row keeps its original ids; from the first replay on the replay number is part of the id, so a reset attempt count can never repeat an id
+    expect(OUTBOX_JOB_ID("abc", 0, 0)).toBe("outbox-abc-0");
+    expect(OUTBOX_JOB_ID("abc", 0, 1)).toBe("outbox-abc-r1-0");
+    expect(new Set([OUTBOX_JOB_ID("abc", 0), OUTBOX_JOB_ID("abc", 0, 1), OUTBOX_JOB_ID("abc", 0, 2), OUTBOX_JOB_ID("abc", 1, 1)]).size).toBe(4);
   });
   it("a deletion's identity depends only on the SET of deleted ids", () => {
     const base = { intakeSource: "user_capture" as const, channelIdentifier: "tg_chat_-100", payload: {}, receivedAt: new Date(0) };

@@ -1,0 +1,12 @@
+# Every 10 minutes. Persistent: a run missed while the host was down is made up at boot. Tunables (window, grace, throttle) go in a drop-in or /etc/default, see docs/twins/OPERATIONAL_ALERTING.md.
+[Unit]
+Description=TWINS Telegram capture-gap check timer
+
+[Timer]
+OnCalendar=*:0/10
+Persistent=true
+RandomizedDelaySec=30
+Unit=twins-capture-gap-check.service
+
+[Install]
+WantedBy=timers.target
