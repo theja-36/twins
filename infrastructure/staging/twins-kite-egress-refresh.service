@@ -1,0 +1,12 @@
+# One refresh of the Kite address set, then the staleness check. Run every 30 seconds by twins-kite-egress-refresh.timer. NOT INSTALLED.
+[Unit]
+Description=TWINS Kite egress address-set refresh
+After=twins-kite-egress.service
+OnFailure=twins-alert-on-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/twins-staging/twins-kite-egress.sh refresh
+ExecStartPost=/opt/twins-staging/twins-kite-egress.sh check-stale
+TimeoutStartSec=30
+Nice=5
