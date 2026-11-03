@@ -1,6 +1,6 @@
 # Staging deploy plan: Stages 3-5, P0 hardening and the verifier fix
 
-> **Status: PLAN ONLY. Nothing in this document has been executed.** Written 2026-11-01 against `main` at `ef833e4` (hosted CI green, run 41342324093). Executing any step needs the owner's explicit approval ("approved to execute the staging deploy plan"), and each gate below is a stop point. Facts about the host were read-only observations on 2026-11-01 and must be re-checked in section 2 before executing. Related: [STAGING_DEPLOYMENT_VERIFICATION.md](STAGING_DEPLOYMENT_VERIFICATION.md) (the Stage 2 deployment this plan repeats and extends), [IMMUTABLE_AUDIT.md](IMMUTABLE_AUDIT.md), [HARDENING_BACKLOG.md](HARDENING_BACKLOG.md), decisions D-077 / D-078.
+> **Status (updated 2026-11-03): two parts.** **Part A (sections 0-10)** is the plan for the first deployment, which was **executed on 2026-11-01** (staging runs `main-ef833e48`, 29 migrations; the evidence is in the deploy report and `deployments.jsonl`; deviations are listed in section 12). **Part B (section 11, below) is the plan for the NEXT deployment, a delta to `main` `aa3093b`**: migration 0029 (30 in total), the Kite read-only code in the image, and the follow-ups found since. Part B is **PLAN ONLY: nothing in it has been executed.** Executing any step needs the owner's explicit approval ("approved to execute deploy 2"), and each gate is a stop point. Host facts were read-only observations on 2026-11-03 and must be re-checked in the pre-deploy checks.
 
 ## 0. What this deploy does and does not do
 
@@ -72,7 +72,7 @@ Order (identical in shape to Stage 2):
 | D1 | `docker compose -f docker-compose.staging.yml --env-file staging.env stop api worker` (keep `alert-relay`, `postgres`, `redis`, `capture` running; `scheduler` and `approval-bot` stopped if running) | containers stopped; capture still up (its POSTs will get connection errors until D7; see section 7 risk R2) | `start` them again; abort |
 | D2 | Put the new compose file and `TWINS_IMAGE_TAG=main-ef833e48` in place (copy the old compose / `staging.env` to `*.pre-main-ef833e48-<stamp>` first, mode 0600). Compose changes vs deployed: new `risk-control` ops service and nothing else material (see D3b) | `docker compose config` valid; diff of compose reviewed | restore the copies |
 | D3 | `docker compose ... --profile migrate run --rm migrate` (the guarded one-shot; applies 0014-0028 in order) | log "migrations applied"; `select count(*) from drizzle.__drizzle_migrations` = **29** | do NOT retry blindly: read the error; if a migration partially applied, go to section 6 (Level 2); migrations run inside drizzle's transaction per file, so a failed file leaves the previous files applied |
-| D3b | Migration order is the journal order **0014 risk_decisions_foundation, 0015 sizing, 0016 portfolio, 0017 circuit breakers, 0018 market gates, 0019 risk approvals, 0020 historical import, 0021 outcome evaluation, 0022 scorecards, 0023 patterns/confidence, 0024 source intelligence, 0025 agent engine, 0026 agent id hyphen, 0027 research eligibility, 0028 P0 hardening**. No down migrations exist: rollback is restore (6.3). | n/a | n/a |
+| D3b | Migration order is the journal order **0014 risk_decisions_foundation, 0015 sizing, 0016 portfolio, 0017 circuit breakers, 0018 market gates, 0019 risk approvals, 0020 historical import, 0021 outcome evaluation, 0022 scorecards, 0023 patterns/confidence, 0024 source intelligence, 0025 agent engine, 0026 agent id hyphen, 0027 research eligibility, 0028 P0 hardening, 0029 revoke runtime writes on orders / fills / positions (added after this plan was first written; applied in Deploy 2)**. No down migrations exist: rollback is restore (6.3). | n/a | n/a |
 | D4 | `node scripts/ci/verify-migrations.mjs` inside the new image against staging (read-only) | passes; reports 29 migrations and the 0004-0028 structure checks (32 audit chain heads, `ENABLE ALWAYS` guards, SECURITY DEFINER doors, `agent_engine_state` one row, card columns) | stop; section 6 |
 | D5 | Apply `infrastructure/staging/app-role.sql` as the owner (`psql -v app_role=twins_app -f ...`, password not involved) | success; `twins_app` can SELECT `agent_orchestrator_runs`, `agent_orchestrator_syntheses`, `agent_runs`, `agent_evidence_references`, `risk_decisions`, `agent_engine_state`; has **no** INSERT/UPDATE/DELETE on `agent_engine_state`, `risk_approvals`, `system_controls`; no privilege at all on `agent_engine_state_events`, `audit_chain_heads`; EXECUTE on `twins_research_assessment`, `twins_agent_evidence_fp`, `twins_record_risk_approval`. Check with the privilege queries below. | fix grants; do not start services |
 | D6 | Apply `approval-bot-role.sql` (the bot gets SELECT on cards and EXECUTE on the three definer functions) | success; bot role still has zero write privileges on audit tables | as D5 |
@@ -196,3 +196,128 @@ Acceptance for A: `docker ps -a` shows the bot `Exited` and not restarting; rest
 7. Zero approval cards, approvals, orders, fills, positions and agent runs created.
 8. Backups and the three timers healthy; an alert test delivered.
 9. `deployments.jsonl` and a deploy report committed; rollback copies retained; rollback rehearsal evidence recorded.
+
+---
+
+# Part B: Deploy 2, the delta from `main-ef833e48` to `main` `aa3093b` (PLAN ONLY, nothing executed)
+
+## 11. Deploy 2
+
+### 11.1 Starting point (read-only observations, 2026-11-03 06:00 UTC)
+| Item | Observed |
+|---|---|
+| Image on `api`, `worker`, `alert-relay` | `twins-staging:main-ef833e48` (deployed 2026-11-01), restarts 0 |
+| `approval-bot` | created on `main-ef833e48`, **stopped** (no restart loop); `scheduler` stopped; `capture` on `capture-2762179-1ad16990`, running since 2026-11-01 21:40, restarts 0 |
+| Migrations | **29** (0000-0028) |
+| Audit verification | scheduled run green, `ok:true` (32 chains) |
+| Data | 72 messages and 72 options claims; `risk_decisions` 38; `risk_approval_cards`, `risk_approvals`, `orders`, `fills`, `positions`, `agent_orchestrator_runs` all **0** |
+| Intake outbox | 46 COMPLETED, **1 DEAD_LETTER** (see K1 in 11.8); 22 live messages arrived on 2026-11-02 and 11-03 and flowed through the new code, which also closes the live-capture variant of V6 |
+| Host alert path | `twins-alert.sh`, the compose file and `alert.env` were installed from PR #50's branch on 2026-11-01; `main` now contains the same content (verify by hash in PB3) |
+
+### 11.2 What changes between `ef833e4` and `aa3093b` (from `git diff --stat`, 79 files; runtime-relevant ones)
+* **Migration 0029** (`0029_p1_revoke_runtime_execution_writes.sql`): one `DO` block that REVOKEs INSERT / UPDATE / DELETE / TRUNCATE / REFERENCES / TRIGGER on `orders`, `fills`, `positions` from `twins_app` and `twins_bot` if they exist. Metadata only; no table is rewritten, no data changes; journal total **30**; audit chains stay **32** (no new chain).
+* `infrastructure/staging/app-role.sql`: `orders`, `fills`, `positions` join the read-only list (so a re-run never grants them back). `scripts/ci/verify-migrations.mjs`: new check that no runtime role can write them; the expected count is 30.
+* `packages/alerting`: `detectCaptureGap` and three new alert rules (`telegram.capture.gap`, `kite.session.invalidated`, exhausted `worker.queue.job_failed`). The rules only fire when a process logs those events; **nothing schedules or logs `telegram.capture.gap` yet**, and no queue is configured to emit the others at staging, so there is no new alert noise.
+* `packages/agents`: shared snapshot-generation publisher and small provider changes. The engine stays disabled, so this is inert.
+* `packages/kite` (new): the read-only Kite code (section 11.3). `apps/*`, `services/*`, the Dockerfiles and the entrypoints are **unchanged**.
+* `docker-compose.staging.yml` (+3 lines, relay on `127.0.0.1:8099`), `twins-alert.sh`, `alert.env.example`: already live on the host from PR #50; unchanged by Deploy 2 except for the tag.
+* Not changed: `services/telegram-capture` (so the capture image stays), the audit verifier (the fix shipped in Deploy 1).
+
+### 11.3 Kite code in the image: dormant by construction
+* `COPY packages ./packages` puts `packages/kite` into the image. **Nothing imports it**: `grep -rl "@twins/kite\|packages/kite" apps services scripts adapters` returns nothing (re-run in PB4). No service, job, timer or compose profile starts Kite code.
+* No Kite variable exists in `docker-compose.staging.yml` or (by name) in `staging.env`; the code reads `TWINS_KITE_API_KEY`, `TWINS_KITE_API_SECRET`, `TWINS_KITE_ACCESS_TOKEN` and the `TWINS_KITE_*` wiring names, none of which is set on staging. `api` and `worker` run on the `internal` network `twins_data`, so they could not reach `api.kite.trade` anyway.
+* **Plan gate, corrected statement.** The gate is real (`packages/kite/src/plans.ts`): the plan is an **option** of `KiteClient` and `KiteTicker` and defaults to `"personal"`, which refuses market data, historical candles and the WebSocket locally with `PLAN_RESTRICTED` before anything is sent; account reads work on either plan. **There is no `TWINS_KITE_PLAN` environment variable or loader in the code**: earlier text (a comment in `plans.ts` and the sentence "TWINS_KITE_PLAN=connect" in `KITE_INTEGRATION.md`) said otherwise and has been corrected. A plan loader is a prerequisite of the future task that wires Kite, not of this deploy; with nothing constructing a client, the default cannot be bypassed.
+* All order, GTT, position, holdings-authorisation, mutual-fund and logout paths are refused for every method; Kite has no write method on its client class.
+
+### 11.4 Pre-deploy checks (PB; no change to staging except the scratch database in PB8)
+| # | Check | PASS |
+|---|---|---|
+| PB1 | `main` is the approved commit (default `aa3093b`, or the commit that carries the K1 fix if the owner chooses to include it) and its hosted `ci` run is green | commit and run match |
+| PB2 | Source tree: `git archive` of that commit, manifest computed on the workstation and on the host (use `git archive --format=tar.gz`, never a macOS `tar`, which adds `._*` files) | manifests byte-identical |
+| PB3 | Host alert files equal `main`: `sha256sum` of `/usr/local/sbin/twins-alert.sh` and the deployed compose against `git show <commit>:infrastructure/staging/...` (the compose will differ only if the host copy was edited) | identical, or the difference is understood before replacing |
+| PB4 | Kite is dormant: the import grep above is empty on the extracted tree; `staging.env` has no `TWINS_KITE_` names | true |
+| PB5 | Fresh verified backup (`twins-backup`, `--status` ok, checksum OK), pinned in `backups/pre-deploy-main-<sha8>/` | true |
+| PB6 | Audit baseline: `audit-verify --require-ddl-watch --anchor-file` PASS with the current image; record head indexes | PASS, 32 chains |
+| PB7 | Disk over 10 GB, MemAvailable over 3 GB, intake outbox idle (no PENDING / FAILED / PROCESSING), `risk_decisions` count recorded | true |
+| PB8 | **Rehearsal of 0029 on a scratch copy** (restore the PB5 backup into `twins_rehearsal_a`, apply the new image's `migrate`, `verify-migrations`, `app-role.sql` + `approval-bot-role.sql`, privilege checks, `audit-verify` twice with a copy of the real anchor, then the rollback swap as in 6.1) | migration applies; `verify-migrations` passes with 30; `twins_app` has SELECT and nothing else on the three tables; audit PASS; swap restores 29 and the counts |
+| PB9 | K1 decision (11.8) recorded | decided |
+| PB10 | Alert path: a host `twins-alert.sh --test` INFO is forwarded by the relay | delivered |
+
+### 11.5 Build
+Same procedure as section 3 with tag `twins-staging:main-<sha8>` (for `aa3093b`: `main-aa3093ba`): extract the verified archive to `/opt/twins-staging/src-main-<sha8>`, build with a copy of `build-main-ef833e48.sh` (refuses an existing tag, memory watchdog, labels for revision and manifest), smoke test with no network and no database (module load; `node -e` import of `@twins/audit-chain` and `@twins/kite`). Previous images stay for rollback. Estimated 5 minutes, no downtime, risk low. The capture image is **not** rebuilt.
+
+### 11.6 Execution steps
+| # | Step | PASS |
+|---|---|---|
+| E0 | Backup again (`twins-backup`) and pin it; announce | status ok |
+| E1 | `stop api worker` (relay, postgres, redis, capture keep running; scheduler and bot stay stopped) | stopped |
+| E2 | Copy `staging.env` to `*.pre-main-<sha8>-<stamp>`; set `TWINS_IMAGE_TAG` and `TWINS_BOT_IMAGE_TAG` to the new tag; leave `TWINS_CAPTURE_IMAGE_TAG=capture-2762179-1ad16990`; compose file only if PB3 showed a difference | `compose config` valid |
+| E3 | `... --profile migrate run --rm migrate` | "migrations applied"; count **30** (it applies only 0029; under 1 second of work) |
+| E4 | `verify-migrations.mjs` in the new image | passes; includes the 0029 check |
+| E5 | Re-apply `app-role.sql` and `approval-bot-role.sql` as the owner | success; exact privileges: `twins_app` SELECT true and INSERT / UPDATE / DELETE false on `orders`, `fills`, `positions`; all Deploy 1 expectations unchanged (agent tables read-only, `agent_engine_state` select only, no access to `agent_engine_state_events` and `audit_chain_heads`, no INSERT on `risk_approvals`, EXECUTE on the research functions and the approval door); `twins_bot` no privilege on the three tables |
+| E6 | `audit-verify --require-ddl-watch`, then the scheduled unit (`systemctl start twins-audit-verify.service`) | PASS, 32 chains, status file `ok:true` |
+| E7 | `up -d --no-deps alert-relay`, then `api`, then `worker`; `--profile bot create approval-bot` (created, not started) | relay and api healthy; worker running; no `agent_engine.config.invalid`; restarts 0; no exit 81 / 82 |
+
+Downtime for `api` and `worker`: about 2-4 minutes (they were stopped for about 70 seconds in Deploy 1). Risk: low (a metadata-only migration; the previous image and a minutes-old backup are at hand).
+
+### 11.7 Post-deploy verification (all must pass)
+| # | Check | PASS |
+|---|---|---|
+| V1 | Migrations | **30**; `verify-migrations` passes |
+| V2 | Audit chain | scheduled unit run exits 0, `ok:true`, `first_failure` null, 32 chains; the next hourly run also passes |
+| V3 | Safety posture | `TRADING_ENABLED=false`, kill switch false, intake true; `LIVE_TRADING=false`, `TRADING_MODE=paper` in api / worker; `agent_engine_state.enabled=false`; `TWINS_AGENT_ENGINE_ENABLED` unset; `TWINS_BOT_ACTIVE` not true |
+| V4 | Health | `/health` 200; `/health/status` ok with fresh backup and audit-verify timestamps |
+| V5 | Roles | E5 privilege list re-run; plus a rolled-back probe as `twins_app`: `insert into orders default values` fails with SQLSTATE 42501 (and the same for `fills`, `positions`; `select` succeeds) |
+| V6 | Intake | a new live message goes PENDING -> COMPLETED on the new image, dead-letter count unchanged (see K1: the existing dead letter stays until replayed) |
+| V7 | Nothing forbidden created | `risk_approval_cards`, `risk_approvals`, `orders`, `fills`, `positions`, `agent_orchestrator_runs` all 0 (`risk_decisions` may grow with new messages) |
+| V8 | Alerts | host `--test` INFO delivered through the relay; no restart-loop alert |
+| V9 | Timers | backup, audit-verify, backup-verify timers active; no failed unit |
+| V10 | Containers | api, worker, relay on the new tag; bot created, not running; scheduler stopped; capture unchanged (restarts 0, same image) |
+| V11 | **Kite refused by default** | (a) the tree and `staging.env` checks from PB4 re-run on the deployed image / file; (b) a throwaway container from the new image with `--network none`, `--read-only`, no database and no Kite variable runs the probe below and prints the exact results: market data on the default plan refused with `PLAN_RESTRICTED`, order / GTT / holdings-authorise paths refused with `NOT_ALLOWED`, the fake `fetch` call count stays 0 for every refused call, a `connect` plan still refuses order paths |
+
+Probe for V11(b) (nothing here can reach the network: the transport is a counting stub):
+```
+node --import tsx -e '
+import { KiteClient, Session, RateLimiter } from "/app/packages/kite/src/index.ts";
+let calls = 0; const fake = async () => { calls += 1; return new Response("{}"); };
+const mk = (plan) => { const s = new Session(); s.setToken("probe_token_0123456789abcdef"); return new KiteClient({ apiKey: "probekey1234", session: s, fetch: fake, ...(plan ? { plan } : {}) }); };
+const code = async (f) => { try { await f(); return "ok"; } catch (e) { return e.code ?? e.name; } };
+const dflt = mk(), conn = mk("connect");
+console.log(JSON.stringify({
+  default_quote: await code(() => dflt.getJson("/quote/ltp", { i: "NSE:INFY" })),
+  default_historical: await code(() => dflt.getJson("/instruments/historical/1/day")),
+  order_path: await code(() => conn.getAccountJson("/orders/regular")),
+  gtt_write_path: await code(() => conn.getJson("/gtt/triggers")),
+  holdings_authorise: await code(() => conn.getAccountJson("/portfolio/holdings/authorise")),
+  fake_fetch_calls_after_refusals: calls }));'
+```
+(Expected: `PLAN_RESTRICTED`, `PLAN_RESTRICTED`, `NOT_ALLOWED`, `NOT_ALLOWED`, `NOT_ALLOWED`, `0`. The probe is part of the plan, not a repository file; if its output differs the deploy is not declared successful.)
+
+### 11.8 Known issues to decide before executing
+* **K1 (new, real): a live message dead-lettered in the new risk flow.** Evidence (read-only, 2026-11-03): outbox row for source message 29089 reached `DEAD_LETTER` at 05:31 UTC after 8 attempts, each failing in the worker with `RiskDecisionError` (`invalid_input`). The message itself was ingested (attempt 1: `inserted 1`) and its options claim was stored. The claim's stop-loss was parsed as **0**, so the stop-loss validation is `INVALID` / `INVALID_STOP_LOSS`; `packages/risk/src/pending.ts` passes the claim's own `stopLoss` (0) to the decision input when the validation is not VALID (lines for the claim path and the signal path), and `riskDecisions.ts` rejects a non-positive stop-loss. The result is a thrown error that is retried instead of a recorded PENDING decision. **Safety was not affected** (fail closed: no decision, card or approval), but each such message costs 8 retries, a dead letter and a CRITICAL alert. Recommendation: fix first (treat a non-positive stop-loss as absent, record the PENDING decision with the invalid-stop reason, add a regression test), merge, and build Deploy 2 from the fix commit; then replay the dead letter once with `outbox-deadletter replay --id <outbox-id> --reason "..." --changed-by operator:<name>` (owner credential; it re-opens exactly that row, and downstream processing is idempotent). Without the fix Deploy 2 is still safe, but the same defect will dead-letter every message with a zero or negative stop-loss.
+* **K2:** the capture-gap detector exists (code) but no host job runs it: a silent capture client is still not alerted. Out of scope for Deploy 2; schedule it in a later task.
+* **K3:** the Kite plan has no environment loader (11.3). Documentation corrected; implement the loader in the wiring task.
+* **K4:** the approval bot stays stopped; its restart-loop decision (D1) is unchanged.
+
+### 11.9 Rollback for Deploy 2
+Migration 0029 has no down script and needs none: it only removes privileges, old code never wrote the execution tables, and the schema is otherwise identical to 29 migrations.
+* **Level 1, code only (preferred).** Stop `api worker alert-relay`; restore `staging.env` from the `*.pre-main-<sha8>-*` copy (tags back to `main-ef833e48`); `up -d alert-relay api worker`. The previous image `main-ef833e48` stays on the host. **Verify:** images are the old tag; `/health/status` ok; safety state unchanged; a probe as `twins_app` still cannot insert into `orders` (0029 stays applied, which is the safer state); the old image's `audit-verify` PASS (it contains the verifier fix); `verify-migrations` of the **old** image must be pointed at expectation 29 and would report 30 recorded: that mismatch is expected and is not a failure of the rollback.
+* **Level 2, restore.** Only for data-integrity doubt: restore the E0 backup (minutes old) into a scratch database, check counts (29 migrations, expected message count, chain heads equal to PB6), then the rename swap of section 6.3, then Level 1. After the swap the migration count is 29 and 0029 is gone together with its privilege change; re-run the **old** `app-role.sql` is NOT needed (the restored database carries its grants, which then include the old, wider ones: re-apply the new `app-role.sql` to keep the execution tables read-only).
+* **Decision table additions:** 0029 fails (it cannot, apart from a lost connection): the transaction rolls back, count stays 29, start the old services again. E5 shows `twins_app` still writable: re-run `app-role.sql` and the migration's `DO` block is not repeatable by hand, so re-run the migration command; if it still fails, do not start the services. V11 output differs: hold; do not declare success.
+
+### 11.10 Acceptance
+Deploy 2 is successful only if: the deployed commit is the approved one with green hosted CI and a verified manifest; 30 migrations and `verify-migrations` pass; the scheduled audit run passes with 32 chains; `twins_app` and `twins_bot` cannot write `orders`, `fills`, `positions`; all other privileges equal the Deploy 1 list; safety flags and engine flag unchanged; services healthy on the new tag and capture untouched; zero cards, approvals, orders, fills, positions and agent runs; V11 shows Kite refused by default; alert delivery proven; `deployments.jsonl` and a deploy report committed. Estimated total 1-1.5 hours, user-visible downtime 2-4 minutes, overall risk low (medium only if the K1 fix ships in the same deploy, because it is code that touches the live risk flow).
+
+### 11.11 Questions for the owner
+* **QB1** Ship the K1 fix first (recommended) or deploy 0029 and Kite now and fix K1 afterwards?
+* **QB2** Maintenance window (the channel is quiet; the last live traffic was 2026-11-03 05:20 UTC).
+* **QB3** After the fix, replay the one dead-lettered message?
+* **QB4** Approve PB8 (a second scratch-database rehearsal on the staging Postgres)?
+
+## 12. Deploy 1 (executed 2026-11-01): deviations from Part A
+* A scratch-database rehearsal (P7) was run first: migrations 0014-0028 applied in 8 seconds, verifier and role checks passed, the fail-closed worker behaviour and both rollback levels were exercised.
+* Host alerting had no destination (found in P10): fixed first through the loopback relay (PR #50), `alert.env` gained the relay URL and bearer; delivery proven with INFO and CRITICAL tests.
+* `staging.env`: the capture tag was aligned to the running image, the app and bot tags were set to `main-ef833e48`.
+* The scheduler had been started during the P0 recovery and was stopped as part of the deploy; the approval bot was recreated on the new image and left stopped (decision D1 option A).
+* Measured: migrations 8 s, api / worker downtime about 70 s, every V check passed; V6 (live capture) was first closed on the history path and later on live traffic.
+* The `risk-control` compose service was added; no `agent-engine-control` service exists yet.
