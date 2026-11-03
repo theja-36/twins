@@ -186,6 +186,12 @@ services:
     volumes:
       - /var/lib/twins-monitor/alert-relay:/status
     networks: [twins_data, twins_alert_egress]
+    # The relay's log is the DELIVERY RECORD of every alert (the host script only learns "202 accepted"). json-file logs vanish when the container is recreated, so the relay logs to the host journal
+    # (retention: journald.conf, currently 7 days / 1 GB). Read it with `journalctl CONTAINER_TAG=twins-alert-relay` or `docker logs twins-staging-alert-relay-1`.
+    logging:
+      driver: journald
+      options:
+        tag: twins-alert-relay
     # HOST jobs (backup, audit verification, health check, systemd OnFailure) send their alerts here through twins-alert.sh with the relay bearer token. Loopback only: the port is not reachable from outside the host.
     ports:
       - "127.0.0.1:8099:8099"
