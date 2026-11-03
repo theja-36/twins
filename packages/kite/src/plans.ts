@@ -5,7 +5,7 @@ import { KiteError } from "./errors";
  *   Personal (Free)   "Full fledged order, GTT, alerts management", "Margin computation, portfolio management etc."  -  market data is NOT listed
  *   Connect (INR 500 / month)   "Full suite of APIs", "realtime WebSocket streaming", "historical candle data"
  * The page lists no separate Historical add-on. The vendor page does not enumerate every endpoint per plan, so this table is deliberately CONSERVATIVE: a capability that is not
- * listed for a plan is treated as unavailable on it and refused locally, before any request. Which plan the owner's app has is configuration (`TWINS_KITE_PLAN`), never inferred.
+ * listed for a plan is treated as unavailable on it and refused locally, before any request. Which plan the owner's app has is the `plan` option of KiteClient / KiteTicker (default personal; no environment loader exists yet), never inferred.
  */
 export type KitePlan = "personal" | "connect";
 export interface PlanCapabilities { account: boolean; marketData: boolean; websocket: boolean; historical: boolean; basis: string }
