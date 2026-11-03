@@ -1,4 +1,6 @@
-# Kite Connect decision brief (for the owner; nothing has been purchased or called)
+# Kite Connect decision brief
+
+> **DECISION UPDATE 2026-11-04 (D-090): Connect was PURCHASED by the owner (INR 500 per month).** The sections below are the pre-decision brief, kept for the record. Purchase changes nothing else: the engine stays disabled, no order path exists, `LIVE_TRADING` is false, and every live-run gate listed in KITE_INTEGRATION.md stays in force until it is passed in order (egress allow-list installed and tested, feed code deployed, supervised morning login, supervised first run). Previously this brief was titled "nothing has been purchased or called".
 
 > Prepared 2026-11-03. Prices and plan contents come from Zerodha's published plan page as read on 2026-10-31 (`zerodha.com/products/api`); confirm them on the purchase page before paying, because the page does not list every endpoint per plan and prices can change.
 
