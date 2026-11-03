@@ -146,6 +146,32 @@ describe("dead-letter operations", () => {
     expect((await readOutboxRow(handle.db, id))?.status).toBe("DEAD_LETTER");
     return { id, channel };
   }
+  it("REGRESSION (staging 2026-11-03): a replayed row is enqueued under a NEW queue job id and then runs, even though the queue keeps finished jobs and ignores a repeated job id", async () => {
+    // a queue with BullMQ's relevant semantics: add() with a job id that already exists (finished jobs are retained) is silently ignored
+    const known = new Set<string>();
+    const accepted: string[] = [];
+    const ignored: string[] = [];
+    const queue = { add: async (_name: string, _data: unknown, opts?: { jobId?: string }) => { const id = opts?.jobId ?? ""; if (known.has(id)) { ignored.push(id); } else { known.add(id); accepted.push(id); } return { id } as never; } };
+    const id = await seedRow(1);
+    const reconcile = (offsetMs: number) => reconcileOutbox(handle.db, { logger, queue, graceMs: 0, redeliverAfterMs: 60_000, now: () => new Date(Date.now() + offsetMs) });
+    await reconcile(1000);
+    expect(accepted).toContain(`outbox-${id}-0`); // the original job
+    const dead = await processOutboxQueueJob({ id: "j", data: { jobType: "telegram_outbox", outboxId: id } } as never, handle.db, { logger, runPipeline: () => Promise.reject(Object.assign(new Error("boom"), { code: "E_DEAD" })), workerId: "t:1" });
+    expect(dead).toBe("dead_lettered");
+    expect((await lines(["replay", "--id", id, "--reason", "regression test: replay after a finished first job", "--changed-by", "operator:itest"])).code).toBe(0);
+    expect(await readOutboxRow(handle.db, id)).toMatchObject({ status: "PENDING", attemptCount: 0 });
+    const before = accepted.length;
+    await reconcile(2000);
+    expect(ignored.filter((j) => j.includes(id))).toEqual([]); // nothing was swallowed as a duplicate
+    expect(accepted.slice(before)).toEqual([`outbox-${id}-r1-0`]); // a new id, carrying the replay number
+    expect(await readOutboxRow(handle.db, id)).toMatchObject({ status: "PENDING" });
+    expect((await readOutboxRow(handle.db, id))?.enqueuedAt).not.toBeNull();
+    const done = await processOutboxQueueJob({ id: "j2", data: { jobType: "telegram_outbox", outboxId: id } } as never, handle.db, { logger, runPipeline: async () => undefined, workerId: "t:2" });
+    expect(done).toBe("completed");
+    expect(await readOutboxRow(handle.db, id)).toMatchObject({ status: "COMPLETED" });
+    // a second replay of the same row would be refused (not dead); a LATER replay gets its own number: simulate by reading the count the reconciler uses
+    expect(Number(must((await pool.query("select count(*)::int as n from telegram_intake_outbox_replays where outbox_id = $1", [id])).rows[0])["n"])).toBe(1);
+  });
   it("list and show print safe metadata only", async () => {
     const { id, channel } = await deadRow();
     const list = await lines(["list", "--limit", "500"]);
