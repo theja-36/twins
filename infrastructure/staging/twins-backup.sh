@@ -83,8 +83,10 @@ STEP="verify: decrypted == original"
 [ "$(sha256sum "$VERIFY_TMP" | cut -c1-64)" = "$PLAIN_SHA" ] || { echo "decrypted content differs from the dump" >&2; exit 4; }
 STEP="verify: pg_restore --list"
 TOC="$("$DOCKER" exec -i "$PG_CONTAINER" pg_restore --list < "$VERIFY_TMP")"
-TOC_ENTRIES="$(printf '%s\n' "$TOC" | grep -vc '^;' || true)"
-[ "$TOC_ENTRIES" -ge 1 ] && printf '%s\n' "$TOC" | grep -q 'TABLE DATA public telegram_messages' && printf '%s\n' "$TOC" | grep -q 'drizzle __drizzle_migrations' || { echo "restore list lacks the expected tables" >&2; exit 5; }
+# Here-strings, not `printf | grep -q`: under `set -o pipefail` a pipe whose reader (grep -q) exits at the first match makes the writer fail with SIGPIPE once the listing is larger than the pipe
+# buffer (64 KiB). That is exactly what happened on 2026-11-02 after migrations 0014-0029 made the restore list bigger: every backup since then "lacked the expected tables" although it did not.
+TOC_ENTRIES="$(grep -vc '^;' <<<"$TOC" || true)"
+[ "$TOC_ENTRIES" -ge 1 ] && grep -q 'TABLE DATA public telegram_messages' <<<"$TOC" && grep -q 'drizzle __drizzle_migrations' <<<"$TOC" || { echo "restore list lacks the expected tables" >&2; exit 5; }
 STEP="remove plaintext"
 shred -u "$VERIFY_TMP" "$PLAIN" "$PLAIN.sha256" 2>/dev/null || rm -f "$VERIFY_TMP" "$PLAIN" "$PLAIN.sha256"
 
