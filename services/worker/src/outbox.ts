@@ -158,13 +158,13 @@ export async function reconcileOutbox(db: Db, options: ReconcilerOptions): Promi
   for (const row of due) {
     try {
       await options.queue.add(OUTBOX_QUEUE_JOB_NAME, { jobType: OUTBOX_QUEUE_JOB_NAME, outboxId: row.id } satisfies OutboxJobPayload, {
-        jobId: OUTBOX_JOB_ID(row.id, row.attemptCount),
+        jobId: OUTBOX_JOB_ID(row.id, row.attemptCount, row.replayCount),
         attempts: 3,
         backoff: { type: "exponential", delay: 1000 },
       });
       await new PgIntakeOutbox(db).markEnqueued(row.id);
       summary.enqueued += 1;
-      options.logger.info("outbox.reconciled", { outboxId: row.id, action: "re_enqueued", attempt: row.attemptCount });
+      options.logger.info("outbox.reconciled", { outboxId: row.id, action: "re_enqueued", attempt: row.attemptCount, replays: row.replayCount });
     } catch (error) {
       summary.enqueueFailed += 1;
       options.logger.warn("outbox.reconcile_enqueue_failed", { outboxId: row.id, ...describeErrorSafely(error) });

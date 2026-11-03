@@ -1,0 +1,9 @@
+[Unit]
+Description=TWINS Telegram capture-gap check (read-only)
+OnFailure=twins-alert-on-failure@%n.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/twins-capture-gap-check
+TimeoutStartSec=120
+Nice=10

@@ -45,7 +45,12 @@ export interface IntakeOutbox {
   markEnqueued(id: string): Promise<void>;
 }
 
-export const OUTBOX_JOB_ID = (id: string, attemptCount: number): string => `outbox-${id}-${attemptCount}`;
+/**
+ * The queue job id of one delivery attempt. BullMQ ignores an `add` whose job id already exists, and finished jobs are kept, so an id must never repeat for a row. A dead-letter replay resets the
+ * attempt count to 0 and would therefore reuse `outbox-<id>-0`, which exists from the first run: the row stayed PENDING forever (found on staging 2026-11-03). The number of replays recorded for the row
+ * (the append-only replay log) is part of the id from the first replay on; a row that was never replayed keeps its original ids, so jobs already in the queue are unaffected.
+ */
+export const OUTBOX_JOB_ID = (id: string, attemptCount: number, replayCount = 0): string => (replayCount > 0 ? `outbox-${id}-r${replayCount}-${attemptCount}` : `outbox-${id}-${attemptCount}`);
 
 const sha12 = (text: string): string => createHash("sha256").update(text, "utf8").digest("hex").slice(0, 12);
 
@@ -244,11 +249,11 @@ export async function findRedeliverableOutboxRows(
   db: Db,
   now: Date,
   options: { graceMs: number; redeliverAfterMs: number; limit: number },
-): Promise<Array<{ id: string; attemptCount: number }>> {
+): Promise<Array<{ id: string; attemptCount: number; replayCount: number }>> {
   const graceCutoff = new Date(now.getTime() - options.graceMs);
   const redeliverCutoff = new Date(now.getTime() - options.redeliverAfterMs);
   return db
-    .select({ id: table.id, attemptCount: table.attemptCount })
+    .select({ id: table.id, attemptCount: table.attemptCount, replayCount: sql<number>`(select count(*)::int from telegram_intake_outbox_replays r where r.outbox_id = telegram_intake_outbox.id)` })
     .from(table)
     .where(
       and(
