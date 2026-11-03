@@ -17,6 +17,11 @@ function service(name: string): string {
 }
 
 describe("staging packaging (static)", () => {
+  it("the alert relay logs to the host journal (its log is the alert delivery record and must survive a container recreate); every other service keeps the rotated json-file log", () => {
+    expect(service("alert-relay")).toMatch(/logging:\s*\n\s+driver: journald\s*\n\s+options:\s*\n\s+tag: twins-alert-relay/);
+    for (const name of ["api", "worker", "postgres", "redis", "capture", "approval-bot"]) expect(service(name), name).not.toMatch(/driver: journald/);
+    expect(compose).toMatch(/x-logging: &logging\n\s+driver: json-file/);
+  });
   it("publishes no database or Redis port and publishes the API on loopback only", () => {
     expect(service("postgres")).not.toMatch(/^\s+ports:/m);
     expect(service("redis")).not.toMatch(/^\s+ports:/m);
