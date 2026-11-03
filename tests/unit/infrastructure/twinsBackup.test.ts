@@ -21,7 +21,7 @@ function sandbox() {
   };
   stub("docker", `case "$*" in
   *pg_dump*) [ "\${STUB_DUMP_FAIL:-0}" = 1 ] && exit 1; [ "\${STUB_DUMP_EMPTY:-0}" = 1 ] && exit 0; printf 'PGDMP-fake-dump-bytes'; ;;
-  *pg_restore*--list*) cat >/dev/null; case "\${STUB_TOC:-ok}" in ok) printf '; header\\n1; 1 2 TABLE DATA public telegram_messages x\\n2; 1 2 TABLE DATA drizzle __drizzle_migrations x\\n';; missing) printf '1; 1 2 TABLE DATA public other x\\n';; esac;;
+  *pg_restore*--list*) cat >/dev/null; case "\${STUB_TOC:-ok}" in ok) printf '; header\\n1; 1 2 TABLE DATA public telegram_messages x\\n2; 1 2 TABLE DATA drizzle __drizzle_migrations x\\n';; missing) printf '1; 1 2 TABLE DATA public other x\\n';; large) printf '; header\\n1; 1 2 TABLE DATA public telegram_messages x\\n2; 1 2 TABLE DATA drizzle __drizzle_migrations x\\n'; i=0; while [ \$i -lt 6000 ]; do printf '%s; 1 2 TABLE public some_table_with_a_rather_long_name_to_fill_the_pipe_buffer_%s owner\\n' \$i \$i; i=\$((i+1)); done;; esac;;
 esac`);
   stub("flock", `[ "\${STUB_LOCKED:-0}" = 1 ] && exit 1; exit 0`);
   stub("sha256sum", `shasum -a 256 "$@"`);
@@ -61,6 +61,15 @@ describe("twins-backup.sh (stubbed docker/encryption)", () => {
     expect(String(st["plain_sha256"])).toMatch(/^[0-9a-f]{64}$/);
     expect(statSync(join(sb.status, "backup.json")).mode & 0o777).toBe(0o600);
     expect(statSync(sb.backups).mode & 0o777).toBe(0o700);
+  });
+
+  it("a restore list larger than the 64 KiB pipe buffer still passes (regression: printf | grep -q under pipefail failed every backup after migrations 0014-0029 on 2026-11-02)", () => {
+    const sb = sandbox();
+    const r = sb.run({ STUB_TOC: "large" });
+    expect(r.status, r.stderr?.toString()).toBe(0);
+    const st = sb.readStatus();
+    expect(st).toMatchObject({ ok: true });
+    expect(Number(st["toc_entries"])).toBeGreaterThan(5000);
   });
 
   const failures: Array<[string, Record<string, string>, string]> = [
