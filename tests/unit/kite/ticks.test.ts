@@ -107,7 +107,20 @@ describe("rejections never produce a usable quote", () => {
   });
   it("incoherent day OHLC", () => {
     const b = bytes("index_quote").slice(); b.set([0x00, 0x00, 0x00, 0x01], 4 + 8); // high = 0.01 < low
-    expect(decode(b).rejected).toEqual([{ reason: "bad_price", token: 256265 }]);
+    expect(decode(b).rejected).toEqual([{ reason: "ohlc_incoherent", token: 256265 }]);
+  });
+  it("a day wholly below or above the PREVIOUS close is valid (index and tradable)", () => {
+    const down = bytes("index_quote").slice(); down.set([0x00, 0x26, 0x25, 0xa0], 4 + 20); // previous close 25000 > high 24400
+    expect(decode(down).rejected).toEqual([]);
+    expect(decode(down).ticks[0]).toMatchObject({ dayOhlc: { open: 24300, high: 24400, low: 24280, close: 25000 } });
+    const up = bytes("index_quote").slice(); up.set([0x00, 0x1e, 0x84, 0x80], 4 + 20); // previous close 20000 < low 24280
+    expect(decode(up).ticks[0]).toMatchObject({ dayOhlc: { close: 20000 } });
+    const fut = bytes("fut_quote").slice(); fut.set([0x00, 0x26, 0x25, 0xa0], 4 + 40); // previous close 25000 > high 24450
+    expect(decode(fut).rejected).toEqual([]);
+  });
+  it("open outside the day's range is still incoherent", () => {
+    const b = bytes("index_quote").slice(); b.set([0x00, 0x26, 0x25, 0xa0], 4 + 16); // open 25000 > high 24400
+    expect(decode(b).rejected).toEqual([{ reason: "ohlc_incoherent", token: 256265 }]);
   });
 });
 

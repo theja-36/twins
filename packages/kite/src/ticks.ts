@@ -105,16 +105,18 @@ function decodePacket(p: Uint8Array, resolve: (token: number) => KiteInstrument 
   let dayOhlc: TickDayOhlc | null = null;
   let bid: number | null = null, ask: number | null = null, bidDepth: number | null = null, askDepth: number | null = null, openInterest: number | null = null;
 
-  const ohlc = (o: number, h: number, l: number, c: number): TickDayOhlc | null | "bad" => {
+  const ohlc = (o: number, h: number, l: number, c: number): TickDayOhlc | null | "bad" | "incoherent" => {
     const [op, hi, lo, cl] = [price(o), price(h), price(l), price(c)];
     if (op === "bad" || hi === "bad" || lo === "bad" || cl === "bad") return "bad";
     if (op === null || hi === null || lo === null || cl === null) return null; // not yet traded today: absent, not a price of zero
-    return hi < lo || hi < op || hi < cl || lo > op || lo > cl ? "bad" : { open: op, high: hi, low: lo, close: cl };
+    // `close` is the PREVIOUS session's close, so a day that stays wholly above or below it is valid: only the day's own open/high/low must agree with each other
+    return hi < lo || hi < op || lo > op ? "incoherent" : { open: op, high: hi, low: lo, close: cl };
   };
 
   if (layout === "index_quote" || layout === "index_full") {
-    const d = ohlc(16, 8, 12, 20); // open@16 high@8 low@12 close@20
+    const d = ohlc(16, 8, 12, 20); // open@16 high@8 low@12 close@20 (previous close)
     if (d === "bad") return { reason: "bad_price", token };
+    if (d === "incoherent") return { reason: "ohlc_incoherent", token };
     dayOhlc = d;
     if (layout === "index_full") { const t = ts(view, 28, nowMs); if (!t.ok) return { reason: t.reason, token }; exchangeTimestamp = t.iso; }
   } else if (layout === "quote" || layout === "full") {
@@ -122,6 +124,7 @@ function decodePacket(p: Uint8Array, resolve: (token: number) => KiteInstrument 
     volume = view.getInt32(16, false);
     const d = ohlc(28, 32, 36, 40);
     if (d === "bad") return { reason: "bad_price", token };
+    if (d === "incoherent") return { reason: "ohlc_incoherent", token };
     dayOhlc = d;
     if (layout === "full") {
       const lt = ts(view, 44, nowMs); if (!lt.ok) return { reason: lt.reason, token }; lastTradeTime = lt.iso;

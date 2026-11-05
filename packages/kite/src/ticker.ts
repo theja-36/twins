@@ -92,6 +92,8 @@ export type Freshness =
 export interface TickerStats {
   frames: number; heartbeats: number; ticks: number; rejectedPackets: number; rejectedFrames: number; staleDropped: number;
   ordersIgnored: number; messagesIgnored: number; reconnects: number; lastActivityAt: string | null;
+  /** Packet rejections by check name (no payloads): the first of each reason is logged, then every 100th with its running count. */
+  rejectedByReason: Record<string, number>;
 }
 
 const MAX_TEXT = 64 * 1024;
@@ -119,7 +121,7 @@ export class KiteTicker {
   private watchdogTimer: unknown;
   private lastFrameAt = 0;
   private opened = false;
-  private statsData: TickerStats = { frames: 0, heartbeats: 0, ticks: 0, rejectedPackets: 0, rejectedFrames: 0, staleDropped: 0, ordersIgnored: 0, messagesIgnored: 0, reconnects: 0, lastActivityAt: null };
+  private statsData: TickerStats = { frames: 0, heartbeats: 0, ticks: 0, rejectedPackets: 0, rejectedFrames: 0, staleDropped: 0, ordersIgnored: 0, messagesIgnored: 0, reconnects: 0, lastActivityAt: null, rejectedByReason: {} };
 
   constructor(private readonly o: TickerOptions) {
     this.timers = o.timers ?? systemTimers;
@@ -132,7 +134,7 @@ export class KiteTicker {
   }
 
   state(): TickerState { return this.current; }
-  stats(): TickerStats { return { ...this.statsData }; }
+  stats(): TickerStats { return { ...this.statsData, rejectedByReason: { ...this.statsData.rejectedByReason } }; }
   subscribed(): number[] { return [...this.desired.keys()]; }
   storedCount(): number { return this.store.size; }
   /** For tests and diagnostics: 0 or 1 timers of each kind, never more. */
@@ -329,7 +331,12 @@ export class KiteTicker {
     this.attempts = 0;
     if (frame.heartbeat) { this.statsData.heartbeats += 1; return; }
     this.statsData.frames += 1;
-    for (const r of frame.rejected) { this.statsData.rejectedPackets += 1; this.log("ticker.bad_packet", { reason: r.reason }); }
+    for (const r of frame.rejected) {
+      this.statsData.rejectedPackets += 1;
+      const n = (this.statsData.rejectedByReason[r.reason] ?? 0) + 1;
+      this.statsData.rejectedByReason[r.reason] = n;
+      if (n === 1 || n % 100 === 0) this.log("ticker.bad_packet", { reason: r.reason, count: n });
+    }
     for (const t of frame.ticks) this.accept(t);
   }
 
