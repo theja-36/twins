@@ -1,6 +1,6 @@
 # Q-009 privacy question: draft answer for owner approval
 
-> Prepared 2026-11-05. **Not approved.** The owner must approve (or change) this before the engine is enabled in ANY mode, including shadow. Question text (OPEN_QUESTIONS.md Q-009): model use - none yet / local model / external provider / mixed - and, for anything but "none yet", whether any channel text may be disclosed.
+> Prepared 2026-11-05. **APPROVED by the owner on 2026-11-05 (D-094), pending the F1 independent review** - the approval records the answer; it does not enable anything and does not stand in for F1 (reviewer still unassigned). Until F1 the engine is not enabled in any mode. Question text (OPEN_QUESTIONS.md Q-009): model use - none yet / local model / external provider / mixed - and, for anything but "none yet", whether any channel text may be disclosed.
 
 ## Proposed answer
 1. **Model use: none.** No model component is activated. All twelve agents are deterministic code (D-026: agents are logical responsibilities). No provider is selected, purchased or called.
