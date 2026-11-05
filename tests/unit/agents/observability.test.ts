@@ -119,7 +119,7 @@ describe("redaction: nothing but codes, ids, counts and durations is logged", ()
   });
   it("only fixed field names are used and none looks sensitive to the logger's own filter", () => {
     const c = capture(); const o = createRunObserver(c.log, { level: "debug" }, { riskDecisionId: DEC }); feed(o, EVENTS); o.completed(result());
-    o.failed(new Error("x")); logProviderAvailability(c.log, { level: "debug" }, { ohlcProvider: { name: "p" } }, true);
+    o.failed(new Error("x")); logProviderAvailability(c.log, { level: "debug" }, { ohlcProvider: { name: "p" } }, { enabled: true, shadow: false });
     const keys = new Set(c.records.flatMap((r) => Object.keys(r)));
     for (const k of keys) expect(k, k).not.toMatch(/(secret|token|authorization|password|passwd|api[_-]?key|cookie|credential|raw|text|payload|body|content)/i);
     expect(JSON.stringify(c.records)).not.toContain("[redacted]");
@@ -131,9 +131,10 @@ describe("provider availability", () => {
     const a = providerAvailability({ ohlcProvider: { name: "file:ohlc-export" }, quoteProvider: { name: "x".repeat(200) }, newsProvider: null });
     expect(a.configured).toEqual(["quotes", "ohlc"]); expect(a.missing).toHaveLength(13); expect(a.missing).toContain("news"); expect(a.providers["ohlc"]).toBe("file:ohlc-export"); expect((a.providers["quotes"] as string).length).toBeLessThanOrEqual(60);
     const c = capture();
-    logProviderAvailability(c.log, { level: "summary" }, { ohlcProvider: { name: "p" } }, true);
+    logProviderAvailability(c.log, { level: "summary" }, { ohlcProvider: { name: "p" } }, { enabled: true, shadow: false });
     expect(c.records[0]).toMatchObject({ event: "agent_engine.providers", level: "warn", engineEnabled: true, configuredCount: 1, missingCount: 14, providerNames: ["ohlc=p"] });
-    const c2 = capture(); logProviderAvailability(c2.log, { level: "summary" }, {}, false); expect(c2.records[0]).toMatchObject({ level: "info", engineEnabled: false });
-    const c3 = capture(); logProviderAvailability(c3.log, { level: "errors" }, {}, true); expect(c3.records).toEqual([]);
+    const c2 = capture(); logProviderAvailability(c2.log, { level: "summary" }, {}, { enabled: false, shadow: false }); expect(c2.records[0]).toMatchObject({ level: "info", engineEnabled: false, shadowEnabled: false });
+    const c4 = capture(); logProviderAvailability(c4.log, { level: "summary" }, {}, { enabled: false, shadow: true }); expect(c4.records[0]).toMatchObject({ level: "warn", engineEnabled: false, shadowEnabled: true }); // shadow only: the label no longer claims the engine is enabled
+    const c3 = capture(); logProviderAvailability(c3.log, { level: "errors" }, {}, { enabled: true, shadow: false }); expect(c3.records).toEqual([]);
   });
 });
