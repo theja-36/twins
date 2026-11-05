@@ -82,7 +82,11 @@ export async function main(argv: string[], deps: TickerDeps): Promise<number> {
   }
 
   // ── run ──
-  const session = new Session(now, (reason) => { store.clear(); log("kite.session.invalidated", { reason }); });
+  const session = new Session(now, (reason) => {
+    let cleared = true;
+    try { store.clear(); } catch { cleared = false; } // the token directory is mounted read-only here: the file stays, the in-memory token is dropped either way
+    log("kite.session.invalidated", { reason, tokenFileCleared: cleared });
+  });
   session.setToken(stored.accessToken);
   const client = new KiteClient({ apiKey: cfg.apiKey, session, plan, ...(deps.fetch ? { fetch: deps.fetch } : {}) });
   const holder: { ticker?: KiteTicker; source?: QuoteSource } = {};

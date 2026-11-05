@@ -451,10 +451,11 @@ services:
       LIVE_TRADING: "false"
       NODE_ENV: production
       TWINS_KITE_TOKEN_FILE: /var/lib/twins-kite/kite-token.json
+      TWINS_KITE_API_SECRET: ""  # F1: the feed never exchanges a token, so it must not hold the API secret even though kite.env carries it (an empty value is treated as unset)
       TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
       TWINS_AGENT_SNAPSHOT_REQUIRED: instrument-reference,quotes,option-quotes,option-chain,last-price,ohlc
     volumes:
-      - /var/lib/twins-kite:/var/lib/twins-kite
+      - /var/lib/twins-kite:/var/lib/twins-kite:ro  # F1: the feed only reads the token; kite-login is the sole writer
       - /var/lib/twins-snapshots:/var/lib/twins-snapshots
     networks: [twins_kite_egress]
     stop_grace_period: 20s
@@ -476,7 +477,7 @@ networks:
     ipam:
       config:
         - subnet: 10.0.27.0/24   # 10.0.26.0/24 is taken by another stack on the host; verify this one is free before creating
-  twins_kite_egress:             # ordinary outbound (NAT) for the Kite login / ticker ONLY; to be narrowed to api.kite.trade and ws.kite.trade by a host firewall before the first start
+  twins_kite_egress:             # ordinary outbound (NAT) for the Kite login / ticker ONLY; narrowed to api.kite.trade and ws.kite.trade by the host egress allow-list (twins-kite-egress, installed 2026-11-04, D-091)
     ipam:
       config:
         - subnet: 10.0.28.0/24   # 10.0.24-27 are taken (capture, bot, other stack, alert relay); verified free on the host 2026-11-03

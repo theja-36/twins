@@ -7,7 +7,7 @@ import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages/database/src/index";
 import { verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
-import { AgentRegistry, getLatestAgentAssessment, runAgentEngine, runAgentEngineShadow, type AgentRunResult } from "../../../packages/agents/src/index";
+import { AgentRegistry, getLatestAgentAssessment, runAgentEngine, runAgentEngineShadow, SHADOW_TIMEOUT_MS, type AgentRunResult } from "../../../packages/agents/src/index";
 import { assessApprovalEligibility, createPendingRiskDecisionForSignal, listRiskDecisions, recordSourceIntelligence, type IntelligenceResolver } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { validIntelligence } from "../../support/intelligenceFixtures";
@@ -252,6 +252,17 @@ describe("shadow mode (HB-06): evaluates and reports, persists nothing, never ha
   it("is a no-op unless shadow is on, and refuses to run next to the enforcing engine", async () => {
     expect(await runAgentEngineShadow(untouchable, randomUUID(), { registry: registryOf(fakeAgent("agent_a", answer())), config: config({ enabled: false, shadow: false }) })).toEqual({ skipped: "SHADOW_OFF" });
     expect(await runAgentEngineShadow(untouchable, randomUUID(), { registry: registryOf(fakeAgent("agent_a", answer())), config: config({ enabled: true, shadow: true }) })).toEqual({ skipped: "ENGINE_ENFORCING" });
+  });
+  it("is bounded in time (F1 finding 1): a hung evaluation comes back as SHADOW_TIMEOUT instead of stalling the caller", async () => {
+    const id = await makeDecision();
+    const cfg = config({ enabled: false, shadow: true, requiredAgents: ["agent_a"] });
+    const hung = registryOf(fakeAgent("agent_a", (() => new Promise(() => undefined)) as never));
+    const t0 = Date.now();
+    expect(await runAgentEngineShadow(db(), id, { registry: hung, config: cfg, shadowTimeoutMs: 100 })).toEqual({ skipped: "SHADOW_ERROR", errorCode: "SHADOW_TIMEOUT" });
+    expect(Date.now() - t0).toBeLessThan(2000);
+    expect(SHADOW_TIMEOUT_MS).toBeGreaterThanOrEqual(1000);
+    expect(SHADOW_TIMEOUT_MS).toBeLessThanOrEqual(10000);
+    expect(await runAgentEngineShadow(db(), id, { registry: registryOf(fakeAgent("agent_a", answer("SUPPORTIVE", 90))), config: cfg, shadowTimeoutMs: 5000 })).toMatchObject({ assessment: expect.any(String) });
   });
   it("never throws: a refused runtime state, an unknown decision and a mis-wired registry come back as skipped values", async () => {
     const id = await makeDecision();
