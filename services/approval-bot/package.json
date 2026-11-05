@@ -10,10 +10,10 @@
     "@twins/stop-loss": "*",
     "@twins/runtime-state": "*",
     "@twins/config": "*",
-    "pg": "^8.12.0"
+    "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/pg": "^8.11.6",
-    "tsx": "^4.16.0"
+    "tsx": "^4.23.15"
   }
 }
