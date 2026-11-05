@@ -45,6 +45,12 @@ describe("staging packaging (static)", () => {
     expect(service("api")).toMatch(/TWINS_ADMIN_API_KEY: \$\{TWINS_ADMIN_API_KEY:-\}/);
     expect(service("api")).toMatch(/TWINS_PAPER_TRADING_ENABLED: \$\{TWINS_PAPER_TRADING_ENABLED:-false\}/);
     expect(service("worker")).not.toMatch(/TWINS_ADMIN_API_KEY/);
+    // provider exporter: OFF behind a profile, its own egress network, no database / Redis / broker, snapshots read-only, no ports
+    expect(service("provider-exporter")).toMatch(/profiles: \["providers"\]/); expect(service("provider-exporter")).toMatch(/networks: \[twins_providers_egress\]/);
+    expect(service("provider-exporter")).not.toMatch(/DATABASE_URL|REDIS_URL|ports:|twins_data|twins_edge|coolify|KITE|TWINS_API_KEY|TELEGRAM/);
+    expect(service("provider-exporter")).toMatch(/- \/var\/lib\/twins-snapshots:\/var\/lib\/twins-snapshots:ro/); expect(service("provider-exporter")).toMatch(/LIVE_TRADING: "false"/);
+    for (const name of ["api", "worker", "kite-ticker", "kite-login", "capture"]) expect(service(name), name).not.toMatch(/twins_providers_egress/);
+    expect(service("api")).toMatch(/- \/var\/lib\/twins-providers:\/var\/lib\/twins-providers:ro/); expect(service("api")).toMatch(/- \/var\/lib\/twins-snapshots:\/var\/lib\/twins-snapshots:ro/);
     // F1 findings 4 and 5: the feed never holds the API secret (blanked over kite.env) and only reads the token directory; kite-login is the sole token writer
     expect(service("kite-ticker")).toMatch(/TWINS_KITE_API_SECRET: ""/);
     expect(service("kite-ticker")).toMatch(/- \/var\/lib\/twins-kite:\/var\/lib\/twins-kite:ro/);
@@ -215,11 +221,11 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the eleven shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler, kite-login, kite-ticker) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(11);
+  it("a new image gets its own tag and never overwrites the running one: the twelve shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler, kite-login, kite-ticker, provider-exporter) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(12);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(13); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(14); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -279,7 +285,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(13);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(14);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);

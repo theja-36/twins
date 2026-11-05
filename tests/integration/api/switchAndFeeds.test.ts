@@ -1,11 +1,15 @@
 /**
  * Paper switch, admin route, notifications, agents status and system config against REAL PostgreSQL. Simulation only; no network, no broker.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import Fastify from "fastify";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { registerAdminRoutes } from "../../../apps/api/src/adminApi";
 import { registerAgentsRoutes } from "../../../apps/api/src/agentsApi";
+import { registerLiveRoutes } from "../../../apps/api/src/liveApi";
 import { collectNotifications, registerNotificationsRoutes } from "../../../apps/api/src/notificationsApi";
 import { registerPaperRoutes } from "../../../apps/api/src/paperApi";
 import { registerSystemRoutes } from "../../../apps/api/src/systemApi";
@@ -111,5 +115,33 @@ describe("feeds", () => {
     expect(r.environment).toMatchObject({ liveTradingEnabled: false, brokerOrders: false }); expect(r.paperTrading).toMatchObject({ effective: false }); expect(r.runtimeControls).toMatchObject({ killSwitchActive: false, intakeEnabled: true, tradingEnabled: false }); // the REAL snapshot shape (camelCase), which the frontend must read
     expect(r.risk.sizing.valid).toBe(true); expect(r.risk.circuitBreakers.valid).toBe(true);
     expect(JSON.stringify(r)).not.toMatch(/postgres(ql)?:\/\/|bearer|password|api[_-]?key|secret/i);
+  });
+});
+
+describe("live data routes (real database)", () => {
+  const NOW = new Date("2026-11-05T09:00:00.000Z"); // Thursday 14:30 IST: the market is open
+  const snap = (complete: boolean) => { const d = mkdtempSync(join(tmpdir(), "live-int-")); const w = (f: string, o: unknown) => writeFileSync(join(d, f), JSON.stringify(o)); w(".snapshot-generation.json", { status: complete ? "complete" : "building", generation: "g" }); w("last-price.json", { format: "twins-last-price-v1", as_of: "2026-11-05T08:59:30.000Z", prices: { "NSE:NIFTY": { price: 24450, as_of: "2026-11-05T08:59:30.000Z" } } }); w("ohlc.json", { format: "twins-ohlc-v1", as_of: "2026-11-05T06:00:00.000Z", series: { "NSE:NIFTY": { bars: [{ t: "2026-11-04T00:00:00+05:30", o: 24060, h: 24300, l: 24000, c: 24200 }] } } }); return d; };
+  const appFor = (o: { dir: string; admin: boolean; safety?: unknown }) => { const a = Fastify(); registerLiveRoutes(a, { db: db(), authorized: (h) => h === READ.authorization, snapshotDir: o.dir, providersDir: join(o.dir, "none"), adminConfigured: o.admin, readSafety: () => ("safety" in o ? o.safety : { tradingEnabled: false, intakeEnabled: true, killSwitchActive: false }), now: () => NOW }); return a; };
+  it("intake status: counts, bounded recent rows, masked channels, no payload or message text", async () => {
+    const r = (await appFor({ dir: snap(true), admin: true }).inject({ method: "GET", url: "/intake/status?limit=5", headers: READ })).json();
+    expect(typeof r.total).toBe("number"); expect(r.recent.length).toBeLessThanOrEqual(5);
+    for (const x of r.recent) { expect(Object.keys(x).sort()).toEqual(["attempts", "channel", "completedAt", "id", "receivedAt", "status", "type"]); expect(x.channel).toMatch(/^\*\*\*/); expect(x.id).toHaveLength(8); }
+    expect(JSON.stringify(r)).not.toMatch(/raw_payload|text|password|token/i);
+  });
+  it("market snapshot: generation, index price with the day's change, and the (absent) provider files", async () => {
+    const r = (await appFor({ dir: snap(true), admin: true }).inject({ method: "GET", url: "/market/snapshot", headers: READ })).json();
+    expect(r.generation).toMatchObject({ status: "complete" }); expect(r.indices[0]).toMatchObject({ symbol: "NIFTY", level: 24450, changePct1d: 1.033 }); expect(r.providers).toHaveLength(7); expect(r.providers.every((p: { present: boolean }) => !p.present)).toBe(true);
+  });
+  it("readiness: ready when nothing blocks, never enabled by itself; each missing prerequisite is named", async () => {
+    const good = (await appFor({ dir: snap(true), admin: true }).inject({ method: "GET", url: "/paper/readiness", headers: READ })).json();
+    expect(good).toMatchObject({ readyToEnable: true, enabledNow: false, blockers: [] });
+    const noAdmin = (await appFor({ dir: snap(true), admin: false }).inject({ method: "GET", url: "/paper/readiness", headers: READ })).json();
+    expect(noAdmin.blockers).toEqual(["admin"]);
+    const noSnap = (await appFor({ dir: snap(false), admin: true }).inject({ method: "GET", url: "/paper/readiness", headers: READ })).json();
+    expect(noSnap.blockers).toEqual(["snapshot"]);
+    const kill = (await appFor({ dir: snap(true), admin: true, safety: { killSwitchActive: true, intakeEnabled: true, tradingEnabled: false } }).inject({ method: "GET", url: "/paper/readiness", headers: READ })).json();
+    expect(kill.blockers).toEqual(["kill_switch"]);
+    const unreadable = (await appFor({ dir: snap(true), admin: true, safety: null }).inject({ method: "GET", url: "/paper/readiness", headers: READ })).json();
+    expect(unreadable.blockers).toEqual(["kill_switch"]); // an unreadable kill switch is never "clear"
   });
 });

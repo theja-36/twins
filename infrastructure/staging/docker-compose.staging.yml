@@ -236,9 +236,14 @@ services:
     # GET /health/status. The monitor directory itself stays root-private; only this export directory is mounted.
     volumes:
       - /var/lib/twins-monitor/export:/monitor:ro
+      # READ-ONLY views for GET /market/snapshot and GET /paper/readiness: the Kite snapshot generation and the provider data files. The host directories must exist (see docs/twins/PROVIDERS.md).
+      - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro
+      - /var/lib/twins-providers:/var/lib/twins-providers:ro
     environment:
       <<: *app-env
       TWINS_STATUS_DIR: /monitor
+      TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
+      TWINS_PROVIDERS_DIR: /var/lib/twins-providers
       # The API also joins the shared `coolify` network, where Coolify's own containers carry the bare aliases `postgres`
       # and `redis`. Bare names would therefore resolve to Coolify's services (and send them TWINS credentials), so the
       # API uses the unique container names, which resolve only to the TWINS containers on twins_data. Only the API
@@ -477,6 +482,35 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  # Provider exporter (news, sentiment, macro, economic calendar, market quotes; see docs/twins/PROVIDERS.md). OFF: profile `providers`, never part of `up`. It has the ONLY outbound route of the data
+  # side (network twins_providers_egress) and must not be started until the host egress allow-list for that network is installed and accepted (api.gdeltproject.org and api.stlouisfed.org, tcp/443 only).
+  # No database, no Redis, no broker, no Kite credential. It reads the Kite snapshots read-only and writes ONLY the provider data files. Secrets (TWINS_FRED_API_KEY) come from the host-only providers.env.
+  provider-exporter:
+    <<: *hardening
+    restart: unless-stopped
+    profiles: ["providers"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    user: "1000:1000"
+    command: ["node", "--import", "tsx", "/app/scripts/ops/provider-exporter.ts", "loop", "--every-min", "60"]
+    env_file:
+      - path: ./providers.env
+        required: false
+    environment:
+      APP_ENV: staging
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
+      NODE_ENV: production
+      TWINS_PROVIDERS_DIR: /var/lib/twins-providers
+      TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
+    volumes:
+      - /var/lib/twins-providers:/var/lib/twins-providers
+      - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro
+    networks: [twins_providers_egress]
+    stop_grace_period: 20s
+    mem_limit: 256m
+    cpus: 0.5
+
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks
@@ -496,6 +530,10 @@ networks:
     ipam:
       config:
         - subnet: 10.0.28.0/24   # 10.0.24-27 are taken (capture, bot, other stack, alert relay); verified free on the host 2026-11-03
+  twins_providers_egress:        # outbound (NAT) for the provider exporter ONLY; to be narrowed to the two provider hosts by a host allow-list before the first start (not installed yet)
+    ipam:
+      config:
+        - subnet: 10.0.29.0/24   # 10.0.24-28 are taken (capture, bot, other stack, alert relay, kite); verify this one is free on the host before creating
   twins_edge:                    # only the API joins this, solely so Docker can publish its loopback port
   coolify:                       # existing external network of the shared Traefik; only the API joins it
     external: true

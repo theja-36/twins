@@ -12,6 +12,7 @@
     { "path": "packages/alerting" },
     { "path": "packages/risk" },
     { "path": "packages/paper" },
+    { "path": "packages/providers" },
     { "path": "packages/historical" },
     { "path": "packages/agents" },
     { "path": "packages/stop-loss" },

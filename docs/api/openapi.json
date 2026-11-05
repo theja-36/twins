@@ -1021,6 +1021,122 @@
         }
       }
     },
+    "/intake/status": {
+      "get": {
+        "tags": [
+          "intake"
+        ],
+        "summary": "Telegram intake: counts by status, oldest open item, last received / completed, recent items (type, status, attempts, times, masked channel; never message text)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "IntakeStatus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/market/snapshot": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "The Kite snapshot generation (status, per-file age), index prices with one-day change, quote counts, and the provider data files (present, as-of, age, count)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "MarketSnapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/readiness": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "The paper-trading ENABLE checklist: each condition with pass / fail / info / manual, the blockers, readyToEnable and enabledNow. Turns nothing on",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Readiness",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
     "/openapi.json": {
       "get": {
         "tags": [

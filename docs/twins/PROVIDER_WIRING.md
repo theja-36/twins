@@ -1,4 +1,6 @@
-# Provider wiring (structure only)
+# Provider wiring (structure; superseded by PROVIDERS.md)
+
+> **Update 2026-11-06:** real exporters now exist (`packages/providers`); see [PROVIDERS.md](PROVIDERS.md) for what is wired, verified and still missing. This page keeps the original structure notes.
 
 Five data kinds the research agents need have **no writer yet**, so the agents that depend on them report UNAVAILABLE (never a pass) and a shadow assessment is INCOMPLETE/BLOCKED. `packages/agents/src/exporters/stubs.ts` records, per kind, the exact file, format id, agent setting and credential an exporter will need. The stubs are inert (no network, no credential access, no file writes) and unit-tested against the settings the rules loader really reads.
 
