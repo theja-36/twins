@@ -23,7 +23,11 @@ export interface EngineDeps extends OrchestrationDeps {
   registry: AgentRegistry;
   config: AgentEngineConfig;
   trigger?: "WORKER_PIPELINE" | "OPERATOR";
+  /** Shadow mode only: the whole evaluation is abandoned after this many milliseconds (default `SHADOW_TIMEOUT_MS`). */
+  shadowTimeoutMs?: number;
 }
+/** F1 finding 1: the upper bound on one shadow evaluation, so a hung read can never stall the live worker job. */
+export const SHADOW_TIMEOUT_MS = 8000;
 export type EngineResult =
   | { skipped: "ENGINE_DISABLED" }
   | { skipped?: undefined; runId: string; created: boolean; riskDecisionId: string; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment; halt: boolean; /** Why the flow halts or continues (`HALT_<rule>` | `NO_HALT`); `UNKNOWN` for a run stored before synthesis v2. */ haltReasonCode: string; agents: number };
@@ -173,14 +177,21 @@ export type ShadowResult =
   };
 
 /**
- * SHADOW MODE (HB-06). Evaluates a risk decision with the agents exactly as the enforcing engine would, then reports the result - and does nothing else: it performs READS only (the
+ * SHADOW MODE (HB-06). Evaluates a risk decision with the agents exactly as the enforcing engine would, then reports the result - and does nothing else: it performs READS only, bounded by `SHADOW_TIMEOUT_MS` (the
  * decision, its parsed inputs, the snapshot providers), writes no agent_* row, no risk decision, card, approval, order, fill or position, never halts the flow and never throws. Any
  * failure (including a refused runtime state: kill switch, intake off, unreadable state) is returned as a `skipped` value for the caller to log. Mutually exclusive with enforcing mode.
  */
 export async function runAgentEngineShadow(db: Db, decisionId: string, deps: EngineDeps): Promise<ShadowResult> {
+  if (!deps.config.shadow) return { skipped: "SHADOW_OFF" };
+  if (deps.config.enabled) return { skipped: "ENGINE_ENFORCING" };
+  const ms = deps.shadowTimeoutMs ?? SHADOW_TIMEOUT_MS;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timedOut = new Promise<ShadowResult>((resolve) => { timer = setTimeout(() => resolve({ skipped: "SHADOW_ERROR", errorCode: "SHADOW_TIMEOUT" }), ms); });
+  try { return await Promise.race([evaluateShadow(db, decisionId, deps), timedOut]); } finally { clearTimeout(timer); } // an abandoned evaluation only reads and never rejects; it finishes in the background
+}
+
+async function evaluateShadow(db: Db, decisionId: string, deps: EngineDeps): Promise<ShadowResult> {
   const { config, registry } = deps;
-  if (!config.shadow) return { skipped: "SHADOW_OFF" };
-  if (config.enabled) return { skipped: "ENGINE_ENFORCING" };
   try {
     try { await refuseUnlessSafe("agent_engine.shadow"); } catch (e) { return { skipped: "SHADOW_REFUSED", errorCode: typeof (e as { code?: unknown }).code === "string" ? ((e as { code: string }).code).slice(0, 60) : "refused" }; }
     const decision = await getRiskDecision(db, decisionId);

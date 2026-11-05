@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TWINS Kite egress allow-list (design: docs/twins/KITE_EGRESS_ALLOWLIST_DESIGN.md, Option B). NOT APPLIED ANYWHERE: this file only exists in the repository until the owner approves a host change.
+# TWINS Kite egress allow-list (design: docs/twins/KITE_EGRESS_ALLOWLIST_DESIGN.md, Option B). INSTALLED on the staging host 2026-11-04 (D-091); the host copy is what runs.
 # Limits the Kite network (10.0.28.0/24) to the addresses that exactly two host names currently resolve to, tcp/443 only, and DROPS everything else it sends. Reversible: ONE ipset, ONE dedicated chain and
 # ONE jump rule in DOCKER-USER; no other rule, chain, policy or table is touched (see the unit tests).
 #   twins-kite-egress.sh apply      create the set and the chain, run one refresh, insert the jump LAST (refuses if the chain exists)

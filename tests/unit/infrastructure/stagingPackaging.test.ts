@@ -36,6 +36,11 @@ describe("staging packaging (static)", () => {
     for (const name of ["api", "worker", "postgres", "redis", "capture", "alert-relay", "scheduler", "migrate", "approval-bot"]) expect(service(name), name).not.toMatch(/twins_kite_egress/); // Kite services ONLY
     // the Kite services have no database or Redis access at all
     expect(service("kite-ticker")).not.toMatch(/DATABASE_URL|REDIS_URL/);
+    // F1 findings 4 and 5: the feed never holds the API secret (blanked over kite.env) and only reads the token directory; kite-login is the sole token writer
+    expect(service("kite-ticker")).toMatch(/TWINS_KITE_API_SECRET: ""/);
+    expect(service("kite-ticker")).toMatch(/- \/var\/lib\/twins-kite:\/var\/lib\/twins-kite:ro/);
+    expect(service("kite-login")).toMatch(/- \/var\/lib\/twins-kite:\/var\/lib\/twins-kite\n/);
+    expect(service("kite-login")).not.toMatch(/twins-kite:ro/);
   });
   it("the alert relay logs to the host journal (its log is the alert delivery record and must survive a container recreate); every other service keeps the rotated json-file log", () => {
     expect(service("alert-relay")).toMatch(/logging:\s*\n\s+driver: journald\s*\n\s+options:\s*\n\s+tag: twins-alert-relay/);

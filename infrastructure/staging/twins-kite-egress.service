@@ -1,4 +1,4 @@
-# Applies the Kite-only egress rules for the Kite network (10.0.28.0/24) at boot and whenever Docker restarts. NOT INSTALLED. Install only with the Kite feed (see docs/twins/KITE_EGRESS_ALLOWLIST_DESIGN.md):
+# Applies the Kite-only egress rules for the Kite network (10.0.28.0/24) at boot and whenever Docker restarts. INSTALLED on the staging host 2026-11-04 (D-091). Install only with the Kite feed (see docs/twins/KITE_EGRESS_ALLOWLIST_DESIGN.md):
 # copy to /etc/systemd/system/, `systemctl daemon-reload && systemctl enable --now twins-kite-egress twins-kite-egress-refresh.timer`.
 # `systemctl stop` (or disable) REMOVES the rules: only do that while the Kite feed is stopped.
 [Unit]

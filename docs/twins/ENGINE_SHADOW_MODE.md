@@ -28,6 +28,7 @@ The challenger still depends on every agent and all twelve stay required by defa
 1. Merge and deploy the code (shadow OFF; no behaviour change). Verify V1-V13 as usual.
 2. Give the **worker** what the agents need to read: a read-only mount of `/var/lib/twins-snapshots` and the agent rules/provider variables (`TWINS_AGENT_SNAPSHOT_DIR`, calendars, reference) - a compose change reviewed in its own PR. Until then agents report UNAVAILABLE providers and the assessment is INCOMPLETE (a valid, harmless shadow result).
 3. Approve Q-009 (see `Q009_PRIVACY_PROPOSAL.md`): shadow mode reads parsed fields only, no message text, no model, no disclosure.
+3b. **Prerequisite (D-096, F1 self-check finding 1):** the build that bounds each shadow evaluation at `SHADOW_TIMEOUT_MS` (8 s; a timeout is logged as `agent_engine.shadow.failed` with `errorCode: SHADOW_TIMEOUT`) must be deployed first. Without it a hung evaluation could stall the worker job.
 4. Set `TWINS_AGENT_ENGINE_SHADOW=true` on the worker, recreate the worker. Watch `agent_engine.shadow.assessed` / `.failed` for a defined period (suggested: one full market week) and review INCOMPLETE rate, timeouts and `wouldHalt` share. `ENABLED` stays unset.
 5. Rollback at any step: unset the variable and recreate the worker (no data to undo - shadow writes nothing).
 6. Moving to enforcing (`ENABLED=true`, `SHADOW` unset) is a separate, audited decision that additionally requires the F1 review, HB-05 relaxation or an accepted all-twelve profile, and Stage 6 prerequisites. **Not part of this task.**

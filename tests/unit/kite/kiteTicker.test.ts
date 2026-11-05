@@ -96,7 +96,7 @@ describe("kite-ticker (fixtures only; nothing connects)", () => {
     const d = s.captured() as FeedLoopDeps;
     await expect(d.service.prepareDay()).rejects.toMatchObject({ code: "SESSION_INVALID" });
     expect(new KiteTokenStore(s.tokenFile).status()).toEqual({ present: false, reason: "missing" });
-    expect(s.logs).toContainEqual(["kite.session.invalidated", { reason: "server_rejected" }]);
+    expect(s.logs).toContainEqual(["kite.session.invalidated", { reason: "server_rejected", tokenFileCleared: true }]);
     expect(s.socks).toHaveLength(0);
     expect(d.service.ready()).toBe(false);
   });

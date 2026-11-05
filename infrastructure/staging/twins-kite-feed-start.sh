@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # TWINS Kite feed start gate (START-UP CHECK). The ONLY supported way to start the Kite ticker: it refuses unless the egress allow-list is applied, filled and fresh.
-# Installed as /opt/twins-staging/twins-kite-feed-start.sh (NOT INSTALLED until the owner starts the feed). Starting the feed is still a separate owner decision (Connect plan, login, supervised run).
+# Installed as /opt/twins-staging/twins-kite-feed-start.sh (installed on the staging host 2026-11-04, D-091). Starting the feed is still a separate owner decision (Connect plan, login, supervised run).
 #   twins-kite-feed-start.sh        runs `twins-kite-egress.sh status`; only if it exits 0 does it start the `kite-ticker` compose service. Exit 0 started, 3 refused, 2 usage.
 set -uo pipefail
 EGRESS="${EGRESS_BIN:-/opt/twins-staging/twins-kite-egress.sh}"
