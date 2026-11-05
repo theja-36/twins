@@ -310,6 +310,15 @@ services:
       # another producer is still checked). Empty = no chat approved. Options-only is a literal.
       TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
       TWINS_TELEGRAM_OPTIONS_ONLY: "true"
+      # Shadow mode (HB-06, D-094..D-097): the agents read the published snapshot generation READ-ONLY. TWINS_AGENT_ENGINE_SHADOW comes from staging.env (absent = false) so
+      # that switching shadow on or off is a one-line host change. The enforcing engine (TWINS_AGENT_ENGINE_ENABLED) is not set anywhere. Only the instrument reference and the Kite snapshot
+      # kinds are wired; calendar / news / macro / sentiment / constituent sources stay `none`, so those agents report UNAVAILABLE (an INCOMPLETE shadow assessment, never a pass).
+      TWINS_AGENT_ENGINE_SHADOW: ${TWINS_AGENT_ENGINE_SHADOW:-false}  # an empty string would be rejected by the config loader, so the off state is the explicit "false"
+      TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
+      TWINS_AGENT_SNAPSHOT_REQUIRED: instrument-reference,quotes,option-quotes,option-chain,last-price,ohlc
+      TWINS_AGENT_INSTRUMENT_REFERENCE: file:/var/lib/twins-snapshots/instrument-reference.json
+    volumes:
+      - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro  # read-only: the kite-ticker is the only writer
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
