@@ -39,6 +39,9 @@
       "path": "../../packages/risk"
     },
     {
+      "path": "../../packages/paper"
+    },
+    {
       "path": "../../packages/historical"
     }
   ],

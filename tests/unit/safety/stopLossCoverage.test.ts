@@ -36,6 +36,7 @@ describe("no approval-class state is produced outside the audited places", () =>
     "packages/decision-intelligence/src/types.ts": "the outcome type",
     "packages/decision-intelligence/src/decide.ts": "the single producer of APPROVE (guarded by assertStopLossAllowsEligibility)",
     "packages/stop-loss/src/eligibility.ts": "the eligibility lists and the invariant",
+    "packages/paper/src/service.ts": "selects the human APPROVE rows of risk_approvals to find decisions that may start a SIMULATED paper trade (paper-trading build; reads approvals, writes only paper_* tables, creates no order and grants no approval)",
     "apps/api/src/riskApi.ts": "validates the human APPROVE / REJECT ACTION of the approval API (an action recorded by the database function, which re-checks every gate; Stage 3 / Task 6) - not a decision outcome",
     "packages/risk/src/approval/service.ts": "passes the human APPROVE / REJECT action to twins_record_risk_approval; it never produces an approval-class decision outcome (Stage 3 / Task 6)",
     "packages/database/src/schema/riskApprovals.ts": "the check constraint on the recorded APPROVE / REJECT action of risk_approvals (Stage 3 / Task 6)",

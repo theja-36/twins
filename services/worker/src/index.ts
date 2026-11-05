@@ -25,6 +25,7 @@ import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusa
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { runResearchProbe } from "@twins/risk";
+import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/paper";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
@@ -913,8 +914,25 @@ if (marketWorker) {
 
 // ─── Graceful shutdown ─────────────────────────────────────────────────────
 
+// ─── Paper trading (simulation only; OFF unless TWINS_PAPER_TRADING_ENABLED=true) ────────────────────────
+// Turns APPROVED risk decisions into simulated trades and manages them (stop, targets, trailing) against the local last-price snapshot. No broker, no network, no orders/fills/positions row.
+// A malformed setting disables the loop and is logged (setting name only); it never stops the worker.
+let paperLoop: ReturnType<typeof startPaperLoop> | null = null;
+if (process.env["NODE_ENV"] !== "test") {
+  try {
+    const paperConfig = loadPaperConfig();
+    if (paperConfig.enabled) {
+      paperLoop = startPaperLoop({ db: workerDb.db, config: paperConfig, prices: snapshotPriceSource(process.env["TWINS_AGENT_SNAPSHOT_DIR"] ?? "/var/lib/twins-snapshots"), log: (event, fields) => defaultWorkerLogger.info(event, fields) });
+      defaultWorkerLogger.info("paper.loop.started", { slippageBps: paperConfig.slippageBps });
+    }
+  } catch (error) {
+    defaultWorkerLogger.error("paper.config.invalid", { errorName: error instanceof Error ? error.name : "unknown" });
+  }
+}
+
 export async function shutdown(signal: string): Promise<void> {
   console.log(`[worker] received ${signal}, shutting down gracefully`);
+  paperLoop?.stop();
   outboxReconciler?.stop();
   const closers: Array<Promise<unknown>> = [];
   if (outboxQueue) closers.push(outboxQueue.close());

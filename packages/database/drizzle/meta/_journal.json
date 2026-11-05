@@ -211,6 +211,13 @@
       "when": 1793569299859,
       "tag": "0029_p1_revoke_runtime_execution_writes",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1793889940116,
+      "tag": "0030_paper_trading",
+      "breakpoints": true
     }
   ]
 }
