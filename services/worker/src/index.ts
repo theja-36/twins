@@ -353,7 +353,7 @@ const agentRules = agentEngineConfig.enabled || agentEngineConfig.shadow ? obser
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
 const agentProviders = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-providers", () => ({ ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules), ...resolveHistoricalProviders(agentRules) })) : null;
-if (agentRules) logProviderAvailability(defaultWorkerLogger, observabilityConfig, { ...(agentProviders ?? {}), instrumentReference: agentReference }, true);
+if (agentRules) logProviderAvailability(defaultWorkerLogger, observabilityConfig, { ...(agentProviders ?? {}), instrumentReference: agentReference }, { enabled: agentEngineConfig.enabled, shadow: agentEngineConfig.shadow });
 const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
   if (!agentRules) return createDefaultRegistry();
   let r = agentRegistries.get(db);

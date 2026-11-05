@@ -118,11 +118,11 @@ export function providerAvailability(providers: Record<string, { name?: unknown 
   }
   return { configured, missing, providers: names };
 }
-export function logProviderAvailability(log: ObserverLog, cfg: ObservabilityConfig, providers: Record<string, { name?: unknown } | null | undefined>, engineEnabled: boolean): ProviderAvailability {
+export function logProviderAvailability(log: ObserverLog, cfg: ObservabilityConfig, providers: Record<string, { name?: unknown } | null | undefined>, mode: { enabled: boolean; shadow: boolean }): ProviderAvailability {
   const a = providerAvailability(providers);
   if (RANK[cfg.level] >= RANK.summary) {
-    const fields = { engineEnabled, configuredCount: a.configured.length, missingCount: a.missing.length, configured: a.configured, missing: a.missing, providerNames: a.configured.map((k) => `${k}=${a.providers[k] ?? ""}`) };
-    if (engineEnabled && a.missing.length > 0) log.warn("agent_engine.providers", fields); else log.info("agent_engine.providers", fields);
+    const fields = { engineEnabled: mode.enabled, shadowEnabled: mode.shadow, configuredCount: a.configured.length, missingCount: a.missing.length, configured: a.configured, missing: a.missing, providerNames: a.configured.map((k) => `${k}=${a.providers[k] ?? ""}`) };
+    if ((mode.enabled || mode.shadow) && a.missing.length > 0) log.warn("agent_engine.providers", fields); else log.info("agent_engine.providers", fields);
   }
   return a;
 }
