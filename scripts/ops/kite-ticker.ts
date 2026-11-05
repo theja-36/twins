@@ -16,7 +16,7 @@ import { loadSnapshotConfig } from "../../packages/agents/src/snapshots";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
 import {
   DEFAULT_FEED, KiteClient, KiteError, KiteFeedService, KiteTicker, KiteTokenStore, Session, SUPPORTED_UNDERLYINGS, builtinWebSocketFactory, getCandles, loadKiteConfig, loadKitePlan,
-  loadKiteWiringConfig, loadMarketHours, marketState, runFeedLoop, websocketSource,
+  loadKiteWiringConfig, loadMarketHours, marketState, runFeedLoop, sleepUnlessStopped, websocketSource,
   type FeedLoopDeps, type KiteInstrument, type KiteUnderlying, type LoopEnd, type QuoteSource, type WsFactory,
 } from "../../packages/kite/src/index";
 import { DEFAULT_TOKEN_FILE } from "./kite-login";
@@ -102,14 +102,16 @@ export async function main(argv: string[], deps: TickerDeps): Promise<number> {
     },
     subscribe: (instruments) => holder.ticker?.subscribe(instruments, "full"),
   });
+  const shouldStop = deps.shouldStop ?? (() => false);
   const loopDeps: FeedLoopDeps = {
     service, hours, now, log, intervalMs: intervalSeconds * 1000,
-    sleep: deps.sleep ?? ((ms) => new Promise((r) => setTimeout(r, ms))),
-    shouldStop: deps.shouldStop ?? (() => false),
+    sleep: deps.sleep ?? ((ms) => sleepUnlessStopped(ms, shouldStop)), // a stop request must not wait out the export interval
+    shouldStop,
     onWindowClose: () => holder.ticker?.stop(),
     health: () => { const s = holder.ticker?.state(); return s === "auth_failed" ? "auth_failed" : s === "failed" ? "ticker_failed" : null; },
   };
   const end = await (deps.runLoop ?? runFeedLoop)(loopDeps);
+  if (holder.ticker) log("ticker.summary", { ...holder.ticker.stats() });
   holder.ticker?.dispose();
   if (end === "stopped") return EXIT.ok;
   deps.err(JSON.stringify({ stopped: true, reason: end.stoppedBecause }));

@@ -22,6 +22,22 @@ export type LoopEnd = "stopped" | { stoppedBecause: string };
 const MAX_IDLE_SLEEP_MS = 60_000;
 const RETRY_MS = 30_000;
 
+/**
+ * A sleep that ends early once `shouldStop()` turns true (polled every `pollMs`). A plain timer would hold the process for a whole export interval after SIGTERM,
+ * which is longer than the container's stop grace period (the first live run was killed with exit 137 for exactly this reason).
+ */
+export function sleepUnlessStopped(ms: number, shouldStop: () => boolean, pollMs = 250): Promise<void> {
+  return new Promise((resolve) => {
+    const end = Date.now() + ms;
+    const tick = (): void => {
+      const left = end - Date.now();
+      if (left <= 0 || shouldStop()) { resolve(); return; }
+      setTimeout(tick, Math.min(pollMs, left));
+    };
+    tick();
+  });
+}
+
 export async function runFeedLoop(d: FeedLoopDeps): Promise<LoopEnd> {
   let wasOpen = false;
   while (!d.shouldStop()) {

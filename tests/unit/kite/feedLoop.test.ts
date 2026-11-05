@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { feedWindowOpen, loadMarketHours, runFeedLoop } from "../../../packages/kite/src/index";
+import { feedWindowOpen, loadMarketHours, runFeedLoop, sleepUnlessStopped } from "../../../packages/kite/src/index";
 
 const hours = loadMarketHours({});
 function sim(startIso: string, over: { prepareFails?: number; cycleFails?: number; healthAfter?: number } = {}) {
@@ -57,5 +57,33 @@ describe("runFeedLoop (simulated clock, no timers, no network)", () => {
     const s = sim("2026-11-03T04:00:00Z", { healthAfter: 5 });
     expect(await runFeedLoop(s.deps)).toEqual({ stoppedBecause: "auth_failed" });
     expect(s.calls.cycle).toBe(5);
+  });
+});
+
+describe("graceful stop (SIGTERM must not wait out the export interval)", () => {
+  it("sleepUnlessStopped returns promptly once the stop flag turns true", async () => {
+    let stop = false;
+    setTimeout(() => { stop = true; }, 60);
+    const t0 = Date.now();
+    await sleepUnlessStopped(30_000, () => stop, 20);
+    expect(Date.now() - t0).toBeLessThan(1500);
+  });
+  it("sleepUnlessStopped still sleeps the full time when no stop is requested", async () => {
+    const t0 = Date.now();
+    await sleepUnlessStopped(120, () => false, 20);
+    expect(Date.now() - t0).toBeGreaterThanOrEqual(100);
+  });
+  it("a stop requested during the inter-cycle sleep of an OPEN window ends the loop promptly, after the current cycle finished", async () => {
+    let stop = false;
+    let cycles = 0;
+    const service = { ready: () => true, prepareDay: async () => undefined, cycle: async () => { cycles += 1; setTimeout(() => { stop = true; }, 60); return { published: true as const, generation: "g", kinds: [] }; } };
+    const t0 = Date.now();
+    const end = await runFeedLoop({
+      service, hours, now: () => new Date("2026-11-03T05:00:00Z"), log: () => undefined, // 10:30 IST Tuesday: window open
+      sleep: (ms) => sleepUnlessStopped(ms, () => stop, 20), intervalMs: 60_000, shouldStop: () => stop,
+    });
+    expect(end).toBe("stopped");
+    expect(cycles).toBe(1);
+    expect(Date.now() - t0).toBeLessThan(2000);
   });
 });

@@ -355,6 +355,7 @@ export class KiteTicker {
       slot.limited = { instrumentKey: key, layout: t.layout, lastPrice: t.lastPrice, receivedAt: t.receivedAt, volume: t.volume, dayOhlc: t.dayOhlc, reason: "no_exchange_timestamp" };
     }
     this.statsData.ticks += 1;
+    if (this.statsData.ticks % 100 === 0) this.log("ticker.ticks_accepted", { count: this.statsData.ticks }); // count only, never a payload
     for (const cb of [...this.tickListeners]) { try { cb(t); } catch { /* ignore */ } }
   }
 

@@ -167,6 +167,15 @@ describe("ticks, freshness and what does NOT make data fresh", () => {
     const reason = Object.keys(st.rejectedByReason)[0] as string;
     expect(st.rejectedByReason[reason]).toBe(3);
   });
+  it("logs a count (never a payload) every 100 accepted ticks", () => {
+    const r = rig();
+    r.ticker.subscribe([fut], "full");
+    const sock = r.connect();
+    for (let i = 0; i < 205; i++) sock.push(frame("fut_ltp"));
+    expect(r.ticker.stats().ticks).toBe(205);
+    const counts = r.logs.filter((l) => l.event === "ticker.ticks_accepted");
+    expect(counts.map((l) => l.fields)).toEqual([{ count: 100 }, { count: 200 }]);
+  });
   it("an instrument never moves backwards in exchange time; a newer tick replaces", () => {
     const r = rig();
     r.ticker.subscribe([fut], "full");
