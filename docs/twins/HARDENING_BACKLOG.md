@@ -37,6 +37,8 @@
 | HB-24 | Capture-gap window tuned to the channel's real cadence (default 14 days) | P2 | observation |
 | HB-25 | Durable shadow-run table (shadow output is log-only, 7-day journal) | P2 | owner decision (deferred 2026-11-05, D-094) |
 | HB-26 | Diagnose 3 local integration failures (offhostBackup restore, 2x expiryBreakers) that pass on fresh hosted CI | P2 | - |
+| HB-27 | Harden the flaky real-SIGKILL crash-recovery test (failed once on node 22 on PR #77, then passed on re-run with no code change) | P2 | - |
+| HB-28 | Local integration prerequisites: `pg_dump` missing on the dev Mac makes `offhostBackup` fail locally; a long-lived local database makes `historical/patterns` and `risk/sourceIntelligence` hit their 10 s hook timeout (extends HB-26; a freshly created database passes 905 of 906 locally) | P2 | - |
 
 ## P0
 
@@ -127,6 +129,17 @@ Real-provider data (none exists), performance with many agents and large snapsho
 * **Now (owner decision 2026-11-05):** shadow evaluations are written to the structured log only (journald, 7-day retention). Deferred on purpose.
 * **Work (when asked):** a non-chained `agent_shadow_runs` table (migration, write-only for `twins_app`) holding decision id, assessment, `wouldHalt`, per-agent status / verdict / confidence, duration; needed for scoring and weight evidence (HB-09, HB-19) beyond one week.
 * **Acceptance:** a shadow run leaves exactly one row; the live tables are still untouched; retention policy documented.
+
+### HB-27 Flaky real-SIGKILL crash-recovery test
+* **Now:** `tests/integration/runtime/crashRecovery.test.ts` ("worker process crash and recovery", real SIGKILL, node 22) failed once on the pull-request run of PR #77 (`expected 0 to be 1`) while the push run of the same commit and a re-run of the failed job passed. No code involved had changed. It is timing-based (a real process is killed and a replacement must recover the job).
+* **Risk:** a red required check that is not a real regression trains everyone to re-run; a real regression could be re-run away.
+* **Work:** find the race (what the test waits for before the kill and before it asserts), replace sleeps/polls with an explicit condition and a bounded wait that fails with a clear message, run the job 50 times in CI (a manually triggered loop) and record the failure rate before and after.
+* **Acceptance:** 50 consecutive green runs of the crash-recovery job; the assertion message names what was not yet true when it gave up.
+
+### HB-28 Local integration prerequisites
+* **Now (2026-11-06):** on the developer Mac `pg_dump` is not installed, so the off-host backup test fails locally (`dump: unexpected_error`); a local database that has accumulated thousands of rows over many runs makes two suites time out in their setup hook. A freshly created database passed 905 of 906 tests (only the `pg_dump` one failed). Hosted CI is unaffected.
+* **Work:** document the local prerequisites (client tools matching server 16, creating a fresh database per full run) next to the test-target documentation, or make the suites self-contained (own schema/database, bounded setup).
+* **Acceptance:** a documented one-command local run that passes on a clean machine.
 
 ### HB-26 Diagnose three local integration failures
 * **Now:** on 2026-11-05 a full local integration run against a 6-day-old local Postgres failed 3 tests (`offhostBackup` scratch restore, two in `expiryBreakers`); the same suite passes on the fresh hosted-CI database, and none of the code involved was changed. Cause not diagnosed: likely stale local database state (rows left by earlier runs) and/or a missing or mismatched `pg_dump`/`pg_restore`.
