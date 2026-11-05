@@ -81,9 +81,9 @@ describe("paper cycle", () => {
   it("stops out at the stop, ignores stale and missing prices, and a finished trade can never be changed or deleted", async () => {
     const d = await makeDecision(); const id = await seedTrade(d.id, d.symbol);
     let clock = NOW; const p = prices(d.symbol, () => clock); const run = () => runPaperCycle(db(), { config: cfg(), prices: p, now: () => clock, env });
-    p.set(null); expect(await run()).toMatchObject({ noPrice: 1, stepped: 0 });
-    const stale = { last: async () => ({ price: 100, at: new Date(clock.getTime() - 3_600_000).toISOString() }) }; expect(await runPaperCycle(db(), { config: cfg(), prices: stale, now: () => clock, env })).toMatchObject({ stalePrice: 1, stepped: 0 });
-    clock = at(1); p.set(100); await run(); clock = at(2); p.set(94); expect(await run()).toMatchObject({ closed: 1 });
+    p.set(null); const none = await run(); expect(none.stepped).toBe(0); expect(none.noPrice).toBeGreaterThanOrEqual(1); // the database may hold other live paper trades, so counts are lower bounds
+    const stale = { last: async () => ({ price: 100, at: new Date(clock.getTime() - 3_600_000).toISOString() }) }; const old = await runPaperCycle(db(), { config: cfg(), prices: stale, now: () => clock, env }); expect(old.stepped).toBe(0); expect(old.stalePrice).toBeGreaterThanOrEqual(1);
+    clock = at(1); p.set(100); await run(); clock = at(2); p.set(94); expect((await run()).closed).toBeGreaterThanOrEqual(1);
     expect(await listPaperOutcomes(db())).toContainEqual(expect.objectContaining({ tradeId: id, outcome: "LOSS", closeReason: "STOP_LOSS" }));
     await expect(pool.query("update paper_trades set state = 'OPEN' where id = $1", [id])).rejects.toThrow(/finished paper trade/);
     await expect(pool.query("delete from paper_trades where id = $1", [id])).rejects.toThrow();
