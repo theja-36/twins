@@ -44,7 +44,7 @@ x-app-env: &app-env
 services:
   postgres:
     <<: *hardening
-    image: postgres:16-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea   # PostgreSQL 16.15, resolved 2026-10-21
+    image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5   # PostgreSQL 16.15, resolved 2026-10-21
     read_only: false            # the postgres image writes to its data dir and /var/run/postgresql
     cap_drop: ["ALL"]
     cap_add: ["CHOWN", "DAC_OVERRIDE", "FOWNER", "SETGID", "SETUID"]
