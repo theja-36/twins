@@ -27,7 +27,7 @@ function app() {
   registerPaperRoutes(a, { db: db(), authorized: (h) => h === READ.authorization });
   registerAgentsRoutes(a, { db: db(), authorized: (h) => h === READ.authorization });
   registerNotificationsRoutes(a, { db: db(), authorized: (h) => h === READ.authorization });
-  registerSystemRoutes(a, { db: db(), authorized: (h) => h === READ.authorization, readSafety: () => ({ TRADING_ENABLED: false, INTAKE_ENABLED: true, KILL_SWITCH_ACTIVE: false }) });
+  registerSystemRoutes(a, { db: db(), authorized: (h) => h === READ.authorization, readSafety: () => ({ tradingEnabled: false, intakeEnabled: true, killSwitchActive: false, versions: { TRADING_ENABLED: 1, INTAKE_ENABLED: 1, KILL_SWITCH_ACTIVE: 1 } }) });
   registerAdminRoutes(a, { db: db(), adminAuthorized: (h) => h === ADMIN.authorization });
   return a;
 }
@@ -86,11 +86,19 @@ describe("admin route (real database)", () => {
 describe("feeds", () => {
   it("notifications: newest first, bounded, includes the switch changes, masks actors, and never leaks credentials", async () => {
     await setPaperSwitch(db(), { enabled: true, actor: "operator:abcdef12", reason: "notification test on" }); await setPaperSwitch(db(), { enabled: false, actor: "operator:abcdef12", reason: "notification test off" });
-    const list = await collectNotifications(db(), 200); // the paper tests use a future fake clock, so their events sort first; look at a wide window
-    expect(list.length).toBeLessThanOrEqual(200); expect((await collectNotifications(db(), 7)).length).toBeLessThanOrEqual(7); expect(list.map((n) => n.at)).toEqual([...list.map((n) => n.at)].sort().reverse());
+    const { notifications: list, unavailableSources } = await collectNotifications(db(), 200); // the paper tests use a future fake clock, so their events sort first; look at a wide window
+    expect(unavailableSources).toEqual([]); expect(list.length).toBeLessThanOrEqual(200); expect((await collectNotifications(db(), 7)).notifications.length).toBeLessThanOrEqual(7); expect(list.map((n) => n.at)).toEqual([...list.map((n) => n.at)].sort().reverse());
     const sw = list.find((n) => n.kind === "paper_switch"); expect(sw).toBeTruthy(); expect(sw!.title).toMatch(/OFF|ON/); expect(sw!.title).not.toContain("abcdef12"); expect(sw!.title).toContain("***ef12");
     expect(JSON.stringify(list)).not.toMatch(/password|secret|bearer|token/i);
     const res = await app().inject({ method: "GET", url: "/notifications?limit=5", headers: READ }); expect(res.statusCode).toBe(200); expect(res.json().notifications.length).toBeLessThanOrEqual(5);
+  });
+  it("notifications: a source the runtime role cannot read is reported, and the other sources are still returned (no 500)", async () => {
+    const real = db();
+    const blind = new Proxy(real, { get: (t, k) => (k === "execute" ? async (q: { queryChunks?: unknown[] }) => { if (JSON.stringify(q).includes("circuit_breaker_events")) throw Object.assign(new Error("permission denied"), { code: "42501" }); return (t as typeof real).execute(q as never); } : (t as never)[k]) }) as typeof real;
+    const r = await collectNotifications(blind, 50);
+    expect(r.unavailableSources).toEqual(["circuit_breaker"]); expect(r.notifications.every((n) => n.kind !== "circuit_breaker")).toBe(true); expect(r.notifications.length).toBeGreaterThan(0);
+    const res = await (() => { const a = Fastify(); registerNotificationsRoutes(a, { db: blind, authorized: (h) => h === READ.authorization }); return a.inject({ method: "GET", url: "/notifications?limit=5", headers: READ }); })();
+    expect(res.statusCode).toBe(200); expect(res.json().unavailableSources).toEqual(["circuit_breaker"]);
   });
   it("agents status: the twelve agents with contract metadata, engine mode, and persisted runs; shadow results are declared not stored", async () => {
     const r = (await app().inject({ method: "GET", url: "/agents/status", headers: READ })).json();
@@ -100,7 +108,7 @@ describe("feeds", () => {
   });
   it("system config: safe snapshot with live trading off, paper not effective, risk limits present, and no secrets", async () => {
     const r = (await app().inject({ method: "GET", url: "/system/config", headers: READ })).json();
-    expect(r.environment).toMatchObject({ liveTradingEnabled: false, brokerOrders: false }); expect(r.paperTrading).toMatchObject({ effective: false }); expect(r.runtimeControls).toMatchObject({ KILL_SWITCH_ACTIVE: false });
+    expect(r.environment).toMatchObject({ liveTradingEnabled: false, brokerOrders: false }); expect(r.paperTrading).toMatchObject({ effective: false }); expect(r.runtimeControls).toMatchObject({ killSwitchActive: false, intakeEnabled: true, tradingEnabled: false }); // the REAL snapshot shape (camelCase), which the frontend must read
     expect(r.risk.sizing.valid).toBe(true); expect(r.risk.circuitBreakers.valid).toBe(true);
     expect(JSON.stringify(r)).not.toMatch(/postgres(ql)?:\/\/|bearer|password|api[_-]?key|secret/i);
   });
