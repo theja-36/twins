@@ -7,8 +7,8 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:4000",
-      "description": "staging API (loopback on the VPS; use an SSH tunnel)"
+      "url": "http://127.0.0.1:4400",
+      "description": "staging API through an SSH tunnel: ssh -L 4400:127.0.0.1:4110 hostinger-vps (the API listens on the VPS loopback port 4110, port 4000 inside its container)"
     }
   ],
   "components": {

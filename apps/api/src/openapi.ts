@@ -16,7 +16,7 @@ const read = (tag: string, summary: string, response: Json, parameters: Json[] =
 export const openApiDocument: Json = {
   openapi: "3.0.3",
   info: { title: "TWINS operator API", version: "1.0.0", description: "Internal, bearer-protected API for the operator frontend. Everything here is READ-ONLY except the human approval door (`/risk/decisions/{id}/approval*`, which records a decision but creates no order) and the separately-authenticated admin switch for paper trading. No route places, changes or cancels an order: no order path exists. Paper trading is simulation only." },
-  servers: [{ url: "http://127.0.0.1:4000", description: "staging API (loopback on the VPS; use an SSH tunnel)" }],
+  servers: [{ url: "http://127.0.0.1:4400", description: "staging API through an SSH tunnel: ssh -L 4400:127.0.0.1:4110 hostinger-vps (the API listens on the VPS loopback port 4110, port 4000 inside its container)" }],
   components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer", description: "TWINS_API_KEY" }, adminBearer: { type: "http", scheme: "bearer", description: "TWINS_ADMIN_API_KEY (a different, longer token; the admin route does not exist unless it is configured)" } } },
   paths: {
     "/health": { get: { tags: ["health"], summary: "Liveness (no auth)", responses: { "200": ok("status, service, appEnv, tradingMode, liveTradingEnabled") } } },
