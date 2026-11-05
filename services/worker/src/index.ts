@@ -26,7 +26,7 @@ import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { runResearchProbe } from "@twins/risk";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
-import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine } from "@twins/agents";
+import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
 import { processOutboxQueueJob, startOutboxReconciler, type OutboxJobPayload } from "./outbox.js";
@@ -349,7 +349,7 @@ function alertMarket(log: StructuredLogger, a: MarketAlert): void {
 // Stage 5 / Task 9: a malformed configuration is logged (redacted: setting names, never values) before start-up fails; the engine's records are bounded (see observability.ts).
 const observabilityConfig = observeConfigLoad(defaultWorkerLogger, "agent-observability", () => loadObservabilityConfig());
 const agentEngineConfig = observeConfigLoad(defaultWorkerLogger, "agent-engine", () => loadAgentEngineConfig());
-const agentRules = agentEngineConfig.enabled ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
+const agentRules = agentEngineConfig.enabled || agentEngineConfig.shadow ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
 const agentProviders = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-providers", () => ({ ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules), ...resolveHistoricalProviders(agentRules) })) : null;
@@ -372,6 +372,16 @@ const agentEngineFor = (log: StructuredLogger, db: Db) => async (decisionId: str
   }
 };
 
+/** Shadow mode (HB-06): evaluate and LOG only. Never throws, never halts, writes nothing; the caller ignores the outcome except for the log line. */
+const agentShadowFor = (log: StructuredLogger, db: Db) => async (decisionId: string): Promise<void> => {
+  const r = await runAgentEngineShadow(db, decisionId, { registry: agentRegistryFor(db), config: agentEngineConfig });
+  if (r.skipped === "SHADOW_OFF" || r.skipped === "ENGINE_ENFORCING") return;
+  if (r.skipped !== undefined) { log.warn("agent_engine.shadow.failed", { riskDecisionId: decisionId, reason: r.skipped, errorCode: "errorCode" in r ? r.errorCode : "ERROR" }); return; }
+  const count = (k: string) => r.agents.filter((a) => a.status === k).length;
+  const fields = { riskDecisionId: r.riskDecisionId, status: r.status, assessment: r.assessment, wouldHalt: r.wouldHalt, durationMs: r.durationMs, agents: r.agents.length, completed: count("COMPLETED"), failed: count("FAILED"), timedOut: count("TIMEOUT"), skippedAgents: count("SKIPPED"), unavailable: count("UNAVAILABLE"), perAgent: r.agents.map((a) => `${a.agentId}:${a.status}:${a.verdict}`).join(",").slice(0, 900) };
+  if (r.wouldHalt) log.warn("agent_engine.shadow.assessed", fields); else log.info("agent_engine.shadow.assessed", fields);
+};
+
 async function recordPendingRiskDecision(
   log: StructuredLogger,
   create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
@@ -381,6 +391,7 @@ async function recordPendingRiskDecision(
   db?: Db,
   intel?: () => ReturnType<typeof recordIntelligenceForSignal>,
   agents?: (decisionId: string) => ReturnType<typeof runAgentEngine>,
+  shadow?: (decisionId: string) => Promise<void>,
 ): Promise<void> {
   try {
     const r = await create();
@@ -407,6 +418,8 @@ async function recordPendingRiskDecision(
         if (ar.halt) { log.warn("worker.agent_engine.halted", { riskDecisionId: ar.riskDecisionId, assessment: ar.assessment, ...subject }); return; }
       }
     }
+    // Shadow mode (HB-06): observe-only. Runs after the enforcing hook, can never halt or fail the flow (errors are swallowed and logged), writes nothing.
+    if (shadow) { try { await shadow(latestId); } catch { log.warn("agent_engine.shadow.failed", { riskDecisionId: latestId, reason: "SHADOW_ERROR", errorCode: "ERROR" }); } }
     // Stage 3 / Task 2: append the position-size version. Planning only: no order, broker call or approval is produced.
     const sz = size ? await size() : undefined;
     if (!sz) return;
@@ -645,7 +658,7 @@ export async function processTelegramJob(
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
-    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForOptionsClaim(db, record.id), agentEngineFor(log, db));
+    if (intake.kind === "claim") await recordPendingRiskDecision(log, () => createPendingRiskDecisionForOptionsClaim(db, record.id), { optionsClaimId: record.id }, () => sizeLatestRiskDecisionForOptionsClaim(db, record.id, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForOptionsClaim(db, record.id), agentEngineFor(log, db), agentShadowFor(log, db));
     log.warn("worker.options.claim_not_ingested", {
       resultKind: intake.kind,
       assessment: assessment?.outcome,
@@ -683,7 +696,7 @@ export async function processTelegramJob(
   const recomputeKey = `telegram-ingest-recompute:${signalId}`;
   if ((await findValidationByKey(db, primaryKey)) || (await findValidationByKey(db, recomputeKey))) {
     log.info("worker.validation.skipped_existing", { signalId });
-    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db)); // resume: a crash after validation must not leave the signal without its risk decision
+    await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db), agentShadowFor(log, db)); // resume: a crash after validation must not leave the signal without its risk decision
     return { outcome: "validation_already_existed", signalId };
   }
   const [unknownProvenance] = await db
@@ -759,7 +772,7 @@ export async function processTelegramJob(
     validationReused: validation.reused,
     decision: validation.result?.outcome,
   });
-  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db));
+  await recordPendingRiskDecision(log, () => createPendingRiskDecisionForSignal(db, signalId), { signalId }, () => sizeLatestRiskDecisionForSignal(db, signalId, { requireIntelligence: true }), (id) => evaluatePortfolioRisk(db, id), db, () => recordIntelligenceForSignal(db, signalId), agentEngineFor(log, db), agentShadowFor(log, db));
   return {
     outcome: validation.reused ? "validation_already_existed" : "validation_created",
     signalId,

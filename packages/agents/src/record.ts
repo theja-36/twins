@@ -160,3 +160,42 @@ export async function getLatestAgentAssessment(db: Db, riskDecisionId: string): 
   const agents = await db.select({ agentId: schema.agentRuns.agentId, agentVersion: schema.agentRuns.agentVersion, status: schema.agentRuns.status, verdict: schema.agentRuns.verdict, confidence: schema.agentRuns.confidence, errorCode: schema.agentRuns.errorCode }).from(schema.agentRuns).where(eq(schema.agentRuns.orchestratorRunId, r.id));
   return { runId: r.id, decisionVersion: r.v, status: r.status, assessment: r.assessment, score: r.score, agents: agents.sort((a, b) => (a.agentId < b.agentId ? -1 : 1)) };
 }
+
+/** What a shadow evaluation reports: counts and codes only (no inputs, no outputs, no text). */
+export type ShadowResult =
+  | { skipped: "SHADOW_OFF" | "ENGINE_ENFORCING" }
+  | { skipped: "SHADOW_REFUSED" | "SHADOW_ERROR"; errorCode: string }
+  | {
+    skipped?: undefined; riskDecisionId: string; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment;
+    /** Whether the ENFORCING engine would have stopped the flow here (haltOn). In shadow mode nothing is ever stopped. */
+    wouldHalt: boolean; durationMs: number;
+    agents: Array<{ agentId: string; status: string; verdict: string; confidence: number | null }>;
+  };
+
+/**
+ * SHADOW MODE (HB-06). Evaluates a risk decision with the agents exactly as the enforcing engine would, then reports the result - and does nothing else: it performs READS only (the
+ * decision, its parsed inputs, the snapshot providers), writes no agent_* row, no risk decision, card, approval, order, fill or position, never halts the flow and never throws. Any
+ * failure (including a refused runtime state: kill switch, intake off, unreadable state) is returned as a `skipped` value for the caller to log. Mutually exclusive with enforcing mode.
+ */
+export async function runAgentEngineShadow(db: Db, decisionId: string, deps: EngineDeps): Promise<ShadowResult> {
+  const { config, registry } = deps;
+  if (!config.shadow) return { skipped: "SHADOW_OFF" };
+  if (config.enabled) return { skipped: "ENGINE_ENFORCING" };
+  try {
+    try { await refuseUnlessSafe("agent_engine.shadow"); } catch (e) { return { skipped: "SHADOW_REFUSED", errorCode: typeof (e as { code?: unknown }).code === "string" ? ((e as { code: string }).code).slice(0, 60) : "refused" }; }
+    const decision = await getRiskDecision(db, decisionId);
+    if (!decision) return { skipped: "SHADOW_ERROR", errorCode: "not_found" };
+    const inputs = await buildDecisionInputs(db, decision);
+    const plan = registry.resolve(config);
+    const outcome = await orchestrate(plan, config, inputs, { riskDecisionId: decision.id, decisionVersion: decision.decisionVersion }, { ...(deps.emit ? { emit: deps.emit } : {}), ...(deps.sleep ? { sleep: deps.sleep } : {}), ...(deps.now ? { now: deps.now } : {}) });
+    const a = outcome.synthesis.assessment;
+    return {
+      riskDecisionId: decision.id, status: outcome.status, assessment: a, wouldHalt: config.haltOn.includes(a),
+      durationMs: Math.max(0, outcome.completedAt.getTime() - outcome.startedAt.getTime()),
+      agents: outcome.results.map((r) => ({ agentId: r.agentId, status: r.status, verdict: r.verdict, confidence: r.confidence })).sort((x, y) => (x.agentId < y.agentId ? -1 : 1)),
+    };
+  } catch (e) {
+    const code = (e as { code?: unknown }).code;
+    return { skipped: "SHADOW_ERROR", errorCode: typeof code === "string" && /^[A-Za-z0-9_.:-]{1,60}$/.test(code) ? code : "ERROR" };
+  }
+}

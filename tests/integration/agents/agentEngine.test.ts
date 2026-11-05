@@ -7,7 +7,7 @@ import pg from "pg";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages/database/src/index";
 import { verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
-import { AgentRegistry, getLatestAgentAssessment, runAgentEngine, type AgentRunResult } from "../../../packages/agents/src/index";
+import { AgentRegistry, getLatestAgentAssessment, runAgentEngine, runAgentEngineShadow, type AgentRunResult } from "../../../packages/agents/src/index";
 import { assessApprovalEligibility, createPendingRiskDecisionForSignal, listRiskDecisions, recordSourceIntelligence, type IntelligenceResolver } from "../../../packages/risk/src/index";
 import { configureRuntimeState, inMemoryStateSource, type InMemoryStateSource } from "../../../packages/runtime-state/src/index";
 import { validIntelligence } from "../../support/intelligenceFixtures";
@@ -228,5 +228,39 @@ describe("runs against results", () => {
     expect(out.halt).toBe(true);
     const stored: Pick<AgentRunResult, "status" | "verdict">[] = (await q("select status, verdict from agent_runs where orchestrator_run_id = $1", [out.runId])) as never;
     expect(stored).toEqual([{ status: "COMPLETED", verdict: "ADVERSE" }]);
+  });
+});
+
+describe("shadow mode (HB-06): evaluates and reports, persists nothing, never halts", () => {
+  it("returns the assessment with a would-halt flag and writes NOTHING (no agent table, no decision, card, approval, order, fill or position)", async () => {
+    const id = await makeDecision();
+    const reg = registryOf(fakeAgent("agent_a", answer("ADVERSE", 90), { weight: 80 }));
+    const watched = [...CHAINS, ...LIVE];
+    const before = await counts(watched);
+    const r = await runAgentEngineShadow(db(), id, { registry: reg, config: config({ enabled: false, shadow: true, requiredAgents: ["agent_a"] }) });
+    expect(r).toMatchObject({ riskDecisionId: id, status: "COMPLETED", assessment: "RESEARCH_ADVERSE", wouldHalt: true, agents: [{ agentId: "agent_a", status: "COMPLETED", verdict: "ADVERSE", confidence: 90 }] });
+    expect(await counts(watched)).toEqual(before);
+    expect(await getLatestAgentAssessment(db(), id)).toBeUndefined();
+  });
+  it("a supportive result reports wouldHalt false; an incomplete one (required agent missing) reports INCOMPLETE and would halt", async () => {
+    const id = await makeDecision();
+    const ok = await runAgentEngineShadow(db(), id, { registry: registryOf(fakeAgent("agent_a", answer("SUPPORTIVE", 90))), config: config({ enabled: false, shadow: true, requiredAgents: ["agent_a"] }) });
+    expect(ok).toMatchObject({ assessment: "RESEARCH_SUPPORTIVE", wouldHalt: false });
+    const missing = await runAgentEngineShadow(db(), id, { registry: registryOf(fakeAgent("agent_a", answer("SUPPORTIVE", 90))), config: config({ enabled: false, shadow: true, requiredAgents: ["agent_a", "agent_missing"] }) });
+    expect(missing).toMatchObject({ assessment: "RESEARCH_INCOMPLETE", wouldHalt: true });
+  });
+  it("is a no-op unless shadow is on, and refuses to run next to the enforcing engine", async () => {
+    expect(await runAgentEngineShadow(untouchable, randomUUID(), { registry: registryOf(fakeAgent("agent_a", answer())), config: config({ enabled: false, shadow: false }) })).toEqual({ skipped: "SHADOW_OFF" });
+    expect(await runAgentEngineShadow(untouchable, randomUUID(), { registry: registryOf(fakeAgent("agent_a", answer())), config: config({ enabled: true, shadow: true }) })).toEqual({ skipped: "ENGINE_ENFORCING" });
+  });
+  it("never throws: a refused runtime state, an unknown decision and a mis-wired registry come back as skipped values", async () => {
+    const id = await makeDecision();
+    const cfg = config({ enabled: false, shadow: true, requiredAgents: ["agent_a"] });
+    const reg = registryOf(fakeAgent("agent_a", answer()));
+    state.set({ KILL_SWITCH_ACTIVE: true });
+    expect(await runAgentEngineShadow(db(), id, { registry: reg, config: cfg })).toMatchObject({ skipped: "SHADOW_REFUSED" });
+    state.set({ KILL_SWITCH_ACTIVE: false });
+    expect(await runAgentEngineShadow(db(), randomUUID(), { registry: reg, config: cfg })).toMatchObject({ skipped: "SHADOW_ERROR" });
+    expect(await runAgentEngineShadow(db(), id, { registry: registryOf(fakeAgent("agent_a", answer(), { dependsOn: ["agent_nope"] })), config: cfg })).toMatchObject({ skipped: "SHADOW_ERROR" });
   });
 });
