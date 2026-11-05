@@ -3,6 +3,7 @@ import { desc, eq, inArray, sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { getRiskDecision, intelligenceOf, latestResearchAssessment, refuseUnlessSafe, type RiskDecisionRecord } from "@twins/risk";
 import { assertPaperOnly, type PaperConfig } from "./config";
+import { getPaperSwitch } from "./switch";
 import { computeStats, toOutcome, type OutcomeContext, type OutcomeStats, type TradeOutcome } from "./learning";
 import { createTrade, exitNow, expirePending, PaperTradeError, step } from "./manager";
 import { positionView, summarize, type PnlSummary, type PositionView } from "./pnl";
@@ -12,11 +13,11 @@ import type { PaperTrade, TradeEvent } from "./types";
 /**
  * The paper cycle: (1) turn newly APPROVED risk decisions into pending paper trades, (2) step every live paper trade with the latest price, (3) square off at the session end,
  * (4) record one immutable outcome per closed trade. SIMULATION ONLY: it reads risk decisions and approvals, writes only `paper_*` tables, makes no network call, touches
- * no broker and no `orders` / `fills` / `positions` row. It refuses to run unless TWINS_PAPER_TRADING_ENABLED is true, the live-trading guard passes and the kill switch is clear.
+ * no broker and no `orders` / `fills` / `positions` row. It refuses to run unless TWINS_PAPER_TRADING_ENABLED is true AND the audited database switch is on, the live-trading guard passes and the kill switch is clear.
  */
 export interface CycleDeps { config: PaperConfig; prices: PriceSource; now?: () => Date; env?: Record<string, string | undefined> }
 export interface CycleResult {
-  skipped?: "PAPER_DISABLED"; created: number; invalid: number; stepped: number; noPrice: number; stalePrice: number; closed: number; cancelled: number; squaredOff: number; events: number;
+  skipped?: "PAPER_DISABLED" | "PAPER_SWITCH_OFF"; created: number; invalid: number; stepped: number; noPrice: number; stalePrice: number; closed: number; cancelled: number; squaredOff: number; events: number;
 }
 const empty = (): CycleResult => ({ created: 0, invalid: 0, stepped: 0, noPrice: 0, stalePrice: 0, closed: 0, cancelled: 0, squaredOff: 0, events: 0 });
 
@@ -73,6 +74,7 @@ export async function runPaperCycle(db: Db, deps: CycleDeps): Promise<CycleResul
   const { config } = deps;
   if (!config.enabled) return { ...out, skipped: "PAPER_DISABLED" };
   assertPaperOnly(deps.env);
+  if (!(await getPaperSwitch(db)).enabled) return { ...out, skipped: "PAPER_SWITCH_OFF" }; // the audited database switch is the second gate (an unreadable switch throws: fail closed)
   await refuseUnlessSafe("paper.cycle"); // kill switch / unreadable state: fail closed before anything is read or written
   const now = (deps.now ?? (() => new Date()))();
   const nowIso = now.toISOString();

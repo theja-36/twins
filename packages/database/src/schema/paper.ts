@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { riskDecisions } from "./riskDecisions";
 
 /**
@@ -64,4 +64,35 @@ export const paperOutcomes = pgTable(
     tradeUnique: uniqueIndex("paper_outcomes_trade_unique").on(t.tradeId),
     outcomeCheck: check("paper_outcomes_outcome_check", sql`${t.outcome} in ('WIN', 'LOSS', 'BREAKEVEN')`),
   }),
+);
+
+/**
+ * The runtime ON/OFF switch for paper trading (one row, id = 1, seeded OFF). It is changed ONLY through the SECURITY DEFINER function `twins_paper_set_switch` (which also appends the audit
+ * event); the runtime role can read it but cannot update it directly. Effective paper trading needs BOTH the host setting TWINS_PAPER_TRADING_ENABLED ("armed") and this switch.
+ */
+export const paperSwitch = pgTable(
+  "paper_switch",
+  {
+    id: integer("id").primaryKey(),
+    enabled: boolean("enabled").notNull().default(false),
+    version: integer("version").notNull().default(1),
+    reason: text("reason").notNull(),
+    changedBy: text("changed_by").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ singleRow: check("paper_switch_single_row_check", sql`${t.id} = 1`) }),
+);
+
+export const paperSwitchEvents = pgTable(
+  "paper_switch_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    version: integer("version").notNull(),
+    previousEnabled: boolean("previous_enabled").notNull(),
+    enabled: boolean("enabled").notNull(),
+    reason: text("reason").notNull(),
+    changedBy: text("changed_by").notNull(),
+    changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({ versionUnique: uniqueIndex("paper_switch_events_version_unique").on(t.version) }),
 );

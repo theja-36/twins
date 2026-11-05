@@ -42,6 +42,9 @@
       "path": "../../packages/paper"
     },
     {
+      "path": "../../packages/agents"
+    },
+    {
       "path": "../../packages/historical"
     }
   ],

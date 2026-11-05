@@ -20,7 +20,7 @@
 Prices come from the local `last-price` snapshot (index / cash-segment prices only, read-only mount). A price older than `TWINS_PAPER_MAX_PRICE_AGE_SEC` (120 s) is ignored. Option contracts have no price in that snapshot yet, so option paper trades stay unmonitored (pending trades still expire).
 
 ## Safety properties (all tested)
-* `TWINS_PAPER_TRADING_ENABLED` must be `true`; otherwise the cycle writes nothing.
+* **Two keys.** `TWINS_PAPER_TRADING_ENABLED=true` (host arming) AND the audited database switch (`paper_switch`, seeded OFF by migration 0031; changed only through the `twins_paper_set_switch` function, whose every change is an append-only event; the admin API route `POST /admin/paper/switch` is its only caller and exists only when a separate admin token is configured). Either one off: the cycle writes nothing. See `docs/api/README.md`.
 * Refuses to run if the shared live-trading guard fails, `TRADING_MODE` is not `paper`, or the kill switch is set / state unreadable.
 * Writes only `paper_trades` (mutable until finished), `paper_trade_events` and `paper_outcomes` (append-only triggers). A finished trade cannot be changed or deleted (trigger). `orders` / `fills` / `positions` stay read-only for the runtime roles (migration 0029) and are never touched.
 * The package imports no Kite client, network library or order/fill/position table (static test). The Kite request allow-list is unchanged: there is still no order, GTT or portfolio-write path.

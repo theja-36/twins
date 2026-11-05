@@ -41,6 +41,10 @@ describe("staging packaging (static)", () => {
     expect(service("worker")).toMatch(/TWINS_AGENT_ENGINE_SHADOW: \$\{TWINS_AGENT_ENGINE_SHADOW:-false\}/);
     expect(compose).not.toMatch(/TWINS_AGENT_ENGINE_ENABLED/);
     expect(service("worker")).toMatch(/TWINS_PAPER_TRADING_ENABLED: \$\{TWINS_PAPER_TRADING_ENABLED:-false\}/); // paper trading is off unless the host says otherwise
+    // admin switch route: its token is blank by default (the route then does not exist) and the API only mirrors the host settings for display
+    expect(service("api")).toMatch(/TWINS_ADMIN_API_KEY: \$\{TWINS_ADMIN_API_KEY:-\}/);
+    expect(service("api")).toMatch(/TWINS_PAPER_TRADING_ENABLED: \$\{TWINS_PAPER_TRADING_ENABLED:-false\}/);
+    expect(service("worker")).not.toMatch(/TWINS_ADMIN_API_KEY/);
     // F1 findings 4 and 5: the feed never holds the API secret (blanked over kite.env) and only reads the token directory; kite-login is the sole token writer
     expect(service("kite-ticker")).toMatch(/TWINS_KITE_API_SECRET: ""/);
     expect(service("kite-ticker")).toMatch(/- \/var\/lib\/twins-kite:\/var\/lib\/twins-kite:ro/);

@@ -26,7 +26,8 @@
     "ioredis": "^5.11.1",
     "@twins/alerting": "*",
     "@twins/risk": "*",
-    "@twins/paper": "*"
+    "@twins/paper": "*",
+    "@twins/agents": "*"
   },
   "devDependencies": {
     "tsx": "^4.16.0"
