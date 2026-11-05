@@ -35,6 +35,8 @@
 | HB-22 | Longer retention for audit evidence in the host journal (relay delivery records, host job logs) | P2 | owner decision |
 | HB-23 | Dead-letter replay needed the manual job-record cleanup until the replay job-id fix was deployed (**CLOSED 2026-11-03**, Deploy 3, D-085) | P1 | - |
 | HB-24 | Capture-gap window tuned to the channel's real cadence (default 14 days) | P2 | observation |
+| HB-25 | Durable shadow-run table (shadow output is log-only, 7-day journal) | P2 | owner decision (deferred 2026-11-05, D-094) |
+| HB-26 | Diagnose 3 local integration failures (offhostBackup restore, 2x expiryBreakers) that pass on fresh hosted CI | P2 | - |
 
 ## P0
 
@@ -73,7 +75,7 @@
 * **Now:** the challenger depends on every other registered agent; disabling one without the challenger makes the engine refuse to start (`DEPENDENCY_DISABLED`); all twelve are required by default; one missing snapshot makes every decision INCOMPLETE.
 * **Work:** let the challenger declare *optional* dependencies (it skips an agent that is disabled, but a *required* agent that did not complete still skips it); a required-agent profile per activation stage (HB-06).
 * **Acceptance:** disabling a non-required agent no longer requires disabling the challenger; a required agent's failure still yields INCOMPLETE.
-* **Status 2026-11-05 (D-093):** OPEN for enforcing mode. For the shadow stage the proposed answer is the *shadow-mode scope limit*: in shadow an INCOMPLETE assessment is only logged, so the dependency does not need relaxing now (see ENGINE_SHADOW_MODE.md section 2; owner to confirm).
+* **Status 2026-11-05 (D-093, D-094):** OPEN for enforcing mode. **Owner decision 2026-11-05: shadow scope only** - the challenger dependency stays as it is for shadow (an INCOMPLETE assessment is only logged); relaxing it is deferred to the enforcing stage (ENGINE_SHADOW_MODE.md section 2).
 
 ### HB-06 Staged / shadow activation
 * **Now:** enabled means halting. There is no mode that records assessments without halting.
@@ -120,6 +122,16 @@
 Real-provider data (none exists), performance with many agents and large snapshots (16 MB cap, 200k-bar series), the approval bot's callback end-to-end with the new refusal codes against a running bot, and a deployment rehearsal of migrations 0025-0027 on a copy of the staging database.
 
 ## P2 - model fidelity
+
+### HB-25 Durable shadow-run table
+* **Now (owner decision 2026-11-05):** shadow evaluations are written to the structured log only (journald, 7-day retention). Deferred on purpose.
+* **Work (when asked):** a non-chained `agent_shadow_runs` table (migration, write-only for `twins_app`) holding decision id, assessment, `wouldHalt`, per-agent status / verdict / confidence, duration; needed for scoring and weight evidence (HB-09, HB-19) beyond one week.
+* **Acceptance:** a shadow run leaves exactly one row; the live tables are still untouched; retention policy documented.
+
+### HB-26 Diagnose three local integration failures
+* **Now:** on 2026-11-05 a full local integration run against a 6-day-old local Postgres failed 3 tests (`offhostBackup` scratch restore, two in `expiryBreakers`); the same suite passes on the fresh hosted-CI database, and none of the code involved was changed. Cause not diagnosed: likely stale local database state (rows left by earlier runs) and/or a missing or mismatched `pg_dump`/`pg_restore`.
+* **Work:** re-run against a freshly created local database with matching client tools; if they still fail, fix the tests' isolation or document the local prerequisites.
+* **Acceptance:** the full integration suite passes locally on a fresh database, or the prerequisites are written into the test-target documentation.
 
 ### HB-22 Longer retention for audit evidence in the host journal
 * **Now (decision 2026-11-03: keep 7 days for now):** the alert relay logs to the host journal (D-084). `/etc/systemd/journald.conf` keeps `MaxRetentionSec=7day`, `SystemMaxUse=1G` (about 174 MB used), so the record of whether an alert reached Telegram, and the host jobs' logs, age out after a week. The two backup-failure alerts of 2026-11-02 / 11-03 could not be proven delivered partly because their log was already gone.
