@@ -16,7 +16,7 @@ npm run lint && npm run typecheck && npm test        # 157 unit files, ~3,090 te
 #   TWINS_CI=1 NODE_ENV=test LIVE_TRADING=false DATABASE_URL=postgresql://twins_ci:<pw>@127.0.0.1:5432/twins_ci REDIS_URL=redis://127.0.0.1:6379
 #   npm run db:migrate -w @twins/database && node scripts/ci/verify-migrations.mjs && npm run test:integration
 ```
-Hosted CI (GitHub Actions, 7 jobs + `ci-gate`) is green on this commit. Known: 3 integration tests failed on one reviewer-side-style stale local database but pass on a fresh one (backlog HB-26, not engine-related).
+Hosted CI (GitHub Actions, 7 jobs + `ci-gate`) is green on this commit. Known: 3 integration tests failed on the assistant's own stale local database but pass on a fresh one (backlog HB-26, not engine-related).
 
 **Glossary.** *Risk decision*: a versioned DB row for one parsed signal. *Agent*: a pure function returning a verdict (SUPPORTIVE..BLOCKING), confidence, finding codes. *Assessment*: the weighted synthesis (SUPPORTIVE/NEUTRAL/CAUTION/ADVERSE/BLOCKED/INCOMPLETE). *Halt*: enforcing mode stops the flow before sizing when the assessment is in `haltOn`. *Shadow*: same evaluation, logged only. *Snapshot generation*: the set of JSON files the Kite feed publishes atomically.
 
