@@ -869,7 +869,7 @@
         "tags": [
           "notifications"
         ],
-        "summary": "Merged newest-first feed of audited system events (not the Telegram alert history)",
+        "summary": "Merged newest-first feed of audited system events (not the Telegram alert history); a source the runtime role cannot read is listed in unavailableSources",
         "security": [
           {
             "bearerAuth": []
@@ -889,7 +889,7 @@
         ],
         "responses": {
           "200": {
-            "description": "{ notifications: Notification[] }",
+            "description": "{ notifications: Notification[], unavailableSources: string[], note: string }",
             "content": {
               "application/json": {
                 "schema": {
@@ -915,7 +915,7 @@
         "tags": [
           "system"
         ],
-        "summary": "Safe configuration snapshot as the API process sees it (limits, switches, modes; no credentials)",
+        "summary": "Safe configuration snapshot as the API process sees it (limits, switches, modes; no credentials). runtimeControls = { tradingEnabled, intakeEnabled, killSwitchActive, versions } (camelCase) or null when unreadable",
         "security": [
           {
             "bearerAuth": []

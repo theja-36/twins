@@ -78,3 +78,18 @@ describe("committed OpenAPI file", () => {
     expect(JSON.parse(readFileSync("docs/api/openapi.json", "utf8"))).toEqual(JSON.parse(JSON.stringify(openApiDocument)));
   });
 });
+
+describe("the API stays inside what the runtime database role may read", () => {
+  it("no API route file names a table the runtime role is barred from (none_for_runtime in app-role.sql)", async () => {
+    const { readFileSync, readdirSync } = await import("node:fs");
+    const sql = readFileSync("infrastructure/staging/app-role.sql", "utf8");
+    const m = /none_for_runtime text\[\] := ARRAY\[([^\]]+)\]/.exec(sql);
+    expect(m, "none_for_runtime list not found").toBeTruthy();
+    const barred = [...m![1]!.matchAll(/'([a-z_]+)'/g)].map((x) => x[1]!);
+    expect(barred.length).toBeGreaterThan(3); expect(barred).toContain("system_control_events");
+    for (const f of readdirSync("apps/api/src").filter((x) => /\.ts$/.test(x))) {
+      const code = readFileSync(`apps/api/src/${f}`, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/.*$/gm, "$1");
+      for (const t of barred) expect(code, `${f} must not read ${t}`).not.toMatch(new RegExp(`\\b${t}\\b`));
+    }
+  });
+});
