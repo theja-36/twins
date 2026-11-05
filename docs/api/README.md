@@ -5,7 +5,7 @@ Machine-readable description: [`openapi.json`](openapi.json) (OpenAPI 3.0.3, han
 To browse it: paste `openapi.json` into <https://editor.swagger.io> or run `npx @redocly/cli preview-docs docs/api/openapi.json`.
 
 ## Access
-* The API listens on the VPS loopback (port 4000). From a laptop use a tunnel: `ssh -L 4000:127.0.0.1:4000 hostinger-vps`.
+* The API listens on the VPS loopback, **port 4110** (4000 inside its container). From a laptop use a tunnel: `ssh -L 4400:127.0.0.1:4110 hostinger-vps`, then call `http://127.0.0.1:4400`. (An earlier version of this page said 4000; that was wrong for staging.)
 * Every route except `/health` needs `Authorization: Bearer <TWINS_API_KEY>`. The admin route needs a *different* token (`TWINS_ADMIN_API_KEY`) and does not exist unless that token is configured.
 * Errors are fixed bodies: `{ "error": "invalid_input" | "Unauthorized" | "not_found" | "internal_error" | ... }`. Server logs carry the route, the error class and a code, never a message or a row value.
 

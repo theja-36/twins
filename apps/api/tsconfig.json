@@ -45,6 +45,9 @@
       "path": "../../packages/agents"
     },
     {
+      "path": "../../packages/providers"
+    },
+    {
       "path": "../../packages/historical"
     }
   ],

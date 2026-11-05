@@ -36,6 +36,7 @@ describe("no approval-class state is produced outside the audited places", () =>
     "packages/decision-intelligence/src/types.ts": "the outcome type",
     "packages/decision-intelligence/src/decide.ts": "the single producer of APPROVE (guarded by assertStopLossAllowsEligibility)",
     "packages/stop-loss/src/eligibility.ts": "the eligibility lists and the invariant",
+    "apps/api/src/liveApi.ts": "counts recorded human APPROVE actions for the read-only paper-trading readiness checklist (it reads risk_approvals; it records nothing and grants nothing)",
     "apps/api/src/openapi.ts": "documents the human APPROVE / REJECT action of the approval API in the OpenAPI description (text only; no logic, no state)",
     "apps/api/src/notificationsApi.ts": "labels recorded human APPROVE / REJECT actions in the read-only notifications feed (it reads risk_approvals; it records nothing and grants nothing)",
     "packages/paper/src/service.ts": "selects the human APPROVE rows of risk_approvals to find decisions that may start a SIMULATED paper trade (paper-trading build; reads approvals, writes only paper_* tables, creates no order and grants no approval)",

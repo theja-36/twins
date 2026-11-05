@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { registerAdminRoutes } from "../../../apps/api/src/adminApi";
 import { registerAgentsRoutes } from "../../../apps/api/src/agentsApi";
 import { registerIntelligenceRoutes } from "../../../apps/api/src/intelligenceApi";
+import { registerLiveRoutes } from "../../../apps/api/src/liveApi";
 import { registerNotificationsRoutes } from "../../../apps/api/src/notificationsApi";
 import { documentedRoutes, openApiDocument, registerOpenApiRoute } from "../../../apps/api/src/openapi";
 import { registerPaperRoutes } from "../../../apps/api/src/paperApi";
@@ -20,6 +21,7 @@ function appWithAllRoutes() {
   registerRiskRoutes(app, { db: fakeDb, authorized }); registerIntelligenceRoutes(app, { db: fakeDb, authorized } as never); registerPaperRoutes(app, { db: fakeDb, authorized });
   registerAgentsRoutes(app, { db: fakeDb, authorized }); registerNotificationsRoutes(app, { db: fakeDb, authorized }); registerSystemRoutes(app, { db: fakeDb, authorized, readSafety: () => ({}) });
   registerAdminRoutes(app, { db: fakeDb, adminAuthorized }); registerOpenApiRoute(app, { authorized });
+  registerLiveRoutes(app, { db: fakeDb, authorized, snapshotDir: "/nonexistent", providersDir: "/nonexistent", adminConfigured: false, readSafety: () => ({}) });
   return { app, seen };
 }
 
@@ -48,8 +50,8 @@ describe("OpenAPI document", () => {
 describe("new read routes", () => {
   it("are bearer-protected and validate input before touching the database", async () => {
     const { app } = appWithAllRoutes(); const h = { authorization: "Bearer ok" };
-    for (const url of ["/agents/status", "/notifications", "/system/config"]) expect((await app.inject({ method: "GET", url })).statusCode, url).toBe(401);
-    for (const url of ["/agents/status?limit=0", "/agents/status?limit=101", "/notifications?limit=0", "/notifications?limit=999", "/notifications?limit=x"]) expect((await app.inject({ method: "GET", url, headers: h })).statusCode, url).toBe(400);
+    for (const url of ["/agents/status", "/notifications", "/system/config", "/intake/status", "/market/snapshot", "/paper/readiness"]) expect((await app.inject({ method: "GET", url })).statusCode, url).toBe(401);
+    for (const url of ["/agents/status?limit=0", "/agents/status?limit=101", "/notifications?limit=0", "/notifications?limit=999", "/notifications?limit=x", "/intake/status?limit=0", "/intake/status?limit=101"]) expect((await app.inject({ method: "GET", url, headers: h })).statusCode, url).toBe(400);
     for (const method of ["POST", "PUT", "PATCH", "DELETE"] as const) for (const url of ["/agents/status", "/notifications", "/system/config"]) expect((await app.inject({ method, url, headers: h })).statusCode, `${method} ${url}`).toBe(404);
   });
 });

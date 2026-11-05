@@ -27,7 +27,8 @@
     "@twins/alerting": "*",
     "@twins/risk": "*",
     "@twins/paper": "*",
-    "@twins/agents": "*"
+    "@twins/agents": "*",
+    "@twins/providers": "*"
   },
   "devDependencies": {
     "tsx": "^4.16.0"

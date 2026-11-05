@@ -57,6 +57,7 @@ import { registerNotificationsRoutes } from "./notificationsApi.js";
 import { registerSystemRoutes } from "./systemApi.js";
 import { registerAdminRoutes } from "./adminApi.js";
 import { registerOpenApiRoute } from "./openapi.js";
+import { registerLiveRoutes } from "./liveApi.js";
 import { createIntakeService, type IntakeEnqueue } from "./intakeService.js";
 import {
   acceptCorrelationId,
@@ -336,6 +337,8 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   registerNotificationsRoutes(app, { db, authorized: checkBearerToken }); // read-only merged system-event feed
   registerSystemRoutes(app, { db, authorized: checkBearerToken, readSafety: () => currentRuntimeState().snapshot() }); // read-only safe configuration snapshot
   registerOpenApiRoute(app, { authorized: checkBearerToken });
+  const adminToken = process.env["TWINS_ADMIN_API_KEY"];
+  registerLiveRoutes(app, { db, authorized: checkBearerToken, snapshotDir: process.env["TWINS_AGENT_SNAPSHOT_DIR"] || "/var/lib/twins-snapshots", providersDir: process.env["TWINS_PROVIDERS_DIR"] || "/var/lib/twins-providers", adminConfigured: adminToken !== undefined && adminToken.length >= 32 && adminToken !== apiKey, readSafety: () => currentRuntimeState().snapshot() }); // read-only intake / market / provider files / paper readiness
   // The admin route exists ONLY when a separate, long admin token is configured (it can only flip the audited paper-trading switch).
   const adminKey = process.env["TWINS_ADMIN_API_KEY"];
   if (adminKey !== undefined && adminKey !== "" && adminKey.length >= 32 && adminKey !== apiKey) {
