@@ -196,9 +196,9 @@ describe("rule configuration (conservative defaults, strict overrides)", () => {
 });
 
 describe("worker wiring: the production agents exist only when the engine is explicitly enabled", () => {
-  it("the worker registers them only if enabled, loads the rules and the reference only then, and otherwise uses the empty registry", () => {
+  it("the worker registers them only if enabled (or in shadow mode), loads the rules and the reference only then, and otherwise uses the empty registry", () => {
     const w = readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8");
-    expect(w).toMatch(/const agentRules = agentEngineConfig\.enabled \? observeConfigLoad\(defaultWorkerLogger, \"agent-rules\", \(\) => loadAgentRulesConfig\(\)\) : null;/);
+    expect(w).toMatch(/const agentRules = agentEngineConfig\.enabled \|\| agentEngineConfig\.shadow \? observeConfigLoad\(defaultWorkerLogger, \"agent-rules\", \(\) => loadAgentRulesConfig\(\)\) : null;/);
     expect(w).toMatch(/const agentReference = agentRules \? observeConfigLoad\(defaultWorkerLogger, \"agent-instrument-reference\", \(\) => resolveInstrumentReference\(/);
     expect(w).toMatch(/if \(!agentRules\) return createDefaultRegistry\(\);/);
     expect(createDefaultRegistry().snapshot()).toEqual([]);

@@ -134,6 +134,11 @@ describe("configuration (disabled by default, strict)", () => {
     const c = loadAgentEngineConfig({});
     expect(c).toMatchObject({ enabled: false, requiredAgents: ["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"], maxConcurrency: 4, haltOn: ["RESEARCH_BLOCKED", "RESEARCH_INCOMPLETE", "RESEARCH_ADVERSE"] });
   });
+  it("shadow mode is off by default and opt-in on its own (enforcing stays off)", () => {
+    expect(loadAgentEngineConfig({})).toMatchObject({ enabled: false, shadow: false });
+    expect(loadAgentEngineConfig({ TWINS_AGENT_ENGINE_SHADOW: "true" })).toMatchObject({ enabled: false, shadow: true });
+    expect(loadAgentEngineConfig({ TWINS_AGENT_ENGINE_SHADOW: "false", TWINS_AGENT_ENGINE_ENABLED: "true" })).toMatchObject({ enabled: true, shadow: false });
+  });
   it("parses overrides", () => {
     const c = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: "agent_b, agent_a", TWINS_AGENT_ENGINE_DISABLED_AGENTS: "agent_z", TWINS_AGENT_ENGINE_WEIGHTS: '{"agent_a":70}', TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "2", TWINS_AGENT_ENGINE_HALT_ON: "RESEARCH_BLOCKED" });
     expect(c).toMatchObject({ enabled: true, requiredAgents: ["agent_a", "agent_b"], disabledAgents: ["agent_z"], weights: { agent_a: 70 }, maxConcurrency: 2, haltOn: ["RESEARCH_BLOCKED"] });
@@ -143,5 +148,7 @@ describe("configuration (disabled by default, strict)", () => {
     ["required and disabled", { TWINS_AGENT_ENGINE_REQUIRED: "agent_a", TWINS_AGENT_ENGINE_DISABLED_AGENTS: "agent_a" }], ["non-JSON weights", { TWINS_AGENT_ENGINE_WEIGHTS: "{nope" }],
     ["an out-of-range weight", { TWINS_AGENT_ENGINE_WEIGHTS: '{"agent_a":500}' }], ["concurrency 0", { TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "0" }], ["concurrency 99", { TWINS_AGENT_ENGINE_MAX_CONCURRENCY: "99" }],
     ["an unknown halt assessment", { TWINS_AGENT_ENGINE_HALT_ON: "RESEARCH_GREAT" }],
+    ["a non-boolean shadow flag", { TWINS_AGENT_ENGINE_SHADOW: "1" }],
+    ["shadow AND enforcing together", { TWINS_AGENT_ENGINE_SHADOW: "true", TWINS_AGENT_ENGINE_ENABLED: "true" }],
   ])("a malformed override (%s) THROWS instead of falling back", (_n, env) => { expect(code(() => loadAgentEngineConfig(env))).toBe("INVALID_ENGINE_CONFIG"); });
 });

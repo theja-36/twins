@@ -73,11 +73,13 @@
 * **Now:** the challenger depends on every other registered agent; disabling one without the challenger makes the engine refuse to start (`DEPENDENCY_DISABLED`); all twelve are required by default; one missing snapshot makes every decision INCOMPLETE.
 * **Work:** let the challenger declare *optional* dependencies (it skips an agent that is disabled, but a *required* agent that did not complete still skips it); a required-agent profile per activation stage (HB-06).
 * **Acceptance:** disabling a non-required agent no longer requires disabling the challenger; a required agent's failure still yields INCOMPLETE.
+* **Status 2026-11-05 (D-093):** OPEN for enforcing mode. For the shadow stage the proposed answer is the *shadow-mode scope limit*: in shadow an INCOMPLETE assessment is only logged, so the dependency does not need relaxing now (see ENGINE_SHADOW_MODE.md section 2; owner to confirm).
 
 ### HB-06 Staged / shadow activation
 * **Now:** enabled means halting. There is no mode that records assessments without halting.
 * **Work:** a `SHADOW` mode: the engine runs and records, the worker never halts on it, eligibility ignores it; the observability record says `shadow`. Switching from shadow to enforcing is an audited control change.
 * **Acceptance:** in shadow mode an ADVERSE assessment is recorded and logged but the flow continues and eligibility is unchanged; in enforcing mode both halt.
+* **Status 2026-11-05 (D-093):** IMPLEMENTED in code (`TWINS_AGENT_ENGINE_SHADOW`, `runAgentEngineShadow`; logs only, no table; mutually exclusive with enforcing), merged only after owner approval; NOT deployed, NOT activated. Activation path: ENGINE_SHADOW_MODE.md section 3.
 
 ### HB-07 Process isolation and CPU / memory limits
 * **Now:** agents run in the worker process; the timeout is cooperative (the result is ignored, but a CPU-bound agent blocks the event loop). Today every agent is first-party and deterministic.
@@ -112,6 +114,7 @@
 * **Now:** records go to the structured log only. The alert destination is deferred (Q-018 / D-042).
 * **Work:** map `agent_engine.run.failed`, `config.invalid`, repeated `run.completed` with INCOMPLETE, and a missing-provider `providers` warning to the existing alerting package once the destination is approved; rate-limit and de-duplicate.
 * **Acceptance:** a simulated failure produces exactly one alert per window; nothing is sent while the destination is unconfigured.
+* **Status 2026-11-05 (D-093):** rules for `agent_engine.config.invalid`, `agent_engine.run.failed`, `agent_engine.shadow.failed` added (unit-tested); delivery proven through the host relay to Telegram. Not alerted by design: per-decision INCOMPLETE / would-halt. The destination (owner Telegram via relay) is the existing approved one.
 
 ### HB-20 Test gaps
 Real-provider data (none exists), performance with many agents and large snapshots (16 MB cap, 200k-bar series), the approval bot's callback end-to-end with the new refusal codes against a running bot, and a deployment rehearsal of migrations 0025-0027 on a copy of the staging database.
