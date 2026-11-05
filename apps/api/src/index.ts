@@ -52,6 +52,11 @@ import { buildStatus } from "./statusSurface.js";
 import { registerRiskRoutes } from "./riskApi.js";
 import { registerIntelligenceRoutes } from "./intelligenceApi.js";
 import { registerPaperRoutes } from "./paperApi.js";
+import { registerAgentsRoutes } from "./agentsApi.js";
+import { registerNotificationsRoutes } from "./notificationsApi.js";
+import { registerSystemRoutes } from "./systemApi.js";
+import { registerAdminRoutes } from "./adminApi.js";
+import { registerOpenApiRoute } from "./openapi.js";
 import { createIntakeService, type IntakeEnqueue } from "./intakeService.js";
 import {
   acceptCorrelationId,
@@ -327,6 +332,15 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
 
   // ── Health check (no auth) ──────────────────────────────────────────────────
   registerRiskRoutes(app, { db, authorized: checkBearerToken }); // Stage 3 / Task 6: bearer-protected internal risk approval API
+  registerAgentsRoutes(app, { db, authorized: checkBearerToken }); // read-only agent status
+  registerNotificationsRoutes(app, { db, authorized: checkBearerToken }); // read-only merged system-event feed
+  registerSystemRoutes(app, { db, authorized: checkBearerToken, readSafety: () => currentRuntimeState().snapshot() }); // read-only safe configuration snapshot
+  registerOpenApiRoute(app, { authorized: checkBearerToken });
+  // The admin route exists ONLY when a separate, long admin token is configured (it can only flip the audited paper-trading switch).
+  const adminKey = process.env["TWINS_ADMIN_API_KEY"];
+  if (adminKey !== undefined && adminKey !== "" && adminKey.length >= 32 && adminKey !== apiKey) {
+    registerAdminRoutes(app, { db, adminAuthorized: (header) => { if (!header) return false; const [scheme, token] = header.split(" "); return scheme?.toLowerCase() === "bearer" && !!token && constantTimeCompare(token, adminKey); } });
+  }
   registerPaperRoutes(app, { db, authorized: checkBearerToken }); // paper trading: bearer-protected, READ-ONLY (simulation; no order route exists)
   registerIntelligenceRoutes(app, { db, authorized: checkBearerToken }); // Stage 4 / Task 5: bearer-protected, read-only source intelligence API
 

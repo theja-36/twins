@@ -250,6 +250,11 @@ services:
       HOST: 0.0.0.0              # inside the container only; the host publish below is loopback-only
       PORT: "4000"
       TWINS_API_KEY: ${TWINS_API_KEY:?set TWINS_API_KEY}
+      # Display-only copies of the host settings, so GET /agents/status, /paper/status and /system/config describe what the worker is running with. The API never runs agents or paper trades.
+      TWINS_AGENT_ENGINE_SHADOW: ${TWINS_AGENT_ENGINE_SHADOW:-false}
+      TWINS_PAPER_TRADING_ENABLED: ${TWINS_PAPER_TRADING_ENABLED:-false}
+      # Admin token for the audited paper-trading switch (POST /admin/paper/switch). EMPTY (default) = the route does not exist. Needs 32+ characters and must differ from TWINS_API_KEY.
+      TWINS_ADMIN_API_KEY: ${TWINS_ADMIN_API_KEY:-}
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?set TELEGRAM_WEBHOOK_SECRET}
       TELEGRAM_SIGNAL_EXCHANGE: NSE
       # Telegram intake guards (deny by default). Empty/unset approves NO chat; the approved numeric test-chat id is added to

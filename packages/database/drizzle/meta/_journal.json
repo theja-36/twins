@@ -218,6 +218,13 @@
       "when": 1793889940116,
       "tag": "0030_paper_trading",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793912565359,
+      "tag": "0031_paper_switch",
+      "breakpoints": true
     }
   ]
 }

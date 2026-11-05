@@ -1,0 +1,1060 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TWINS operator API",
+    "version": "1.0.0",
+    "description": "Internal, bearer-protected API for the operator frontend. Everything here is READ-ONLY except the human approval door (`/risk/decisions/{id}/approval*`, which records a decision but creates no order) and the separately-authenticated admin switch for paper trading. No route places, changes or cancels an order: no order path exists. Paper trading is simulation only."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:4000",
+      "description": "staging API (loopback on the VPS; use an SSH tunnel)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "TWINS_API_KEY"
+      },
+      "adminBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "TWINS_ADMIN_API_KEY (a different, longer token; the admin route does not exist unless it is configured)"
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Liveness (no auth)",
+        "responses": {
+          "200": {
+            "description": "status, service, appEnv, tradingMode, liveTradingEnabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/status": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Database, Redis, runtime controls, outbox counts, last backup and audit verification",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "status document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Recent risk decisions (newest first)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "APPROVED_FOR_REVIEW",
+                "REJECTED",
+                "EXPIRED",
+                "SUPERSEDED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ decisions: DecisionSummary[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions/{id}/summary": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "One decision (safe fields only)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DecisionSummary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions/{id}/approval-eligibility": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Whether the decision may be approved now, with reasons",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SafeEligibility",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions/{id}/intelligence": {
+      "get": {
+        "tags": [
+          "intelligence"
+        ],
+        "summary": "Source intelligence recorded for the decision",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "intelligence summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/approvals": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Recent human approvals and rejections (approver masked)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ approvals: ApprovalSummary[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions/{id}/approval-card": {
+      "post": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Create the approval card (does not send it; the approval bot delivers it)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "card already existed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "card created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "409": {
+            "description": "not_approval_eligible, with reasons"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/risk/decisions/{id}/approval": {
+      "post": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Record APPROVE or REJECT of the decision version (the database re-checks every gate). Creates NO order.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "action",
+                  "actor"
+                ],
+                "properties": {
+                  "action": {
+                    "enum": [
+                      "APPROVE",
+                      "REJECT"
+                    ]
+                  },
+                  "actor": {
+                    "type": "string",
+                    "pattern": "^operator:[A-Za-z0-9._-]{1,64}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "409": {
+            "description": "duplicate or refused"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/intelligence/source": {
+      "get": {
+        "tags": [
+          "intelligence"
+        ],
+        "summary": "Source scorecard / trust tier lookup",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "label",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "asOf",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "source intelligence",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/intelligence/estimate": {
+      "post": {
+        "tags": [
+          "intelligence"
+        ],
+        "summary": "Calibrated confidence estimate for a hypothetical signal (read-only computation)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "estimate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/status": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Paper trading: effective state, host arming, audited switch and its history, configuration and P&L summary",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "PaperStatus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/summary": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Open / pending / closed counts, exposure, realised and unrealised P&L",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "PnlSummary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/positions": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Simulated trades with stop, targets, last price, P&L and R",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_ENTRY",
+                "OPEN",
+                "CLOSED",
+                "CANCELLED"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ positions: PositionView[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/trades/{id}/events": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Append-only event history of one simulated trade",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ events: [] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/outcomes": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Recent closed-trade outcomes (learning-loop input)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ outcomes: TradeOutcome[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/paper/outcomes/stats": {
+      "get": {
+        "tags": [
+          "paper"
+        ],
+        "summary": "Win rate, expectancy, profit factor, drawdown and breakdowns; says when the sample is too small",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OutcomeStats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/agents/status": {
+      "get": {
+        "tags": [
+          "agents"
+        ],
+        "summary": "Research agents (contract metadata), engine mode and recent PERSISTED runs (shadow results are logged, not stored)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "AgentsStatus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "tags": [
+          "notifications"
+        ],
+        "summary": "Merged newest-first feed of audited system events (not the Telegram alert history)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ notifications: Notification[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/system/config": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "summary": "Safe configuration snapshot as the API process sees it (limits, switches, modes; no credentials)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "SystemConfig",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/admin/paper/switch": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "summary": "Turn the audited paper-trading switch on or off (needs the admin token; has no effect unless the host has armed paper trading; enabling is refused while the live-trading guard fails)",
+        "security": [
+          {
+            "adminBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "enabled",
+                  "actor",
+                  "reason"
+                ],
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "actor": {
+                    "type": "string",
+                    "pattern": "^(operator|service):[A-Za-z0-9._-]{1,64}$"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "unchanged",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "enabled or disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "409": {
+            "description": "live_trading_guard_failed"
+          },
+          "500": {
+            "description": "internal_error"
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "This document",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OpenAPI 3 document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    }
+  }
+}

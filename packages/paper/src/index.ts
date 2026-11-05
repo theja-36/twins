@@ -6,3 +6,4 @@ export * from "./learning";
 export * from "./prices";
 export * from "./service";
 export * from "./loop";
+export * from "./switch";
