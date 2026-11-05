@@ -1,0 +1,12 @@
+# Every 30 seconds (the WebSocket load balancer's DNS TTL is 60 s; entries live 10 minutes). NOT INSTALLED.
+[Unit]
+Description=TWINS providers egress address-set refresh timer
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=30s
+AccuracySec=1s
+Unit=twins-providers-egress-refresh.service
+
+[Install]
+WantedBy=timers.target
