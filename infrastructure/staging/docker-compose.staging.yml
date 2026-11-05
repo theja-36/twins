@@ -317,6 +317,7 @@ services:
       TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
       TWINS_AGENT_SNAPSHOT_REQUIRED: instrument-reference,quotes,option-quotes,option-chain,last-price,ohlc
       TWINS_AGENT_INSTRUMENT_REFERENCE: file:/var/lib/twins-snapshots/instrument-reference.json
+      TWINS_PAPER_TRADING_ENABLED: ${TWINS_PAPER_TRADING_ENABLED:-false}  # paper (simulated) trading loop; OFF unless true. Simulation only: no broker, no orders/fills/positions rows.
     volumes:
       - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro  # read-only: the kite-ticker is the only writer
     depends_on:

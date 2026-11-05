@@ -27,6 +27,7 @@
     "ioredis": "^5.11.1",
     "@twins/agents": "*",
     "@twins/alerting": "*",
+    "@twins/paper": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {
