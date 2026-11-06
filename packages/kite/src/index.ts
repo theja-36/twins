@@ -22,3 +22,4 @@ export * from "./tokenStore";
 export * from "./marketHours";
 export * from "./feedService";
 export * from "./feedLoop";
+export * from "./barsDataset";

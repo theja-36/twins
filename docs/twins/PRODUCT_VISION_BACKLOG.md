@@ -70,3 +70,6 @@ One short discovery note per P0 feature: what already exists in the repository, 
 ## Build status update (2026-11-06)
 * Package 2 (#1 adaptive management + #3 reduce-only sizing) merged (#101) and deployed (Deploy 17, `main-6b5161c8`, no migration). Pure functions, not wired.
 * #5 outcome attribution: first slice built (read-only stratified report with THIN flags, see [OUTCOME_ATTRIBUTION.md](OUTCOME_ATTRIBUTION.md)). #4 options risk waits for the Kite token refresh.
+
+## Priority update (2026-11-06, owner)
+Dhan skipped for now (converter kept idle). Order: (a) Kite token refresh and feed run, (b) Marketaux reply and adapter activation, (c) archive import with Kite historical bars, (d) #4 options risk from Kite data. See [KITE_REFRESH_PREP.md](KITE_REFRESH_PREP.md) and the refined archive plan.
