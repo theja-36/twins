@@ -107,8 +107,10 @@ describe("what the providers package may and may not do (static)", () => {
     }
     const fredHost = /FRED_HOST = "([a-z0-9.-]+)"/.exec(code.find(([f]) => f === "fred.ts")![1])?.[1];
     expect(fredHost).toBe("api.stlouisfed.org"); // the FRED URLs are built from this constant
+    const mxHost = /MARKETAUX_HOST = "([a-z0-9.-]+)"/.exec(code.find(([f]) => f === "marketaux.ts")![1])?.[1];
+    expect(mxHost).toBe("api.marketaux.com"); // the Marketaux URL is built from this constant
     expect([...hosts]).toEqual(["api.gdeltproject.org"]); // every other literal https URL host would show up here
-    expect(code.map(([, t]) => t).join("\n")).not.toMatch(/https:\/\/(?!api\.gdeltproject\.org|\$\{FRED_HOST\})/);
+    expect(code.map(([, t]) => t).join("\n")).not.toMatch(/https:\/\/(?!api\.gdeltproject\.org|\$\{FRED_HOST\}|\$\{MARKETAUX_HOST\})/);
   });
   it("the CLI exposes no write command beyond publishing files", () => {
     const cli = readFileSync(join(process.cwd(), "scripts/ops/provider-exporter.ts"), "utf8");

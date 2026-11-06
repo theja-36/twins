@@ -6,3 +6,4 @@ export * from "./calendar";
 export * from "./macro";
 export * from "./marketdata";
 export * from "./runner";
+export * from "./marketaux";
