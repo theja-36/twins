@@ -54,3 +54,21 @@ It reads the local export, runs the same preparation and normalization the impor
 **Tests:** `tests/unit/historical/archiveProfile.test.ts` (9): classification of every category, counts and dates, coverage and bar plan, invalid / duplicate / revision handling, no text leakage, empty-signal archive (null shares, not NaN), determinism, CLI usage and exit codes.
 
 **Still needed from the owner:** the archive file, and a go for the real import after reading the profile.
+
+## Strategy update 2026-11-07 (owner): no archive file; live capture is the primary source
+Owner decision: the Telegram archive is SKIPPED (no export option; manual copying is slow and incomplete). Optional later: hand-copy 50-100 recent signals for early patterns. Live capture (the Telegram bot) is the primary source from Monday 2026-11-09. #17 stays blocked (paper off).
+
+**What read-only checks of staging showed (2026-11-07), which change the plan:**
+1. **Live capture is already running and has data:** 126 captured messages / 126 options claims (2026-10-21 to 2026-11-06; 77 in the last 7 days). No plain `signals` rows (all options claims).
+2. **The risk pipeline already runs on them:** 70 risk decisions (two versions each, 140 rows), latest 2026-11-06 09:40 UTC, all PENDING.
+3. **None of them can be sized, and that will not change by waiting:** every decision has trust tier UNKNOWN (reason `source_intelligence_unavailable`, 70 of 70, because no source scorecard exists), and 70 of 70 carry a stop-loss problem (66 ambiguous, 3 invalid, 1 missing). Sizing rejects an UNKNOWN tier by design, so **no decision reaches SIZED**.
+4. **Consequence for what was just deployed:** the reduce-only sizing shadow only observes SIZED decisions, so with the current traffic it would log nothing even when switched on. Attribution (#5) reads `historical_*` outcome labels, which live capture does not write, so it would also stay empty.
+
+**Why this matters:** trust tiers come from scorecards, scorecards come from evaluated outcome labels, and labels need (a) the signals in the `historical_*` tables and (b) price bars. Without some history, tiers stay UNKNOWN and the sizing / shadow / attribution chain never starts, whatever the volume of live capture.
+
+**Options (owner decision needed):**
+* **A. Bridge the capture we already hold (recommended):** a read-only exporter turns the captured messages in our own database into the importer's JSONL format; they go through the existing profile -> dry-run -> import -> evaluate (with Kite bars after the refresh) -> scorecard path. That gives a real 16-day history now without any Telegram export, and the same exporter keeps feeding the pipeline as capture grows. Cost: a small read-only tool; the import itself still needs your go. Limits: 126 claims is a thin sample (most strata will read THIN), and expired options cannot be verified from Kite history, so the verifiable share may be small (the profiler measures it first).
+* **B. Wait for accumulation only:** nothing flows until captured volume is enough for scorecards, but scorecards cannot be built without the bridge anyway, so B alone does not unblock tiers.
+* **C. Hand-copied 50-100 signals later:** same path as A with a smaller, curated set.
+
+Stop-loss ambiguity (66 of 70) is a separate signal-quality finding: the parser cannot tell what the stop refers to (premium or underlying) for most claims. It deserves its own look because even with tiers, ambiguous stops are blocked by the mandatory-stop rule.

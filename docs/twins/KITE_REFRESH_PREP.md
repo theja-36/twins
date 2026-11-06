@@ -40,3 +40,10 @@ Your go for the live run (step 2 onward), the day and time, and whether to insta
 * **Kite login and supervised feed run: Monday 2026-11-09, 09:00 IST.** Owner does the browser login; I supervise the feed run (egress check first, then verify, check-config, feed start, checks in step 5).
 * **Token-check timer installed** (weekdays 08:30 IST). Note: it fires at 08:30 IST, before the 09:00 login, so on Monday it will raise the CRITICAL "token not usable" alert as a reminder; that alert is expected and not a fault. A dry run (alert disabled) confirmed it reports `token_expired` for the current token.
 * Feed window is 08:55-15:40 IST; 09:00 is inside it.
+
+## Preflight script (installed 2026-11-07)
+`/opt/twins-staging/twins-kite-preflight.sh` (source: `infrastructure/staging/twins-kite-preflight.sh`) is a read-only go/no-go checklist for the morning of the run. It makes no network request, reads no secret value (kite.env variable names and the plan only; the token file's timestamp only), starts nothing, and always exits 0. It prints PASS / WARN / FAIL per check and a summary: clock and feed window, egress allow-list, token file age, kite.env contents by name, safety flags inside the running api and worker (must be LIVE false, paper false, enforcing unset, shadow true), services up, feed not already running, provider file freshness, memory and disk. A FAIL means do not start the feed; WARNs such as an expired token are expected before the login. Test: `tests/unit/infrastructure/kitePreflight.test.ts`.
+
+First run (Friday night): 12 PASS, 5 WARN (weekend, outside window, token expired, macro and quotes not rewritten), 0 FAIL.
+
+**Explained finding:** the exporter has been SKIPPING macro and market-quotes since 19:13 UTC with reason `no_fresh_index`, i.e. it refuses to republish while the Kite-fed index values are stale. That is the safe behaviour (it will not present old numbers as fresh) and it clears after the feed has run.
