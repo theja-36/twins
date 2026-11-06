@@ -12,3 +12,4 @@ export * from "./evidence";
 export * from "./engine";
 export type { Db } from "./db";
 export * from "./options";
+export * from "./independent";

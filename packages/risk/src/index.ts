@@ -28,3 +28,6 @@ export * from "./preTrade/validate";
 export * from "./drawdown/governor";
 export * from "./regime/detect";
 export * from "./liquidity/guard";
+export * from "./exposure/governor";
+export * from "./stress/scenarios";
+export * from "./correlation/matrix";

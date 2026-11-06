@@ -76,3 +76,6 @@ Dhan skipped for now (converter kept idle). Order: (a) Kite token refresh and fe
 
 ## P1 batch 4 (2026-11-07)
 #9, #11, #13 built in full as pure functions; #7 and #8 built partially with synthetic fixtures. None is wired. See [P1_BATCH4.md](P1_BATCH4.md). Owner order for next batches: 5 = #10, #12, #14, #15, #16 (partial); 6 = #17/#18 (blocked, paper off), archive import prep, Marketaux adapter after the reply.
+
+## P1 batch 5 (2026-11-07)
+#10, #12, #14, #15, #16 built partially as pure functions on synthetic fixtures; not wired; ships with the next functional deploy together with batch 4. See [P1_BATCH5.md](P1_BATCH5.md).
