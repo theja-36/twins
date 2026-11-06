@@ -79,3 +79,6 @@ Dhan skipped for now (converter kept idle). Order: (a) Kite token refresh and fe
 
 ## P1 batch 5 (2026-11-07)
 #10, #12, #14, #15, #16 built partially as pure functions on synthetic fixtures; not wired; ships with the next functional deploy together with batch 4. See [P1_BATCH5.md](P1_BATCH5.md).
+
+## Batch 6 (2026-11-07)
+Archive prep tooling built: `archive-profile` dry-run profiler (no import, no database). #17 and #18 remain blocked (paper off). See [ARCHIVE_IMPORT_PLAN.md](discovery/ARCHIVE_IMPORT_PLAN.md).

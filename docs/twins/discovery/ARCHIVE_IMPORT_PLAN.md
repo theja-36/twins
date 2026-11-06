@@ -35,3 +35,22 @@ The bars gap has a source: Kite Connect historical candles (the Connect plan is 
 **Practical consequence:** after a Kite refresh, the first attributable data will be index-level (NIFTY/BANKNIFTY/SENSEX) signals. Stock and expired-option signals need further decisions. I should first read the archive's symbol mix (counts by instrument kind from the dry run) before choosing what to build next.
 
 **Updated order:** Kite refresh (KITE_REFRESH_PREP.md) -> archive file from the owner -> dry run to learn the symbol mix -> fetch bars for what Kite can supply -> import -> evaluate -> scorecards -> attribution.
+
+## Batch 6 (2026-11-07): archive prep tooling built (no import)
+**New: `scripts/ops/archive-profile.ts`** (`packages/historical/src/archiveProfile.ts`), a dry-run profiler that needs no database. Usage:
+
+`npx tsx scripts/ops/archive-profile.ts <path> --label <label> [--default-market NSE] [--as-of <ISO with offset>] [--json]`
+
+It reads the local export, runs the same preparation and normalization the importer uses (so counts match the importer's own dry run), and prints: records, invalid, unique messages, revisions, duplicates, parseable signals; date range and per-month counts; per-channel messages and signals; instrument / market / side mix; top underlyings; stop-loss quality (missing, invalid, ambiguous, incomplete); **bar coverage estimate**; and a **bar plan** (how many historical-candle calls per underlying and how long at the 3 requests/second limit).
+
+**Bar coverage categories (estimate from the existing market-data client rules, not a live check):** `INDEX_UNDERLYING` (NIFTY, BANKNIFTY, SENSEX), `OPTION_LISTED` (index option whose expiry is today or later), `OPTION_EXPIRED` (cannot be verified), `STOCK_NOT_IN_CATALOG`, `NOT_ASSESSABLE` (parser could not name the underlying or expiry). `plausiblyVerifiableShare` = index underlying + listed option, as a share of parseable signals. This is the number that decides whether importing is worth doing before extending the catalog.
+
+**Safety:** writes nothing, contacts nothing, no database, prints no message text (verified by test, including a message containing a secret-shaped string and an email). Channel labels ARE printed: keep the output out of public repositories.
+
+**Where to run it:** locally on the owner's machine against the export (nothing needs to leave the machine), or on the host after the next functional deploy puts the script in the image (not verified yet; the image is read-only, so the file must be placed where the container can read it).
+
+**What the existing importer dry run adds:** `historical-import dry-run` additionally counts messages already imported (read-only database access) and prints the manifest hash that `import` requires. Use `archive-profile` first, then `dry-run`, then decide scope.
+
+**Tests:** `tests/unit/historical/archiveProfile.test.ts` (9): classification of every category, counts and dates, coverage and bar plan, invalid / duplicate / revision handling, no text leakage, empty-signal archive (null shares, not NaN), determinism, CLI usage and exit codes.
+
+**Still needed from the owner:** the archive file, and a go for the real import after reading the profile.
