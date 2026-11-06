@@ -13,7 +13,7 @@
 ## What is NOT done (honest limits)
 * Nothing is connected to the pipeline, the worker, the API or the decision card. Wiring each is a separate step with its own design (shadow first, reduce-only).
 * #7 and #8 thresholds and the impact constant are defaults chosen for plausibility, not fitted to NSE data; calibration needs real bars/depth (Kite after the Monday refresh).
-* #9 needs per-instrument rules (lot, tick, freeze, bands). Kite's instrument catalog has lot and tick; freeze quantity and bands are not in it, so they would have to be supplied (null = not checked, which the function reports as unchecked only for session and quote age; a null band or freeze simply skips that check).
+* #9 needs per-instrument rules (lot, tick, freeze, bands). Kite's instrument catalog has lot and tick; freeze quantity and bands are not in it, so they would have to be supplied. A null freeze quantity or band silently skips that check (an unknown session or quote age is reported as a warning instead); wiring should decide whether an unknown freeze/band must block.
 * #11 consumes an equity curve; none exists while paper trading is off.
 * #13 is deterministic structure over existing agent results, not an LLM debate. A model-driven debate would be a separate, much riskier feature and was not built.
 
