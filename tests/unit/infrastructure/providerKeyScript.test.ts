@@ -35,8 +35,23 @@ describe("twins-set-provider-key.sh", () => {
     }
     expect(existsSync("/tmp/pwned")).toBe(false);
   });
-  it("takes no arguments (the key can never be a command-line argument) and refuses a missing folder", () => {
-    const s = sandbox(); const r = run(s.file, FAKE, [FAKE]); expect(r.status).toBe(2); expect(existsSync(s.file)).toBe(false);
+  it("marketaux: sets only TWINS_MARKETAUX_API_KEY, keeps the FRED line and everything else, never prints the key", () => {
+    const s = sandbox(); writeFileSync(s.file, "TWINS_FRED_API_KEY=fredfredfredfredfred1234\nTWINS_HOLIDAYS_MARKET=NSE\nTWINS_MARKETAUX_API_KEY=oldoldoldoldoldoldold12\n", { mode: 0o644 });
+    const r = run(s.file, FAKE, ["marketaux"]);
+    expect(r.status, r.stderr).toBe(0);
+    expect(readFileSync(s.file, "utf8").split("\n").filter(Boolean)).toEqual(["TWINS_FRED_API_KEY=fredfredfredfredfred1234", "TWINS_HOLIDAYS_MARKET=NSE", `TWINS_MARKETAUX_API_KEY=${FAKE}`]);
+    expect(statSync(s.file).mode & 0o777).toBe(0o600); expect(r.stdout + r.stderr).not.toContain(FAKE); expect(r.stdout).toMatch(/^OK: the Marketaux key was saved to providers\.env \(key length 32, file mode 600,/);
+    const f = run(s.file, "z".repeat(32), ["fred"]); expect(f.status).toBe(0); // and the FRED setting leaves the Marketaux line alone
+    expect(readFileSync(s.file, "utf8")).toContain(`TWINS_MARKETAUX_API_KEY=${FAKE}`);
+  });
+  it("the only argument allowed is a provider name: a key-shaped argument, an unknown provider or a second argument is refused and nothing changes", () => {
+    for (const args of [[FAKE], ["gdelt"], ["MARKETAUX"], ["marketaux", FAKE], ["fred", "marketaux"]]) {
+      const s = sandbox(); writeFileSync(s.file, "KEEP=1\n"); const r = run(s.file, FAKE, args);
+      expect(r.status, JSON.stringify(args)).toBe(2); expect(readFileSync(s.file, "utf8")).toBe("KEEP=1\n"); expect(r.stdout + r.stderr).not.toContain(FAKE);
+    }
+  });
+  it("takes no key argument (the key can never be a command-line argument) and refuses a missing folder", () => {
+    const s = sandbox(); const r = run(s.file, FAKE, [FAKE]); expect(r.status).toBe(2); expect(r.stderr).not.toContain(FAKE); expect(existsSync(s.file)).toBe(false);
     expect(run(join(s.dir, "nope", "providers.env"), FAKE).status).toBe(4);
   });
   it("the script text never traces, echoes or passes the key as an argument", () => {
