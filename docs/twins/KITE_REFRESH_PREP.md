@@ -35,3 +35,8 @@ The token lasts to about 06:00 IST next day, so every trading morning needs the 
 
 ## Needs from the owner
 Your go for the live run (step 2 onward), the day and time, and whether to install the token-check timer.
+
+## Scheduled (owner decision 2026-11-06)
+* **Kite login and supervised feed run: Monday 2026-11-09, 09:00 IST.** Owner does the browser login; I supervise the feed run (egress check first, then verify, check-config, feed start, checks in step 5).
+* **Token-check timer installed** (weekdays 08:30 IST). Note: it fires at 08:30 IST, before the 09:00 login, so on Monday it will raise the CRITICAL "token not usable" alert as a reminder; that alert is expected and not a fault. A dry run (alert disabled) confirmed it reports `token_expired` for the current token.
+* Feed window is 08:55-15:40 IST; 09:00 is inside it.
