@@ -334,6 +334,10 @@ services:
       TWINS_AGENT_MARKET_DATA_PROVIDER: file:/var/lib/twins-providers/market-quotes.json
       TWINS_AGENT_CONSTITUENT_PROVIDER: file:/var/lib/twins-providers/index-constituents.json
       TWINS_PAPER_TRADING_ENABLED: ${TWINS_PAPER_TRADING_ENABLED:-false}  # paper (simulated) trading loop; OFF unless true. Simulation only: no broker, no orders/fills/positions rows.
+      # P0 #3 reduce-only sizing SHADOW (design: docs/twins/design/SHADOW_WIRING_1_3.md): log-only observer after sizing-v1, OFF unless staging.env says true. Refuses to start with the enforcing engine or LIVE_TRADING on.
+      TWINS_REDUCE_ONLY_SHADOW: ${TWINS_REDUCE_ONLY_SHADOW:-false}
+      # Planning capital for position sizing (owner decision 2026-11-06: INR 1,00,000). Sizing is planning only: no order, no broker call. Empty = unset = nothing is sized.
+      TWINS_SIZING_AVAILABLE_CAPITAL: ${TWINS_SIZING_AVAILABLE_CAPITAL:-}
     volumes:
       - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro  # read-only: the kite-ticker is the only writer
       - /var/lib/twins-providers:/var/lib/twins-providers:ro  # read-only: the provider exporter is the only writer

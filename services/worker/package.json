@@ -28,6 +28,7 @@
     "@twins/agents": "*",
     "@twins/alerting": "*",
     "@twins/paper": "*",
+    "@twins/providers": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {

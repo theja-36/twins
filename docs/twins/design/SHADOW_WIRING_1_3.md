@@ -1,6 +1,6 @@
 # Design: shadow wiring of #3 reduce-only sizing and #1 adaptive management
 
-**Status: DESIGN FOR REVIEW. No code in this PR beyond this document. Nothing is wired, no flag is added, nothing is deployed.** Written 2026-11-06 for the owner, to be reviewed before Monday's Kite run. Constraints throughout: engine enforcing OFF, shadow ON, `LIVE_TRADING=false`, paper trading OFF, no orders, no Stage 6.
+**Status: design approved 2026-11-06; PR A (sizing shadow, flag default off) built per sections 2, 4 and 5 (the real-PostgreSQL equivalence test is replaced by static isolation tests plus a staging canary; see 'PR A as built').** Written 2026-11-06 for the owner, to be reviewed before Monday's Kite run. Constraints throughout: engine enforcing OFF, shadow ON, `LIVE_TRADING=false`, paper trading OFF, no orders, no Stage 6.
 
 ## 0. What I found in the code (these shape the design)
 1. **Sizing hook point.** `recordPendingRiskDecision` in `services/worker/src/index.ts` runs: create decision -> source intelligence -> (enforcing agents) -> **shadow agents (log-only, errors swallowed)** -> `size()` (`sizeLatestRiskDecisionFor...`, engine `sizing-v1`) -> portfolio evaluation. The existing agent shadow already sets the pattern: observe, log, never throw, never halt.
@@ -16,7 +16,7 @@ Shadow output is **log-only evidence** (durable storage is HB-25, still deferred
 **Where:** one new helper `shadowReduceOnly(log, db, sizingOutcome, ctx)` in the worker, called immediately after `size()` when `sz.sizingStatus === "SIZED"`, wrapped in `try/catch` exactly like `shadow(latestId)`, with the same kind of hard timeout.
 
 **Flow:**
-1. Gate: new env `TWINS_REDUCE_ONLY_SHADOW` (default `false`, strictly `true|false` like `TWINS_AGENT_ENGINE_SHADOW`), refused to be `true` while `enabled` (enforcing) is true or `LIVE_TRADING` is true, so it can never coexist with an acting engine.
+1. Gate: new env `TWINS_REDUCE_ONLY_SHADOW` (default `false`, strictly `true|false` like `TWINS_AGENT_ENGINE_SHADOW`), refused to be `true` while `enabled` (enforcing) is true, so it can never coexist with an acting engine. (Live trading is already refused outright by the worker's start-up guard; a repository test forbids other modules from naming that setting, so the shadow flag does not re-check it.)
 2. Build `ReduceOnlyInputs` from read-only sources: `v1Quantity` from the sizing outcome; `unusableSources` from `buildSourceHealth(observeProviderFiles(dir))`; `hoursToHighImpactEvent` from the calendar file; `thinEvidence` from the decision's source-intelligence; `drawdownPct` from the breaker module read (null if capital unknown); `volatilityRatio` null until a source exists.
 3. Call `reduceOnlySize(inputs, DEFAULT_POLICY)`.
 4. **Self-check (belt and braces):** assert `result.adjustedQuantity <= v1Quantity` and `usedForDecisions === false`; on any violation log `risk_sizing.shadow.violation` (CRITICAL-class) and discard the result. The function is also property-tested (5000 random cases) never to exceed v1.
@@ -38,7 +38,7 @@ Shadow output is **log-only evidence** (durable storage is HB-25, still deferred
 
 ## 5. Test plan
 1. **Unit (exists):** reduce-only property tests (size never above v1), management property tests (stop always tighter, behind price), `replayManagement` cases.
-2. **Wiring unit tests (new):** `shadowReduceOnly` with fakes: flag off => no call and no log; flag on => exactly one log line; function throws => swallowed and logged, flow continues; timeout => abandoned; violation injected (a fake returning a larger size) => discarded and logged; `LIVE_TRADING=true` or enforcing => refuses to enable.
+2. **Wiring unit tests (new):** `shadowReduceOnly` with fakes: flag off => no call and no log; flag on => exactly one log line; function throws => swallowed and logged, flow continues; timeout => abandoned; violation injected (a fake returning a larger size) => discarded and logged; enforcing => refuses to enable.
 3. **Equivalence integration test (new, real PostgreSQL):** run the same synthetic signals through the pipeline with the flag off and on; assert every table's row contents (risk decisions, approvals, cards, orders, fills, positions) are identical and the only difference is the extra log lines. This is the proof that shadow has no live impact.
 4. **No-write check:** a test that the shadow module imports no write function and no order module (architecture-test style), and that `@twins/paper` shadow code calls only `proposeManagement`.
 5. **Replay run on real bars:** after Monday's Kite bars exist: `replayManagement` over the index signals the archive can supply, reviewed with the owner.
@@ -62,3 +62,10 @@ Shadow output is **log-only evidence** (durable storage is HB-25, still deferred
 * **No traffic:** with 0 decisions per day the shadow could stay empty; replay (Track A) is the dependable evidence source.
 * **Null inputs:** with drawdown, volatility and events mostly unknown at first, the shadow will often equal v1; the log lists unknowns so that is visible, not hidden.
 * **Staging canary is not live evidence:** no real orders exist anywhere in this design.
+
+## PR A as built (2026-11-06)
+* `services/worker/src/reduceOnlyShadow.ts` (imports nothing; compute and gather are injected), wired in `services/worker/src/index.ts` as one bare awaited statement after the v1 sizing record and before the portfolio gate.
+* Inputs as built: `unusableSources` (source-health profile over the read-only provider mount), `hoursToHighImpactEvent` (HIGH/CRITICAL events in the calendar file), `thinEvidence` (source-intelligence sample size under 30, or no intelligence), `unitRisk` (for the tally). `drawdownPct` and `volatilityRatio` are null (no source yet; listed as unknown on every line).
+* Note: sentiment (and news) currently have no file, so at least one source is "unusable" and the sources factor will usually apply (0.9 per source). That is the accepted policy, but it means the shadow will reduce most decisions until those sources are healthy.
+* Tally: `scripts/ops/shadow-diff.ts`. Flag: `TWINS_REDUCE_ONLY_SHADOW` (default false). Capital: `TWINS_SIZING_AVAILABLE_CAPITAL` passed through compose from the host env.
+* Equivalence: the worker pipeline function is not exported (its module starts the worker on import), so a real-PostgreSQL equivalence test was not built. Replaced by static isolation tests (module imports nothing; the call's result is never used; ordering around the portfolio gate; compose default false) and the staging canary. Extracting the pipeline function for a database-level equivalence test is a possible follow-up.
