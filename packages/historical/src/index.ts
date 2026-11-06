@@ -12,3 +12,4 @@ export * from "./scorecards/index";
 export * from "./attribution/index";
 export * from "./patterns/index";
 export * from "./intelligence/index";
+export * from "./archiveProfile";
