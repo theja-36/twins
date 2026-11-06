@@ -49,6 +49,7 @@ Source health (#2) and the decision card (#6) are the least risky and make every
 * Paper trading and any trade history: separate owner decision, not yet.
 * News inputs (#12): Marketaux permission pending (email sent 2026-11-06); GDELT keeps failing.
 * Kite feed run and token refresh: macro `as_of` stays stale until then.
+* Discovery notes for the six P0 features: [discovery/P0_DISCOVERY.md](discovery/P0_DISCOVERY.md).
 * Hardening items HB-05..HB-30 still apply and are not replaced by this list.
 
 ## Next step (when the owner says go)
