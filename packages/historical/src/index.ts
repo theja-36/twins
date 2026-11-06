@@ -9,5 +9,6 @@ export * from "./importer";
 export * from "./report";
 export * from "./outcomes/index";
 export * from "./scorecards/index";
+export * from "./attribution/index";
 export * from "./patterns/index";
 export * from "./intelligence/index";

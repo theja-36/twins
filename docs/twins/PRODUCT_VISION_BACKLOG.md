@@ -65,3 +65,8 @@ Source health (#2) and the decision card (#6) are the least risky and make every
 
 ## Next step (when the owner says go)
 One short discovery note per P0 feature: what already exists in the repository, the smallest first slice, tests and the shadow-mode plan. Then the owner picks the first feature.
+
+
+## Build status update (2026-11-06)
+* Package 2 (#1 adaptive management + #3 reduce-only sizing) merged (#101) and deployed (Deploy 17, `main-6b5161c8`, no migration). Pure functions, not wired.
+* #5 outcome attribution: first slice built (read-only stratified report with THIN flags, see [OUTCOME_ATTRIBUTION.md](OUTCOME_ATTRIBUTION.md)). #4 options risk waits for the Kite token refresh.
