@@ -327,9 +327,16 @@ services:
       TWINS_AGENT_SNAPSHOT_DIR: /var/lib/twins-snapshots
       TWINS_AGENT_SNAPSHOT_REQUIRED: instrument-reference,quotes,option-quotes,option-chain,last-price,ohlc
       TWINS_AGENT_INSTRUMENT_REFERENCE: file:/var/lib/twins-snapshots/instrument-reference.json
+      # Provider data files (D-108): calendar, macro, quotes, holidays and constituents, read-only. News and sentiment stay `none` (GDELT is rate-limited, no file is written), so those agents report UNAVAILABLE.
+      TWINS_AGENT_ECONOMIC_CALENDAR: file:/var/lib/twins-providers/economic-calendar.json
+      TWINS_AGENT_HOLIDAY_CALENDAR: file:/var/lib/twins-providers/holiday-calendar.json
+      TWINS_AGENT_MACRO_PROVIDER: file:/var/lib/twins-providers/macro-context.json
+      TWINS_AGENT_MARKET_DATA_PROVIDER: file:/var/lib/twins-providers/market-quotes.json
+      TWINS_AGENT_CONSTITUENT_PROVIDER: file:/var/lib/twins-providers/index-constituents.json
       TWINS_PAPER_TRADING_ENABLED: ${TWINS_PAPER_TRADING_ENABLED:-false}  # paper (simulated) trading loop; OFF unless true. Simulation only: no broker, no orders/fills/positions rows.
     volumes:
       - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro  # read-only: the kite-ticker is the only writer
+      - /var/lib/twins-providers:/var/lib/twins-providers:ro  # read-only: the provider exporter is the only writer
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
