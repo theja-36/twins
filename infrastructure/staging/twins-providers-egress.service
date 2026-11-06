@@ -1,0 +1,22 @@
+# Applies the providers-only egress rules for the providers network (10.0.29.0/24) at boot and whenever Docker restarts. BUILT 2026-11-06, Install only with the provider exporter (see docs/twins/KITE_EGRESS_ALLOWLIST_DESIGN.md):
+# copy to /etc/systemd/system/, `systemctl daemon-reload && systemctl enable --now twins-providers-egress twins-providers-egress-refresh.timer`.
+# `systemctl stop` (or disable) REMOVES the rules: only do that while the provider exporter is stopped.
+[Unit]
+Description=TWINS providers egress allow-list (api.gdeltproject.org, api.stlouisfed.org; 10.0.29.0/24)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=90
+# A leftover chain (for example from a manual apply) is removed first; `apply` itself refuses to touch an existing chain.
+ExecStartPre=-/opt/twins-staging/twins-providers-egress.sh remove
+ExecStart=/opt/twins-staging/twins-providers-egress.sh apply
+# The unit fails (and the problem is visible) unless the chain, the set and a fresh refresh are all in place.
+ExecStartPost=/opt/twins-staging/twins-providers-egress.sh status
+ExecStop=/opt/twins-staging/twins-providers-egress.sh remove
+
+[Install]
+WantedBy=multi-user.target
