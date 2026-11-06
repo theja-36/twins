@@ -39,6 +39,8 @@
 | HB-26 | Diagnose 3 local integration failures (offhostBackup restore, 2x expiryBreakers) that pass on fresh hosted CI | P2 | - |
 | HB-27 | Harden the flaky real-SIGKILL crash-recovery test (failed once on node 22 on PR #77, then passed on re-run with no code change) | P2 | - |
 | HB-28 | Local integration prerequisites: `pg_dump` missing on the dev Mac makes `offhostBackup` fail locally; a long-lived local database makes `historical/patterns` and `risk/sourceIntelligence` hit their 10 s hook timeout (extends HB-26; a freshly created database passes 905 of 906 locally) | P2 | - |
+| HB-29 | Refresh tasks for the provider data (owner-supplied inputs go stale; reminder system pending): Fed decision dates every year, NSE holiday list every year, NIFTY / NIFTY BANK member lists after each semi-annual rebalance | P1 | - |
+| HB-30 | Alternative news source (GDELT keeps failing: 429, timeouts): options proposed to the owner, nothing wired until approved | P2 | - |
 
 ## P0
 
@@ -135,6 +137,17 @@ Real-provider data (none exists), performance with many agents and large snapsho
 * **Risk:** a red required check that is not a real regression trains everyone to re-run; a real regression could be re-run away.
 * **Work:** find the race (what the test waits for before the kill and before it asserts), replace sleeps/polls with an explicit condition and a bounded wait that fails with a clear message, run the job 50 times in CI (a manually triggered loop) and record the failure rate before and after.
 * **Acceptance:** 50 consecutive green runs of the crash-recovery job; the assertion message names what was not yet true when it gave up.
+
+### HB-29 Refresh tasks for the provider data
+* **Now (2026-11-06):** the Fed decision days are a fixed 2026 list in `packages/providers/src/calendar.ts` (`FOMC_DECISION_DATES`, D-105); the holiday list is the owner's 2026 file (D-106) and runs to 2026-12-31; the constituents are NSE member lists with equal weights (D-107). None of them updates itself.
+* **Work, with due dates:** (1) **by 2026-12-01:** add the 2027 Fed dates (owner verifies against federalreserve.gov), the 2027 NSE holiday list (NSE circular) and set `TWINS_HOLIDAYS_TO`; without them the holiday agent has no data after 2026-12-31. (2) **After each NSE rebalance** (cut-off 31 Jan and 31 Jul, four weeks' notice, so roughly March and September): download `ind_nifty50list.csv` and `ind_niftybanklist.csv`, rebuild the equal-weight CSVs, replace the host files, run `run constituents`. (3) Special sessions (Diwali Muhurat, 2026-11-08) are not modelled: decide whether to add them.
+* **Reminder system (owner, 2026-11-06): pending.** Nothing alerts the owner when these fall due; a reminder mechanism (calendar entry or an alert-relay message ahead of each date) is still to be designed.
+* **Acceptance:** each refresh done and verified by a manual exporter pass before its date; consider a loud warning when the holiday file ends within 30 days (the agents already flag stale files).
+
+### HB-30 Alternative news source
+* **Now:** GDELT answers 429 or times out on every pass (D-108); no `news.json` / `sentiment.json` exists, so the news and sentiment agents report UNAVAILABLE (never a pass).
+* **Decision (owner, 2026-11-06): Marketaux** (free plan 100 requests a day, 3 articles per request; sentiment, entity tagging, country filter, all to be confirmed by a local test first). NewsData.io rejected (12-hour delay). Steps: local test from the Mac only (no host or firewall change) and report; then the adapter, the egress allow-list host (separate go-ahead), exporter wiring, deploy and verify. Original work item: the owner chooses a source from the options note; a new adapter, a new host on the egress allow-list (firewall change, separate approval) and a key (if any) in `providers.env`, never in chat.
+* **Acceptance:** one exporter pass publishes a news file the agents' parser accepts, with honest placeholders for fields the source does not give.
 
 ### HB-28 Local integration prerequisites
 * **Now (2026-11-06):** on the developer Mac `pg_dump` is not installed, so the off-host backup test fails locally (`dump: unexpected_error`); a local database that has accumulated thousands of rows over many runs makes two suites time out in their setup hook. A freshly created database passed 905 of 906 tests (only the `pg_dump` one failed). Hosted CI is unaffected.
