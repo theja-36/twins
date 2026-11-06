@@ -25,12 +25,12 @@ const n = async (sql: string) => Number(must((await q(sql))[0])["n"]);
 describe("capture export (read-only)", () => {
   it("exports captured messages with their edits, writes nothing to the database, and refuses to overwrite", async () => {
     const tag = randomUUID().slice(0, 8);
-    const [src] = await q("insert into telegram_sources (channel_identifier, display_name) values ($1, $2) returning id", [`capex-${tag}`, `CapEx ${tag}`]);
-    const sid = must(src)["id"];
+    const sid = randomUUID();
+    await q("insert into telegram_sources (id, channel_identifier, display_name) values ($1, $2, $3)", [sid, `capex-${tag}`, `CapEx ${tag}`]);
     const ts = "2031-01-05T04:00:00Z";
-    await q("insert into telegram_messages (telegram_source_id, external_message_id, message_timestamp, raw_text) values ($1, $2, $3, $4)", [sid, `m-${tag}`, ts, MSG.completeOption]);
-    await q("insert into telegram_messages (telegram_source_id, external_message_id, message_timestamp, raw_text, origin_message_id, edit_date) values ($1, $2, $3, $4, $5, $6)", [sid, `m-${tag}_edit_1`, ts, MSG.completeOption.replace("SL 90", "SL 60"), `m-${tag}`, "2031-01-05T04:30:00Z"]);
-    await q("insert into telegram_messages (telegram_source_id, external_message_id, message_timestamp, raw_text, first_seen_edited) values ($1, $2, $3, $4, true)", [sid, `fse-${tag}`, ts, MSG.equity]);
+    await q("insert into telegram_messages (id, telegram_source_id, external_message_id, message_timestamp, raw_text) values ($5, $1, $2, $3, $4)", [sid, `m-${tag}`, ts, MSG.completeOption, randomUUID()]);
+    await q("insert into telegram_messages (id, telegram_source_id, external_message_id, message_timestamp, raw_text, origin_message_id, edit_date) values ($7, $1, $2, $3, $4, $5, $6)", [sid, `m-${tag}_edit_1`, ts, MSG.completeOption.replace("SL 90", "SL 60"), `m-${tag}`, "2031-01-05T04:30:00Z", randomUUID()]);
+    await q("insert into telegram_messages (id, telegram_source_id, external_message_id, message_timestamp, raw_text, first_seen_edited) values ($5, $1, $2, $3, $4, true)", [sid, `fse-${tag}`, ts, MSG.equity, randomUUID()]);
 
     const tables = ["telegram_messages", "telegram_sources", "options_claims", "signals", "risk_decisions", "historical_source_records", "historical_normalized_records"];
     const before = await Promise.all(tables.map((t) => n(`select count(*)::int as n from ${t}`)));
