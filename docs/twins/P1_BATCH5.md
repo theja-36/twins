@@ -1,0 +1,17 @@
+# P1 batch 5: exposure governor, news impact, stress test, correlation, independent signals
+
+**Status: built as PURE functions on synthetic fixtures, tested, NOT wired. No deploy (owner decision 2026-11-07: ships with the next functional deploy, together with batch 4).** No order, migration, flag, provider call or decision change. Every result carries `grantsApproval: false`.
+
+| # | Feature | Where | What it does | Main limits |
+|---|---|---|---|---|
+| 10 | Portfolio exposure governor | `packages/risk/src/exposure/governor.ts` | Gross, net, long, short, per-symbol and per-sector exposure as % of capital; breaches against limits; for a candidate trade, the **headroom** (largest additional notional that breaks no limit, never above the request) and FITS / REDUCE / REFUSE. Never forces an exit. | Needs positions with sector tags; there are none while paper is off. Default limits (gross 200%, net 100%, symbol 25%, sector 40%, same direction 150%) are placeholders, not tuned. Complements, does not replace, the existing portfolio-limit gate. |
+| 12 | News impact | `packages/agents/src/newsImpact.ts` | Time-decayed, reliability- and relevance-weighted impact of already-fetched news for one symbol; flags THIN / STALE / CONFLICTING / SPIKE / NO_SENTIMENT; recommends only NONE / CAUTION / REVIEW_NEW_ENTRIES. **Asymmetric: good news never recommends anything.** Parsed fields only, no headline text. | Offline. No live feed exists (GDELT rate-limited, Marketaux not activated), so on staging it answers UNKNOWN. Weights and half-life are untuned defaults. |
+| 14 | Scenario stress test | `packages/risk/src/stress/scenarios.ts` | Fixed what-ifs (market -3/-7/+5%, gap -10%, vol spike) on positions: linear moves by beta, losses capped at stop distance plus gap-through, long options floored at premium. Reports P&L, % of capital, worst position, limit breach. | Rough and assumption-driven; no correlation breakdown; options are delta-vega with gamma capped conservatively (a pure delta-gamma expansion was found unreliable for large shocks while testing); long options only. |
+| 15 | Cross-market correlation | `packages/risk/src/correlation/matrix.ts` | Pearson correlation, matrix with high-pair flags, lead-lag scan, correlation-break flag, effective number of independent bets. Short, misaligned or constant series give null with a reason. | Needs aligned return series (Kite bars after the refresh; foreign markets have no source). Correlation is unstable and not causal. |
+| 16 | Independent signal generation | `packages/signals/src/independent.ts` | Rule-based CANDIDATES from bars: breakout, breakdown, pullback-in-trend. Each has a mandatory stop (ATR-based), R-multiple targets and reason codes; `confidence: null`, `calibrated: false`, `orderable: false`, `requiresFullPipeline: true`. A blocked regime (HIGH_VOLATILITY, UNKNOWN) generates nothing. | **No edge has been shown**: the rules are textbook and not backtested. A candidate must pass the normal pipeline like any signal. Do not read candidates as recommendations. |
+
+## Tests
+`tests/unit/p1/batch5RiskModules.test.ts` and `newsImpactAndIndependent.test.ts` (30 tests, including 2000-case property tests that headroom never exceeds the request or goes negative, and 300 random price paths where every candidate has a protective stop and ordered targets).
+
+## Not done
+Wiring of any of the ten P1 modules built so far; calibration on real data; backtests for #16; a live news source for #12.

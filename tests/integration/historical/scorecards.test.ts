@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createBoundedDb, type BoundedDbHandle } from "../../../packages/database/src/index";
 import { verifyAuditChainsWithPool } from "../../../packages/audit-chain/src/index";
 import {
-  canonicalSources, exportReport, getLatestSourceTrustTier, inspectInput, InputError, linkAlias, listSources, memoryProvider, rebuildAll, rebuildScorecard, registerSources, resolveSource, runEvaluation, runImport, showScorecard,
+  attributionReport, canonicalSources, exportReport, getLatestSourceTrustTier, inspectInput, InputError, linkAlias, listSources, memoryProvider, rebuildAll, rebuildScorecard, registerSources, resolveSource, runEvaluation, runImport, showScorecard,
 } from "../../../packages/historical/src/index";
 import { runCli } from "../../../scripts/ops/historical-scorecard";
 import { tempDir, writeJsonl } from "../../support/historicalFixtures";
@@ -265,5 +265,22 @@ describe("the CLI and the safe report", () => {
     expect(await cli(["rebuild", "--all", "--created-by", "someone"])).toBe(3);
     expect((await rebuildAll(db(), { asOf: NOW, createdBy: "service:itest" })).length).toBeGreaterThan(0);
     expect((await verifyAuditChainsWithPool(pool, { chains: SCORE_CHAINS })).ok).toBe(true);
+  });
+});
+
+describe("outcome attribution (read-only report over real labels)", () => {
+  it("attributes evaluated labels by source and market with sample sizes, and writes nothing", async () => {
+    const ch = `sc-attr-${sfx()}`;
+    await seed(ch, mixed(7, 3));
+    const live = await counts(LIVE), hist = await counts(HIST);
+    const r = await attributionReport(db(), { minSample: 5 });
+    expect(await counts(LIVE)).toEqual(live);
+    expect(await counts(HIST)).toEqual(hist);
+    const mine = must(r.strata.find((x) => x.dimension === "source" && x.value === ch));
+    expect(mine).toMatchObject({ evaluable: 10, wins: 7, losses: 3, thin: false, reading: "READABLE" });
+    expect(r.strata.some((x) => x.dimension === "market" && x.value === "NSE")).toBe(true);
+    expect(r.usedForDecisions).toBe(false);
+    const thin = await attributionReport(db(), { minSample: 50, dimensions: ["source"] });
+    expect(must(thin.strata.find((x) => x.value === ch)).thin).toBe(true);
   });
 });

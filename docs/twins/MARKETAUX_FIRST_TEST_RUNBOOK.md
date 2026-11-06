@@ -1,6 +1,6 @@
 # Marketaux: first permitted live test (runbook)
 
-Status: **not started, blocked.** Nothing in this runbook may be run until Gate 0 is satisfied. See D-109 and PROVIDERS.md ("Alternative news source: Marketaux").
+Status: **not started, blocked.** Nothing in this runbook may be run until Gate 0 is satisfied. See D-111 and PROVIDERS.md ("Alternative news source: Marketaux").
 
 ## Gate 0 (all required, owner)
 

@@ -1,15 +1,34 @@
 import type { FastifyInstance } from "fastify";
 import { desc, eq, sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
-import { createProductionRegistry, loadAgentEngineConfig, loadAgentRulesConfig } from "@twins/agents";
+import { buildDecisionCard, createProductionRegistry, loadAgentEngineConfig, loadAgentRulesConfig, type CardSizing } from "@twins/agents";
 import { clampLimit, failRoute, guardWith, type Authorizer } from "./apiSupport.js";
 
 /**
  * Agent status API: INTERNAL, bearer-protected, READ-ONLY. Shows which research agents exist (contract metadata only), how the engine is configured as this process sees it, and the
  * recent PERSISTED orchestrator runs. Shadow-mode evaluations are logged, not stored (HB-25), so they do not appear in `recentRuns`. No inputs, outputs or message text are returned.
  */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function registerAgentsRoutes(app: FastifyInstance, deps: { db: Db; authorized: Authorizer }): void {
   const guard = guardWith(deps.authorized);
+
+  /** Explainable decision card (P0 #6): a READ-ONLY view assembled from the stored synthesis and the stored decision. Nothing is computed, written, sent or approved. */
+  app.get<{ Params: { id: string } }>("/risk/decisions/:id/decision-card", async (request, reply) => {
+    if (!guard(request, reply)) return reply;
+    if (!UUID.test(request.params.id)) return reply.code(400).send({ error: "invalid_input" });
+    try {
+      const O = schema.agentOrchestratorRuns, S = schema.agentOrchestratorSyntheses;
+      const [row] = await deps.db.select({ runId: O.id, version: O.decisionVersion, result: S.result }).from(O).innerJoin(S, eq(S.orchestratorRunId, O.id)).where(eq(O.riskDecisionId, request.params.id)).orderBy(desc(O.createdAt), desc(O.id)).limit(1);
+      if (!row) return reply.code(404).send({ error: "no_assessment" }); // no stored assessment: say so, never invent one
+      const R = schema.riskDecisions;
+      const [d] = await deps.db.select({ status: R.status, reason: R.decisionReasonCode, qty: R.plannedQuantity, lossPct: R.plannedMaxLossPercent, rr: R.plannedRiskRewardRatio, trust: R.sourceTrustTier }).from(R).where(eq(R.id, request.params.id)).limit(1);
+      const n = (v: unknown): number | null => (v === null || v === undefined || Number.isNaN(Number(v)) ? null : Number(v));
+      const sizing: CardSizing | null = d && n(d.qty) !== null ? { status: d.status ?? "UNKNOWN", reasonCode: d.reason ?? null, quantity: n(d.qty) as number, maxLossPercent: n(d.lossPct), riskReward: n(d.rr), trustTier: d.trust ?? null } : null;
+      const card = buildDecisionCard({ riskDecisionId: request.params.id, decisionVersion: row.version, runId: row.runId, synthesis: row.result, sizing });
+      return card ?? reply.code(422).send({ error: "assessment_unreadable" });
+    } catch (error) { return failRoute(request, reply, error); }
+  });
   app.get<{ Querystring: { limit?: string } }>("/agents/status", async (request, reply) => {
     if (!guard(request, reply)) return reply;
     const limit = clampLimit(request.query.limit, 20, 100);

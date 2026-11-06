@@ -47,7 +47,7 @@ Every provider run ends as `published`, `skipped` or `failed`, with a FIXED reas
 - **Address pinning:** each provider host resolved to a single address (`api.gdeltproject.org`, `api.stlouisfed.org`), identically from the container and the host, in 6 samples over 24 s. This is a short observation, not proof against CDN rotation over hours or days. Watch `journalctl -k | grep twins-providers-egress-drop` and the `providers.egress_stale` alert; if legitimate drops appear, switch to the hostname-filtering proxy.
 - **Open:** GDELT's 429 from this VPS address is a provider-side throttle, not a firewall effect (the same answer came from the Mac). If it persists, news and sentiment need another source or a different request pattern; nothing is guessed in the meantime.
 
-## Alternative news source: Marketaux (built offline, NOT active; D-109)
+## Alternative news source: Marketaux (built offline, NOT active; D-111)
 
 * **Status:** code and tests only. Default stays GDELT. Nothing calls Marketaux until (a) Marketaux confirms in writing that automated, personal-research use and storing the data are allowed (their only published terms are for the website: "personal, non-commercial use", no automated access to the site; no API terms were found), (b) the owner approves the firewall change for `api.marketaux.com` tcp/443 (separate go-ahead), and (c) a key is stored in `providers.env`. Switch: `TWINS_NEWS_SOURCE=marketaux` + `TWINS_MARKETAUX_API_KEY`.
 * **Entity-specific sentiment:** Marketaux scores each tagged entity (-1..+1). The news file has one item per (article, entity) with that entity's own score; different companies are never averaged. An entity without a numeric score is dropped (counted), so missing sentiment stays unavailable, never NEUTRAL.
