@@ -8,7 +8,6 @@ import type { FredClient } from "./fred";
  */
 type Impact = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
 export const RELEASES: ReadonlyArray<{ match: RegExp; id: string; name: string; impact: Impact; category: string; at: string }> = [
-  { match: /^FOMC Press Release/i, id: "fomc", name: "US Fed rate decision", impact: "CRITICAL", category: "central_bank", at: "14:00" },
   { match: /^Consumer Price Index/i, id: "cpi", name: "US CPI inflation", impact: "HIGH", category: "inflation", at: "08:30" },
   { match: /^Employment Situation/i, id: "nfp", name: "US jobs report", impact: "HIGH", category: "labour", at: "08:30" },
   { match: /^Gross Domestic Product/i, id: "gdp", name: "US GDP", impact: "HIGH", category: "growth", at: "08:30" },
@@ -17,6 +16,13 @@ export const RELEASES: ReadonlyArray<{ match: RegExp; id: string; name: string; 
   { match: /^Personal Income and Outlays/i, id: "pce", name: "US personal income and PCE", impact: "MEDIUM", category: "inflation", at: "08:30" },
   { match: /^Job Openings and Labor Turnover/i, id: "jolts", name: "US job openings (JOLTS)", impact: "MEDIUM", category: "labour", at: "10:00" },
 ];
+
+/**
+ * FOMC rate-decision days (the second day of each meeting, statement at 14:00 US Eastern). They are a FIXED LIST, not taken from FRED: FRED's "FOMC Press Release" is a near-daily release, so mapping it produced a
+ * fake CRITICAL "Fed rate decision" on every day. Source: the Federal Reserve's published 2026 FOMC calendar (federalreserve.gov/monetarypolicy/fomccalendars.htm); the owner confirms it, and the list must be
+ * extended each year (dates outside it simply produce no Fed event, never a wrong one).
+ */
+export const FOMC_DECISION_DATES: readonly string[] = ["2026-01-28", "2026-03-18", "2026-04-29", "2026-06-17", "2026-07-29", "2026-09-16", "2026-10-28", "2026-12-09"];
 
 /** UTC instant of a wall-clock time in America/New_York (handles daylight saving). */
 export function easternInstant(date: string, hhmm: string): string {
@@ -43,8 +49,12 @@ export async function buildEconomicCalendar(deps: { fred: FredClient; now: () =>
     seen.add(id);
     events.push({ id, name: rel.name, at: easternInstant(r.date, rel.at), impact: rel.impact, markets: ["ALL"], category: rel.category });
   }
+  for (const d of FOMC_DECISION_DATES) {
+    if (d < from || d > to) continue;
+    events.push({ id: `fomc-${d}`, name: "US Fed rate decision", at: easternInstant(d, "14:00"), impact: "CRITICAL", markets: ["ALL"], category: "central_bank" });
+  }
   events.sort((a, b) => (String(a["at"]) < String(b["at"]) ? -1 : 1));
-  return { document: { format: ECONOMIC_CALENDAR_FORMAT, source: "fred-releases", as_of: now.toISOString(), coverage: { from: `${from}T00:00:00.000Z`, to: `${to}T23:59:59.000Z` }, events }, events: events.length };
+  return { document: { format: ECONOMIC_CALENDAR_FORMAT, source: "fred-releases+fomc-schedule", as_of: now.toISOString(), coverage: { from: `${from}T00:00:00.000Z`, to: `${to}T23:59:59.000Z` }, events }, events: events.length };
 }
 
 const realDate = (s: string): boolean => { if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false; const t = Date.parse(`${s}T00:00:00Z`); return !Number.isNaN(t) && new Date(t).toISOString().slice(0, 10) === s; }; // Date.parse is NaN for month 13; Feb 30 rolls over and is caught by the round trip

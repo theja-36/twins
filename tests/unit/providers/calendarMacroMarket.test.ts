@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseConstituentsFile, parseEconomicCalendar, parseHolidayCalendar, parseMacroContext, parseQuotesFile } from "../../../packages/agents/src/index";
-import { buildConstituents, buildEconomicCalendar, buildHolidayCalendar, buildMacro, buildMarketQuotes, ConstituentsCsvError, createFredClient, easternInstant, HolidayCsvError, indexContexts, sessionStatus, type Fetcher } from "../../../packages/providers/src/index";
+import { buildConstituents, buildEconomicCalendar, buildHolidayCalendar, buildMacro, buildMarketQuotes, ConstituentsCsvError, createFredClient, easternInstant, FOMC_DECISION_DATES, HolidayCsvError, indexContexts, sessionStatus, type Fetcher } from "../../../packages/providers/src/index";
 
 const KEY = "abcdef0123456789abcdef0123456789";
 const NOW = new Date("2026-11-05T09:00:00.000Z"); // 14:30 IST on a Thursday
@@ -24,9 +24,18 @@ describe("economic calendar from FRED release dates", () => {
   it("keeps only the named market-moving releases, de-duplicated and sorted, and the agents' parser accepts the file", async () => {
     const b = await buildEconomicCalendar({ now: () => NOW, fred: createFredClient({ apiKey: KEY, fetcher: fredFetcher({ "releases/dates": rows }).fetcher }) });
     const ev = b.document["events"] as Array<{ id: string; impact: string; at: string; name: string }>;
-    expect(ev.map((e) => e.id)).toEqual(["fred-nfp-2026-11-06", "fred-cpi-2026-11-12", "fred-fomc-2026-11-18"]);
-    expect(ev.find((e) => e.id.startsWith("fred-fomc"))!.impact).toBe("CRITICAL");
+    expect(ev.map((e) => e.id)).toEqual(["fred-nfp-2026-11-06", "fred-cpi-2026-11-12"]); // FRED's FOMC Press Release row (2026-11-18) is NOT a rate decision
     expect(() => parseEconomicCalendar(JSON.parse(JSON.stringify(b.document)))).not.toThrow();
+  });
+  it("never invents Fed decisions: a daily FRED 'FOMC Press Release' yields none; real meeting days come only from the fixed list", async () => {
+    const daily = Array.from({ length: 24 }, (_, i) => ({ release_id: 101, release_name: "FOMC Press Release", date: `2026-11-${String(4 + i).padStart(2, "0")}` }));
+    const quiet = await buildEconomicCalendar({ now: () => NOW, fred: createFredClient({ apiKey: KEY, fetcher: fredFetcher({ "releases/dates": { release_dates: daily } }).fetcher }) });
+    expect((quiet.document["events"] as Array<{ name: string }>).filter((e) => e.name.includes("Fed"))).toEqual([]);
+    const dec = await buildEconomicCalendar({ now: () => new Date("2026-12-05T12:00:00Z"), fred: createFredClient({ apiKey: KEY, fetcher: fredFetcher({ "releases/dates": { release_dates: daily } }).fetcher }) });
+    const fed = (dec.document["events"] as Array<{ id: string; at: string; impact: string }>).filter((e) => e.id.startsWith("fomc-"));
+    expect(fed).toEqual([{ id: "fomc-2026-12-09", name: "US Fed rate decision", at: "2026-12-09T19:00:00.000Z", impact: "CRITICAL", markets: ["ALL"], category: "central_bank" }]);
+    expect(() => parseEconomicCalendar(JSON.parse(JSON.stringify(dec.document)))).not.toThrow();
+    expect(FOMC_DECISION_DATES.every((d) => /^2026-\d\d-\d\d$/.test(d))).toBe(true);
   });
   it("uses the right New York offset around daylight saving", () => {
     expect(easternInstant("2026-11-12", "08:30")).toBe("2026-11-12T13:30:00.000Z"); // EST, UTC-5
