@@ -818,6 +818,51 @@
         }
       }
     },
+    "/risk/decisions/{id}/decision-card": {
+      "get": {
+        "tags": [
+          "risk"
+        ],
+        "summary": "Read-only explainable decision card built from the stored synthesis and decision (assessment, decided-by rule, agent verdicts, close calls, sizing facts); 404 when no assessment is stored; never an approval",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "DecisionCard",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
     "/agents/status": {
       "get": {
         "tags": [
@@ -1047,6 +1092,41 @@
         "responses": {
           "200": {
             "description": "IntakeStatus",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/market/sources": {
+      "get": {
+        "tags": [
+          "market"
+        ],
+        "summary": "Source health profile of the provider data files (status, reasons, data and export age, usable); read-only evidence, never an approval",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "SourceHealthProfile",
             "content": {
               "application/json": {
                 "schema": {

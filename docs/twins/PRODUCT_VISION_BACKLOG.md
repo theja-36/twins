@@ -52,5 +52,13 @@ Source health (#2) and the decision card (#6) are the least risky and make every
 * Discovery notes for the six P0 features: [discovery/P0_DISCOVERY.md](discovery/P0_DISCOVERY.md).
 * Hardening items HB-05..HB-30 still apply and are not replaced by this list.
 
+## Build status (updated 2026-11-06)
+* Owner order: package 1 = #2 + #6; package 2 = #1 + #3 (shadow, strictly reduce-only: never larger size, never a wider stop); package 3 = #4 + #5 (options data: Kite first after the token refresh, Dhan as backup, terms check for any new source).
+* Package 1 (#2 source health + #6 decision card): built, see [SOURCE_HEALTH_AND_DECISION_CARD.md](SOURCE_HEALTH_AND_DECISION_CARD.md). #2 uses files and logs only, no migration.
+
+## Build status (updated 2026-11-06)
+* Owner order: package 1 = #2 + #6; package 2 = #1 + #3 (shadow, strictly reduce-only: never a larger size, never a wider stop); package 3 = #4 + #5 (options data: Kite first after the token refresh, Dhan as backup, terms check for any new source).
+* Package 1 (#2 source health + #6 decision card): built, see [SOURCE_HEALTH_AND_DECISION_CARD.md](SOURCE_HEALTH_AND_DECISION_CARD.md). #2 uses files and logs only, no migration.
+
 ## Next step (when the owner says go)
 One short discovery note per P0 feature: what already exists in the repository, the smallest first slice, tests and the shadow-mode plan. Then the owner picks the first feature.
