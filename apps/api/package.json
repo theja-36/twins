@@ -20,8 +20,8 @@
     "@twins/shared": "*",
     "@twins/signals": "*",
     "@twins/types": "*",
-    "bullmq": "^6.3.11",
-    "drizzle-orm": "^0.45.2",
+    "bullmq": "^6.5.4",
+    "drizzle-orm": "^0.45.4",
     "fastify": "^4.28.0",
     "ioredis": "^5.11.1",
     "@twins/alerting": "*",
@@ -31,6 +31,6 @@
     "@twins/providers": "*"
   },
   "devDependencies": {
-    "tsx": "^4.16.0"
+    "tsx": "^4.23.15"
   }
 }
