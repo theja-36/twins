@@ -4,6 +4,7 @@ export * from "./intelligence/record";
 export * from "./sizing/config";
 export * from "./sizing/engine";
 export * from "./sizing/record";
+export * from "./sizing/reduceOnly";
 export * from "./portfolio/config";
 export * from "./portfolio/engine";
 export * from "./portfolio/record";
