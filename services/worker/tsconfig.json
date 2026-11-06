@@ -26,7 +26,8 @@
     { "path": "../../adapters/macro" },
     { "path": "../../adapters/telegram" },
     { "path": "../../packages/agents" },
-    { "path": "../../packages/paper" }
+    { "path": "../../packages/paper" },
+    { "path": "../../packages/providers" }
   ],
   "include": ["src"]
 }

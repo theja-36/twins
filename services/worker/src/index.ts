@@ -24,7 +24,9 @@ import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
 import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
-import { runResearchProbe } from "@twins/risk";
+import { DEFAULT_REDUCE_ONLY_POLICY, getRiskDecision, intelligenceOf, reduceOnlySize, runResearchProbe } from "@twins/risk";
+import { buildSourceHealth, observeProviderFiles } from "@twins/providers";
+import { loadReduceOnlyShadowFlag, runReduceOnlyShadow, type ShadowDeps, type ShadowInputs } from "./reduceOnlyShadow.js";
 import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/paper";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
@@ -383,6 +385,44 @@ const agentShadowFor = (log: StructuredLogger, db: Db) => async (decisionId: str
   if (r.wouldHalt) log.warn("agent_engine.shadow.assessed", fields); else log.info("agent_engine.shadow.assessed", fields);
 };
 
+// P0 #3 reduce-only sizing SHADOW (design: docs/twins/design/SHADOW_WIRING_1_3.md). Default OFF; log-only; reads files and the decision, writes nothing, is never used by a decision. A malformed flag, or the flag
+// on together with the enforcing engine, fails at start-up (fail closed; the start-up guard already refuses live trading).
+const reduceOnlyShadowEnabled = loadReduceOnlyShadowFlag(process.env, { enforcingEngine: agentEngineConfig.enabled });
+const HIGH_IMPACT = new Set(["HIGH", "CRITICAL"]);
+const THIN_SAMPLE = 30;
+async function gatherShadowInputs(db: Db | undefined, decisionId: string): Promise<ShadowInputs> {
+  const dir = process.env["TWINS_PROVIDERS_DIR"] || "/var/lib/twins-providers";
+  let unusableSources: number | null = null;
+  try { unusableSources = buildSourceHealth({ now: new Date(), observations: observeProviderFiles(dir) }).providers.filter((p) => !p.usable).length; } catch { /* unknown stays null */ }
+  let hoursToHighImpactEvent: number | null = null;
+  try {
+    const ref = process.env["TWINS_AGENT_ECONOMIC_CALENDAR"] ?? "";
+    if (ref.startsWith("file:")) {
+      const doc = JSON.parse(readFileSync(ref.slice(5), "utf8")) as { events?: Array<{ at?: string; impact?: string }> };
+      const now = Date.now();
+      const hours = (doc.events ?? []).filter((e) => typeof e.at === "string" && HIGH_IMPACT.has(String(e.impact)) && Date.parse(e.at) >= now).map((e) => (Date.parse(e.at as string) - now) / 3_600_000);
+      hoursToHighImpactEvent = hours.length ? Math.min(...hours) : null;
+    }
+  } catch { /* unknown stays null */ }
+  let thinEvidence = true, unitRisk: number | null = null;
+  try {
+    const d = db ? await getRiskDecision(db, decisionId) : null;
+    if (d) {
+      const intel = intelligenceOf(d);
+      thinEvidence = intel === null ? true : (intel.confidence.sampleSize ?? 0) < THIN_SAMPLE;
+      const entry = d.entryPrice === null ? NaN : Number(d.entryPrice), level = d.stopLoss === null ? NaN : Number(d.stopLoss);
+      unitRisk = Number.isFinite(entry) && Number.isFinite(level) ? Math.abs(entry - level) : null;
+    }
+  } catch { /* defaults stay */ }
+  // drawdown and volatility have no source yet: null (the factor stays off and is listed as unknown)
+  return { drawdownPct: null, volatilityRatio: null, hoursToHighImpactEvent, unusableSources, thinEvidence, unitRisk };
+}
+const reduceOnlyShadowDeps = (log: StructuredLogger, db: Db | undefined): ShadowDeps => ({
+  enabled: reduceOnlyShadowEnabled, log,
+  compute: (i) => reduceOnlySize(i, DEFAULT_REDUCE_ONLY_POLICY),
+  gather: (o) => gatherShadowInputs(db, o.id),
+});
+
 async function recordPendingRiskDecision(
   log: StructuredLogger,
   create: () => ReturnType<typeof createPendingRiskDecisionForSignal>,
@@ -426,6 +466,8 @@ async function recordPendingRiskDecision(
     if (!sz) return;
     if ("skipped" in sz && sz.skipped) log.info("worker.risk_sizing.skipped", { reason: sz.skipped, ...subject });
     else if (!("skipped" in sz)) log.info("worker.risk_sizing.recorded", { riskDecisionId: sz.id, created: sz.created, sizingStatus: sz.sizingStatus, reasonCode: sz.reasonCode, quantity: sz.quantity, decisionVersion: sz.decisionVersion, ...subject });
+    // P0 #3 shadow: observe-only, bounded, never throws, result unused. Runs after the v1 sizing record exists.
+    if (!("skipped" in sz)) await runReduceOnlyShadow(reduceOnlyShadowDeps(log, db), { id: sz.id, decisionVersion: sz.decisionVersion, sizingStatus: sz.sizingStatus, quantity: sz.quantity });
     // Stage 3 / Task 3: a successfully sized (PENDING) decision is evaluated against the portfolio limits; the result is a new version. Review state only: no order, card or broker call.
     if (evaluate && !("skipped" in sz) && sz.sizingStatus === "SIZED" && sz.status === "PENDING") {
       const pf = await evaluate(sz.id);
