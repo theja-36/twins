@@ -22,7 +22,7 @@
     "@twins/types": "*",
     "bullmq": "^6.3.11",
     "drizzle-orm": "^0.45.2",
-    "fastify": "^4.28.0",
+    "fastify": "^5.12.6",
     "ioredis": "^5.11.1",
     "@twins/alerting": "*",
     "@twins/risk": "*",
