@@ -25,6 +25,10 @@ data/options-snapshots/
 # Filled staging environment file (real secrets) - never commit
 infrastructure/staging/staging.env
 infrastructure/staging/bot.env
+# Host-only secrets files of the other services (never commit)
+infrastructure/staging/kite.env
+infrastructure/staging/providers.env
+infrastructure/staging/alert.env
 infrastructure/staging/backups/
 
 # Stage 2 / Task 1 hygiene: credentials, key material, dumps and local artifacts that must never be committed
