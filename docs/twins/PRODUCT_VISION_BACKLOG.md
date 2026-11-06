@@ -73,3 +73,6 @@ One short discovery note per P0 feature: what already exists in the repository, 
 
 ## Priority update (2026-11-06, owner)
 Dhan skipped for now (converter kept idle). Order: (a) Kite token refresh and feed run, (b) Marketaux reply and adapter activation, (c) archive import with Kite historical bars, (d) #4 options risk from Kite data. See [KITE_REFRESH_PREP.md](KITE_REFRESH_PREP.md) and the refined archive plan.
+
+## P1 batch 4 (2026-11-07)
+#9, #11, #13 built in full as pure functions; #7 and #8 built partially with synthetic fixtures. None is wired. See [P1_BATCH4.md](P1_BATCH4.md). Owner order for next batches: 5 = #10, #12, #14, #15, #16 (partial); 6 = #17/#18 (blocked, paper off), archive import prep, Marketaux adapter after the reply.
