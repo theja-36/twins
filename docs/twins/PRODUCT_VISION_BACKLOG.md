@@ -34,7 +34,7 @@ Build order set by the owner:
 | 9 | Pre-trade order validation | Deterministic last check of an order against mandate, limits, lot size, price band, stop | MANDATORY_STOP_LOSS.md, MARKET_RISK_GATES.md | #8, #10 |
 | 10 | Portfolio exposure governor | Aggregate caps by symbol, sector, index, direction and options delta | PORTFOLIO_RISK_LIMITS.md | #3 |
 | 11 | Drawdown circuit breaker | Reduce, then halt, after defined loss thresholds, with a human reset | CIRCUIT_BREAKERS.md | #3, #10 |
-| 12 | Real-time news impact | Fast entity-specific news effect on open positions and candidates | Marketaux adapter (D-109, blocked on permission), GDELT (failing) | News source decision (HB-30) |
+| 12 | Real-time news impact | Fast entity-specific news effect on open positions and candidates | Marketaux adapter (D-111, blocked on permission), GDELT (failing) | News source decision (HB-30) |
 | 13 | Multi-agent debate | Structured bull / bear challenge feeding the decision card; advisory only | agent engine challenger (HB-05) | #6 |
 | 14 | Scenario stress test | Gap, volatility and correlation shock replays on the live portfolio | PORTFOLIO_RISK_LIMITS.md | #10, #15 |
 | 15 | Cross-market correlation | Rolling correlation to indices, FX, rates, commodities, global futures | macro context provider | Data provider choices |

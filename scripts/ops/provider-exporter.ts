@@ -4,21 +4,25 @@
  *   provider-exporter loop [--every-min N]   repeat every N minutes (default 60, minimum 30) until SIGTERM / SIGINT
  * Environment: TWINS_PROVIDERS_DIR (/var/lib/twins-providers), TWINS_AGENT_SNAPSHOT_DIR (/var/lib/twins-snapshots, read only), TWINS_FRED_API_KEY (optional; calendar and global macro are skipped
  * without it), TWINS_PROVIDERS_WATCH (JSON watch list), TWINS_HOLIDAYS_CSV + TWINS_HOLIDAYS_MARKET/FROM/TO, TWINS_CONSTITUENTS_CSV + TWINS_CONSTITUENTS_INDEX (comma-separated, same count, one file per index; optional TWINS_CONSTITUENTS_SOURCE labels the provenance).
+ * Optional alternative news source (OFF by default, needs its host on the egress allow-list first): TWINS_NEWS_SOURCE=marketaux + TWINS_MARKETAUX_API_KEY.
  * It reads no broker credential, makes requests only to the allow-listed provider hosts, and logs fixed codes and counts only.
  */
 import { readFileSync } from "node:fs";
 import { enforceLiveTradingGuard } from "@twins/config";
-import { ALL_PROVIDERS, runProviders, type ProviderName, type RunContext, type WatchEntry } from "../../packages/providers/src/index";
+import { ALL_PROVIDERS, createQuotaGuard, runProviders, type ProviderName, type RunContext, type WatchEntry } from "../../packages/providers/src/index";
 
 enforceLiveTradingGuard("provider-exporter"); // first statement of every TWINS process: refuses to start unless live trading is locked
 
 const log = (event: string, fields: Record<string, unknown> = {}) => console.log(JSON.stringify({ ts: new Date().toISOString(), service: "provider-exporter", event, ...fields }));
 const env = process.env;
+/** One counter for the life of the process (the loop builds a new context every pass; the daily request cap must survive that). */
+const marketauxQuota = createQuotaGuard({ now: () => new Date() });
 
 function buildContext(): RunContext {
   const ctx: RunContext = { providersDir: env["TWINS_PROVIDERS_DIR"] || "/var/lib/twins-providers", snapshotDir: env["TWINS_AGENT_SNAPSHOT_DIR"] || "/var/lib/twins-snapshots", now: () => new Date() };
   const key = env["TWINS_FRED_API_KEY"];
   if (key) ctx.fredApiKey = key;
+  if (env["TWINS_NEWS_SOURCE"] === "marketaux") { ctx.newsSource = "marketaux"; const mk = env["TWINS_MARKETAUX_API_KEY"]; if (mk) ctx.marketauxApiKey = mk; ctx.marketauxQuota = marketauxQuota; } else if (env["TWINS_NEWS_SOURCE"] && env["TWINS_NEWS_SOURCE"] !== "gdelt") throw new Error("TWINS_NEWS_SOURCE must be gdelt or marketaux");
   const watch = env["TWINS_PROVIDERS_WATCH"];
   if (watch) { const w = JSON.parse(watch) as WatchEntry[]; if (!Array.isArray(w) || w.some((e) => typeof e.symbol !== "string" || typeof e.market !== "string" || !Array.isArray(e.keywords))) throw new Error("TWINS_PROVIDERS_WATCH is malformed"); ctx.watch = w; }
   const h = env["TWINS_HOLIDAYS_CSV"];

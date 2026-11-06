@@ -7,6 +7,7 @@ import { createFredClient, FRED_HOST, type FredClient } from "./fred";
 import { createFetcher, ProviderFetchError, type Fetcher } from "./http";
 import { NewsDataError } from "./news";
 import { buildMacro } from "./macro";
+import { buildMarketauxNews, createQuotaGuard, marketauxNewsDocument, marketauxSentimentDocument, MarketauxDataError, MarketauxLimitError, MARKETAUX_HOST, type MarketauxBuild } from "./marketaux";
 import { buildConstituents, buildMarketQuotes, ConstituentsCsvError } from "./marketdata";
 import { buildNews, buildSentiment, type WatchEntry } from "./news";
 import { publishJson, PublishRefusedError } from "./publish";
@@ -27,15 +28,18 @@ export interface RunContext {
   fredApiKey?: string; watch?: readonly WatchEntry[];
   holidays?: { csv: string; market: string; from: string; to: string };
   constituents?: ConstituentsInput | readonly ConstituentsInput[];
+  /** News and sentiment source: "gdelt" (default, unchanged) or "marketaux" (needs a key; its host must be allowed on the egress list first). */
+  newsSource?: "gdelt" | "marketaux"; marketauxApiKey?: string; marketauxQuota?: ReturnType<typeof createQuotaGuard>;
 }
 const GDELT = "https://api.gdeltproject.org/api/v2/doc/doc";
 const pad = (n: number) => String(n).padStart(2, "0");
 const gdeltTime = (d: Date) => `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}`;
 
-export function createContextClients(ctx: RunContext): { gdelt: Fetcher; fred: FredClient | null } {
+export function createContextClients(ctx: RunContext): { gdelt: Fetcher; fred: FredClient | null; marketaux: Fetcher } {
   const common = { ...(ctx.fetchFn ? { fetchFn: ctx.fetchFn } : {}), ...(ctx.sleep ? { sleep: ctx.sleep } : {}) };
   return {
     gdelt: createFetcher({ allowedHosts: ["api.gdeltproject.org"], minIntervalMs: 5500, maxAttempts: 2, maxRetryAfterMs: 20_000, ...common }), // GDELT asks for one request every 5 seconds
+    marketaux: createFetcher({ allowedHosts: [MARKETAUX_HOST], minIntervalMs: 2100, maxAttempts: 2, maxRetryAfterMs: 20_000, ...common }), // 30 requests a minute on the free plan
     fred: ctx.fredApiKey ? createFredClient({ apiKey: ctx.fredApiKey, fetcher: createFetcher({ allowedHosts: [FRED_HOST], minIntervalMs: 600, maxAttempts: 3, ...common }) }) : null,
   };
 }
@@ -61,14 +65,35 @@ function readSnapshots(dir: string): { ohlc: unknown; last: unknown } | "snapsho
 }
 const readExistingEvents = (dir: string): unknown[] => { try { const p = join(dir, FILES.calendar); return existsSync(p) ? ((JSON.parse(readFileSync(p, "utf8")) as { events?: unknown[] }).events ?? []) : []; } catch { return []; } };
 
-export async function runProvider(name: ProviderName, ctx: RunContext, shared: { events?: unknown[]; gdeltLimited?: boolean } = {}): Promise<RunResult> {
+const INDEX_UNIVERSE = ["NIFTY", "BANKNIFTY", "SENSEX"];
+/** The stock symbols news may be tagged to: the constituents CSVs that are configured (first column). Without them only the three indices are supported. */
+function universeOf(ctx: RunContext): ReadonlySet<string> {
+  const inputs = ctx.constituents === undefined ? [] : Array.isArray(ctx.constituents) ? ctx.constituents : [ctx.constituents as ConstituentsInput];
+  const set = new Set<string>(INDEX_UNIVERSE);
+  for (const i of inputs) for (const line of i.csv.split(/\r?\n/)) { const sym = line.split(",")[0]?.trim() ?? ""; if (/^[A-Z0-9&._-]{1,30}$/.test(sym)) set.add(sym); }
+  return set;
+}
+
+export async function runProvider(name: ProviderName, ctx: RunContext, shared: { events?: unknown[]; gdeltLimited?: boolean; marketaux?: MarketauxBuild | "limited" } = {}): Promise<RunResult> {
   const skip = (reason: string): RunResult => ({ provider: name, status: "skipped", reason });
   const publish = (doc: unknown, validate: (r: unknown) => unknown, count: number): RunResult => { const r = publishJson(ctx.providersDir, FILES[name], doc, validate); return { provider: name, status: "published", file: FILES[name], count, bytes: r.bytes }; };
   try {
-    const { gdelt, fred } = createContextClients(ctx);
+    const { gdelt, fred, marketaux } = createContextClients(ctx);
+    /** One Marketaux fetch per pass, shared by news and sentiment (the sentiment file is derived from the same items, never a second request). Returns a failure reason or the build. */
+    const marketauxPass = async (): Promise<MarketauxBuild | string> => {
+      if (shared.marketaux === "limited") return "provider_rate_limited";
+      if (shared.marketaux) return shared.marketaux;
+      if (!ctx.marketauxApiKey) return "key_missing";
+      const quota = ctx.marketauxQuota ?? createQuotaGuard({ now: ctx.now });
+      try { const b = await buildMarketauxNews({ fetcher: marketaux, apiKey: ctx.marketauxApiKey, universe: universeOf(ctx), now: ctx.now, quota }); shared.marketaux = b; return b; }
+      catch (e) { if (e instanceof MarketauxLimitError) { shared.marketaux = "limited"; return e.kind; } throw e; }
+    };
     switch (name) {
-      case "news": { if (shared.gdeltLimited) return skip("provider_rate_limited"); const b = await buildNews({ transport: transportOf(gdelt), ...(ctx.watch ? { watch: ctx.watch } : {}), now: ctx.now }); return publish(b.document, parseNewsFile, b.items); }
+      case "news": {
+        if (ctx.newsSource === "marketaux") { const m = await marketauxPass(); return typeof m === "string" ? (m === "key_missing" ? skip(m) : { provider: name, status: "failed", reason: m }) : publish(marketauxNewsDocument(m), parseNewsFile, m.items.length); }
+        if (shared.gdeltLimited) return skip("provider_rate_limited"); const b = await buildNews({ transport: transportOf(gdelt), ...(ctx.watch ? { watch: ctx.watch } : {}), now: ctx.now }); return publish(b.document, parseNewsFile, b.items); }
       case "sentiment": {
+        if (ctx.newsSource === "marketaux") { const m = await marketauxPass(); if (typeof m === "string") return m === "key_missing" ? skip(m) : { provider: name, status: "failed", reason: m }; const b = marketauxSentimentDocument(m); return b.entries > 0 ? publish(b.document, parseSentimentFile, b.entries) : skip("no_data"); }
         if (shared.gdeltLimited) return skip("provider_rate_limited");
         const b = await buildSentiment({ fetcher: gdelt, ...(ctx.watch ? { watch: ctx.watch } : {}), now: ctx.now });
         if (b.entries > 0) return publish(b.document, parseSentimentFile, b.entries);
@@ -99,7 +124,7 @@ export async function runProvider(name: ProviderName, ctx: RunContext, shared: {
     }
   } catch (raw) {
     const e = unwrap(raw);
-    const reason = e instanceof ProviderFetchError ? `fetch_${e.code}${e.status ? `_${e.status}` : ""}` : e instanceof PublishRefusedError ? "refused_validation" : e instanceof NewsDataError ? "response_invalid" : e instanceof HolidayCsvError || e instanceof ConstituentsCsvError ? "csv_invalid" : "failed";
+    const reason = e instanceof ProviderFetchError ? `fetch_${e.code}${e.status ? `_${e.status}` : ""}` : e instanceof PublishRefusedError ? "refused_validation" : e instanceof NewsDataError || e instanceof MarketauxDataError ? "response_invalid" : e instanceof HolidayCsvError || e instanceof ConstituentsCsvError ? "csv_invalid" : "failed";
     if (e instanceof ProviderFetchError && e.code === "rate_limited" && (name === "news" || name === "sentiment")) shared.gdeltLimited = true; // GDELT said slow down: ask for nothing more in this pass
     return { provider: name, status: "failed", reason };
   }
