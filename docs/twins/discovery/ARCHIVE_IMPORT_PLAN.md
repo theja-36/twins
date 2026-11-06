@@ -72,3 +72,21 @@ Owner decision: the Telegram archive is SKIPPED (no export option; manual copyin
 * **C. Hand-copied 50-100 signals later:** same path as A with a smaller, curated set.
 
 Stop-loss ambiguity (66 of 70) is a separate signal-quality finding: the parser cannot tell what the stop refers to (premium or underlying) for most claims. It deserves its own look because even with tiers, ambiguous stops are blocked by the mandatory-stop rule.
+
+## Option A built (2026-11-07): capture exporter (no import)
+**`scripts/ops/capture-export.ts`** (pure conversion in `packages/historical/src/captureExport.ts`) turns the messages TWINS already captured into the importer's input format, so the existing 124 originals can go through the normal path. It is READ-ONLY: it only SELECTs, writes nothing to the database, contacts nothing, prints counts only, writes the file with mode 0600 and refuses to overwrite. The file contains message text (your own captured data): keep it out of every repository.
+
+`capture-export --out <file.jsonl> [--since <ISO>] [--until <ISO>] [--capture-method bot_webhook|api_live|api_history] [--include-first-seen-edited]`
+
+**Hindsight protections:** a revision is exported as an EDIT of its original, never as a message; a message whose first-seen version was already an edit is EXCLUDED unless asked for (its stored text is a later revision); revisions with no original are skipped and counted; edits are capped at the contract's 50.
+
+**Predicted result on staging** (from a read-only SQL count with the same grouping rules, 2026-11-07): 124 messages, 2 edits attached, 0 orphan revisions, 0 first-seen-edited, 0 empty, 0 unusable ids. The real run is not done: the script is not in the staging image until the next functional deploy, and the exact way to run it on the host (a one-off container from the image with the database URL from the environment and a private bind-mounted output folder) is to be verified read-only first.
+
+**Boundary kept:** the historical package may not read live tables (an architecture test enforces it), so the database reader lives in the script and the package holds only the pure conversion.
+
+**Next steps (each its own gate):** run the exporter -> `archive-profile` on the file (see how much Kite can verify) -> `historical-import dry-run` -> **your separate go for `import`** -> after the Kite refresh, fetch bars and `historical-evaluate` -> scorecards -> tiers. Expect THIN flags (about 124 signals).
+
+**Tests:** 10 unit tests (labels, edits as edits, orphans, first-seen-edited, empty / bad id / oversize / edit cap, source separation, determinism, round trip through the importer's reader and the profiler, CLI arguments) and one real-PostgreSQL integration test (seeds synthetic rows, asserts nothing is written anywhere, 0600 file, no overwrite, first-seen-edited exclusion and inclusion).
+
+## Next: stop-loss ambiguity (66 of 70)
+Investigation starts after this PR (owner order): root cause in signal parsing / stop-loss extraction; it must be fixed before relying on sizing or attribution.
