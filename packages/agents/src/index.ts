@@ -12,3 +12,4 @@ export * from "./snapshots";
 export * from "./snapshotGeneration";
 export * from "./observability";
 export * from "./exporters/stubs";
+export * from "./debate";
