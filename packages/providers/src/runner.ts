@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parseConstituentsFile, parseEconomicCalendar, parseHolidayCalendar, parseMacroContext, parseNewsFile, parseQuotesFile, parseSentimentFile } from "@twins/agents";
+import { CONSTITUENTS_FORMAT, parseConstituentsFile, parseEconomicCalendar, parseHolidayCalendar, parseMacroContext, parseNewsFile, parseQuotesFile, parseSentimentFile } from "@twins/agents";
 import type { GdeltTransport } from "@twins/adapter-news";
 import { buildEconomicCalendar, buildHolidayCalendar, HolidayCsvError } from "./calendar";
 import { createFredClient, FRED_HOST, type FredClient } from "./fred";
@@ -20,12 +20,13 @@ export const ALL_PROVIDERS: readonly ProviderName[] = ["news", "sentiment", "cal
 export const FILES: Record<ProviderName, string> = { news: "news.json", sentiment: "sentiment.json", calendar: "economic-calendar.json", macro: "macro-context.json", "market-quotes": "market-quotes.json", holidays: "holiday-calendar.json", constituents: "index-constituents.json" };
 export type RunResult = { provider: ProviderName; status: "published"; file: string; count: number; bytes: number } | { provider: ProviderName; status: "skipped" | "failed"; reason: string };
 
+export interface ConstituentsInput { csv: string; index: string; source?: string }
 export interface RunContext {
   providersDir: string; snapshotDir: string; now: () => Date;
   fetchFn?: typeof fetch; sleep?: (ms: number) => Promise<void>;
   fredApiKey?: string; watch?: readonly WatchEntry[];
   holidays?: { csv: string; market: string; from: string; to: string };
-  constituents?: { csv: string; index: string };
+  constituents?: ConstituentsInput | readonly ConstituentsInput[];
 }
 const GDELT = "https://api.gdeltproject.org/api/v2/doc/doc";
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -88,7 +89,13 @@ export async function runProvider(name: ProviderName, ctx: RunContext, shared: {
         return b === null ? skip("no_fresh_index") : publish(b.document, parseQuotesFile, b.quotes);
       }
       case "holidays": { if (!ctx.holidays) return skip("file_not_configured"); const b = buildHolidayCalendar(ctx.holidays.csv, { ...ctx.holidays, source: "owner-supplied", now: ctx.now() }); return publish(b.document, parseHolidayCalendar, b.days); }
-      case "constituents": { if (!ctx.constituents) return skip("file_not_configured"); const b = buildConstituents(ctx.constituents.csv, { index: ctx.constituents.index, source: "owner-supplied", asOf: ctx.now() }); return publish(b.document, parseConstituentsFile, b.constituents); }
+      case "constituents": {
+        if (!ctx.constituents) return skip("file_not_configured");
+        const inputs = Array.isArray(ctx.constituents) ? ctx.constituents : [ctx.constituents as ConstituentsInput];
+        const asOf = ctx.now(); const indices: Record<string, unknown> = {}; let total = 0; let source = "owner-supplied";
+        for (const i of inputs) { const b = buildConstituents(i.csv, { index: i.index, source: i.source ?? "owner-supplied", asOf }); Object.assign(indices, b.document["indices"]); total += b.constituents; source = i.source ?? source; }
+        return publish({ format: CONSTITUENTS_FORMAT, source, as_of: asOf.toISOString(), indices }, parseConstituentsFile, total);
+      }
     }
   } catch (raw) {
     const e = unwrap(raw);

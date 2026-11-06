@@ -3,7 +3,7 @@
  *   provider-exporter run [provider ...]     one pass (default: all); exit 0 even if a provider failed (the report says which)
  *   provider-exporter loop [--every-min N]   repeat every N minutes (default 60, minimum 30) until SIGTERM / SIGINT
  * Environment: TWINS_PROVIDERS_DIR (/var/lib/twins-providers), TWINS_AGENT_SNAPSHOT_DIR (/var/lib/twins-snapshots, read only), TWINS_FRED_API_KEY (optional; calendar and global macro are skipped
- * without it), TWINS_PROVIDERS_WATCH (JSON watch list), TWINS_HOLIDAYS_CSV + TWINS_HOLIDAYS_MARKET/FROM/TO, TWINS_CONSTITUENTS_CSV + TWINS_CONSTITUENTS_INDEX.
+ * without it), TWINS_PROVIDERS_WATCH (JSON watch list), TWINS_HOLIDAYS_CSV + TWINS_HOLIDAYS_MARKET/FROM/TO, TWINS_CONSTITUENTS_CSV + TWINS_CONSTITUENTS_INDEX (comma-separated, same count, one file per index; optional TWINS_CONSTITUENTS_SOURCE labels the provenance).
  * It reads no broker credential, makes requests only to the allow-listed provider hosts, and logs fixed codes and counts only.
  */
 import { readFileSync } from "node:fs";
@@ -24,7 +24,13 @@ function buildContext(): RunContext {
   const h = env["TWINS_HOLIDAYS_CSV"];
   if (h) ctx.holidays = { csv: readFileSync(h, "utf8"), market: env["TWINS_HOLIDAYS_MARKET"] || "NSE", from: env["TWINS_HOLIDAYS_FROM"] || `${new Date().getUTCFullYear()}-01-01`, to: env["TWINS_HOLIDAYS_TO"] || `${new Date().getUTCFullYear()}-12-31` };
   const c = env["TWINS_CONSTITUENTS_CSV"];
-  if (c) ctx.constituents = { csv: readFileSync(c, "utf8"), index: env["TWINS_CONSTITUENTS_INDEX"] || "NIFTY" };
+  if (c) {
+    const files = c.split(",").map((x) => x.trim()).filter(Boolean);
+    const names = (env["TWINS_CONSTITUENTS_INDEX"] || "NIFTY").split(",").map((x) => x.trim()).filter(Boolean);
+    if (files.length !== names.length) throw new Error("TWINS_CONSTITUENTS_CSV and TWINS_CONSTITUENTS_INDEX must list the same number of entries");
+    const source = env["TWINS_CONSTITUENTS_SOURCE"];
+    ctx.constituents = files.map((f, i) => ({ csv: readFileSync(f, "utf8"), index: names[i]!, ...(source ? { source } : {}) }));
+  }
   return ctx;
 }
 

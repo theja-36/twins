@@ -53,6 +53,13 @@ describe("running the exporters", () => {
     expect(macro.contexts["NSE:NIFTY"].releases.length).toBe(1); // the calendar's CPI event reached the macro file
     for (const u of seen) expect(u).toMatch(/^https:\/\/(api\.gdeltproject\.org|api\.stlouisfed\.org)\//);
   });
+  it("constituents: several indices go into one file, each validated, with the provenance label the owner gave", async () => {
+    const c = ctx({ constituents: [{ csv: "RELIANCE,50,Energy\nTCS,50,IT\n", index: "NIFTY", source: "nse-list-equal-weight" }, { csv: "HDFCBANK,50,Financial Services\nSBIN,50,Financial Services\n", index: "BANKNIFTY", source: "nse-list-equal-weight" }] });
+    const r = await runProviders(["constituents"], c);
+    expect(r.map((x) => `${x.provider}:${x.status}`)).toEqual(["constituents:published"]);
+    const f = JSON.parse(readFileSync(join(c.providersDir, FILES.constituents), "utf8"));
+    expect(Object.keys(f.indices).sort()).toEqual(["BANKNIFTY", "NIFTY"]); expect(f.source).toBe("nse-list-equal-weight");
+  });
   it("skips what is not configured, with a fixed reason", async () => {
     const r = await runProviders(["calendar", "holidays", "constituents", "macro"], ctx({ fredApiKey: undefined as never }));
     expect(Object.fromEntries(r.map((x) => [x.provider, x.status === "skipped" ? x.reason : x.status]))).toEqual({ calendar: "key_missing", macro: "published", holidays: "file_not_configured", constituents: "file_not_configured" });
