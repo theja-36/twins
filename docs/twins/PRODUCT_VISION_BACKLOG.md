@@ -60,5 +60,8 @@ Source health (#2) and the decision card (#6) are the least risky and make every
 * Owner order: package 1 = #2 + #6; package 2 = #1 + #3 (shadow, strictly reduce-only: never a larger size, never a wider stop); package 3 = #4 + #5 (options data: Kite first after the token refresh, Dhan as backup, terms check for any new source).
 * Package 1 (#2 source health + #6 decision card): built, see [SOURCE_HEALTH_AND_DECISION_CARD.md](SOURCE_HEALTH_AND_DECISION_CARD.md). #2 uses files and logs only, no migration.
 
+* Package 1 deployed to staging 2026-11-06 (Deploy 16, `main-09d23eb6`): `GET /market/sources` and `GET /risk/decisions/:id/decision-card` verified.
+* Package 2 (#1 adaptive management + #3 dynamic sizing): pure, strictly reduce-only, replay and shadow comparison only, not wired. See [REDUCE_ONLY_MANAGEMENT_AND_SIZING.md](REDUCE_ONLY_MANAGEMENT_AND_SIZING.md).
+
 ## Next step (when the owner says go)
 One short discovery note per P0 feature: what already exists in the repository, the smallest first slice, tests and the shadow-mode plan. Then the owner picks the first feature.
