@@ -22,3 +22,16 @@
 
 ## Needs from the owner
 The archive file (and its channel names for source labels), a decision on where price bars come from, and a go for the import itself.
+
+## Refinement 2026-11-06: price bars from Kite (free with the Connect plan already bought)
+The bars gap has a source: Kite Connect historical candles (the Connect plan is paid for, D-090). Built: `buildBarsDataset` (pure, `packages/kite/src/barsDataset.ts`) turns fetched and mapped candles into `twins-historical-bars-v1` files, re-validated by the evaluator's own parser. Not built: the fetch driver (needs the token, so after the refresh).
+
+**Coverage limits found in the existing Kite code (these decide how much of the archive can be evaluated):**
+1. The instrument catalog is scoped to NIFTY, BANKNIFTY and SENSEX only. Stock (cash equity) signals in the archive have no bar source yet; adding stocks means extending the catalog scope (a code change, then a fetch per symbol).
+2. Only currently listed contracts can be fetched: the historical client refuses expired contracts and continuous data. **Kite will not supply history for options that have already expired**, so older option signals (the bulk of any archive) stay UNVERIFIABLE. Option attribution therefore needs premium bars captured going forward, or another source for expired contracts.
+3. Intraday history is capped per request (minute 60 days, 15-minute 200 days, daily 2000 days) and rate limited; fetching must be chunked.
+4. Candles carry only bar start times; a still-forming last bar is dropped by the builder.
+
+**Practical consequence:** after a Kite refresh, the first attributable data will be index-level (NIFTY/BANKNIFTY/SENSEX) signals. Stock and expired-option signals need further decisions. I should first read the archive's symbol mix (counts by instrument kind from the dry run) before choosing what to build next.
+
+**Updated order:** Kite refresh (KITE_REFRESH_PREP.md) -> archive file from the owner -> dry run to learn the symbol mix -> fetch bars for what Kite can supply -> import -> evaluate -> scorecards -> attribution.
