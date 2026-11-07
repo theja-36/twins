@@ -82,3 +82,6 @@ Dhan skipped for now (converter kept idle). Order: (a) Kite token refresh and fe
 
 ## Batch 6 (2026-11-07)
 Archive prep tooling built: `archive-profile` dry-run profiler (no import, no database). #17 and #18 remain blocked (paper off). See [ARCHIVE_IMPORT_PLAN.md](discovery/ARCHIVE_IMPORT_PLAN.md).
+
+## Parallel plan (2026-11-07)
+Phase 1 waits (Kite refresh Monday, Marketaux reply). Phase 2 Channels UI built read-only; Phases 3, 4, 5 are design / research only: [PHASE2_CHANNEL_SELECT.md](design/PHASE2_CHANNEL_SELECT.md), [PHASE3_NEWS_SOURCE_COMBO.md](design/PHASE3_NEWS_SOURCE_COMBO.md), [PHASE4_APPROVAL_CARD_UI.md](design/PHASE4_APPROVAL_CARD_UI.md), [PHASE5_BROKER_CONNECT_RESEARCH.md](design/PHASE5_BROKER_CONNECT_RESEARCH.md). After Monday: Phase 2 backend wiring, then Phase 3 live (needs Marketaux), Phase 4 integration, Phase 5 build.
