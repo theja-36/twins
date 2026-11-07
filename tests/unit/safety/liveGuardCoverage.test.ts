@@ -35,7 +35,7 @@ const isPython = (p: string) => p.endsWith(".py");
 
 describe("LIVE_TRADING guard coverage: static", () => {
   it("finds the compose-started processes (so this test cannot silently pass on an empty set)", () => {
-    expect(Object.keys(entries).sort()).toEqual(["alert-relay", "api", "approval-bot", "audit-verify", "capture", "kite-login", "kite-ticker", "migrate", "outbox-deadletter", "provider-exporter", "risk-control", "safety-control", "scheduler", "worker"]);
+    expect(Object.keys(entries).sort()).toEqual(["alert-relay", "api", "approval-bot", "audit-verify", "capture", "channel-news-writer", "kite-login", "kite-ticker", "migrate", "outbox-deadletter", "provider-exporter", "risk-control", "safety-control", "scheduler", "worker"]);
   });
 
   it("every entry point calls the shared guard; module-level guards precede configuration, and capture's main() starts with it", () => {
@@ -88,7 +88,7 @@ describe("LIVE_TRADING guard coverage: static", () => {
   });
 
   it("every compose service that runs TWINS code is pinned to paper / LIVE_TRADING false by literals the env file cannot change", () => {
-    const withCode = ["api", "worker", "scheduler", "migrate", "safety-control", "audit-verify", "approval-bot", "capture", "provider-exporter"];
+    const withCode = ["api", "worker", "scheduler", "migrate", "safety-control", "audit-verify", "approval-bot", "capture", "channel-news-writer", "provider-exporter"];
     for (const name of withCode) {
       const m = new RegExp(`\\n  ${name}:\\n([\\s\\S]*?)(?=\\n  [a-z_-]+:\\n|\\nnetworks:)`).exec(compose);
       const body = (m?.[1] ?? "").split("\n").filter((l) => !l.trim().startsWith("#")).join("\n");
