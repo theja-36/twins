@@ -1112,6 +1112,95 @@
         }
       }
     },
+    "/telegram/channels": {
+      "get": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Captured Telegram channels (masked identifier) with message, revision and claim counts, last message time and whether capture is allowed; no message content",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "{ channels: ChannelSummary[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
+    "/telegram/claims": {
+      "get": {
+        "tags": [
+          "telegram"
+        ],
+        "summary": "Parsed options claims, newest first (underlying, strike, type, action, entry, stop with basis and whether it was inferred, targets, expiry status, blocker codes). Never message text or raw fragments",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "masked channel as returned by /telegram/channels, e.g. ***2544"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ claims: ClaimView[] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
     "/market/sources": {
       "get": {
         "tags": [
