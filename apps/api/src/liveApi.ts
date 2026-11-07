@@ -18,6 +18,37 @@ const isoOrNull = (v: unknown): string | null => (typeof v === "string" && !Numb
 const ageSec = (iso: string | null, now: Date): number | null => (iso ? Math.max(0, Math.round((now.getTime() - Date.parse(iso)) / 1000)) : null);
 const KINDS = ["instrument-reference", "quotes", "option-quotes", "option-chain", "last-price", "ohlc"] as const;
 
+
+// ── Telegram channel / claim views (Phase 2 backend). READ-ONLY, parsed fields only: never message text, never the raw fragments stored inside a claim. ──
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const numOrNull = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+const strIn = (v: unknown, allowed: readonly string[]): string | null => (typeof v === "string" && allowed.includes(v) ? v : null);
+const CODE_RE = /^[a-z0-9_.]{1,60}$/;
+const SEVERITIES = ["info", "warn", "warning", "insufficient", "reject", "error"];
+
+export function safeClaimView(claim: unknown): Record<string, unknown> | null {
+  if (!isObj(claim)) return null;
+  const entry = isObj(claim["entry"]) ? claim["entry"] : {};
+  const expiry = isObj(claim["expiry"]) ? claim["expiry"] : {};
+  return {
+    action: strIn(claim["action"], ["buy", "sell"]),
+    underlying: strIn(claim["underlying"], ["NIFTY", "BANKNIFTY", "SENSEX"]),
+    strike: numOrNull(claim["strike"]), optionType: strIn(claim["optionType"], ["CE", "PE"]),
+    entry: { type: strIn(entry["type"], ["at", "above", "below", "near", "range", "market", "unspecified"]), price: numOrNull(entry["price"]), low: numOrNull(entry["low"]), high: numOrNull(entry["high"]) },
+    stopLoss: numOrNull(claim["stopLoss"]),
+    targets: Array.isArray(claim["targets"]) ? claim["targets"].map(numOrNull).filter((x): x is number => x !== null).slice(0, 6) : [],
+    levelBasis: strIn(claim["levelBasis"], ["premium", "underlying", "unspecified"]),
+    levelBasisInferred: isObj(claim["levelBasisInference"]), levelBasisConflict: claim["levelBasisConflict"] === true,
+    expiry: { status: strIn(expiry["status"], ["missing", "period_word", "year_two_digit", "day_month", "year_dependent", "full", "invalid"]), day: numOrNull(expiry["day"]), month: numOrNull(expiry["month"]), year: numOrNull(expiry["year"]) },
+  };
+}
+export function safeReasons(reasons: unknown): Array<{ code: string; severity: string }> {
+  if (!Array.isArray(reasons)) return [];
+  const out: Array<{ code: string; severity: string }> = [];
+  for (const r of reasons) { if (isObj(r) && typeof r["code"] === "string" && CODE_RE.test(r["code"])) out.push({ code: r["code"], severity: strIn(r["severity"], SEVERITIES) ?? "info" }); if (out.length >= 16) break; }
+  return out;
+}
+
 export function marketOpenIst(now: Date): boolean {
   const ist = new Date(now.getTime() + 330 * 60_000), dow = ist.getUTCDay(), m = ist.getUTCHours() * 60 + ist.getUTCMinutes();
   return dow >= 1 && dow <= 5 && m >= 9 * 60 + 15 && m < 15 * 60 + 30;
@@ -48,7 +79,7 @@ export function readProvidersView(dir: string, now: Date) {
   });
 }
 
-export function registerLiveRoutes(app: FastifyInstance, deps: { db: Db; authorized: Authorizer; snapshotDir: string; providersDir: string; adminConfigured: boolean; readSafety: () => Promise<unknown> | unknown; now?: () => Date }): void {
+export function registerLiveRoutes(app: FastifyInstance, deps: { db: Db; authorized: Authorizer; snapshotDir: string; providersDir: string; adminConfigured: boolean; readSafety: () => Promise<unknown> | unknown; now?: () => Date; /** Whether a chat id is on the ingestion allow-list; absent => `captureAllowed` is reported as unknown. */ isChatApproved?: (chatId: string) => boolean }): void {
   const guard = guardWith(deps.authorized), nowOf = deps.now ?? (() => new Date());
 
   app.get<{ Querystring: { limit?: string } }>("/intake/status", async (request, reply) => {
@@ -70,6 +101,64 @@ export function registerLiveRoutes(app: FastifyInstance, deps: { db: Db; authori
         oldestOpenSeconds: ageSec(iso(byStatus.filter((r) => ["PENDING", "PROCESSING", "FAILED"].includes(String(r["status"]))).map((r) => r["oldest"]).filter(Boolean).sort()[0] ?? null), now),
         lastReceivedAt: iso(last[0]?.["received"]), lastCompletedAt: iso(last[0]?.["at"]),
         recent: recent.map((r) => ({ id: String(r["id"]).slice(0, 8), type: String(r["message_type"]), status: String(r["status"]), attempts: Number(r["attempt_count"]), receivedAt: iso(r["received_at"]), completedAt: iso(r["completed_at"]), channel: mask(String(r["channel_id"])) })),
+      };
+    } catch (error) { return failRoute(request, reply, error); }
+  });
+
+
+  /** Phase 2: channels TWINS has captured from, with counts. Identifiers masked; no message content. */
+  app.get("/telegram/channels", async (request, reply) => {
+    if (!guard(request, reply)) return reply;
+    try {
+      const rows = async (q: ReturnType<typeof sql>) => (await deps.db.execute(q)).rows as Array<Record<string, unknown>>;
+      const [chans, claims] = await Promise.all([
+        rows(sql`select s.id, s.channel_identifier, s.display_name, s.chat_id,
+          count(m.id) filter (where m.edit_date is null and (m.origin_message_id is null or m.origin_message_id = m.external_message_id))::int as messages,
+          count(m.id) filter (where m.edit_date is not null or (m.origin_message_id is not null and m.origin_message_id <> m.external_message_id))::int as revisions,
+          min(m.message_timestamp) as first_at, max(m.message_timestamp) as last_at
+          from telegram_sources s left join telegram_messages m on m.telegram_source_id = s.id group by s.id order by max(m.message_timestamp) desc nulls last limit 200`),
+        rows(sql`select m.telegram_source_id as sid, c.result_kind, count(*)::int as n from options_claims c join telegram_messages m on m.id = c.telegram_message_id group by 1, 2`),
+      ]);
+      const now = nowOf();
+      const iso = (v: unknown): string | null => (v ? new Date(String(v)).toISOString() : null);
+      const byChan = new Map<string, Record<string, number>>();
+      for (const r of claims) { const k = String(r["sid"]); const o = byChan.get(k) ?? {}; o[String(r["result_kind"])] = Number(r["n"]); byChan.set(k, o); }
+      return {
+        channels: chans.map((r) => {
+          const last = iso(r["last_at"]), chat = typeof r["chat_id"] === "string" ? r["chat_id"] : null, kinds = byChan.get(String(r["id"])) ?? {};
+          return {
+            id: String(r["id"]).slice(0, 8), channel: mask(String(r["channel_identifier"])), name: typeof r["display_name"] === "string" ? r["display_name"].replace(/[^A-Za-z0-9 _.:@-]/g, "_").slice(0, 60) : null,
+            messages: Number(r["messages"]), revisions: Number(r["revisions"]), claims: { claim: kinds["claim"] ?? 0, ambiguous: kinds["ambiguous"] ?? 0, unsupported: kinds["unsupported"] ?? 0 },
+            firstMessageAt: iso(r["first_at"]), lastMessageAt: last, lastMessageAgeSeconds: ageSec(last, now),
+            captureAllowed: deps.isChatApproved && chat !== null ? deps.isChatApproved(chat) : null,
+          };
+        }),
+      };
+    } catch (error) { return failRoute(request, reply, error); }
+  });
+
+  /** Phase 2: parsed options claims, newest first. Explicit field allow-list: no message text, no raw fragments, no free-text descriptions. */
+  app.get<{ Querystring: { limit?: string; channel?: string } }>("/telegram/claims", async (request, reply) => {
+    if (!guard(request, reply)) return reply;
+    const limit = clampLimit(request.query.limit, 25, 100);
+    const channel = request.query.channel;
+    if (limit === null || (channel !== undefined && !/^\*\*\*[A-Za-z0-9_.:@-]{1,4}$/.test(channel))) return reply.code(400).send({ error: "invalid_input" });
+    try {
+      const tail = channel === undefined ? null : channel.slice(3);
+      const found = (await deps.db.execute(sql`select c.id, c.parser_version, c.result_kind, c.assessment_outcome, c.claim, c.reasons, m.message_timestamp, s.channel_identifier
+        from options_claims c join telegram_messages m on m.id = c.telegram_message_id join telegram_sources s on s.id = m.telegram_source_id
+        where (${tail}::text is null or right(s.channel_identifier, 4) = ${tail}) order by m.message_timestamp desc, c.id desc limit ${limit}`)).rows as Array<Record<string, unknown>>;
+      const now = nowOf();
+      return {
+        claims: found.map((r) => {
+          const at = r["message_timestamp"] ? new Date(String(r["message_timestamp"])).toISOString() : null;
+          return {
+            id: String(r["id"]).slice(0, 8), channel: mask(String(r["channel_identifier"])), receivedAt: at, ageSeconds: ageSec(at, now),
+            parserVersion: /^[a-z0-9._-]{1,40}$/.test(String(r["parser_version"])) ? String(r["parser_version"]) : "unknown",
+            resultKind: strIn(r["result_kind"], ["claim", "ambiguous", "unsupported"]), assessmentOutcome: strIn(r["assessment_outcome"], ["INSUFFICIENT_EVIDENCE", "REJECT"]),
+            claim: safeClaimView(r["claim"]), blockers: safeReasons(r["reasons"]),
+          };
+        }),
       };
     } catch (error) { return failRoute(request, reply, error); }
   });
