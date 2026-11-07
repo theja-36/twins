@@ -29,7 +29,7 @@ C="docker compose -p twins-staging --env-file staging.env -f docker-compose.stag
 ## E. Shadow flag ON
 Only after D is clean: in `staging.env` set `TWINS_REDUCE_ONLY_SHADOW=true` (backup copy first), then `$C up -d --no-deps worker`. Verify: worker starts without a configuration error; `risk_sizing.shadow.*` lines appear only when a decision is SIZED (expected to be none until trust tiers and contracts exist); 0 errors. Rollback: set it back to `false` and restart the worker.
 
-## F. Functional deploy (main at that time: #110, #111, #114, #115 plus the neutral #112, #113, #116)
+## F. Functional deploy (main at that time: #110, #111, #114, #115, #118 (read-only Telegram routes) and #119 (pure), plus the neutral #112, #113, #116, #117, #122; NOT #120 (migration, held) or #121 (Dhan, held))
 Same recipe as Deploys 17-19: tarball and SHA-256 manifest, `MANIFEST_MATCH`, derived build script, `twins-backup` (verified), edit `TWINS_IMAGE_TAG` (keep a `.before-main-<sha8>` copy), rolling `up -d --no-deps` of alert-relay, api, worker, then checks and a `deployments.jsonl` line. Extra steps for this deploy:
 1. Copy the repo compose file over the host one (keep a `.before` copy); `$C config -q`.
 2. **Set the premium default source (owner-confirmed 2026-11-07: the channel ending 2544, 109 of 126 claims).** The identifier is computed on the host and never printed: select it from `telegram_sources` where it ends in `2544`, require exactly one row, and write `TWINS_SOURCE_DEFAULT_LEVEL_BASIS=<identifier>=premium` into `staging.env`. Verified read-only on 2026-11-07: the identifier matches the setting's allowed characters and has no display name (so the exporter's channel label equals the identifier).
@@ -49,3 +49,8 @@ Feed run result, verification table, flag state, deploy record, source default a
 
 ## Not part of Monday
 Marketaux (waiting for the reply), Dhan, Stage 6, paper trading, any import, any order, the Phase 2 backend routes.
+
+## Added 2026-11-07 (batch 7)
+* After the deploy, check the two new read-only routes with the API key read inside the container (never printed): `GET /telegram/channels` and `GET /telegram/claims?limit=5` return 200 with masked channels and no message text; without the token they return 401.
+* twins-frontend #7 and #8 are already merged; the Channels and decision-card pages need the SSH tunnel to be viewed against the live API.
+* If you approve #120 (migration 0032) it adds a migration step to the deploy (take the usual backup first, apply, verify the table exists and the count of migrations is 33) and only then may `TWINS_SHADOW_PERSIST=true` be set.
