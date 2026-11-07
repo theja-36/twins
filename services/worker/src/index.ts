@@ -26,7 +26,8 @@ import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { DEFAULT_REDUCE_ONLY_POLICY, getRiskDecision, intelligenceOf, reduceOnlySize, runResearchProbe } from "@twins/risk";
 import { buildSourceHealth, observeProviderFiles } from "@twins/providers";
-import { loadReduceOnlyShadowFlag, runReduceOnlyShadow, type ShadowDeps, type ShadowInputs } from "./reduceOnlyShadow.js";
+import { recordShadowObservation } from "./shadowStore.js";
+import { loadReduceOnlyShadowFlag, loadShadowPersistFlag, runReduceOnlyShadow, type ShadowDeps, type ShadowInputs } from "./reduceOnlyShadow.js";
 import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/paper";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
@@ -383,12 +384,18 @@ const agentShadowFor = (log: StructuredLogger, db: Db) => async (decisionId: str
   const count = (k: string) => r.agents.filter((a) => a.status === k).length;
   const fields = { riskDecisionId: r.riskDecisionId, status: r.status, assessment: r.assessment, wouldHalt: r.wouldHalt, durationMs: r.durationMs, agents: r.agents.length, completed: count("COMPLETED"), failed: count("FAILED"), timedOut: count("TIMEOUT"), skippedAgents: count("SKIPPED"), unavailable: count("UNAVAILABLE"), perAgent: r.agents.map((a) => `${a.agentId}:${a.status}:${a.verdict}`).join(",").slice(0, 900) };
   if (r.wouldHalt) log.warn("agent_engine.shadow.assessed", fields); else log.info("agent_engine.shadow.assessed", fields);
+  if (shadowPersistEnabled) {
+    try { await recordShadowObservation(db, { kind: "agent_engine", riskDecisionId: r.riskDecisionId, decisionVersion: r.decisionVersion, result: { status: r.status, assessment: r.assessment, wouldHalt: r.wouldHalt, durationMs: r.durationMs, agents: r.agents.map((a) => ({ agentId: a.agentId, status: a.status, verdict: a.verdict, confidence: a.confidence })) } }); }
+    catch { log.warn("agent_engine.shadow.persist_failed", { riskDecisionId: r.riskDecisionId }); }
+  }
 };
 
 // P0 #3 reduce-only sizing SHADOW (design: docs/twins/design/SHADOW_WIRING_1_3.md). Default OFF; log-only; reads files and the decision, writes nothing, is never used by a decision. A malformed flag, or the flag
 // on together with the enforcing engine, fails at start-up (fail closed; the start-up guard already refuses live trading).
 // Per-source default level basis for option stops (TWINS_SOURCE_DEFAULT_LEVEL_BASIS, default: none). A malformed value fails at start-up.
 const sourceBasisConfig = parseSourceBasisConfig(process.env);
+// Durable copy of shadow results (HB-25, migration 0032). Default OFF; best-effort; nothing reads it to decide.
+const shadowPersistEnabled = loadShadowPersistFlag(process.env);
 const reduceOnlyShadowEnabled = loadReduceOnlyShadowFlag(process.env, { enforcingEngine: agentEngineConfig.enabled });
 const HIGH_IMPACT = new Set(["HIGH", "CRITICAL"]);
 const THIN_SAMPLE = 30;
@@ -421,6 +428,7 @@ async function gatherShadowInputs(db: Db | undefined, decisionId: string): Promi
 }
 const reduceOnlyShadowDeps = (log: StructuredLogger, db: Db | undefined): ShadowDeps => ({
   enabled: reduceOnlyShadowEnabled, log,
+  ...(shadowPersistEnabled && db ? { persist: (o: Parameters<NonNullable<ShadowDeps["persist"]>>[0]) => recordShadowObservation(db, o) } : {}),
   compute: (i) => reduceOnlySize(i, DEFAULT_REDUCE_ONLY_POLICY),
   gather: (o) => gatherShadowInputs(db, o.id),
 });

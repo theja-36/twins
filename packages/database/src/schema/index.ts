@@ -32,3 +32,4 @@ export * from "./historicalPatterns";
 export * from "./agents";
 export * from "./agentEngineState";
 export * from "./paper";
+export * from "./shadowObservations";
