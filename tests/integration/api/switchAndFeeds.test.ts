@@ -128,6 +128,19 @@ describe("live data routes (real database)", () => {
     for (const x of r.recent) { expect(Object.keys(x).sort()).toEqual(["attempts", "channel", "completedAt", "id", "receivedAt", "status", "type"]); expect(x.channel).toMatch(/^\*\*\*/); expect(x.id).toHaveLength(8); }
     expect(JSON.stringify(r)).not.toMatch(/raw_payload|text|password|token/i);
   });
+  it("telegram channels and claims: the SQL runs on real PostgreSQL; identifiers are masked; claims carry only the field allow-list", async () => {
+    const a = appFor({ dir: snap(true), admin: true });
+    const ch = await a.inject({ method: "GET", url: "/telegram/channels", headers: READ });
+    expect(ch.statusCode).toBe(200);
+    for (const c of ch.json().channels) { expect(c.channel).toMatch(/^\*\*\*/); expect(Object.keys(c).sort()).toEqual(["captureAllowed", "channel", "claims", "firstMessageAt", "id", "lastMessageAgeSeconds", "lastMessageAt", "messages", "name", "revisions"]); expect(c.messages).toBeGreaterThanOrEqual(0); }
+    const cl = await a.inject({ method: "GET", url: "/telegram/claims?limit=20", headers: READ });
+    expect(cl.statusCode).toBe(200);
+    for (const c of cl.json().claims) { expect(Object.keys(c).sort()).toEqual(["ageSeconds", "assessmentOutcome", "blockers", "channel", "claim", "id", "parserVersion", "receivedAt", "resultKind"]); expect(c.channel).toMatch(/^\*\*\*/); }
+    expect(cl.body).not.toMatch(/"raw"|description|rawText|raw_text/);
+    const filtered = await a.inject({ method: "GET", url: "/telegram/claims?limit=5&channel=***0000", headers: READ });
+    expect(filtered.statusCode).toBe(200);
+    expect(filtered.json().claims.length).toBeLessThanOrEqual(5);
+  });
   it("market snapshot: generation, index price with the day's change, and the (absent) provider files", async () => {
     const r = (await appFor({ dir: snap(true), admin: true }).inject({ method: "GET", url: "/market/snapshot", headers: READ })).json();
     expect(r.generation).toMatchObject({ status: "complete" }); expect(r.indices[0]).toMatchObject({ symbol: "NIFTY", level: 24450, changePct1d: 1.033 }); expect(r.providers).toHaveLength(7); expect(r.providers.every((p: { present: boolean }) => !p.present)).toBe(true);
