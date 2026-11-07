@@ -98,7 +98,7 @@ describe("twins-channel-news-v1 file", () => {
   });
   it("rejects malformed files instead of repairing them", () => {
     const good = JSON.parse(JSON.stringify(buildChannelNewsFile([item("1")], NOW)));
-    const mutate = (f: (x: Record<string, any>) => void) => { const c = JSON.parse(JSON.stringify(good)); f(c); return c; };
+    const mutate = (f: (x: { items: Array<Record<string, unknown>> } & Record<string, unknown>) => void) => { const c = JSON.parse(JSON.stringify(good)); f(c); return c; };
     for (const bad of [null, [], { ...good, format: "x" }, mutate((c) => { c.as_of = "nope"; }), mutate((c) => { c.items[0].themes = ["free text"]; }), mutate((c) => { c.items[0].polarity = 2; }), mutate((c) => { c.items[0].symbols = ["lower"]; }), mutate((c) => { c.items.push({ ...c.items[0] }); }), mutate((c) => { c.items[0].channel = "has/slash"; })]) {
       expect(() => parseChannelNewsFile(bad)).toThrow(ChannelNewsFormatError);
     }
