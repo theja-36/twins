@@ -1,3 +1,4 @@
+import { analyzeTelegramText } from "@twins/signals";
 import { MAX_EDITS, MAX_TEXT_LENGTH } from "./contract";
 
 /**
@@ -19,9 +20,9 @@ export interface CaptureRow {
 export interface ExportRecord { channel: string; message_id: string; timestamp: string; text: string; edits?: Array<{ edited_at: string; text: string }> }
 export interface ExportStats {
   version: typeof CAPTURE_EXPORT_VERSION; rowsRead: number; messagesExported: number; revisionsAttached: number; revisionsOrphaned: number; firstSeenEditedExcluded: number; firstSeenEditedIncluded: number;
-  emptyTextSkipped: number; badIdSkipped: number; editsTruncated: number; textTruncated: number; channels: number; byCaptureMethod: Record<string, number>; first: string | null; last: string | null;
+  emptyTextSkipped: number; resultReportsSkipped: number; badIdSkipped: number; editsTruncated: number; textTruncated: number; channels: number; byCaptureMethod: Record<string, number>; first: string | null; last: string | null;
 }
-export interface ExportOptions { includeFirstSeenEdited?: boolean }
+export interface ExportOptions { includeFirstSeenEdited?: boolean; /** Keep messages the parser classifies as reports of past results (default: skipped, so they cannot reach the importer as signals). */ includeResultReports?: boolean }
 
 /** Contract-safe channel label: the display name when present, else the identifier; characters outside the contract's set become "_". */
 export function channelLabelOf(r: Pick<CaptureRow, "channelIdentifier" | "displayName">): string {
@@ -31,7 +32,7 @@ export function channelLabelOf(r: Pick<CaptureRow, "channelIdentifier" | "displa
 }
 
 export function captureRowsToRecords(rows: readonly CaptureRow[], opts: ExportOptions = {}): { records: ExportRecord[]; stats: ExportStats } {
-  const stats: ExportStats = { version: CAPTURE_EXPORT_VERSION, rowsRead: rows.length, messagesExported: 0, revisionsAttached: 0, revisionsOrphaned: 0, firstSeenEditedExcluded: 0, firstSeenEditedIncluded: 0, emptyTextSkipped: 0, badIdSkipped: 0, editsTruncated: 0, textTruncated: 0, channels: 0, byCaptureMethod: {}, first: null, last: null };
+  const stats: ExportStats = { version: CAPTURE_EXPORT_VERSION, rowsRead: rows.length, messagesExported: 0, revisionsAttached: 0, revisionsOrphaned: 0, firstSeenEditedExcluded: 0, firstSeenEditedIncluded: 0, emptyTextSkipped: 0, resultReportsSkipped: 0, badIdSkipped: 0, editsTruncated: 0, textTruncated: 0, channels: 0, byCaptureMethod: {}, first: null, last: null };
   const groups = new Map<string, { original: CaptureRow | null; revisions: CaptureRow[] }>();
   for (const r of rows) {
     stats.byCaptureMethod[r.captureMethod] = (stats.byCaptureMethod[r.captureMethod] ?? 0) + 1;
@@ -51,6 +52,7 @@ export function captureRowsToRecords(rows: readonly CaptureRow[], opts: ExportOp
     if (o.firstSeenEdited) { if (!opts.includeFirstSeenEdited) { stats.firstSeenEditedExcluded += 1; continue; } stats.firstSeenEditedIncluded += 1; }
     if (!ID_OK.test(origin)) { stats.badIdSkipped += 1; continue; }
     if (o.rawText.trim() === "") { stats.emptyTextSkipped += 1; continue; }
+    if (!opts.includeResultReports) { const a = analyzeTelegramText(o.rawText); if (a.kind === "none" && a.reason === "result_report") { stats.resultReportsSkipped += 1; continue; } }
     const channel = channelLabelOf(o);
     const edits = [...g.revisions].filter((r) => r.rawText.trim() !== "").sort((a, b) => (a.editDate?.getTime() ?? a.messageTimestamp.getTime()) - (b.editDate?.getTime() ?? b.messageTimestamp.getTime()));
     const keep = edits.slice(0, MAX_EDITS);

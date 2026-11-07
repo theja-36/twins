@@ -13,7 +13,13 @@ import { analyzeOptionsText, detectUnsupportedOptionsShape, normalizeUnderlyingA
 import { isReservedUnderlyingToken, type OptionsClaim } from "./options/types";
 
 /** Identifies this deterministic parser; bump when extraction rules change. */
-export const TELEGRAM_PARSER_VERSION = "telegram-regex-v2";
+export const TELEGRAM_PARSER_VERSION = "telegram-regex-v3";
+
+/**
+ * The parser version before result reports were recognised. v3 differs ONLY in that a message with no BUY/SELL action, no entry level and result / performance wording (a report of past outcomes, not
+ * a signal) is classified as no signal (`reason: "result_report"`) instead of an empty options claim. v2 stays available for explicit reparse and for the claims already stored under it.
+ */
+export const TELEGRAM_PARSER_VERSION_V2 = "telegram-regex-v2";
 
 /**
  * The previous parser version. v2 differs ONLY in that options-style directives (index underlyings NIFTY /
@@ -59,7 +65,8 @@ function extractTargets(normalized: string): number[] {
 }
 
 export type TelegramTextAnalysis =
-  | { kind: "none" }
+  /** `reason: "result_report"` marks a recognised report of past results (parser v3); the claim is not created. */
+  | { kind: "none"; reason?: "result_report" }
   | { kind: "signal"; signal: ParsedSignal }
   /** An options-style claim (index underlying): unverified, never an equity signal; see ./options. */
   | { kind: "options_claim"; claim: OptionsClaim }
@@ -119,11 +126,11 @@ export function parseTelegramSignal(rawText: string): ParsedSignal | null {
 }
 
 /**
- * Current parser (telegram-regex-v2). Options-style text (an index underlying after BUY/SELL, or a CE/PE contract)
+ * Parser telegram-regex-v2 (kept for explicit reparse). Options-style text (an index underlying after BUY/SELL, or a CE/PE contract)
  * is handled by the options path and can never produce an equity signal; a message mixing it with other directives
  * is ambiguous. Everything else is parsed exactly as in v1.
  */
-export function analyzeTelegramText(rawText: string): TelegramTextAnalysis {
+export function analyzeTelegramTextV2(rawText: string): TelegramTextAnalysis {
   const options = analyzeOptionsText(rawText);
   if (options.kind !== "none") return options;
   const unsupported = detectUnsupportedOptionsShape(rawText);
@@ -140,4 +147,23 @@ export function analyzeTelegramText(rawText: string): TelegramTextAnalysis {
     return { kind: "ambiguous", directives: [{ direction: v1.signal.direction, symbol: v1.signal.symbol }], optionsRelated: true };
   }
   return v1;
+}
+
+/**
+ * RESULT / PERFORMANCE wording of a past-outcome report (targets hit, profit booked, points gained). Whole-word matches on the normalised upper-case text. Used ONLY together with the structural test
+ * below (no action, no entry), so a signal that merely mentions "target" or "profit" is never affected.
+ */
+const RESULT_WORDING_RE = /(?<![A-Z])(?:HIT|ACHIEVED|ACHIEVE|ACCOMPLISHED|BOOKED|BOOKING|GAINED|GAINING|GAINS|GAIN|PROFIT|PROFITS|DONE|REACHED|SUCCESS(?:FUL)?|WINNER|WON|WIN)(?![A-Z])/;
+export function hasResultWording(rawText: string): boolean {
+  return RESULT_WORDING_RE.test(rawText.replace(/\s+/g, " ").toUpperCase());
+}
+
+/**
+ * Current parser (telegram-regex-v3) = v2 plus ONE rule: an options claim with NO BUY/SELL action AND NO entry level AND result wording is a report of past results, not a signal. A message with a
+ * BUY/SELL action, or with any entry level, is never reclassified, whatever else it says.
+ */
+export function analyzeTelegramText(rawText: string): TelegramTextAnalysis {
+  const a = analyzeTelegramTextV2(rawText);
+  if (a.kind === "options_claim" && a.claim.action === null && a.claim.entry.type === "unspecified" && hasResultWording(rawText)) return { kind: "none", reason: "result_report" };
+  return a;
 }

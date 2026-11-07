@@ -1,4 +1,4 @@
-import { analyzeTelegramText, TELEGRAM_PARSER_VERSION, type ParsedSignal } from "@twins/signals";
+import { analyzeTelegramText, applySourceDefaultBasis, TELEGRAM_PARSER_VERSION, type ParsedSignal, type SourceBasisConfig } from "@twins/signals";
 import { validateOptionsClaimStopLoss, validateStopLoss } from "@twins/stop-loss";
 
 /**
@@ -62,9 +62,9 @@ function decide(f: NormalizedFields): void {
   if (f.stopLossValidation && f.stopLossValidation.result !== "VALID" && f.stopLossValidation.result !== "MISSING") f.warnings.push(`stop_loss_${f.stopLossValidation.result.toLowerCase()}`);
 }
 
-export function normalizeText(text: string, ctx: { recordMarket: string | null; defaultMarket: string | null }): NormalizedFields {
+export function normalizeText(text: string, ctx: { recordMarket: string | null; defaultMarket: string | null; /** Channel label of the record, for the per-source default level basis. */ source?: string | null; sourceBasis?: SourceBasisConfig }): NormalizedFields {
   const a = analyzeTelegramText(text);
-  if (a.kind === "none") return blank("NO_SIGNAL", "NOT_A_SIGNAL");
+  if (a.kind === "none") { const f = blank("NO_SIGNAL", "NOT_A_SIGNAL"); if (a.reason === "result_report") f.warnings.push("result_report"); return f; }
   if (a.kind === "ambiguous") {
     const f = blank("AMBIGUOUS", "AMBIGUOUS");
     f.ambiguousFields = ["directives"];
@@ -91,8 +91,9 @@ export function normalizeText(text: string, ctx: { recordMarket: string | null; 
     decide(f);
     return f;
   }
-  const c = a.claim;
+  const c = ctx.sourceBasis ? applySourceDefaultBasis(a.claim, ctx.source ?? null, ctx.sourceBasis) : a.claim;
   const f = blank("OPTIONS_CLAIM", "INCOMPLETE");
+  if (c !== a.claim) f.warnings.push("level_basis_inferred_source_default");
   const m = resolveMarket(ctx.recordMarket, ctx.defaultMarket, c.underlying);
   const e = c.expiry;
   Object.assign(f, {

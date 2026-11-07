@@ -140,7 +140,7 @@ async function processRecord(tx: Db, batchId: string, files: InputFile[], rec: P
     }).returning({ id: schema.historicalSourceRecords.id });
     const sourceId = (row as { id: string }).id;
     counters.newSourceRecords += 1;
-    const n = normalizeText(v.text, { recordMarket: m.market, defaultMarket: opts.defaultMarket });
+    const n = normalizeText(v.text, { recordMarket: m.market, defaultMarket: opts.defaultMarket, source: m.channel, ...(opts.sourceBasis ? { sourceBasis: opts.sourceBasis } : {}) });
     const [norm] = await tx.insert(schema.historicalNormalizedRecords).values({
       sourceRecordId: sourceId, parserVersion: PARSER_VERSION, parseStatus: n.parseStatus, market: n.market, marketSource: n.marketSource, instrumentType: n.instrumentType, underlying: n.underlying, expiry: n.expiry, expiryDate: n.expiryDate,
       strike: n.strike === null ? null : String(n.strike), optionType: n.optionType, side: n.side, entry: n.entry, stopLoss: n.stopLoss === null ? null : String(n.stopLoss), levelBasis: n.levelBasis, targets: n.targets, timeValidity: n.timeValidity,

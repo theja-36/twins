@@ -8,10 +8,11 @@
  */
 import { pathToFileURL } from "node:url";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
+import { parseSourceBasisConfig, SourceBasisConfigError } from "../../packages/signals/src/index";
 import { inspectInput, InputError, profileArchive, type ArchiveProfile } from "../../packages/historical/src/index";
 
 export interface CliDeps { out: (l: string) => void; err: (l: string) => void; now?: () => Date }
-const USAGE = "usage: archive-profile <path> --label <label> [--default-market <CODE>] [--as-of <ISO with offset>] [--json]";
+const USAGE = "usage: archive-profile <path> --label <label> [--default-market <CODE>] [--level-basis-default \"<source>=premium\"] [--as-of <ISO with offset>] [--json]";
 const pct = (v: number | null): string => (v === null ? "-" : `${(v * 100).toFixed(1)}%`);
 
 export function renderProfile(p: ArchiveProfile): string[] {
@@ -35,19 +36,22 @@ export function renderProfile(p: ArchiveProfile): string[] {
 export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
   const [path, ...rest] = argv;
   if (!path || path.startsWith("--")) { deps.err(USAGE); return 2; }
-  let label: string | undefined, market: string | null = null, asOf: Date | undefined, json = false;
+  let basisRaw: string | undefined, label: string | undefined, market: string | null = null, asOf: Date | undefined, json = false;
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i] as string;
     if (a === "--json") json = true;
     else if (a === "--label" && rest[i + 1]) label = rest[++i];
     else if (a === "--default-market" && rest[i + 1]) market = rest[++i] as string;
+    else if (a === "--level-basis-default" && rest[i + 1]) basisRaw = rest[++i] as string;
     else if (a === "--as-of" && rest[i + 1]) { const v = rest[++i] as string; asOf = new Date(v); if (!/^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:\d{2})$/.test(v) || Number.isNaN(asOf.getTime())) { deps.err("--as-of must be an ISO instant with an offset"); return 2; } }
     else { deps.err(USAGE); return 2; }
   }
   if (!label) { deps.err(USAGE); return 2; }
+  let sourceBasis;
+  if (basisRaw !== undefined) { try { sourceBasis = parseSourceBasisConfig({ TWINS_SOURCE_DEFAULT_LEVEL_BASIS: basisRaw }); } catch (e) { if (e instanceof SourceBasisConfigError) { deps.err("--level-basis-default must look like <source>=premium[,<source>=premium]"); return 2; } throw e; } }
   try {
     const files = await inspectInput(path);
-    const profile = await profileArchive(files, { label, defaultMarket: market }, asOf ?? deps.now?.() ?? new Date());
+    const profile = await profileArchive(files, { label, defaultMarket: market, ...(sourceBasis ? { sourceBasis } : {}) }, asOf ?? deps.now?.() ?? new Date());
     if (json) deps.out(JSON.stringify(profile, null, 2)); else for (const l of renderProfile(profile)) deps.out(l);
     return 0;
   } catch (error) {

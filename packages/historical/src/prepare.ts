@@ -3,6 +3,7 @@ import { contentSha256, identityKey, messageKey, sha256 } from "./identity";
 import { InputError, readAll, type InputFile } from "./readers";
 import { redactSecrets } from "./redact";
 import { NORMALIZER_VERSION, PARSER_VERSION } from "./normalize";
+import type { SourceBasisConfig } from "@twins/signals";
 
 /**
  * Turns the validated records of an input into message VERSIONS ready to store (Stage 4 / Task 1): the original text, then each edit in time order, every text redacted
@@ -51,7 +52,7 @@ export async function* prepareRecords(files: InputFile[], now: Date): AsyncGener
   }
 }
 
-export interface BatchOptions { label: string; defaultMarket: string | null }
+export interface BatchOptions { label: string; defaultMarket: string | null; /** Owner-configured per-source default level basis (premium); part of the batch identity when set. */ sourceBasis?: SourceBasisConfig }
 const LABEL = /^[A-Za-z0-9_.:@ -]{1,80}$/;
 
 export function manifestOf(files: InputFile[]) {
@@ -62,6 +63,6 @@ export const manifestSha256 = (files: InputFile[]): string => sha256(JSON.string
 /** Same input files + label + parser + normalizer + contract + options = the same batch: re-running an import resolves to the batch it already created. */
 export function batchKeyOf(files: InputFile[], o: BatchOptions): string {
   if (!LABEL.test(o.label)) throw new InputError("invalid_label");
-  return sha256(JSON.stringify({ manifest: manifestSha256(files), label: o.label, parser: PARSER_VERSION, normalizer: NORMALIZER_VERSION, contract: CONTRACT_VERSION, defaultMarket: o.defaultMarket }));
+  return sha256(JSON.stringify({ manifest: manifestSha256(files), label: o.label, parser: PARSER_VERSION, normalizer: NORMALIZER_VERSION, contract: CONTRACT_VERSION, defaultMarket: o.defaultMarket, ...(o.sourceBasis && o.sourceBasis.premiumSources.size > 0 ? { sourceBasis: { sources: [...o.sourceBasis.premiumSources].sort(), maxStopPct: o.sourceBasis.maxStopPctOfStrike } } : {}) }));
 }
 export { messageKey };

@@ -59,7 +59,7 @@ export async function dryRun(files: InputFile[], opts: BatchOptions, db?: Db, no
       s.messageVersions += 1;
       if (firstOfMessage) s.uniqueMessages += 1;
       else { s.revisions += 1; bump(s.warningsByCode, v.fromEditsArray ? "edit_revision" : "redelivery_conflict"); }
-      const n = normalizeText(v.text, { recordMarket: r.message.market, defaultMarket: opts.defaultMarket });
+      const n = normalizeText(v.text, { recordMarket: r.message.market, defaultMarket: opts.defaultMarket, source: r.message.channel, ...(opts.sourceBasis ? { sourceBasis: opts.sourceBasis } : {}) });
       bump(s.byParseStatus, n.parseStatus);
       bump(s.byValidation, n.validationResult);
       if (n.parseStatus === "SIGNAL" || n.parseStatus === "OPTIONS_CLAIM") s.parseable += 1;
