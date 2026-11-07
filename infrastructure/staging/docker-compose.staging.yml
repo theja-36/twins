@@ -526,6 +526,33 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  # Channel news writer (Phase 3, D-117): turns recent NON-signal Telegram commentary into the STRUCTURED file `channel-news.json` (fixed fields only, hashed ids, masked channels; no message text), once an
+  # hour. OFF: profile `news`, never part of `up`. It cannot live inside the provider exporter on purpose: that container has no database and has the only outbound route, while this one needs the
+  # runtime database role (SELECT of messages) and must have NO route out. It sits on twins_data only (internal network), writes ONLY the providers folder, and keeps the previous file when a run fails.
+  channel-news-writer:
+    <<: *hardening
+    restart: unless-stopped
+    profiles: ["news"]
+    image: twins-staging:${TWINS_IMAGE_TAG:-local}
+    pull_policy: never
+    user: "1000:1000"
+    command: ["sh", "-c", "while true; do node --import tsx /app/scripts/ops/channel-news-export.ts; sleep 3600; done"]
+    environment:
+      APP_ENV: staging
+      TRADING_MODE: paper
+      LIVE_TRADING: "false"
+      NODE_ENV: production
+      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # runtime role, same as the worker
+      TWINS_PROVIDERS_DIR: /var/lib/twins-providers
+    volumes:
+      - /var/lib/twins-providers:/var/lib/twins-providers
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [twins_data]
+    stop_grace_period: 20s
+    mem_limit: 256m
+    cpus: 0.5
+
 networks:
   twins_data:
     internal: true               # no route to the internet or to other stacks

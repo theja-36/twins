@@ -221,11 +221,19 @@ describe("staging packaging (static)", () => {
     expect(ignore).toContain("infrastructure/staging/*.env"); // a filled staging.env can never enter the build context
     for (const dir of ["apps", "services", "packages", "adapters"]) expect(ignore.includes(dir) || ignore.includes(`${dir}/`)).toBe(false);
   });
-  it("a new image gets its own tag and never overwrites the running one: the twelve shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler, kite-login, kite-ticker, provider-exporter) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
-    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(12);
+  it("the channel news writer: profile `news`, data network only (no route out), runtime DB role, writes only the providers folder, no keys of any broker or provider", () => {
+    const w = service("channel-news-writer");
+    expect(w).toMatch(/profiles: \["news"\]/); expect(w).toMatch(/networks: \[twins_data\]/);
+    expect(w).not.toMatch(/ports:|twins_edge|coolify|twins_providers_egress|twins_kite_egress|twins_egress|KITE|TWINS_API_KEY|TELEGRAM|FRED|REDIS_URL|TWINS_APP_DB_PASSWORD}.*admin/);
+    expect(w).toMatch(/postgresql:\/\/twins_app:/); expect(w).not.toMatch(/twins_owner|POSTGRES_PASSWORD/);
+    expect(w).toMatch(/- \/var\/lib\/twins-providers:\/var\/lib\/twins-providers\n/); expect(w).not.toMatch(/twins-snapshots/);
+    expect(w).toMatch(/LIVE_TRADING: "false"/); expect(w).toMatch(/channel-news-export\.ts/); expect(w).toMatch(/sleep 3600/);
+  });
+  it("a new image gets its own tag and never overwrites the running one: the thirteen shared app services (migrate, safety-control, risk-control, audit-verify, outbox-deadletter, alert-relay, api, worker, scheduler, kite-login, kite-ticker, provider-exporter, channel-news-writer) use one tag variable (default `local`) and the capture service may override it with its own optional tag", () => {
+    expect(compose.match(/image: twins-staging:\$\{TWINS_IMAGE_TAG:-local\}/g)?.length).toBe(13);
     expect(service("capture")).toContain("image: twins-staging:${TWINS_CAPTURE_IMAGE_TAG:-${TWINS_IMAGE_TAG:-local}}"); // capture-only override, falls back to the shared tag
     expect(compose).not.toMatch(/image: twins-staging:local\b/); // no hard-coded tag left
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(14); // an unknown tag fails instead of being pulled
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(15); // an unknown tag fails instead of being pulled
     expect(env).toMatch(/TWINS_IMAGE_TAG/);
   });
   it("keeps the working networking and routing: no public Telegram webhook or bearer route, unique API names, API-only coolify", () => {
@@ -285,7 +293,7 @@ describe("staging packaging (static)", () => {
     expect(read(".github/workflows/ci.yml")).toMatch(/redis:7-alpine/);
     expect(service("postgres")).toMatch(/image: postgres:16-alpine/);
     expect(service("redis")).toMatch(/image: redis:7-alpine/);
-    expect(compose.match(/pull_policy: never/g)?.length).toBe(14);
+    expect(compose.match(/pull_policy: never/g)?.length).toBe(15);
   });
   it("Dockerfile runs as non-root, has no CMD and does not copy env files or data", () => {
     expect(dockerfile).toMatch(/^USER node$/m);
