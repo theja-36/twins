@@ -1,4 +1,4 @@
-# Design: Telegram news feed (read-only route and UI), for owner review
+# Design: Telegram news feed (read-only route and UI) - APPROVED 2026-11-07
 
 **Design only. No code, no migration, no live call.** Decisions of 2026-11-07: raw message text is never exposed by the API or the UI; only structured fields (symbols, themes, polarity, cluster id, timestamp); read-only route with the same API-key auth; no live calls until Marketaux permission and the owner's go-ahead; channel-only evidence is capped at CAUTION. Builds on the merged pure modules (`packages/agents/src/channelNews.ts`, `newsImpact.ts`; design in [PHASE3_NEWS_SOURCE_COMBO.md](PHASE3_NEWS_SOURCE_COMBO.md)). Engine off, shadow ON, `LIVE_TRADING` false, paper OFF, no orders, no Stage 6.
 
@@ -54,3 +54,13 @@ Owner review of this document; owner decision on the theme vocabulary and the po
 1. A or B (is durable history needed for calibration now)?
 2. Writer cadence: after each message, or hourly with the exporter?
 3. Should the Dashboard show a one-line summary, or only the Market page?
+
+## 9. Owner decisions (2026-11-07) and build plan
+Decided: **option A, file only, no migration**; writer **hourly with the exporter** (batch, not per message); Market page shows the full panel (items and clusters); **Dashboard shows a one-line summary** (for example "3 clusters, 2 mixed, CAUTION"); the theme vocabulary and polarity word list are approved as they stand in `channelNews.ts` (revisit later if needed).
+
+Build plan (each step its own PR, read-only or pure, no live call, nothing deployed before the next deploy window):
+1. **Writer:** `scripts/ops/channel-news-export.ts` plus a pure `selectNewsCandidates`; reads `telegram_messages` with the worker role, writes `channel-news.json` atomically into the provider folder; runs from the exporter loop once per hour. Counts only in its log line. Tests: leak, injection, caps, atomic write, previous file kept on failure.
+2. **Reader and route:** strict file reader in the API (no database access), `GET /news/telegram`, OpenAPI entry, proxy allow-list. Tests: 200 with key, 401 without, POST 404, static check that the route and its module import no Telegram table, status codes for missing / stale / invalid.
+3. **Summary:** a pure `summarizeChannelNews` (cluster count, mixed count, capped recommendation word) used by the route (`summary` field) and the Dashboard line. CAUTION-cap test pinned here.
+4. **Frontend:** full Market panel (replaces the SAMPLE News panel when the route answers; SAMPLE stays on 404) and the Dashboard one-liner.
+5. **Shadow wiring of the news agent** is NOT part of this build; separate step after review.
