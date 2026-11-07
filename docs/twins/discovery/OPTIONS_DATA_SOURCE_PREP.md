@@ -31,3 +31,6 @@ A pure parser and validator for a Dhan-shaped option-chain file into the agent's
 * Dhan community post: "Now Live: Option Chain with Greeks on DhanHQ API" (madefortrade.in)
 * Kite Connect forum: "How do I get option greeks data like delta theta of a particular strike price" (kite.trade)
 * Zerodha help pages on the Kite option chain (UI features)
+
+## Update 2026-11-07: dormant Dhan wiring built (owner order), PR open, HOLD
+`packages/providers/src/dhanOptions.ts` + `scripts/ops/dhan-options-export.ts` connect the Dhan converter to a host-pinned POST client and a one-shot pass that publishes `dhan-option-quotes.json` and `dhan-option-chain.json` into the providers folder. It is off in four independent ways: `TWINS_DHAN_OPTIONS_ENABLED` must be `true`; a token and client id must be in the environment; it is not in the exporter loop and not a compose service; no firewall rule or egress entry exists for `api.dhan.co`. The request shape is an assumption never executed. Tests use a fake fetch only (10). Nothing reads the two files yet. Enabling it needs your decisions on the Data plan cost, a credential, the firewall rule, and verification against Dhan's official docs.
