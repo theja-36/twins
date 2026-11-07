@@ -8,6 +8,7 @@ export const REDUCE_ONLY_SHADOW_TIMEOUT_MS = 3000;
 export const SHADOW_EVENT = "risk_sizing.shadow.reduce_only";
 export const SHADOW_VIOLATION_EVENT = "risk_sizing.shadow.violation";
 export const SHADOW_FAILED_EVENT = "risk_sizing.shadow.failed";
+export const SHADOW_PERSIST_FAILED_EVENT = "risk_sizing.shadow.persist_failed";
 
 export class ReduceOnlyShadowConfigError extends Error { constructor(m: string) { super(m); this.name = "ReduceOnlyShadowConfigError"; } }
 
@@ -18,6 +19,15 @@ export function loadReduceOnlyShadowFlag(env: Record<string, string | undefined>
   if (raw !== "true") throw new ReduceOnlyShadowConfigError(`${REDUCE_ONLY_SHADOW_ENV} must be true or false`);
   if (ctx.enforcingEngine) throw new ReduceOnlyShadowConfigError(`${REDUCE_ONLY_SHADOW_ENV} cannot be true while the enforcing agent engine is on`);
   return true;
+}
+
+export const SHADOW_PERSIST_ENV = "TWINS_SHADOW_PERSIST";
+/** Strict flag for the durable copy of shadow results (HB-25). Default OFF; needs migration 0032. Anything but true / false is a configuration error. */
+export function loadShadowPersistFlag(env: Record<string, string | undefined>): boolean {
+  const raw = env[SHADOW_PERSIST_ENV];
+  if (raw === undefined || raw === "" || raw === "false") return false;
+  if (raw === "true") return true;
+  throw new ReduceOnlyShadowConfigError(`${SHADOW_PERSIST_ENV} must be true or false`);
 }
 
 export interface ShadowInputs {
@@ -35,8 +45,11 @@ export interface ShadowResultLike {
 }
 export interface ShadowLog { info(event: string, fields: Record<string, unknown>): void; warn(event: string, fields: Record<string, unknown>): void }
 export interface SizedOutcome { id: string; decisionVersion: number; sizingStatus: string; quantity: number }
+export interface PersistShadow { (o: { kind: "reduce_only_sizing"; riskDecisionId: string; decisionVersion: number; result: Record<string, unknown> }): Promise<unknown> }
 export interface ShadowDeps {
   enabled: boolean;
+  /** Optional durable copy (HB-25). Best-effort: a failure is logged and never reaches the flow. Absent => log only. */
+  persist?: PersistShadow;
   log: ShadowLog;
   /** Injected so this module holds no sizing import: `reduceOnlySize(inputs)`. */
   compute: (i: { v1Quantity: number; drawdownPct: number | null; volatilityRatio: number | null; hoursToHighImpactEvent: number | null; unusableSources: number | null; thinEvidence: boolean }) => ShadowResultLike;
@@ -61,6 +74,14 @@ export async function runReduceOnlyShadow(deps: ShadowDeps, outcome: SizedOutcom
         riskDecisionId: outcome.id, decisionVersion: outcome.decisionVersion, version: r.version, v1Quantity: r.v1Quantity, shadowQuantity: r.adjustedQuantity, multiplier: r.multiplier, reduced: r.reduced,
         factors: r.factors.map((f) => ({ name: f.name, multiplier: f.multiplier })), unknownInputs: [...r.unknownInputs], notes: [...r.notes], unitRisk, usedForDecisions: false,
       });
+      if (deps.persist) {
+        try {
+          await deps.persist({ kind: "reduce_only_sizing", riskDecisionId: outcome.id, decisionVersion: outcome.decisionVersion, result: {
+            version: r.version, v1Quantity: r.v1Quantity, shadowQuantity: r.adjustedQuantity, multiplier: r.multiplier, reduced: r.reduced,
+            factors: r.factors.map((f) => ({ name: f.name, multiplier: f.multiplier })), unknownInputs: [...r.unknownInputs], notes: [...r.notes], unitRisk,
+          } });
+        } catch { deps.log.warn(SHADOW_PERSIST_FAILED_EVENT, { riskDecisionId: outcome.id, usedForDecisions: false }); }
+      }
     })();
     const timeout = new Promise<"timeout">((resolve) => { timer = setTimeout(() => resolve("timeout"), deps.timeoutMs ?? REDUCE_ONLY_SHADOW_TIMEOUT_MS); });
     const res = await Promise.race([work.then(() => "done" as const), timeout]);

@@ -336,6 +336,8 @@ services:
       TWINS_PAPER_TRADING_ENABLED: ${TWINS_PAPER_TRADING_ENABLED:-false}  # paper (simulated) trading loop; OFF unless true. Simulation only: no broker, no orders/fills/positions rows.
       # P0 #3 reduce-only sizing SHADOW (design: docs/twins/design/SHADOW_WIRING_1_3.md): log-only observer after sizing-v1, OFF unless staging.env says true. Refuses to start with the enforcing engine or LIVE_TRADING on.
       TWINS_REDUCE_ONLY_SHADOW: ${TWINS_REDUCE_ONLY_SHADOW:-false}
+      # Durable copy of shadow results in `shadow_observations` (HB-25; needs migration 0032 applied BEFORE this is true). Default false = log only.
+      TWINS_SHADOW_PERSIST: ${TWINS_SHADOW_PERSIST:-false}
       # Planning capital for position sizing (owner decision 2026-11-06: INR 1,00,000). Sizing is planning only: no order, no broker call. Empty = unset = nothing is sized.
       TWINS_SIZING_AVAILABLE_CAPITAL: ${TWINS_SIZING_AVAILABLE_CAPITAL:-}
       # Per-source DEFAULT level basis for option stops (owner decision 2026-11-07): comma-separated <channel identifier>=premium. Empty = no source configured. Applied only when the message is silent and the stop is below 10% of the strike.
