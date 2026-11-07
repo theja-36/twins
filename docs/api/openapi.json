@@ -1206,7 +1206,7 @@
         "tags": [
           "news"
         ],
-        "summary": "Telegram channel news as STRUCTURED fields only (masked channel, symbols, fixed theme codes, polarity, reliability, clusters with a stable id), read from the exporter's file; status ok / stale / missing / invalid. Never message text",
+        "summary": "Telegram channel news as STRUCTURED fields only (masked channel, symbols, fixed theme codes, polarity, reliability, clusters with a stable id, and a one-line summary capped at CAUTION), read from the exporter's file; status ok / stale / missing / invalid. Never message text",
         "security": [
           {
             "bearerAuth": []

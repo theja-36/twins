@@ -85,3 +85,16 @@ describe("static isolation", () => {
     expect(block).not.toMatch(/deps\.db|sql`|execute\(/);
   });
 });
+
+describe("summary field", () => {
+  it("carries the one-line summary, capped at CAUTION", async () => {
+    const { a } = setup(write([item("tm-1"), item("tm-2", { polarity: 0.8 })]));
+    const b = (await get(a)).json();
+    expect(b.summary).toMatchObject({ available: true, clusters: 1, mixed: 1, recommendation: "CAUTION" });
+    expect(b.summary.line).toBe("1 cluster, 1 mixed, CAUTION");
+  });
+  it("says unavailable when the file is missing", async () => {
+    const { a } = setup();
+    expect((await get(a)).json().summary).toMatchObject({ available: false, line: "Channel news unavailable (missing)" });
+  });
+});
