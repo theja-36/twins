@@ -15,3 +15,4 @@ export * from "./exporters/stubs";
 export * from "./debate";
 export * from "./newsImpact";
 export * from "./channelNews";
+export * from "./channelNewsFeed";
