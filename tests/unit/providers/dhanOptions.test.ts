@@ -2,8 +2,7 @@ import { mkdtempSync, readFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { createDhanOptionChainClient, DHAN_CHAIN_FILE, DHAN_HOST, DHAN_QUOTES_FILE, DhanClientError, DhanConfigError, loadDhanConfig, parseUnderlyings, runDhanOptionsPass } from "../../../packages/providers/src/dhanOptions";
-import { runCli } from "../../../scripts/ops/dhan-options-export";
+import { createDhanOptionChainClient, DHAN_CHAIN_FILE, DHAN_HOST, DHAN_QUOTES_FILE, DhanClientError, DhanConfigError, loadDhanConfig, parseUnderlyings, runCli, runDhanOptionsPass } from "../../../scripts/ops/dhan-options-export";
 
 // SYNTHETIC response in the ASSUMED Dhan shape; no real response and no real credential are used.
 const leg = (o: Record<string, unknown> = {}) => ({ implied_volatility: 14.2, last_price: 120.5, oi: 90000, volume: 12000, top_bid_price: 120, top_ask_price: 121, greeks: { delta: 0.52, theta: -8.1, gamma: 0.0012, vega: 11.3 }, ...o });
@@ -99,10 +98,11 @@ describe("enabled pass (fake fetch only)", () => {
 });
 
 describe("it stays out of the running system", () => {
-  it("is not referenced by the exporter loop, the compose file or the egress allow-list", () => {
+  it("is not referenced by the exporter loop, the compose file, the egress allow-list or the providers package", () => {
     const read = (p: string) => readFileSync(p, "utf8");
     expect(read("scripts/ops/provider-exporter.ts")).not.toMatch(/dhan/i);
     expect(read("infrastructure/staging/docker-compose.staging.yml")).not.toMatch(/dhan/i);
     expect(read("infrastructure/staging/twins-providers-egress.sh")).not.toMatch(/dhan/i);
+    expect(read("packages/providers/src/index.ts")).not.toMatch(/dhanOptions\b/);
   });
 });
