@@ -29,3 +29,6 @@ Channel commentary is promotional by nature (pump risk); the polarity word list 
 
 ## Open questions
 Which channels count as news sources (their own list, separate from signal channels)? Is a second API provider wanted as a fallback to GDELT if Marketaux is refused? Should channel news ever be shown on the decision card, or only feed the confidence weighting?
+
+## Built offline (2026-11-07, batch 7)
+`packages/agents/src/channelNews.ts`: structured extraction (instrument-reference symbols, fixed theme codes, polarity from fixed word lists; the message is read in memory and never copied), skipping of signals, claims and result reports through an injected classifier (so the agents package gains no dependency on the intake parser), near-duplicate collapse, symbol x theme x 2-hour clustering with a MIXED flag, `combinedNewsImpact` (API plus channel; corroboration labels; **channel-only evidence capped at CAUTION**; good news recommends nothing), and the strict `twins-channel-news-v1` file builder and parser. 12 unit tests. Not wired: nothing writes the file, the news agent does not read it, no exporter pass produces it.
