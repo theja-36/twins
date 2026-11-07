@@ -151,7 +151,7 @@ describe("parser version semantics after the v2 bump", () => {
     const id = await storeMessage(`BUY NEWV2${randomLetters(5)} @ 100 SL 95 TGT 110`);
     const first = await createSignalFromTelegramMessage(db, id, opts);
     expect(first).toMatchObject({ created: true, parserVersion: TELEGRAM_PARSER_VERSION });
-    expect(TELEGRAM_PARSER_VERSION).toBe("telegram-regex-v2");
+    expect(TELEGRAM_PARSER_VERSION).toBe("telegram-regex-v3");
     const again = await createSignalFromTelegramMessage(db, id, opts);
     expect(again).toMatchObject({ created: false, reused: true, signalId: first.signalId });
     const v1 = await reparseTelegramMessage(db, id, { ...opts, parserVersion: TELEGRAM_PARSER_VERSION_V1 });

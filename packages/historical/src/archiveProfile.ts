@@ -125,7 +125,7 @@ export async function profileArchive(files: InputFile[], opts: BatchOptions, now
       keys.add(key);
       t.messageVersions += 1;
       if (first) t.uniqueMessages += 1; else t.revisions += 1;
-      rows.push({ channel: r.message.channel, at: v.timestamp, n: normalizeText(v.text, { recordMarket: r.message.market, defaultMarket: opts.defaultMarket }), revision: !first });
+      rows.push({ channel: r.message.channel, at: v.timestamp, n: normalizeText(v.text, { recordMarket: r.message.market, defaultMarket: opts.defaultMarket, source: r.message.channel, ...(opts.sourceBasis ? { sourceBasis: opts.sourceBasis } : {}) }), revision: !first });
     }
   }
   return profileArchiveFromRows(rows, { asOf: now, defaultMarket: opts.defaultMarket, totals: t });

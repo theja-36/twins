@@ -46,7 +46,7 @@ describe("a JSONL import end to end", () => {
     const r = await runImport(db(), files, opts(`itest-${sfx()}`, { confirmedSource: file }));
     expect(r).toMatchObject({ outcome: "IMPORTED", resumedFromRecord: 0, checkpoints: 1, counters: { recordsConsumed: 6, validRecords: 6, invalidRecords: 0, messageVersions: 6, newSourceRecords: 6, duplicates: 0, revisions: 0, normalizedRecords: 6 } });
     const [b] = await q("select * from historical_import_batches where id = $1", [r.batchId]);
-    expect(b).toMatchObject({ batch_key: r.batchKey, format: "jsonl", contract_version: "historical-contract-v1", parser_version: "telegram-regex-v2", created_by: "service:itest", confirmed_source: "export.jsonl" });
+    expect(b).toMatchObject({ batch_key: r.batchKey, format: "jsonl", contract_version: "historical-contract-v1", parser_version: "telegram-regex-v3", created_by: "service:itest", confirmed_source: "export.jsonl" });
     expect(JSON.stringify(b)).not.toContain(dir); // a base name only, never a path
     expect(b!["manifest"]).toEqual([{ name: "export.jsonl", format: "jsonl", sha256: files[0]!.sha256, bytes: files[0]!.bytes }]);
 
@@ -66,7 +66,7 @@ describe("a JSONL import end to end", () => {
 
     const norm = await q("select n.*, s.original_message_id from historical_normalized_records n join historical_source_records s on s.id = n.source_record_id where s.batch_id = $1 order by s.source_line", [r.batchId]);
     expect(norm.map((x) => [x["parse_status"], x["validation_result"]])).toEqual([["OPTIONS_CLAIM", "VALID"], ["SIGNAL", "VALID"], ["SIGNAL", "INCOMPLETE"], ["AMBIGUOUS", "AMBIGUOUS"], ["NO_SIGNAL", "NOT_A_SIGNAL"], ["SIGNAL", "INCOMPLETE"]]);
-    expect(norm[0]).toMatchObject({ market: "NSE", market_source: "underlying_mapping", instrument_type: "option", underlying: "NIFTY", option_type: "CE", side: "buy", level_basis: "premium", parser_version: "telegram-regex-v2" });
+    expect(norm[0]).toMatchObject({ market: "NSE", market_source: "underlying_mapping", instrument_type: "option", underlying: "NIFTY", option_type: "CE", side: "buy", level_basis: "premium", parser_version: "telegram-regex-v3" });
     expect(Number(norm[0]!["strike"])).toBe(24500);
     expect(Number(norm[0]!["stop_loss"])).toBe(90);
     expect(new Date(norm[0]!["expiry_date"]).getUTCFullYear()).toBe(2031);

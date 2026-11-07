@@ -22,7 +22,7 @@ const D = "BUY NIFTYBANK 52000 PE @ 300 SL 250 TGT 350";
 describe("renderOptionsPreview (pure, offline)", () => {
   it("A: supported format, explicit PREMIUM, four-digit year", async () => {
     const t = await renderOptionsPreview(A);
-    for (const s of [JSON.stringify(A), "telegram-regex-v2", "RECOGNIZED options claim", "NIFTY", "24500", "CE", "2026-10-29 (as written)", "NOT proof that an exchange contract exists",
+    for (const s of [JSON.stringify(A), "telegram-regex-v3", "RECOGNIZED options claim", "NIFTY", "24500", "CE", "2026-10-29 (as written)", "NOT proof that an exchange contract exists",
       "above 120 (a trigger condition, not a fill)", "Level basis:", "premium", "150, 180, 210", "FOUND (exact match in the synthetic sample reference)", "INSUFFICIENT_EVIDENCE", "contract.found_in_local_reference",
       "option_premium_data.unavailable", "approvalPossible:", "false", "long entry presumed", "No order submitted."]) {
       expect(t, s).toContain(s);

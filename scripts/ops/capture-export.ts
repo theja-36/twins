@@ -3,7 +3,7 @@
  * nothing to it, contacts no Telegram, provider or broker, and prints COUNTS only (never message text). The output file contains message text: it is created 0600, never overwritten, and must not be
  * committed to any repository.
  *
- *   capture-export --out <file.jsonl> [--since <ISO>] [--until <ISO>] [--capture-method bot_webhook|api_live|api_history] [--include-first-seen-edited]
+ *   capture-export --out <file.jsonl> [--since <ISO>] [--until <ISO>] [--capture-method bot_webhook|api_live|api_history] [--include-first-seen-edited] [--include-result-reports]
  *
  * Then: archive-profile <file> --label <label> --default-market NSE, historical-import dry-run, and (separate owner go-ahead) historical-import import. Exit codes: 0 ok, 1 failure, 2 usage, 3 refused.
  */
@@ -21,7 +21,7 @@ export interface CliDeps {
   err: (line: string) => void;
   openDb?: (databaseUrl: string) => { db: Db; close: () => Promise<void> };
 }
-const USAGE = "usage: capture-export --out <file.jsonl> [--since <ISO>] [--until <ISO>] [--capture-method bot_webhook|api_live|api_history] [--include-first-seen-edited]";
+const USAGE = "usage: capture-export --out <file.jsonl> [--since <ISO>] [--until <ISO>] [--capture-method bot_webhook|api_live|api_history] [--include-first-seen-edited] [--include-result-reports]";
 const ISO = /^\d{4}-\d{2}-\d{2}T[\d:.]+(Z|[+-]\d{2}:\d{2})$/;
 
 /** READ-ONLY: one SELECT over messages joined to their source. `since` inclusive, `until` exclusive (message time). */
@@ -39,16 +39,17 @@ export function renderStats(s: ExportStats): string[] {
   return [
     `${s.version}: ${s.rowsRead} rows read -> ${s.messagesExported} messages (${s.revisionsAttached} edits attached) across ${s.channels} channel(s); ${s.first?.slice(0, 10) ?? "-"} .. ${s.last?.slice(0, 10) ?? "-"}`,
     `by capture method: ${JSON.stringify(s.byCaptureMethod)}`,
-    `skipped: orphan revisions ${s.revisionsOrphaned}, first-seen-edited excluded ${s.firstSeenEditedExcluded}, empty text ${s.emptyTextSkipped}, bad id ${s.badIdSkipped}; truncated: edits ${s.editsTruncated}, texts ${s.textTruncated}`,
+    `skipped: orphan revisions ${s.revisionsOrphaned}, first-seen-edited excluded ${s.firstSeenEditedExcluded}, result reports ${s.resultReportsSkipped}, empty text ${s.emptyTextSkipped}, bad id ${s.badIdSkipped}; truncated: edits ${s.editsTruncated}, texts ${s.textTruncated}`,
   ];
 }
 
 export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
-  let out: string | undefined, since: Date | undefined, until: Date | undefined, method: string | undefined, includeFse = false;
+  let out: string | undefined, since: Date | undefined, until: Date | undefined, method: string | undefined, includeFse = false, includeRr = false;
   const date = (v: string | undefined): Date | undefined | "bad" => { if (v === undefined) return "bad"; const d = new Date(v); return ISO.test(v) && !Number.isNaN(d.getTime()) ? d : "bad"; };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i] as string;
     if (a === "--include-first-seen-edited") includeFse = true;
+    else if (a === "--include-result-reports") includeRr = true;
     else if (a === "--out" && argv[i + 1]) out = argv[++i];
     else if (a === "--capture-method" && argv[i + 1]) { method = argv[++i]; if (!["bot_webhook", "api_live", "api_history"].includes(method as string)) { deps.err(USAGE); return 2; } }
     else if ((a === "--since" || a === "--until") && argv[i + 1]) { const d = date(argv[++i]); if (d === "bad" || d === undefined) { deps.err("--since/--until must be an ISO instant with an offset"); return 2; } if (a === "--since") since = d; else until = d; }
@@ -60,7 +61,7 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
   const handle = deps.openDb ? deps.openDb(url) : createBoundedDb(url, { max: 2, idleTimeoutMillis: 5000 });
   try {
     const rows = await loadCaptureRows(handle.db, { ...(since ? { since } : {}), ...(until ? { until } : {}), ...(method ? { captureMethod: method } : {}) });
-    const { records, stats } = captureRowsToRecords(rows, { includeFirstSeenEdited: includeFse });
+    const { records, stats } = captureRowsToRecords(rows, { includeFirstSeenEdited: includeFse, includeResultReports: includeRr });
     const path = resolve(out);
     try { writeFileSync(path, records.map((r) => JSON.stringify(r)).join("\n") + (records.length ? "\n" : ""), { flag: "wx", mode: 0o600 }); chmodSync(path, 0o600); }
     catch (e) { if ((e as NodeJS.ErrnoException).code === "EEXIST") { deps.err("refused: output_exists"); return 3; } throw e; }

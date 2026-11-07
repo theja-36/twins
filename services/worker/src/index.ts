@@ -50,7 +50,7 @@ import {
   resolveTelegramSource,
   runIngestionJob,
 } from "@twins/ingestion";
-import { analyzeTelegramText, assessOptionsClaim, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
+import { analyzeTelegramText, applySourceDefaultBasis, assessOptionsClaim, parseSourceBasisConfig, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
 import { readFileSync } from "node:fs";
 import { findValidationByKey, validateSignal } from "@twins/decision-intelligence";
 import {
@@ -387,6 +387,8 @@ const agentShadowFor = (log: StructuredLogger, db: Db) => async (decisionId: str
 
 // P0 #3 reduce-only sizing SHADOW (design: docs/twins/design/SHADOW_WIRING_1_3.md). Default OFF; log-only; reads files and the decision, writes nothing, is never used by a decision. A malformed flag, or the flag
 // on together with the enforcing engine, fails at start-up (fail closed; the start-up guard already refuses live trading).
+// Per-source default level basis for option stops (TWINS_SOURCE_DEFAULT_LEVEL_BASIS, default: none). A malformed value fails at start-up.
+const sourceBasisConfig = parseSourceBasisConfig(process.env);
 const reduceOnlyShadowEnabled = loadReduceOnlyShadowFlag(process.env, { enforcingEngine: agentEngineConfig.enabled });
 const HIGH_IMPACT = new Set(["HIGH", "CRITICAL"]);
 const THIN_SAMPLE = 30;
@@ -687,7 +689,9 @@ export async function processTelegramJob(
   if (signalOutcome.optionsIntake) {
     // Options-style message: stored raw (telegram_messages) and recorded as an UNVERIFIED options claim row. Never an
     // equity signal, instrument, approval or order. Only a master that was explicitly configured is used (and recorded).
-    const intake = signalOutcome.optionsIntake;
+    const intakeParsed = signalOutcome.optionsIntake;
+    // Per-source DEFAULT level basis (owner decision 2026-11-07): applied only for sources the owner configured, only when the message is silent and the stop is below 10% of the strike; recorded on the claim.
+    const intake = intakeParsed.kind === "claim" ? { ...intakeParsed, claim: applySourceDefaultBasis(intakeParsed.claim, normalizedMessage.channelIdentifier, sourceBasisConfig) } : intakeParsed;
     const master = options.optionsMaster ?? configuredOptionsMaster;
     const assessment = intake.kind === "claim" ? await assessOptionsClaim(intake.claim, master ?? unconfiguredContractMaster, unavailablePremiumProvider, stopLossConfig) : undefined;
     const record = await recordOptionsIntake(db, {

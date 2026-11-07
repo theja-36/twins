@@ -47,6 +47,16 @@ describe("captureRowsToRecords (pure)", () => {
     expect(records[1]?.text).toHaveLength(20_000);
     expect(stats).toMatchObject({ emptyTextSkipped: 1, badIdSkipped: 1, editsTruncated: 5, textTruncated: 1 });
   });
+  it("skips result reports by default, counts them, and keeps them on request; real signals are never skipped", () => {
+    const report = "120 - 190 HIT IN NIFTY CALL\n\nEASY 70 POINTS GAINS\n\nALL TARGET ACHIEVED\n\nGAINING RS 5,000";
+    const rows = [row({ externalId: "20", rawText: report }), row({ externalId: "21", messageTimestamp: T(2) })];
+    const a = captureRowsToRecords(rows);
+    expect(a.records.map((r) => r.message_id)).toEqual(["21"]);
+    expect(a.stats.resultReportsSkipped).toBe(1);
+    const b = captureRowsToRecords(rows, { includeResultReports: true });
+    expect(b.records).toHaveLength(2);
+    expect(b.stats.resultReportsSkipped).toBe(0);
+  });
   it("keeps sources apart even when message ids collide, and counts capture methods", () => {
     const { records, stats } = captureRowsToRecords([row(), row({ sourceId: "s2", displayName: "Beta", captureMethod: "api_history" })]);
     expect(records.map((r) => r.channel).sort()).toEqual(["Alpha Calls", "Beta"]);

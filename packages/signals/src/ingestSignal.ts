@@ -3,7 +3,7 @@ import { assertIntakeEnabled } from "@twins/runtime-state";
 import { schema } from "@twins/database";
 import { resolveInstrument } from "@twins/ingestion";
 import type { Db } from "./db";
-import { analyzeTelegramText, analyzeTelegramTextV1, TELEGRAM_PARSER_VERSION, TELEGRAM_PARSER_VERSION_V1, type TelegramTextAnalysis } from "./extract";
+import { analyzeTelegramText, analyzeTelegramTextV1, analyzeTelegramTextV2, TELEGRAM_PARSER_VERSION, TELEGRAM_PARSER_VERSION_V1, TELEGRAM_PARSER_VERSION_V2, type TelegramTextAnalysis } from "./extract";
 import type { OptionsIntake } from "./options/persist";
 import { isReservedUnderlyingToken, type OptionsClaim } from "./options/types";
 
@@ -24,6 +24,7 @@ export interface ReparseOptions extends CreateSignalOptions {
 
 export const SHIPPED_TELEGRAM_PARSERS: Record<string, (rawText: string) => TelegramTextAnalysis> = {
   [TELEGRAM_PARSER_VERSION_V1]: analyzeTelegramTextV1,
+  [TELEGRAM_PARSER_VERSION_V2]: analyzeTelegramTextV2,
   [TELEGRAM_PARSER_VERSION]: analyzeTelegramText,
 };
 
@@ -88,6 +89,7 @@ function describeNoSignal(analysis: TelegramTextAnalysis): CreateSignalOutcome {
       reason: `ambiguous: ${analysis.directives.length} distinct BUY/SELL directives; multi-signal messages are unsupported by this parser version`,
     };
   }
+  if (analysis.kind === "none" && analysis.reason === "result_report") return { created: false, reason: "result_report: a report of past results (no action, no entry), not a signal" };
   return { created: false, reason: "no recognizable BUY/SELL directive in message text" };
 }
 

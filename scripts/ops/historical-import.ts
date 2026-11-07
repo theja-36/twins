@@ -3,7 +3,7 @@
  * contacts Telegram, needs no bot or user API access, and refuses session / credential-like files. Nothing is imported automatically anywhere; there is no compose service for it.
  *
  *   historical-import validate <path>                                  validate the input and print the summary (no database)
- *   historical-import dry-run  <path> --label <label> [--default-market <CODE>]   the summary, plus how many versions are already imported (read-only database access)
+ *   historical-import dry-run  <path> --label <label> [--default-market <CODE>] [--level-basis-default "<source>=premium"]   the summary, plus how many versions are already imported (read-only database access)
  *   historical-import import   <path> --label <label> --created-by operator:<name> --confirm-source <path> --confirm-manifest <12+ hex of the dry-run manifest>
  *                              [--default-market <CODE>] [--chunk-size N] [--allow-invalid]
  *   historical-import report   --batch <uuid>
@@ -16,6 +16,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createBoundedDb, type Db } from "../../packages/database/src/index";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
+import { parseSourceBasisConfig, SourceBasisConfigError } from "../../packages/signals/src/index";
 import { buildReport, dryRun, inspectInput, InputError, renderReport, runImport } from "../../packages/historical/src/index";
 
 export interface CliDeps {
@@ -29,8 +30,8 @@ export interface CliDeps {
 const USAGE = [
   "usage:",
   "  historical-import validate <path>",
-  "  historical-import dry-run <path> --label <label> [--default-market <CODE>]",
-  "  historical-import import <path> --label <label> --created-by operator:<name> --confirm-source <path> --confirm-manifest <hex> [--default-market <CODE>] [--chunk-size N] [--allow-invalid]",
+  "  historical-import dry-run <path> --label <label> [--default-market <CODE>] [--level-basis-default \"<source>=premium\"]",
+  "  historical-import import <path> --label <label> --created-by operator:<name> --confirm-source <path> --confirm-manifest <hex> [--default-market <CODE>] [--level-basis-default \"<source>=premium\"] [--chunk-size N] [--allow-invalid]",
   "  historical-import report --batch <uuid>",
 ].join("\n");
 
@@ -58,6 +59,9 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
   const label = a.values.get("label") ?? "";
   const defaultMarket = a.values.get("default-market") ?? null;
   if (defaultMarket !== null && !MARKET.test(defaultMarket)) { deps.err("--default-market must be an upper-case market code"); return 2; }
+  let sourceBasis: ReturnType<typeof parseSourceBasisConfig> | undefined;
+  const basisRaw = a.values.get("level-basis-default");
+  if (basisRaw !== undefined) { try { sourceBasis = parseSourceBasisConfig({ TWINS_SOURCE_DEFAULT_LEVEL_BASIS: basisRaw }); } catch (e) { if (e instanceof SourceBasisConfigError) { deps.err("--level-basis-default must look like <source>=premium[,<source>=premium]"); return 2; } throw e; } }
   let handle: { db: Db; close: () => Promise<void> } | undefined;
   const open = (): { db: Db; close: () => Promise<void> } | undefined => {
     const url = deps.env["DATABASE_URL"];
@@ -80,7 +84,7 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
     if (!path || (cmd !== "validate" && cmd !== "dry-run" && cmd !== "import")) { deps.err(USAGE); return 2; }
     if (cmd !== "validate" && !label) { deps.err("--label is required"); return 2; }
     const files = await inspectInput(path);
-    const summary = await dryRun(files, { label: label || "validate", defaultMarket }, cmd === "dry-run" ? open()?.db : undefined, now);
+    const summary = await dryRun(files, { label: label || "validate", defaultMarket, ...(sourceBasis ? { sourceBasis } : {}) }, cmd === "dry-run" ? open()?.db : undefined, now);
     if (cmd !== "import") { deps.out(json(summary)); return summary.invalidRecords > 0 ? 3 : 0; }
 
     const by = a.values.get("created-by"), confirmSource = a.values.get("confirm-source"), confirmManifest = a.values.get("confirm-manifest");
@@ -92,7 +96,7 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
     if (chunkSize !== undefined && !(Number.isInteger(chunkSize) && chunkSize >= 1 && chunkSize <= 5000)) { deps.err("--chunk-size must be a whole number from 1 to 5000"); return 2; }
     const h = open();
     if (!h) { deps.err("DATABASE_URL is not set"); return 1; }
-    const r = await runImport(h.db, files, { label, defaultMarket, createdBy: by, confirmedSource: confirmSource, ...(chunkSize ? { chunkSize } : {}), allowInvalid: a.bare.has("allow-invalid"), now });
+    const r = await runImport(h.db, files, { label, defaultMarket, ...(sourceBasis ? { sourceBasis } : {}), createdBy: by, confirmedSource: confirmSource, ...(chunkSize ? { chunkSize } : {}), allowInvalid: a.bare.has("allow-invalid"), now });
     const report = await buildReport(h.db, r.batchId);
     deps.out(`import ${r.outcome}: batch ${r.batchId} (resumed from record ${r.resumedFromRecord}, ${r.checkpoints} checkpoints)`);
     if (report) deps.out(renderReport(report));

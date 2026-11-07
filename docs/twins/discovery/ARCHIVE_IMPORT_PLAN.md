@@ -90,3 +90,6 @@ Stop-loss ambiguity (66 of 70) is a separate signal-quality finding: the parser 
 
 ## Next: stop-loss ambiguity (66 of 70)
 Investigation starts after this PR (owner order): root cause in signal parsing / stop-loss extraction; it must be fixed before relying on sizing or attribution.
+
+## Update 2026-11-07: result reports and stop basis (D-112)
+The exporter now skips messages the parser classifies as reports of past results (`result reports` in its counts; `--include-result-reports` keeps them), the importer records parser `telegram-regex-v3`, and the importer / profiler accept `--level-basis-default "<source>=premium"` for the owner-configured source (see `PARSER_V3_RESULT_REPORTS_AND_SOURCE_BASIS.md`). Run the profile with the same flag so its counts match what the import will do.

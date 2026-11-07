@@ -338,6 +338,8 @@ services:
       TWINS_REDUCE_ONLY_SHADOW: ${TWINS_REDUCE_ONLY_SHADOW:-false}
       # Planning capital for position sizing (owner decision 2026-11-06: INR 1,00,000). Sizing is planning only: no order, no broker call. Empty = unset = nothing is sized.
       TWINS_SIZING_AVAILABLE_CAPITAL: ${TWINS_SIZING_AVAILABLE_CAPITAL:-}
+      # Per-source DEFAULT level basis for option stops (owner decision 2026-11-07): comma-separated <channel identifier>=premium. Empty = no source configured. Applied only when the message is silent and the stop is below 10% of the strike.
+      TWINS_SOURCE_DEFAULT_LEVEL_BASIS: ${TWINS_SOURCE_DEFAULT_LEVEL_BASIS:-}
     volumes:
       - /var/lib/twins-snapshots:/var/lib/twins-snapshots:ro  # read-only: the kite-ticker is the only writer
       - /var/lib/twins-providers:/var/lib/twins-providers:ro  # read-only: the provider exporter is the only writer
