@@ -29,6 +29,9 @@
 ## Recommendation (judgement)
 Stay on Kite as the primary data source and the first execution candidate (already paid, already integrated read-only, known token routine). Keep Dhan as the option-greeks source only if #4 needs it and the INR 499 is justified (you skipped it on 2026-11-06). Treat Groww as a candidate for a second broker or a TOTP-based token flow after reading its official terms. Decide nothing until the verification list below is done.
 
+## Decision (owner, 2026-11-07)
+Kite first (data and execution); Dhan only if greeks are needed; Groww terms check before it is considered. Before any order work: check whether the host has a fixed public address and where its datacenter is (not yet checked).
+
 ## Verification list (from official pages, before any build)
 Each broker: current plans and prices; API terms of use; token lifetime and renewal method; official rate limits; static IP rule and registration steps; order tagging requirements; data licensing for storage and derived use. SEBI / NSE: the actual circulars and the exemption for personal use.
 

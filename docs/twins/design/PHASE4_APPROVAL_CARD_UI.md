@@ -26,5 +26,8 @@ Plain sentences; every state carries text as well as colour; buttons say exactly
 3. Show claim fields from the future claims endpoint (Phase 2 backend) when available.
 4. No approval controls in this step.
 
+## Decision (owner, 2026-11-07)
+**Option A**: the web card is read-only and approval stays in the Telegram approval bot. **Option B is on HOLD** until the Stage 6 constraint is lifted.
+
 ## Open questions
-Option A or B? Should the card show the reduce-only check only when the shadow is on? Should the card display the channel name or only a masked id?
+(Option A or B is settled.) Should the card show the reduce-only check only when the shadow is on? Should the card display the channel name or only a masked id?
