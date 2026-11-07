@@ -128,6 +128,7 @@ Real-provider data (none exists), performance with many agents and large snapsho
 ## P2 - model fidelity
 
 ### HB-25 Durable shadow-run table
+* **Built 2026-11-07, NOT merged or deployed (needs the owner's schema-migration approval):** migration `0032_shadow_observations` (one append-only table `shadow_observations`, unique per kind + decision + version, `used_for_decisions` constrained to false, no foreign key, not hash-chained), writer in the worker (`shadowStore.ts`, allow-list sanitizer), optional persist hook for the reduce-only sizing shadow and the agent-engine shadow behind `TWINS_SHADOW_PERSIST` (default false; set it only after the migration is applied). Tests: unit (sanitizer, hook, flag) and real-PostgreSQL integration (idempotent writer, append-only, constraints, no live table changes). Retention: none yet (rows are small; decide a policy before volume grows).
 * **Now (owner decision 2026-11-05):** shadow evaluations are written to the structured log only (journald, 7-day retention). Deferred on purpose.
 * **Work (when asked):** a non-chained `agent_shadow_runs` table (migration, write-only for `twins_app`) holding decision id, assessment, `wouldHalt`, per-agent status / verdict / confidence, duration; needed for scoring and weight evidence (HB-09, HB-19) beyond one week.
 * **Acceptance:** a shadow run leaves exactly one row; the live tables are still untouched; retention policy documented.

@@ -225,6 +225,13 @@
       "when": 1793912565359,
       "tag": "0031_paper_switch",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794055449822,
+      "tag": "0032_shadow_observations",
+      "breakpoints": true
     }
   ]
 }

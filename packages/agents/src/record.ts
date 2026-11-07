@@ -170,7 +170,7 @@ export type ShadowResult =
   | { skipped: "SHADOW_OFF" | "ENGINE_ENFORCING" }
   | { skipped: "SHADOW_REFUSED" | "SHADOW_ERROR"; errorCode: string }
   | {
-    skipped?: undefined; riskDecisionId: string; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment;
+    skipped?: undefined; riskDecisionId: string; /** Version of the decision that was assessed (needed to key a durable shadow observation). */ decisionVersion: number; status: "COMPLETED" | "INCOMPLETE" | "FAILED"; assessment: ResearchAssessment;
     /** Whether the ENFORCING engine would have stopped the flow here (haltOn). In shadow mode nothing is ever stopped. */
     wouldHalt: boolean; durationMs: number;
     agents: Array<{ agentId: string; status: string; verdict: string; confidence: number | null }>;
@@ -201,7 +201,7 @@ async function evaluateShadow(db: Db, decisionId: string, deps: EngineDeps): Pro
     const outcome = await orchestrate(plan, config, inputs, { riskDecisionId: decision.id, decisionVersion: decision.decisionVersion }, { ...(deps.emit ? { emit: deps.emit } : {}), ...(deps.sleep ? { sleep: deps.sleep } : {}), ...(deps.now ? { now: deps.now } : {}) });
     const a = outcome.synthesis.assessment;
     return {
-      riskDecisionId: decision.id, status: outcome.status, assessment: a, wouldHalt: config.haltOn.includes(a),
+      riskDecisionId: decision.id, decisionVersion: decision.decisionVersion, status: outcome.status, assessment: a, wouldHalt: config.haltOn.includes(a),
       durationMs: Math.max(0, outcome.completedAt.getTime() - outcome.startedAt.getTime()),
       agents: outcome.results.map((r) => ({ agentId: r.agentId, status: r.status, verdict: r.verdict, confidence: r.confidence })).sort((x, y) => (x.agentId < y.agentId ? -1 : 1)),
     };
