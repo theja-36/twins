@@ -6,6 +6,7 @@ import type { Db } from "@twins/database";
 import { evaluateLiveGuard } from "@twins/config";
 import { evaluateReadiness, getPaperSwitch, loadPaperConfig } from "@twins/paper";
 import { buildSourceHealth, indexContexts, observeProviderFiles } from "@twins/providers";
+import { readChannelNews } from "./channelNewsView.js";
 import { clampLimit, failRoute, guardWith, type Authorizer } from "./apiSupport.js";
 
 /**
@@ -161,6 +162,14 @@ export function registerLiveRoutes(app: FastifyInstance, deps: { db: Db; authori
         }),
       };
     } catch (error) { return failRoute(request, reply, error); }
+  });
+
+  /** Telegram news feed (Phase 3): READ-ONLY, reads only the structured file written by the exporter. No database access, no message text. */
+  app.get<{ Querystring: { limit?: string; symbol?: string } }>("/news/telegram", async (request, reply) => {
+    if (!guard(request, reply)) return reply;
+    const limit = clampLimit(request.query.limit, 50, 200), symbol = request.query.symbol;
+    if (limit === null || (symbol !== undefined && !/^[A-Z][A-Z0-9&.-]{1,19}$/.test(symbol))) return reply.code(400).send({ error: "invalid_input" });
+    try { return readChannelNews(deps.providersDir, nowOf(), { ...(symbol ? { symbol } : {}), limit }); } catch (error) { return failRoute(request, reply, error); }
   });
 
   /** Source health profile (P0 #2): READ-ONLY, from the provider files only. The exporter's pass log is not visible to the API, so `passLogAvailable` is false here; the CLI adds it. */

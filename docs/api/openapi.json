@@ -1201,6 +1201,60 @@
         }
       }
     },
+    "/news/telegram": {
+      "get": {
+        "tags": [
+          "news"
+        ],
+        "summary": "Telegram channel news as STRUCTURED fields only (masked channel, symbols, fixed theme codes, polarity, reliability, clusters with a stable id), read from the exporter's file; status ok / stale / missing / invalid. Never message text",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "description": "upper-case symbol, e.g. RELIANCE"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ChannelNewsView",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "invalid_input"
+          },
+          "401": {
+            "description": "Unauthorized (missing or wrong bearer token)"
+          },
+          "500": {
+            "description": "internal_error (fixed body; details are in the server log)"
+          }
+        }
+      }
+    },
     "/market/sources": {
       "get": {
         "tags": [
