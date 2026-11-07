@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { clusterChannelNews, clusterIdOf, parseChannelNewsFile, type ChannelNewsItem } from "@twins/agents";
+import { clusterChannelNews, clusterIdOf, parseChannelNewsFile, summarizeChannelNews, type ChannelNewsItem, type ChannelNewsSummary } from "@twins/agents";
 
 /**
  * Read model for GET /news/telegram. It reads ONE file, `channel-news.json` (`twins-channel-news-v1`, written by the worker-side exporter), through the agents' strict parser, and nothing else:
@@ -17,10 +17,11 @@ export interface ChannelNewsView {
   asOf: string | null;
   ageSeconds: number | null;
   items: Array<{ id: string; publishedAt: string; channel: string; symbols: string[]; themes: string[]; polarity: number; reliability: number }>;
+  summary: ChannelNewsSummary;
   clusters: Array<{ clusterId: string; symbol: string | null; theme: string | null; bucketStart: string; items: number; channels: number; polarity: number; mixed: boolean }>;
 }
 
-const empty = (status: ChannelNewsStatus, reason: string, asOf: string | null = null, ageSeconds: number | null = null): ChannelNewsView => ({ status, reason, asOf, ageSeconds, items: [], clusters: [] });
+const empty = (status: ChannelNewsStatus, reason: string, asOf: string | null = null, ageSeconds: number | null = null): ChannelNewsView => ({ status, reason, asOf, ageSeconds, items: [], clusters: [], summary: summarizeChannelNews([], status) });
 
 export function readChannelNews(dir: string, now: Date, opts: { symbol?: string; limit: number }): ChannelNewsView {
   const path = join(dir, CHANNEL_NEWS_FILE);
@@ -40,10 +41,12 @@ export function readChannelNews(dir: string, now: Date, opts: { symbol?: string;
   const ageSeconds = Math.max(0, Math.round((now.getTime() - Date.parse(asOf)) / 1000));
   const status: ChannelNewsStatus = ageSeconds > STALE_AFTER_SECONDS ? "stale" : "ok";
   const chosen = opts.symbol ? items.filter((i) => i.symbols.includes(opts.symbol as string)) : items;
+  const clusters = clusterChannelNews(chosen);
   const newest = [...chosen].sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : a.publishedAt > b.publishedAt ? -1 : a.id < b.id ? -1 : 1));
   return {
     status, reason: status === "stale" ? "export_stale" : null, asOf, ageSeconds,
     items: newest.slice(0, opts.limit).map((i) => ({ id: i.id, publishedAt: i.publishedAt, channel: i.channel, symbols: i.symbols, themes: i.themes, polarity: i.polarity, reliability: i.reliability })),
-    clusters: clusterChannelNews(chosen).map((c) => ({ clusterId: clusterIdOf(c), symbol: c.symbol, theme: c.theme, bucketStart: c.bucketStart, items: c.items, channels: c.channels, polarity: c.polarity, mixed: c.mixed })),
+    summary: summarizeChannelNews(clusters, status),
+    clusters: clusters.map((c) => ({ clusterId: clusterIdOf(c), symbol: c.symbol, theme: c.theme, bucketStart: c.bucketStart, items: c.items, channels: c.channels, polarity: c.polarity, mixed: c.mixed })),
   };
 }
