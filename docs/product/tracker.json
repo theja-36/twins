@@ -5355,7 +5355,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5381,7 +5382,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5407,7 +5409,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5433,7 +5436,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5459,7 +5463,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5486,7 +5491,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5514,7 +5520,8 @@
    "evidence": [
     "DB constraint APPROVED requires QUALIFIED + guard trigger verified in CI run 42445765317 (workflow engine itself not built)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5541,7 +5548,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5568,7 +5576,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5595,7 +5604,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5622,7 +5632,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5650,7 +5661,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5678,7 +5690,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5706,7 +5719,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5734,7 +5748,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5763,7 +5778,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07: validity = min(candidate expiry, TTL); enforced by the database at approval and at every entry order",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5791,7 +5807,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5819,7 +5836,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5847,7 +5865,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5875,7 +5894,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5903,7 +5923,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5931,7 +5952,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5959,7 +5981,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5987,7 +6010,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6015,7 +6039,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6043,7 +6068,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6071,7 +6097,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6096,7 +6123,8 @@
    "stage": "07",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no separate listing of comparable historical patterns; the historical provider is not wired (G-23)"
@@ -6126,7 +6154,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6178,7 +6207,8 @@
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6202,7 +6232,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6228,7 +6259,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6254,7 +6286,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6280,7 +6313,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6306,7 +6340,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6332,7 +6367,8 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
@@ -6360,7 +6396,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no WATCH action; no user-facing approval API until authentication sessions exist (G-26, Stage 01)"
@@ -6389,7 +6426,8 @@
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6416,7 +6454,8 @@
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6447,7 +6486,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): simulated order placement: paper_orders (PROPOSED > SUBMITTED > ACCEPTED), idempotent",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6477,7 +6517,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): simulated fills at a FRESH observed price with adverse slippage, partial fills in lots",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6508,7 +6549,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): simulated trade lifecycle: order, fill, position, exits, close",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6538,7 +6580,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): realised P&L (gross, costs, net) in fixed-point decimals; unrealised on demand",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6568,7 +6611,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): trade history: orders, fills, position events, monitoring events, trade_outcomes",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6598,7 +6642,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 (master-build path): no real money: paper_* tables, mode checks in the database, no broker code reachable",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6864,7 +6909,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6893,7 +6939,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: live p&l. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -6924,7 +6971,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: stop-loss monitoring. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -6955,7 +7003,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: target monitoring. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -6986,7 +7035,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: trailing stop. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -7017,7 +7067,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: time-based exit. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7043,7 +7094,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -7071,7 +7123,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -7099,7 +7152,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "prices come from the explicit provider; no live price source exists (G-20)"
@@ -7130,7 +7184,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: partial exit handling. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7159,7 +7214,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: trade status. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7185,7 +7241,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7214,7 +7271,8 @@
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
     "Stage 07 master-build path: outcome recording. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -10246,7 +10304,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10274,7 +10333,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10300,7 +10360,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10327,7 +10388,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10353,7 +10415,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10382,7 +10445,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10409,7 +10473,8 @@
    ],
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10434,7 +10499,8 @@
     "trade_outcomes"
    ],
    "evidence": [
-    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   }
  ]
