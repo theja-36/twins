@@ -264,8 +264,11 @@ BEGIN
 			RAISE EXCEPTION 'a decision must start PENDING' USING ERRCODE = 'check_violation';
 		END IF;
 		IF NEW.outcome = 'QUALIFIED' THEN
-			IF NOT EXISTS (SELECT 1 FROM opportunity_candidates c WHERE c.id = NEW.candidate_id AND c.stop_loss IS NOT NULL AND c.stop_loss > 0 AND c.state IN ('NEW', 'IN_RESEARCH', 'READY_FOR_DECISION') AND c.expires_at > now()) THEN
-				RAISE EXCEPTION 'a QUALIFIED decision needs an active candidate with a stop-loss' USING ERRCODE = 'check_violation';
+			IF NOT EXISTS (SELECT 1 FROM opportunity_candidates c WHERE c.id = NEW.candidate_id AND c.stop_loss IS NOT NULL AND c.stop_loss > 0) THEN
+				RAISE EXCEPTION 'a QUALIFIED decision needs a candidate with a stop-loss' USING ERRCODE = 'check_violation';
+			END IF;
+			IF NOT EXISTS (SELECT 1 FROM opportunity_candidates c WHERE c.id = NEW.candidate_id AND c.state IN ('NEW', 'IN_RESEARCH', 'READY_FOR_DECISION') AND c.expires_at > now()) THEN
+				RAISE EXCEPTION 'a QUALIFIED decision needs an active, unexpired candidate' USING ERRCODE = 'check_violation';
 			END IF;
 			IF NEW.stop_loss_validation IS NULL OR (NEW.stop_loss_validation->>'result') IS DISTINCT FROM 'VALID' OR (NEW.stop_loss_validation->>'ruleVersion') IS NULL THEN
 				RAISE EXCEPTION 'a QUALIFIED decision needs a VALID mandatory stop-loss validation' USING ERRCODE = 'check_violation';

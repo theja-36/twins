@@ -48,6 +48,15 @@ const capital = (c: pg.Client, user: string, account: string, version = 1) => c.
 const decision = (c: pg.Client, o: { user: string; account: string; candidate: string; outcome: string; state?: string }) =>
   c.query("insert into user_decisions (id, user_id, account_id, candidate_id, outcome, workflow_state, explanation, valid_until) values ($1, $2, $3, $4, $5, $6, '{}'::jsonb, now() + interval '15 minutes') returning id", [randomUUID(), o.user, o.account, o.candidate, o.outcome, o.state ?? "PENDING"]);
 
+/** Stage 07 (migration 0038, guard v2): a QUALIFIED decision can only be created with a recorded VALID stop-loss validation, a non-blocked risk assessment, a permitted size and a research package. This helper supplies them. */
+async function qualified(admin: pg.Client, s: pg.Client, u: { userId: string; accountId: string }, candidate: string): Promise<string> {
+  const pkg = randomUUID(), risk = randomUUID();
+  await admin.query("insert into research_packages (id, candidate_id, version, agent_results, assessment) values ($1, $2, 1, '{}'::jsonb, 'RESEARCH_SUPPORTIVE')", [pkg, candidate]);
+  await admin.query("insert into risk_assessments (id, user_id, account_id, candidate_id, policy_version, passed, verdict, result) values ($1, $2, $3, $4, 1, false, 'RESTRICTED', '{}'::jsonb)", [risk, u.userId, u.accountId, candidate]);
+  const r = await s.query("insert into user_decisions (id, user_id, account_id, candidate_id, outcome, explanation, stop_loss_validation, permitted_size, research_package_id, risk_assessment_id, valid_until) values ($1, $2, $3, $4, 'QUALIFIED', '{}'::jsonb, '{\"result\":\"VALID\",\"ruleVersion\":\"stop-loss-v1\"}'::jsonb, '{\"lots\":1,\"quantity\":25}'::jsonb, $5, $6, now() + interval '15 minutes') returning id", [randomUUID(), u.userId, u.accountId, candidate, pkg, risk]);
+  return String(r.rows[0]?.id);
+}
+
 describe("row-level security isolates users", () => {
   it("a user sees only their own rows; another user and a session with no user see none; a foreign user_id cannot be written", async () => {
     const admin = await owner(); const a = await newUserWithAccount(admin), b = await newUserWithAccount(admin);
@@ -94,16 +103,19 @@ describe("user_decisions guard", () => {
     const noStop = await newCandidate(admin, null), withStop = await newCandidate(admin, 100);
     await expect(decision(s, { user: u.userId, account: u.accountId, candidate: noStop, outcome: "QUALIFIED" })).rejects.toThrow(/needs a candidate with a stop-loss/);
     await expect(decision(s, { user: u.userId, account: u.accountId, candidate: withStop, outcome: "QUALIFIED", state: "APPROVED" })).rejects.toThrow(/must start PENDING/);
-    await decision(s, { user: u.userId, account: u.accountId, candidate: withStop, outcome: "QUALIFIED" });
+    await expect(decision(s, { user: u.userId, account: u.accountId, candidate: withStop, outcome: "QUALIFIED" })).rejects.toThrow(/VALID mandatory stop-loss validation/); // guard v2: a stop-loss alone is only the floor
+    await qualified(admin, s, u, withStop);
     await decision(s, { user: u.userId, account: u.accountId, candidate: noStop, outcome: "WAIT" }); // non-qualified is allowed without a stop
   });
   it("only workflow_state changes; outcome is immutable; a non-QUALIFIED decision cannot be APPROVED; final states are final; no delete", async () => {
     const admin = await owner(); const u = await newUserWithAccount(admin); const s = await session(u.userId); const cand = await newCandidate(admin, 100);
-    const q = String((await decision(s, { user: u.userId, account: u.accountId, candidate: cand, outcome: "QUALIFIED" })).rows[0]?.id);
+    const q = await qualified(admin, s, u, cand);
     const w = String((await decision(s, { user: u.userId, account: u.accountId, candidate: cand, outcome: "WAIT" })).rows[0]?.id);
     await expect(s.query("update user_decisions set outcome = 'QUALIFIED' where id = $1", [w])).rejects.toThrow(/only workflow_state/);
     await expect(s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [w])).rejects.toThrow(/approved_qualified_check/);
     await expect(s.query("update user_decisions set valid_until = valid_until + interval '1 day' where id = $1", [q])).rejects.toThrow(/only workflow_state/);
+    await expect(s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [q])).rejects.toThrow(/only through a recorded approval action/); // guard v2: no approval record, no APPROVED
+    await admin.query("insert into decision_approvals (id, user_id, decision_id, action, approver_user_id, permission_mode, revalidation, idempotency_key) values ($1, $2, $3, 'APPROVE', $2, 'PAPER', '{\"passed\":true}'::jsonb, $4)", [randomUUID(), u.userId, q, `key-${randomUUID()}`]);
     await s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [q]);
     await expect(s.query("update user_decisions set workflow_state = 'PENDING' where id = $1", [q])).rejects.toThrow(/final state/);
     await expect(s.query("delete from user_decisions where id = $1", [q])).rejects.toThrow(/append-only/);
