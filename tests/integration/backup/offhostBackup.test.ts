@@ -63,7 +63,7 @@ describe("real database -> encrypted bundle -> object store -> scratch restore",
       store, environment: "ci", identityFile, statusDir, workDir: join(root, "drill"), log, now: () => new Date(), hostFingerprint: "ci-recovery-host", runnerLabel: "ci-runner-scratch-database",
       createScratch: databaseScratch(DATABASE_URL, hooks, container ? { dockerContainer: container } : {}),
     });
-    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "33" });
+    expect(drill.checks).toMatchObject({ encrypted_sha256: "match", decrypt: "ok", dump_sha256: "match", restore: "ok", migrations: "34" });
     expect(drill.checks["row_counts"]).toMatch(/tables match/);
     expect(drill.checks["chain_heads"]).toBe("32 chains match");
     expect(drill.checks["audit_chain"]).toMatch(/PASS/);
