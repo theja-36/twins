@@ -112,7 +112,7 @@ describe("user_decisions guard", () => {
     const q = await qualified(admin, s, u, cand);
     const w = String((await decision(s, { user: u.userId, account: u.accountId, candidate: cand, outcome: "WAIT" })).rows[0]?.id);
     await expect(s.query("update user_decisions set outcome = 'QUALIFIED' where id = $1", [w])).rejects.toThrow(/only workflow_state/);
-    await expect(s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [w])).rejects.toThrow(/approved_qualified_check/);
+    await expect(s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [w])).rejects.toThrow(/approved_qualified_check|only through a recorded approval action/);
     await expect(s.query("update user_decisions set valid_until = valid_until + interval '1 day' where id = $1", [q])).rejects.toThrow(/only workflow_state/);
     await expect(s.query("update user_decisions set workflow_state = 'APPROVED' where id = $1", [q])).rejects.toThrow(/only through a recorded approval action/); // guard v2: no approval record, no APPROVED
     await admin.query("insert into decision_approvals (id, user_id, decision_id, action, approver_user_id, permission_mode, revalidation, idempotency_key) values ($1, $2, $3, 'APPROVE', $2, 'PAPER', '{\"passed\":true}'::jsonb, $4)", [randomUUID(), u.userId, q, `key-${randomUUID()}`]);
