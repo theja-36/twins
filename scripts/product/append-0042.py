@@ -12,7 +12,7 @@ o.append('CREATE TRIGGER "telegram_claim_candidacy_no_truncate" BEFORE TRUNCATE 
 o.append("-- HAND-APPENDED. A Telegram candidate can only come from a stored PARSED CLAIM (result_kind = 'claim'): ambiguous, unsupported and non-signal messages can never become a candidate, whatever code tries.")
 o.append('''CREATE FUNCTION "twins_telegram_candidate_origin_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-	IF NEW.source = 'TELEGRAM' AND NOT EXISTS (SELECT 1 FROM options_claims c WHERE c.id = NEW.claim_id AND c.result_kind = 'claim') THEN
+	IF NEW.source = 'TELEGRAM' AND NEW.claim_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM options_claims c WHERE c.id = NEW.claim_id AND c.result_kind = 'claim') THEN
 		RAISE EXCEPTION 'a Telegram candidate needs a stored parsed claim (not an ambiguous, unsupported or non-signal message)' USING ERRCODE = 'check_violation';
 	END IF;
 	RETURN NEW;

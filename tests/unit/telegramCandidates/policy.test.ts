@@ -15,7 +15,7 @@ describe("a complete claim becomes a candidate draft", () => {
     const d = evaluateTelegramClaim(input());
     expect(d.outcome).toBe("CREATED"); if (d.outcome !== "CREATED") return;
     expect(d.draft).toMatchObject({ claimId: "c1", underlying: "NIFTY", exchange: "NSE", strike: 24500, optionType: "CE", side: "BUY", entryKind: "above", entryLow: 118, entryHigh: 118, stopLoss: 96, targets: [140, 165], setup: "BREAKOUT", timeframe: "INTRADAY", validationStatus: "UNVERIFIED", candidateVersion: 1, expiry: null, dataSource: "LIVE" });
-    expect(d.draft.provenance).toMatchObject({ source: "TELEGRAM", channelId: "s1", messageId: "m1", originMessageId: "100", revisionState: "current", parserVersion: "telegram-regex-v3", classifierVersion: "signal-classifier-v1", policyVersion: "telegram-candidacy-v1" });
+    expect(d.draft.provenance).toMatchObject({ source: "TELEGRAM", channelId: "s1", messageId: "m1", originMessageId: "100", revisionState: "current", parserVersion: "telegram-regex-v3", classifierVersion: "signal-classifier-v1", policyVersion: "telegram-candidacy-v1", claimId: "c1" });
     expect(d.draft.evidence).toEqual([{ kind: "telegram_claim", claimId: "c1", messageId: "m1" }]);
     expect(d.draft.thesis).toMatch(/Unverified claim, not a recommendation/);
   });
@@ -68,7 +68,8 @@ describe("refusals, each with a reason code (never a guess)", () => {
   it("contradictory levels are refused", () => {
     expect(why({ claim: claim({ levelBasisConflict: true }) })).toEqual(["CONTRADICTORY", "LEVEL_BASIS_CONFLICT"]);
     expect(why({ classification: cls({ structureValid: false, structureIssues: ["stop_not_beyond_entry", "targets_not_ordered"] }) })).toEqual(["CONTRADICTORY", "STRUCTURE_STOP_NOT_BEYOND_ENTRY", "STRUCTURE_TARGETS_NOT_ORDERED"]);
-    expect(why({ classification: cls({ structureIssues: ["stop_missing", "targets_missing"] }) })[0]).toBe("CREATED"); // absence is missing information, not a contradiction
+    expect(why({ classification: cls({ structureIssues: ["stop_missing", "targets_missing", "entry_missing", "level_basis_unclear", "option_contract_incomplete"] }) })[0]).toBe("CREATED"); // absence is missing information, not a contradiction
+    expect(why({ classification: cls({ structureIssues: ["range_inverted", "targets_not_beyond_entry"] }) })).toEqual(["CONTRADICTORY", "STRUCTURE_RANGE_INVERTED", "STRUCTURE_TARGETS_NOT_BEYOND_ENTRY"]);
   });
   it("an old claim does not enter research: validity runs from the MESSAGE time", () => {
     expect(why({ now: new Date(MSG_AT.getTime() + 91 * 60_000) })).toEqual(["EXPIRED", "CLAIM_VALIDITY_ELAPSED"]);

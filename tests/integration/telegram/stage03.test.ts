@@ -60,7 +60,7 @@ describe("a Telegram claim becomes a candidate (G-19)", () => {
     const s = await channel(), a = await claim(await message(s, { ts: at(5) }), "ambiguous"), u = await claim(await message(s, { ts: at(4) }), "unsupported");
     expect(await cycle([s])).toMatchObject({ examined: 0, created: 0 });
     expect(Number((await one("select count(*)::int as n from telegram_claim_candidacy where claim_id = any($1::uuid[])", [[a, u]]))["n"])).toBe(0);
-    for (const claimId of [a, u]) await refused(async () => (await own()).query("insert into opportunity_candidates (source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at, thesis, provenance) values ('TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour', 't', '{\"messageId\":\"m\",\"channelId\":\"c\"}')", [claimId]), /stored parsed claim/);
+    for (const claimId of [a, u]) await refused(async () => (await own()).query("insert into opportunity_candidates (id, source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at, thesis, provenance) values (gen_random_uuid(), 'TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour', 't', '{\"messageId\":\"m\",\"channelId\":\"c\"}')", [claimId]), /stored parsed claim/);
   });
   it("never invents a value: an unstated entry, a missing instrument and a SELL are recorded as refusals with reason codes", async () => {
     const s = await channel(), t = (min: number) => at(min);
@@ -132,13 +132,13 @@ describe("database guarantees on candidates and the audit", () => {
   });
   it("one candidate per claim and one decision per claim and policy version", async () => {
     const s = await channel(), c = await claim(await message(s, { ts: at(10) })); await cycle([s]); const o = await own();
-    await refused(() => o.query("insert into opportunity_candidates (source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at, thesis, provenance) values ('TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour', 't', '{\"messageId\":\"m\",\"channelId\":\"c\"}')", [c]), /claim_unique|duplicate key/);
+    await refused(() => o.query("insert into opportunity_candidates (id, source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at, thesis, provenance) values (gen_random_uuid(), 'TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour', 't', '{\"messageId\":\"m\",\"channelId\":\"c\"}')", [c]), /claim_unique|duplicate key/);
     await refused(() => o.query("insert into telegram_claim_candidacy (id, claim_id, policy_version, outcome, reason_codes) values (gen_random_uuid(), $1, 'telegram-candidacy-v1', 'INCOMPLETE', '[\"X\"]')", [c]), /candidacy_claim_policy_unique|duplicate key/);
     await o.query("insert into telegram_claim_candidacy (id, claim_id, policy_version, outcome, reason_codes) values (gen_random_uuid(), $1, 'telegram-candidacy-v2-test', 'INCOMPLETE', '[\"X\"]')", [c]); // a new policy version re-evaluates deliberately
   });
   it("a Telegram candidate needs its provenance and thesis (check constraint)", async () => {
     const s = await channel(), c = await claim(await message(s, { ts: at(10) })), o = await own();
-    await refused(() => o.query("insert into opportunity_candidates (source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at) values ('TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour')", [c]), /telegram_provenance_check/);
+    await refused(() => o.query("insert into opportunity_candidates (id, source, claim_id, underlying, side, entry_kind, data_source, correlation_id, expires_at) values (gen_random_uuid(), 'TELEGRAM', $1, 'NIFTY', 'BUY', 'at', 'FIXTURE', gen_random_uuid(), now() + interval '1 hour')", [c]), /telegram_provenance_check/);
   });
 });
 

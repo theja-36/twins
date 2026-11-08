@@ -44,7 +44,8 @@ export type CandidacyDecision =
   | { outcome: "EXPIRED" | "SUPERSEDED_REVISION" | "INCOMPLETE" | "CONTRADICTORY" | "UNSUPPORTED"; reasons: string[]; detail: Record<string, unknown> };
 
 export const originKeyOf = (m: Pick<CandidacyMessage, "sourceId" | "externalMessageId" | "originMessageId">): string => `${m.sourceId}:${m.originMessageId ?? m.externalMessageId.replace(/_edit.*$/, "")}`;
-const NON_CONTRADICTION_ISSUES = new Set(["entry_missing", "stop_missing", "targets_missing"]);
+/** Structure issues that mean the claim contradicts ITSELF. Absences (entry / stop / targets missing, basis unclear, contract incomplete) are missing information, not contradictions. */
+const CONTRADICTION_ISSUES = new Set(["stop_not_beyond_entry", "targets_not_beyond_entry", "targets_not_ordered", "range_inverted"]);
 const same = (a: number | null, b: number | null): boolean => (a === null && b === null) || (a !== null && b !== null && a === b);
 const sameList = (a: readonly number[], b: readonly number[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
 const fmt = (n: number | null): string => (n === null ? "n/a" : String(n));
@@ -69,7 +70,7 @@ export function evaluateTelegramClaim(i: CandidacyInput): CandidacyDecision {
 
   const contradictions: string[] = [];
   if (claim.levelBasisConflict) contradictions.push("LEVEL_BASIS_CONFLICT");
-  for (const c of i.classification?.structureIssues ?? []) if (!NON_CONTRADICTION_ISSUES.has(c)) contradictions.push(`STRUCTURE_${c.toUpperCase()}`);
+  for (const c of i.classification?.structureIssues ?? []) if (CONTRADICTION_ISSUES.has(c)) contradictions.push(`STRUCTURE_${c.toUpperCase()}`);
   if (contradictions.length) return bad("CONTRADICTORY", contradictions);
 
   // Validity: from the message time, never from the capture time; a full stated expiry date also ends it.
@@ -114,7 +115,7 @@ export function evaluateTelegramClaim(i: CandidacyInput): CandidacyDecision {
       setup: classification && classification.setup !== "UNKNOWN" ? classification.setup : null, timeframe: classification?.horizon ?? "UNKNOWN", classificationConfidence: classification?.confidence ?? null, dataSource, expiresAt, thesis, missingInformation: missing,
       validationStatus: "UNVERIFIED", candidateVersion: prior.reduce((v, p) => Math.max(v, p.candidateVersion), 0) + 1,
       evidence: [{ kind: "telegram_claim", claimId: i.claimId, messageId: m.id }],
-      provenance: { source: "TELEGRAM", channelId: m.sourceId, messageId: m.id, originMessageId: m.originMessageId, revisionState: i.revision, messageTimestamp: m.messageTimestamp.toISOString(), capturedAt: (m.observedAt ?? m.receivedAt).toISOString(), captureMethod: m.captureMethod, captureDelaySeconds: delaySeconds, flags, parserVersion: i.parserVersion, classifierVersion: classification?.classifierVersion ?? null, policyVersion: cfg.policyVersion, impliedUnderlyingView: claim.impliedUnderlyingView },
+      provenance: { source: "TELEGRAM", claimId: i.claimId, channelId: m.sourceId, messageId: m.id, originMessageId: m.originMessageId, revisionState: i.revision, messageTimestamp: m.messageTimestamp.toISOString(), capturedAt: (m.observedAt ?? m.receivedAt).toISOString(), captureMethod: m.captureMethod, captureDelaySeconds: delaySeconds, flags, parserVersion: i.parserVersion, classifierVersion: classification?.classifierVersion ?? null, policyVersion: cfg.policyVersion, impliedUnderlyingView: claim.impliedUnderlyingView },
     },
   };
 }

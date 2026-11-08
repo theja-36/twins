@@ -36,7 +36,7 @@ CREATE TRIGGER "telegram_claim_candidacy_no_truncate" BEFORE TRUNCATE ON "telegr
 --> statement-breakpoint
 CREATE FUNCTION "twins_telegram_candidate_origin_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-	IF NEW.source = 'TELEGRAM' AND NOT EXISTS (SELECT 1 FROM options_claims c WHERE c.id = NEW.claim_id AND c.result_kind = 'claim') THEN
+	IF NEW.source = 'TELEGRAM' AND NEW.claim_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM options_claims c WHERE c.id = NEW.claim_id AND c.result_kind = 'claim') THEN
 		RAISE EXCEPTION 'a Telegram candidate needs a stored parsed claim (not an ambiguous, unsupported or non-signal message)' USING ERRCODE = 'check_violation';
 	END IF;
 	RETURN NEW;
