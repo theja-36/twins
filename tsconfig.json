@@ -18,6 +18,8 @@
     { "path": "packages/opportunity" },
     { "path": "packages/confidence" },
     { "path": "packages/planning" },
+    { "path": "packages/decision" },
+    { "path": "packages/execution" },
     { "path": "packages/stop-loss" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },

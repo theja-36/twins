@@ -43,13 +43,18 @@ describe("the allow-listed master-build files cannot produce a QUALIFIED decisio
       expect(Object.keys(r).sort()).toEqual(["allowed", "reasons"]);
     }
   });
-  it("no source file writes user_decisions: there is no producer of a per-user decision yet", () => {
+  it("Stage 07: user_decisions is written only through the audited database doors, called from exactly one TypeScript store", () => {
     const out: string[] = [];
     const walk = (d: string) => { for (const n of readdirSync(d)) { if (["node_modules", "dist", "drizzle"].includes(n)) continue; const p = join(d, n); if (statSync(p).isDirectory()) walk(p); else if (/\.ts$/.test(n)) out.push(p); } };
     for (const d of ["apps", "services", "packages", "adapters", "scripts"]) walk(d);
     const users = out.filter((f) => /\buserDecisions\b|\buser_decisions\b/.test(readFileSync(f, "utf8"))).sort();
-    // the table definition itself, the schema index that re-exports it, and learning.ts (foreign keys only); no service, route or script
-    expect(users).toEqual(["packages/database/src/schema/index.ts", "packages/database/src/schema/learning.ts", "packages/database/src/schema/userDecisions.ts"]);
+    // schema definitions (and the tables that reference the decision by foreign key) plus the ONE store that calls the database doors and reads decisions
+    expect(users).toEqual(["packages/database/src/schema/index.ts", "packages/database/src/schema/learning.ts", "packages/database/src/schema/tradeExecution.ts", "packages/database/src/schema/userDecisions.ts", "packages/database/src/stores/decisionStore.ts"]);
+    for (const f of out) { const code = strip(readFileSync(f, "utf8")); expect(code, f).not.toMatch(/insert\s+into\s+user_decisions|update\s+user_decisions|delete\s+from\s+user_decisions|\.insert\(\s*userDecisions|\.update\(\s*userDecisions/i); }
+    const door = out.filter((f) => /twins_create_user_decision/.test(readFileSync(f, "utf8"))).sort();
+    expect(door).toEqual(["packages/database/src/stores/decisionStore.ts"]);
+    const callers = out.filter((f) => /\bcreateDecision\(/.test(strip(readFileSync(f, "utf8")))).sort();
+    expect(callers).toEqual(["packages/database/src/stores/decisionStore.ts", "packages/decision/src/cycle.ts"]);
   });
   it("the migration refuses a QUALIFIED decision without a positive stop-loss, an APPROVED insert, and an outcome change", () => {
     const sql = readFileSync("packages/database/drizzle/0033_master_build_platform.sql", "utf8");

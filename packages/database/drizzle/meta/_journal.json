@@ -267,6 +267,13 @@
       "when": 1794124466959,
       "tag": "0037_capital_risk_confidence",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794127246171,
+      "tag": "0038_decision_execution_trade_management",
+      "breakpoints": true
     }
   ]
 }

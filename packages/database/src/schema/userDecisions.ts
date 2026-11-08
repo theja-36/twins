@@ -91,6 +91,14 @@ export const userDecisions = pgTable("user_decisions", {
   riskDecisionId: uuid("risk_decision_id").references(() => riskDecisions.id, { onDelete: "restrict" }),
   /** why it qualified or not, why not larger, what supports it, what would invalidate it, comparable patterns, agent agreement */
   explanation: jsonb("explanation").notNull(),
+  /** Stage 07: the FULL mandatory stop-loss validation (packages/stop-loss) this decision rests on. A QUALIFIED decision needs result VALID (database trigger). */
+  stopLossValidation: jsonb("stop_loss_validation"),
+  /** Stage 07: the size this decision permits (lots, quantity, maximum loss, exposure) from the risk-checked sizing; a QUALIFIED decision needs at least one lot. */
+  permittedSize: jsonb("permitted_size"),
+  researchPackageId: uuid("research_package_id").references(() => researchPackages.id, { onDelete: "restrict" }),
+  evidenceRefs: jsonb("evidence_refs").notNull().default(sql`'[]'::jsonb`),
+  /** Engine, policy, sizing, risk, confidence and stop-loss rule versions in force when the decision was made. */
+  versions: jsonb("versions").notNull().default(sql`'{}'::jsonb`),
   validFrom: timestamp("valid_from", { withTimezone: true }).notNull().defaultNow(),
   validUntil: timestamp("valid_until", { withTimezone: true }).notNull(),
   supersedesId: uuid("supersedes_id"),
@@ -129,7 +137,7 @@ export const userDecisionEvents = pgTable("user_decision_events", {
   fromCheck: check("user_decision_events_from_check", sql`${t.fromState} is null or ${t.fromState} in ('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'SUPERSEDED', 'CANCELLED')`),
 }));
 
-export const MONITORING_KINDS = ["ENTRY_FILLED", "STOP_HIT", "TARGET_HIT", "TRAIL_MOVED", "TIME_EXIT", "RISK_BREACH", "PARTIAL_EXIT", "RECONCILIATION_MISMATCH"] as const;
+export const MONITORING_KINDS = ["ENTRY_FILLED", "STOP_HIT", "TARGET_HIT", "TRAIL_MOVED", "TIME_EXIT", "RISK_BREACH", "PARTIAL_EXIT", "RECONCILIATION_MISMATCH", "PRICE_UNAVAILABLE", "STOP_MOVED", "EXPIRY_EXIT", "ORDER_REJECTED", "ALERT"] as const;
 export const tradeMonitoringEvents = pgTable("trade_monitoring_events", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
@@ -155,6 +163,8 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   decisionId: uuid("decision_id"),
   mode: text("mode").notNull(),
   paperTradeId: uuid("paper_trade_id").references(() => paperTrades.id, { onDelete: "restrict" }),
+  /** Stage 07: the master-build paper position this outcome closes (the other PAPER source; exactly one of the two for a PAPER outcome). Owner-tied by a hand-appended composite foreign key. */
+  paperPositionId: uuid("paper_position_id"),
   orderId: uuid("order_id"),
   instrument: text("instrument").notNull(),
   side: text("side").notNull(),
@@ -173,6 +183,6 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   decisionFk: foreignKey({ name: "trade_outcomes_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
   orderFk: foreignKey({ name: "trade_outcomes_order_fk", columns: [t.orderId, t.accountId], foreignColumns: [orders.id, orders.accountId] }),
   modeCheck: check("trade_outcomes_mode_check", oneOf(t.mode, ["PAPER", "LIVE"])),
-  sourceCheck: check("trade_outcomes_source_check", sql`(${t.mode} = 'PAPER' and ${t.paperTradeId} is not null and ${t.orderId} is null) or (${t.mode} = 'LIVE' and ${t.orderId} is not null and ${t.paperTradeId} is null)`),
+  sourceCheck: check("trade_outcomes_source_check", sql`(${t.mode} = 'PAPER' and ((${t.paperTradeId} is not null) <> (${t.paperPositionId} is not null)) and ${t.orderId} is null) or (${t.mode} = 'LIVE' and ${t.orderId} is not null and ${t.paperTradeId} is null and ${t.paperPositionId} is null)`),
   timeCheck: check("trade_outcomes_time_check", sql`${t.closedAt} >= ${t.openedAt} and ${t.quantity} > 0`),
 }));

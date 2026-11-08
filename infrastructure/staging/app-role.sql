@@ -53,5 +53,7 @@ GRANT SELECT ON agent_orchestrator_runs, agent_orchestrator_syntheses, agent_run
 GRANT EXECUTE ON FUNCTION twins_research_assessment(uuid, uuid, integer), twins_agent_evidence_fp(uuid, text) TO :"app_role";
 -- the one door through which the API records a risk APPROVE / REJECT (it re-checks eligibility inside the database); the card-state doors are for the approval bot only
 GRANT EXECUTE ON FUNCTION twins_record_risk_approval(uuid, uuid, text, text, jsonb, text, timestamptz) TO :"app_role";
+-- Stage 07: the only doors to user_decisions / user_decision_events (the runtime role has no direct write on them). Each function acts only for the user bound to the transaction.
+GRANT EXECUTE ON FUNCTION twins_create_user_decision(jsonb), twins_end_user_decision(uuid, text, text, text), twins_invalidate_decision(uuid, text, jsonb, text), twins_record_decision_approval(uuid, text, jsonb, text, text) TO :"app_role";
 -- Paper trading switch (migration 0031): the runtime role may READ the switch and its history, and change it ONLY through this audited function (the admin API route is the sole caller).
 GRANT EXECUTE ON FUNCTION twins_paper_set_switch(boolean, text, text) TO :"app_role";

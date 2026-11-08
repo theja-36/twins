@@ -31,6 +31,8 @@
     "@twins/providers": "*",
     "@twins/opportunity": "*",
     "@twins/planning": "*",
+    "@twins/decision": "*",
+    "@twins/execution": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {

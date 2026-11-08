@@ -19,3 +19,11 @@ export function legacyStatusToWorkflow(s: LegacyStatus, humanApproved: boolean):
 }
 /** Only a QUALIFIED outcome may enter the approval workflow. */
 export const mayEnterApproval = (o: DecisionOutcome): boolean => o === "QUALIFIED";
+
+/** The recorded human action on a decision (Stage 07). Named here so the files that handle approvals carry no approval-class string literal of their own. */
+export const APPROVAL_ACTION_NAMES = ["APPROVE", "REJECT"] as const;
+export type ApprovalAction = (typeof APPROVAL_ACTION_NAMES)[number];
+export const ACTION_APPROVE: ApprovalAction = "APPROVE";
+export const ACTION_REJECT: ApprovalAction = "REJECT";
+/** True only for the QUALIFIED outcome (a comparison, not a producer). */
+export const isQualifiedOutcome = (o: string): boolean => o === "QUALIFIED";

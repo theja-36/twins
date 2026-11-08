@@ -1,0 +1,16 @@
+{
+  "name": "@twins/decision",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@twins/agents": "*",
+    "@twins/database": "*",
+    "@twins/planning": "*",
+    "@twins/runtime-state": "*",
+    "@twins/stop-loss": "*",
+    "@twins/types": "*"
+  }
+}

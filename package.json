@@ -23,6 +23,7 @@
     "audit:verify": "tsx scripts/ops/verify-audit-chain.ts",
     "safety:control": "tsx scripts/ops/safety-control.ts",
     "risk:control": "tsx scripts/ops/risk-control.ts",
+    "decision:control": "tsx scripts/ops/decision-control.ts",
     "historical:import": "tsx scripts/ops/historical-import.ts",
     "historical:evaluate": "tsx scripts/ops/historical-evaluate.ts",
     "historical:scorecard": "tsx scripts/ops/historical-scorecard.ts",

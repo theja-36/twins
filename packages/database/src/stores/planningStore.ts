@@ -128,3 +128,12 @@ export async function hasRecentRiskAssessment(db: Pick<Db, "transaction">, userI
     return r.rows.length > 0;
   });
 }
+
+/** The latest stored evaluation of a candidate for an account, as the decision engine consumes it: the risk assessment (with its result), the simulation run beside it, and the shared confidence assessment. */
+export async function getLatestEvaluationBundle(db: Pick<Db, "transaction" | "select">, userId: string, accountId: string, candidateId: string): Promise<{ riskAssessmentId: string; verdict: string; policyVersion: number; result: unknown; researchPackageId: string | null; createdAt: Date; simulationId: string | null; confidence: { id: string; score: number; calibrationStatus: string; components: unknown; missing: unknown } | null } | null> {
+  const risk = await getLatestRiskAssessment(db, userId, accountId, candidateId);
+  if (!risk) return null;
+  const sim = await withUser(db, userId, async (tx) => { const r = await t(tx).execute(sql`select id from simulations where risk_assessment_id = ${risk.id}::uuid order by created_at desc limit 1`); return (r.rows[0] as { id: string } | undefined)?.id ?? null; });
+  const [conf] = await db.select().from(confidenceAssessments).where(eq(confidenceAssessments.candidateId, candidateId)).orderBy(desc(confidenceAssessments.createdAt)).limit(1);
+  return { riskAssessmentId: risk.id, verdict: risk.verdict, policyVersion: risk.policyVersion, result: risk.result, researchPackageId: risk.researchPackageId, createdAt: risk.createdAt, simulationId: sim, confidence: conf ? { id: conf.id, score: Number(conf.score), calibrationStatus: conf.calibrationStatus, components: conf.components, missing: conf.missing } : null };
+}

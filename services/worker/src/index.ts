@@ -32,6 +32,8 @@ import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/pap
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { loadOpportunityConfig, runOpportunityCycle } from "@twins/opportunity";
 import { loadEvaluationConfig, memorySpecProvider, fileSpecProvider, runEvaluationCycle, type SpecProvider } from "@twins/planning";
+import { loadDecisionConfig, runDecisionCycle } from "@twins/decision";
+import { advanceOpenOrders, loadExecutionConfig, monitorPositions, paperPortfolioProvider, priceProviderFrom, type AlertEvent } from "@twins/execution";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
@@ -364,7 +366,10 @@ const agentEngineConfig = observeConfigLoad(defaultWorkerLogger, "agent-engine",
 const opportunityConfig = observeConfigLoad(defaultWorkerLogger, "opportunity-engine", () => loadOpportunityConfig());
 // Stage 06: capital / risk / confidence / simulation evaluation of READY candidates. DISABLED by default. Specifications and fees come ONLY from an operator file (TWINS_SPECS_FILE); with none, instruments are BLOCKED (SPEC_UNAVAILABLE), never guessed.
 const evaluationConfig = observeConfigLoad(defaultWorkerLogger, "evaluation", () => loadEvaluationConfig());
-const specProvider: SpecProvider | null = evaluationConfig.enabled ? observeConfigLoad(defaultWorkerLogger, "specs", () => (process.env["TWINS_SPECS_FILE"] ? fileSpecProvider(process.env["TWINS_SPECS_FILE"]) : memorySpecProvider({ name: "no-specs", instruments: [], fees: [] }))) : null;
+// Stage 07: decisions and PAPER trade management. Both DISABLED by default. There is no live price source (G-20): the management loop reads only the file last-price snapshot and labels it FIXTURE; missing or stale prices are recorded as monitoring UNAVAILABLE. Live execution modes cannot be enabled by any setting.
+const decisionConfig = observeConfigLoad(defaultWorkerLogger, "decisions", () => loadDecisionConfig());
+const executionConfig = observeConfigLoad(defaultWorkerLogger, "execution", () => loadExecutionConfig());
+const specProvider: SpecProvider | null = evaluationConfig.enabled || decisionConfig.enabled || executionConfig.enabled || executionConfig.managementEnabled ? observeConfigLoad(defaultWorkerLogger, "specs", () => (process.env["TWINS_SPECS_FILE"] ? fileSpecProvider(process.env["TWINS_SPECS_FILE"]) : memorySpecProvider({ name: "no-specs", instruments: [], fees: [] }))) : null;
 const agentRules = agentEngineConfig.enabled || agentEngineConfig.shadow ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
@@ -958,9 +963,15 @@ export const opportunityWorker =
             registry: agentRegistryFor(workerDb.db), agentConfig: agentEngineConfig, log: (event, fields) => defaultWorkerLogger.info(event, fields),
           });
           if (evaluationConfig.enabled) {
-            // portfolio state, quotes, strategy performance and the live regime have no source yet (G-16, G-22): they are null, so every evaluation is BLOCKED (portfolio unknown) rather than assumed safe
-            const ev = await runEvaluationCycle({ db: workerDb.db, config: evaluationConfig, specs: specProvider, regime: null, portfolio: null, quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });
+            // the portfolio is the PAPER portfolio (open paper positions and today's paper result); quotes, strategy performance and the live regime have no source yet (G-16, G-23): they are null, so their inputs are reported missing / restricted, never assumed
+            const ev = await runEvaluationCycle({ db: workerDb.db, config: evaluationConfig, specs: specProvider, regime: null, portfolio: paperPortfolioProvider(workerDb.db), quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });
             defaultWorkerLogger.info("planning.cycle.done", { evaluated: ev.evaluated, failed: ev.failed, verdicts: ev.verdicts, skipped: ev.skipped });
+          }
+          if (decisionConfig.enabled) {
+            const dr = await runDecisionCycle({ db: workerDb.db, config: decisionConfig, specs: specProvider, regime: null, portfolio: paperPortfolioProvider(workerDb.db), quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });
+            // approval requests are CONTRACTS: delivery to a person needs the Stage 10 notification integration, so only the ids are logged
+            for (const n of dr.notifications) defaultWorkerLogger.info("decision.approval_requested", { decisionId: n.decisionId, dedupeKey: n.dedupeKey });
+            defaultWorkerLogger.info("decision.cycle.done", { created: dr.created, superseded: dr.superseded, expired: dr.expired, invalidated: dr.invalidated, outcomes: dr.outcomes, failed: dr.failed });
           }
           defaultWorkerLogger.info("opportunity.cycle.done", { slotKey: report.slotKey, skipped: report.skipped, scanStatus: report.scan?.status ?? null, created: report.scan?.created ?? 0, researched: report.research?.researched ?? 0 });
           return report;
@@ -971,6 +982,18 @@ if (opportunityWorker) {
   opportunityWorker.on("failed", (job, err) => {
     defaultWorkerLogger.warn("worker.queue.job_failed", { queue: "opportunity_queue", jobId: job?.id, attemptsMade: job?.attemptsMade, maxAttempts: job?.opts?.attempts, ...describeErrorSafely(err) });
   });
+}
+
+// Trade management loop (Stage 07): advances open paper orders and monitors open paper positions at a FRESH price from the explicit provider. Exits are never blocked by the kill switch. Off by default.
+let managementTimer: ReturnType<typeof setInterval> | null = null;
+if (process.env["NODE_ENV"] !== "test" && executionConfig.managementEnabled) {
+  const rules = agentRules ?? (() => { try { return loadAgentRulesConfig(); } catch { return null; } })();
+  const prices = rules ? priceProviderFrom(resolveOhlcProviders(rules).lastPriceProvider ?? { name: "none", price: async () => null }, "FIXTURE") : null;
+  const mgmtDeps = { eval: { db: workerDb.db, specs: specProvider, regime: null, portfolio: paperPortfolioProvider(workerDb.db), quotes: null, strategy: null }, prices, config: executionConfig,
+    alert: (a: AlertEvent) => { try { (marketAlerter ?? alerterFromEnv(process.env, "worker", defaultWorkerLogger)).alert({ event: `trade.${a.kind.toLowerCase()}`, severity: a.severity, code: a.kind.toLowerCase(), summary: a.detail.slice(0, 300), details: { positionId: a.positionId, decisionId: a.decisionId, mode: "PAPER" }, dedupeKey: a.dedupeKey }); } catch { defaultWorkerLogger.warn("management.alert_failed", { kind: a.kind }); } },
+    log: (event: string, fields: Record<string, unknown>) => defaultWorkerLogger.info(event, fields) };
+  let running = false;
+  managementTimer = setInterval(() => { if (running) return; running = true; void (async () => { try { await advanceOpenOrders(mgmtDeps); const m = await monitorPositions(mgmtDeps); if (m.positions > 0) defaultWorkerLogger.info("management.tick", { positions: m.positions, monitored: m.monitored, unmonitored: m.unmonitored, exits: m.exits, closed: m.closed, alerts: m.alerts }); } catch (e) { defaultWorkerLogger.warn("management.tick_failed", { errorName: e instanceof Error ? e.name : "Error" }); } finally { running = false; } })(); }, Number(process.env["TWINS_MANAGEMENT_INTERVAL_MS"] ?? "15000"));
 }
 
 // Outbox reconciler (Stage 2 / Task 2): re-enqueues outbox rows whose Redis job was never created or was lost, and recovers rows orphaned by a dead worker.
@@ -1036,6 +1059,7 @@ if (process.env["NODE_ENV"] !== "test") {
 export async function shutdown(signal: string): Promise<void> {
   console.log(`[worker] received ${signal}, shutting down gracefully`);
   paperLoop?.stop();
+  if (managementTimer) clearInterval(managementTimer);
   outboxReconciler?.stop();
   const closers: Array<Promise<unknown>> = [];
   if (outboxQueue) closers.push(outboxQueue.close());

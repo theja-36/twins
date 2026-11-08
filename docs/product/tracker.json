@@ -5340,326 +5340,9 @@
    "area": "Decision outcomes",
    "feature": "QUALIFIED",
    "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-02",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "WAIT",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-03",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "REJECT",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-04",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "EVALUATION_ONLY",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-05",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "NO_TRADE",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-06",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "PENDING",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-07",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "APPROVED",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [
-    "DB constraint APPROVED requires QUALIFIED + guard trigger verified in CI run 42445765317 (workflow engine itself not built)"
-   ],
-   "blockers": []
-  },
-  {
-   "id": "M12-08",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "REJECTED",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-09",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "EXPIRED",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-10",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "SUPERSEDED",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-11",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Decision outcomes",
-   "feature": "CANCELLED",
-   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "IN_PROGRESS",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-12",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Required functionality",
-   "feature": "Evidence-based decision.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-13",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Required functionality",
-   "feature": "Research synthesis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-14",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Required functionality",
-   "feature": "Risk validation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-15",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Required functionality",
-   "feature": "User-specific eligibility.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_decisions",
-    "user_decision_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M12-16",
-   "module": "M12",
-   "moduleName": "Decision Engine & Explainable Decisions",
-   "area": "Required functionality",
-   "feature": "Decision validity window.",
-   "existing": "15-minute approval validity (TWINS_RISK_EXPIRY_APPROVED_MINUTES) | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 07: the deterministic decision engine produces QUALIFIED with exact reasons, restrictions and what would change it",
    "packages": [
-    "packages/risk/src/expiry"
+    "packages/decision/src/engine.ts"
    ],
    "database": [
     "user_decisions",
@@ -5671,7 +5354,416 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-02",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "WAIT",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the deterministic decision engine produces WAIT with exact reasons, restrictions and what would change it",
+   "packages": [
+    "packages/decision/src/engine.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-03",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "REJECT",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the deterministic decision engine produces REJECT with exact reasons, restrictions and what would change it",
+   "packages": [
+    "packages/decision/src/engine.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-04",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "EVALUATION_ONLY",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the deterministic decision engine produces EVALUATION_ONLY with exact reasons, restrictions and what would change it",
+   "packages": [
+    "packages/decision/src/engine.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-05",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "NO_TRADE",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the deterministic decision engine produces NO_TRADE with exact reasons, restrictions and what would change it",
+   "packages": [
+    "packages/decision/src/engine.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-06",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "PENDING",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state PENDING reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-07",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "APPROVED",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state APPROVED reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "DB constraint APPROVED requires QUALIFIED + guard trigger verified in CI run 42445765317 (workflow engine itself not built)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-08",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "REJECTED",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state REJECTED reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-09",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "EXPIRED",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state EXPIRED reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-10",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "SUPERSEDED",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state SUPERSEDED reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-11",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Decision outcomes",
+   "feature": "CANCELLED",
+   "existing": "vocabulary + legal transitions in packages/types/src/platform/decision.ts; database column and engine not yet built | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: workflow state CANCELLED reached only through the database doors (twins_create/end/invalidate/record_decision_approval) and the guard trigger",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-12",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Required functionality",
+   "feature": "Evidence-based decision.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: every decision stores evidence references and versions",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-13",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Required functionality",
+   "feature": "Research synthesis.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the research package (assessment, contradictions, missing agents) is a decision input",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-14",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Required functionality",
+   "feature": "Risk validation.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: the stored risk assessment and sizing are decision inputs; QUALIFIED needs a non-blocked verdict (engine and database)",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-15",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Required functionality",
+   "feature": "User-specific eligibility.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: PAPER permission per account decides EVALUATION_ONLY versus approvable",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M12-16",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Required functionality",
+   "feature": "Decision validity window.",
+   "existing": "15-minute approval validity (TWINS_RISK_EXPIRY_APPROVED_MINUTES) | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "to be defined when the stage starts",
+   "packages": [
+    "packages/risk/src/expiry",
+    "packages/decision/src/engine.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07: validity = min(candidate expiry, TTL); enforced by the database at approval and at every entry order",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -5682,8 +5774,12 @@
    "area": "Required functionality",
    "feature": "Signal cancellation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: an invalidated or expired candidate yields NO_TRADE; an approved decision is invalidated by the sweep and by the execution revalidation",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5692,8 +5788,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5703,8 +5802,12 @@
    "area": "Required functionality",
    "feature": "Revalidation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: revalidateDecision re-runs the stop-loss rule, risk, size, candidate, window, kill switch and permission before approval and before every execution",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5713,8 +5816,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5724,8 +5830,12 @@
    "area": "Required functionality",
    "feature": "Stale-decision detection.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: pending decisions are expired by the cycle; approved ones are revalidated and invalidated when their basis fails",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5734,8 +5844,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5745,8 +5858,12 @@
    "area": "Required functionality",
    "feature": "Contradiction handling.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: contradicting agents yield WAIT and are listed",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5755,8 +5872,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5766,8 +5886,12 @@
    "area": "Required functionality",
    "feature": "Human-readable explanation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: explanation object: headline, supporting, missing, contradictory, risk restrictions, size restriction, expiry, reassess, invalidatedBy",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5776,8 +5900,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5787,8 +5914,12 @@
    "area": "Explainable decision package",
    "feature": "Why it qualified.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: supporting list on QUALIFIED",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5797,8 +5928,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5808,8 +5942,12 @@
    "area": "Explainable decision package",
    "feature": "Why it did not qualify.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: reasons with categories and what would change it",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5818,8 +5956,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5829,8 +5970,12 @@
    "area": "Explainable decision package",
    "feature": "Why a larger position was not permitted.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: size restriction text and binding budget",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5839,8 +5984,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5850,8 +5998,12 @@
    "area": "Explainable decision package",
    "feature": "What evidence supports it.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: supporting evidence list and evidence references",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5860,8 +6012,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5871,8 +6026,12 @@
    "area": "Explainable decision package",
    "feature": "What risks remain.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: risk restrictions listed",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5881,8 +6040,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5892,8 +6054,12 @@
    "area": "Explainable decision package",
    "feature": "What would invalidate it.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: invalidatedBy lists the stop, the candidate expiry and the revalidation conditions",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5902,8 +6068,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5913,8 +6082,10 @@
    "area": "Explainable decision package",
    "feature": "Which historical patterns are comparable.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: the decision references the research package that contains the historical-pattern agent's report",
+   "packages": [
+    "packages/decision/src/engine.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5923,9 +6094,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "no separate listing of comparable historical patterns; the historical provider is not wired (G-23)"
+   ]
   },
   {
    "id": "M12-29",
@@ -5934,8 +6109,12 @@
    "area": "Explainable decision package",
    "feature": "Which agents agreed or disagreed.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: agent contradictions listed (supportive versus opposing agents)",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/decision/src/revalidate.ts",
+    "packages/decision/src/cycle.ts"
+   ],
    "database": [
     "user_decisions",
     "user_decision_events"
@@ -5944,8 +6123,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -5981,7 +6163,9 @@
    "feature": "Approval cards.",
    "existing": "risk_approval_cards | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
    "database": [
     "risk_approval_cards",
     "user_execution_permissions"
@@ -5992,7 +6176,9 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6003,149 +6189,9 @@
    "area": "Approval interface",
    "feature": "Signal summary.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-04",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Evidence summary.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-05",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Confidence assessment.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-06",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Risk assessment.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-07",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Suggested quantity.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-08",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Entry, SL and target.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-09",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Approve / reject / watch actions.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "user_execution_permissions"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M13-10",
-   "module": "M13",
-   "moduleName": "Human Approval & Execution",
-   "area": "Approval interface",
-   "feature": "Approval expiry.",
-   "existing": "risk expiry + card expiry | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 07: the approval card carries the headline summary in the approval-card-v1 contract",
    "packages": [
-    "packages/risk"
+    "packages/decision/src/approval.ts"
    ],
    "database": [
     "user_execution_permissions"
@@ -6156,7 +6202,194 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-04",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Evidence summary.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: supporting and missing evidence lines in the approval-card-v1 contract",
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-05",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Confidence assessment.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: strength line (uncalibrated, not a probability) in the approval-card-v1 contract",
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-06",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Risk assessment.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: risk restrictions and size restriction lines in the approval-card-v1 contract",
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-07",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Suggested quantity.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: exact permitted lots / units and maximum loss in the approval-card-v1 contract",
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-08",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Entry, SL and target.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: entry, stop-loss and targets in the approval-card-v1 contract",
+   "packages": [
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)"
+   ],
+   "blockers": [
+    "card and notification are contracts; delivery to a person needs the Stage 10 notification integration (G-26)"
+   ]
+  },
+  {
+   "id": "M13-09",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Approve / reject / watch actions.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: approve and reject (watch is not implemented)",
+   "packages": [
+    "packages/decision/src/approval.ts",
+    "scripts/ops/decision-control.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no WATCH action; no user-facing approval API until authentication sessions exist (G-26, Stage 01)"
+   ]
+  },
+  {
+   "id": "M13-10",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Approval interface",
+   "feature": "Approval expiry.",
+   "existing": "risk expiry + card expiry | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "to be defined when the stage starts",
+   "packages": [
+    "packages/risk",
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "user_execution_permissions"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6169,7 +6402,8 @@
    "existing": "assessApprovalEligibility + twins_record_risk_approval | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/approval"
+    "packages/risk/src/approval",
+    "packages/decision/src/approval.ts"
    ],
    "database": [
     "user_execution_permissions"
@@ -6180,7 +6414,9 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07: the same capability for per-user decisions: approval-card-v1, decision window enforced in the approval door, mandatory revalidation immediately before approval (and again before execution)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6193,7 +6429,10 @@
    "existing": "packages/paper (off by default) | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
    ],
    "database": [
     "paper_trades",
@@ -6205,7 +6444,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): simulated order placement: paper_orders (PROPOSED > SUBMITTED > ACCEPTED), idempotent",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6218,7 +6460,10 @@
    "existing": "packages/paper manager | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
    ],
    "database": [
     "user_execution_permissions"
@@ -6229,7 +6474,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): simulated fills at a FRESH observed price with adverse slippage, partial fills in lots",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6242,7 +6490,10 @@
    "existing": "paper_trade_events | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
    ],
    "database": [
     "paper_trade_events",
@@ -6254,7 +6505,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): simulated trade lifecycle: order, fill, position, exits, close",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6267,7 +6521,10 @@
    "existing": "packages/paper/src/pnl.ts | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
    ],
    "database": [
     "user_execution_permissions"
@@ -6278,7 +6535,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): realised P&L (gross, costs, net) in fixed-point decimals; unrealised on demand",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6290,7 +6550,11 @@
    "feature": "Mode A — Paper Trading: Trade history.",
    "existing": "paper_outcomes; GET /paper/outcomes | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
+   ],
    "database": [
     "paper_outcomes",
     "user_execution_permissions"
@@ -6301,7 +6565,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): trade history: orders, fills, position events, monitoring events, trade_outcomes",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6314,7 +6581,10 @@
    "existing": "LIVE_TRADING guard; paper never calls a broker | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/runtime-state"
+    "packages/runtime-state",
+    "packages/execution/src/execute.ts",
+    "packages/execution/src/position.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
    ],
    "database": [
     "user_execution_permissions"
@@ -6325,7 +6595,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 (master-build path): no real money: paper_* tables, mode checks in the database, no broker code reachable",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6576,8 +6849,11 @@
    "area": "Required functionality",
    "feature": "Entry tracking.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: entry tracking: ENTRY_FILLED / OPENED events, position derived from fills",
+   "packages": [
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/execute.ts"
+   ],
    "database": [
     "trade_monitoring_events"
    ],
@@ -6585,8 +6861,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -6598,7 +6877,9 @@
    "existing": "paper pnl (paper only) | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6609,9 +6890,14 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: live p&l. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
-   "blockers": []
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
   },
   {
    "id": "M14-03",
@@ -6622,7 +6908,9 @@
    "existing": "paper manager (paper only) | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6633,9 +6921,14 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: stop-loss monitoring. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
-   "blockers": []
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
   },
   {
    "id": "M14-04",
@@ -6646,7 +6939,9 @@
    "existing": "paper manager (paper only) | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6657,9 +6952,14 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: target monitoring. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
-   "blockers": []
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
   },
   {
    "id": "M14-05",
@@ -6670,7 +6970,9 @@
    "existing": "paper adaptiveManagement / trail config | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6681,9 +6983,14 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: trailing stop. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
-   "blockers": []
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
   },
   {
    "id": "M14-06",
@@ -6694,7 +7001,9 @@
    "existing": "paper square-off time | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6705,7 +7014,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: time-based exit. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6716,69 +7028,10 @@
    "area": "Required functionality",
    "feature": "Risk breach alerts.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "trade_monitoring_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M14-08",
-   "module": "M14",
-   "moduleName": "Trade Management & Monitoring",
-   "area": "Required functionality",
-   "feature": "Stop-loss-hit status.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "trade_monitoring_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M14-09",
-   "module": "M14",
-   "moduleName": "Trade Management & Monitoring",
-   "area": "Required functionality",
-   "feature": "Target-hit status.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
-   "database": [
-    "trade_monitoring_events"
-   ],
-   "api": [],
-   "screens": [],
-   "dependencies": [],
-   "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
-  },
-  {
-   "id": "M14-10",
-   "module": "M14",
-   "moduleName": "Trade Management & Monitoring",
-   "area": "Required functionality",
-   "feature": "Partial exit handling.",
-   "existing": "paper exit fractions | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 07: risk-breach alerts: RISK_BREACH recorded and escalated CRITICAL",
    "packages": [
-    "packages/paper"
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/execute.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6789,7 +7042,95 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
+  },
+  {
+   "id": "M14-08",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Required functionality",
+   "feature": "Stop-loss-hit status.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: stop-loss-hit status: STOP_HIT event, exit reason, outcome",
+   "packages": [
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/execute.ts"
+   ],
+   "database": [
+    "trade_monitoring_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
+  },
+  {
+   "id": "M14-09",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Required functionality",
+   "feature": "Target-hit status.",
+   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "Stage 07: target-hit status: TARGET_HIT event and ladder exits",
+   "packages": [
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/execute.ts"
+   ],
+   "database": [
+    "trade_monitoring_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "prices come from the explicit provider; no live price source exists (G-20)"
+   ]
+  },
+  {
+   "id": "M14-10",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Required functionality",
+   "feature": "Partial exit handling.",
+   "existing": "paper exit fractions | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "change": "to be defined when the stage starts",
+   "packages": [
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
+   ],
+   "database": [
+    "trade_monitoring_events"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "07",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: partial exit handling. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6802,7 +7143,9 @@
    "existing": "paper trade states | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/paper"
+    "packages/paper",
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
    ],
    "database": [
     "trade_monitoring_events"
@@ -6813,7 +7156,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: trade status. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -6824,8 +7170,11 @@
    "area": "Required functionality",
    "feature": "Position reconciliation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 07: position reconciliation: fills versus position, mismatch recorded and escalated, optional repair",
+   "packages": [
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/execute.ts"
+   ],
    "database": [
     "trade_monitoring_events"
    ],
@@ -6833,8 +7182,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -6845,7 +7197,10 @@
    "feature": "Outcome recording.",
    "existing": "paper_outcomes | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/execution/src/monitor.ts",
+    "packages/execution/src/position.ts"
+   ],
    "database": [
     "paper_outcomes",
     "trade_monitoring_events"
@@ -6856,7 +7211,10 @@
    "stage": "07",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 07 master-build path: outcome recording. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ],
    "blockers": []
   },
@@ -9862,6 +10220,221 @@
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
     "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+   ]
+  },
+  {
+   "id": "M12-30",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Mandatory stop-loss enforcement: every QUALIFIED path runs the full packages/stop-loss validation (engine, final guard, persistence door, database trigger, revalidation before approval and execution); closes G-18",
+   "packages": [
+    "packages/decision/src/engine.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "tests/unit/safety/qualifiedProducerStage07.test.ts"
+   ],
+   "database": [
+    "user_decisions"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M12-31",
+   "module": "M12",
+   "moduleName": "Decision Engine & Explainable Decisions",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Decision persistence through SECURITY DEFINER doors bound to the transaction's user; guard v2 makes every column but workflow_state immutable",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/database/src/stores/decisionStore.ts"
+   ],
+   "database": [
+    "user_decisions",
+    "user_decision_events",
+    "decision_invalidations"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M13-30",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Approval record: owner-only, PAPER permission, one action per decision, append-only, idempotent key, revalidation snapshot stored",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/decision/src/approval.ts"
+   ],
+   "database": [
+    "decision_approvals"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M13-31",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Execution safety chain: ownership, permission, approval, gate (live modes refused), fresh revalidation, kill switch, instrument eligibility; unique request per decision and mode; keyed orders; the database re-checks window, invalidation, size, side",
+   "packages": [
+    "packages/execution/src/execute.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
+   ],
+   "database": [
+    "execution_requests",
+    "paper_orders"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M13-32",
+   "module": "M13",
+   "moduleName": "Human Approval & Execution",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Execution modes: PAPER works; ASSISTED_LIVE and CONTROLLED_AUTO are refused by construction and recorded REJECTED (database check); no setting enables them",
+   "packages": [
+    "packages/execution/src/execute.ts",
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql"
+   ],
+   "database": [
+    "execution_requests"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M14-14",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Order, fill and position are separate tables with their own lifecycle guards; fills are applied to orders by the database; the position is derived from fills (crash-safe)",
+   "packages": [
+    "packages/database/drizzle/0038_decision_execution_trade_management.sql",
+    "packages/execution/src/execute.ts"
+   ],
+   "database": [
+    "paper_orders",
+    "paper_fills",
+    "paper_positions",
+    "paper_position_events"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M14-15",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Explicit price-provider interface; missing, stale, future or malformed prices are PRICE_UNAVAILABLE events and alerts, never successful monitoring; exits are never blocked by the kill switch",
+   "packages": [
+    "packages/execution/src/prices.ts",
+    "packages/execution/src/monitor.ts"
+   ],
+   "database": [
+    "paper_position_events",
+    "trade_monitoring_events"
+   ],
+   "evidence": [
+    "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M14-16",
+   "module": "M14",
+   "moduleName": "Trade Management & Monitoring",
+   "area": "Stage 07 additions",
+   "stage": "07",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 07",
+   "change": "Stage 07",
+   "status": "IMPLEMENTED",
+   "feature": "Paper portfolio provider (open paper positions, today's paper result) feeds risk evaluation: resolves the paper half of G-22",
+   "packages": [
+    "packages/execution/src/portfolio.ts"
+   ],
+   "database": [
+    "paper_positions",
+    "trade_outcomes"
+   ],
+   "evidence": [
+    "tests/integration/trading/stage07.test.ts against Postgres 16 (CI pending)"
    ]
   }
  ]
