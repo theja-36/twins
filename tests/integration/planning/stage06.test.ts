@@ -76,9 +76,13 @@ describe("risk controls", () => {
     const now = new Date();
     await setRiskControl(db, { scope: "MARKET", scopeKey: key, kind: "RESTRICTION", userId: null }, { reason: "platform restriction for test", actor: "ops", actorKind: "OWNER" });
     await setRiskControl(db, { scope: "USER", scopeKey: a.userId, kind: "DAILY_LOSS_HALT", userId: a.userId }, { reason: "daily limit reached in test", actor: "planning-cycle", actorKind: "SYSTEM", expiresAt: new Date(Date.now() + 3_600_000) });
-    const forA = await listActiveControls(db, a.userId, new Date(now.getTime() + 1000)), forB = await listActiveControls(db, b.userId, new Date(now.getTime() + 1000));
+    const forA = await listActiveControls(db, a.userId, new Date(now.getTime() + 1000));
     expect(forA.some((c) => c.scopeKey === key)).toBe(true); expect(forA.some((c) => c.kind === "DAILY_LOSS_HALT" && c.userId === a.userId)).toBe(true);
-    expect(forB.some((c) => c.scopeKey === key)).toBe(true); expect(forB.some((c) => c.kind === "DAILY_LOSS_HALT")).toBe(false);
+    // row-level security (the CI connection is a superuser and bypasses it, so isolation is checked through an unprivileged session)
+    const sb = await session(b.userId);
+    expect((await sb.query("select id from risk_control_events where scope_key = $1", [key])).rows).toHaveLength(1);
+    expect((await sb.query("select id from risk_control_events where user_id = $1", [a.userId])).rows).toEqual([]);
+    await expect(sb.query("insert into risk_control_events (id, user_id, scope, scope_key, kind, action, reason, actor, actor_kind) values ($1, $2, 'USER', $2::text, 'RESTRICTION', 'SET', 'writing for another user', 'x', 'OWNER')", [randomUUID(), a.userId])).rejects.toThrow(/row-level security/);
     expect((await listActiveControls(db, a.userId, new Date(Date.now() + 7_200_000))).some((c) => c.kind === "DAILY_LOSS_HALT" && c.userId === a.userId)).toBe(false); // expired
     await clearRiskControl(db, { scope: "MARKET", scopeKey: key, kind: "RESTRICTION", userId: null }, { reason: "restriction lifted after review", actor: "ops", actorKind: "OWNER" });
     expect((await listActiveControls(db, a.userId, new Date(Date.now() + 1000))).some((c) => c.scopeKey === key)).toBe(false);
@@ -88,7 +92,7 @@ describe("risk controls", () => {
   });
   it("the database enforces the recovery policy: the system can never clear a drawdown halt or a kill switch, and a reason is mandatory", async () => {
     const u = await newUser(), admin = await owner();
-    const ins = (kind: string, action: string, actorKind: string, reason = "a sufficiently long reason") => admin.query("insert into risk_control_events (id, user_id, scope, scope_key, kind, action, reason, actor, actor_kind) values ($1, $2, 'USER', $2, $3, $4, $5, 'x', $6)", [randomUUID(), u.userId, kind, action, reason, actorKind]);
+    const ins = (kind: string, action: string, actorKind: string, reason = "a sufficiently long reason") => admin.query("insert into risk_control_events (id, user_id, scope, scope_key, kind, action, reason, actor, actor_kind) values ($1, $2::uuid, 'USER', $2::text, $3, $4, $5, 'x', $6)", [randomUUID(), u.userId, kind, action, reason, actorKind]);
     await ins("DRAWDOWN_HALT", "SET", "SYSTEM");
     await expect(ins("DRAWDOWN_HALT", "CLEAR", "SYSTEM")).rejects.toThrow(/clear_policy_check/);
     await expect(ins("KILL_SWITCH", "CLEAR", "SYSTEM")).rejects.toThrow(/clear_policy_check/);
@@ -116,7 +120,8 @@ describe("assessments and simulations", () => {
     const { rows } = await admin.query("select passed, verdict from risk_assessments where id = $1", [id]); expect(rows[0]).toEqual({ passed: false, verdict: "RESTRICTED" });
     await expect(admin.query("insert into risk_assessments (id, user_id, account_id, candidate_id, policy_version, passed, verdict, result) values ($1, $2, $3, $4, 1, true, 'RESTRICTED', '{}')", [randomUUID(), a.userId, a.accountId, c])).rejects.toThrow(/verdict_check/);
     await storeSimulation(db, a.userId, { accountId: a.accountId, candidateId: c, params: {}, scenarios: {}, costModelVersion: "cost-model-v1", riskAssessmentId: id });
-    await expect(storeSimulation(db, b.userId, { accountId: b.accountId, candidateId: c, params: {}, scenarios: {}, costModelVersion: "cost-model-v1", riskAssessmentId: id })).rejects.toThrow(/assessment_owner_fk/);
+    await expect(admin.query("insert into simulations (id, user_id, account_id, candidate_id, params, scenarios, cost_model_version, risk_assessment_id) values ($1, $2, $3, $4, '{}', '{}', 'cost-model-v1', $5)", [randomUUID(), b.userId, b.accountId, c, id])).rejects.toThrow(/assessment_owner_fk/);
+    await expect(storeSimulation(db, b.userId, { accountId: b.accountId, candidateId: c, params: {}, scenarios: {}, costModelVersion: "cost-model-v1", riskAssessmentId: id })).rejects.toThrow();
     const sb = await session(b.userId);
     expect((await sb.query("select id from risk_assessments where id = $1", [id])).rows).toEqual([]);
     await expect(admin.query("update risk_assessments set verdict = 'PASS', passed = true where id = $1", [id])).rejects.toThrow(/append-only/);
