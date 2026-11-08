@@ -96,22 +96,22 @@ describe("the research queue", () => {
     const u = sym(); const scope = { underlyings: [u] }; const q = createCandidateQueue(db, scope);
     const s = await scanId();
     await insertScanCandidates(db, s, [draft(u, { rankScore: 10, setup: "A" }), draft(u, { rankScore: 90, setup: "B" }), draft(u, { rankScore: 50, setup: "C" })]);
-    const got = (await Promise.all(Array.from({ length: 8 }, () => q.claimNext(NOW, [])))).filter(Boolean);
+    const got = (await Promise.all(Array.from({ length: 8 }, () => q.claimNext(new Date(), [])))).filter(Boolean);
     expect(got).toHaveLength(3);
     expect(new Set(got.map((g) => g!.id)).size).toBe(3);
-    expect(await q.claimNext(NOW, [])).toBeNull();
+    expect(await q.claimNext(new Date(), [])).toBeNull();
     expect((await listCandidates(db, { states: ["IN_RESEARCH"], limit: 10, scope })).map((c) => c.rankScore).sort((a, b) => a! - b!)).toEqual([10, 50, 90]);
   });
   it("release uses an attempt and withdraws at the maximum; an uncounted release does not; stale claims are recovered; expired ones expire", async () => {
     const u = sym(); const q = createCandidateQueue(db, { underlyings: [u] });
     const id = await make(u);
-    await q.claimNext(NOW, []);
+    await q.claimNext(new Date(), []);
     expect(await q.release(id, "SAFETY_REFUSED", { count: false, maxAttempts: 2 })).toBe("RETRY");
     expect((await getCandidate(db, id))).toMatchObject({ state: "NEW", attempts: 0, stateReason: "SAFETY_REFUSED" });
-    await q.claimNext(NOW, []); expect(await q.release(id, "RESEARCH_FAILED:Error", { count: true, maxAttempts: 2 })).toBe("RETRY");
-    await q.claimNext(NOW, []); expect(await q.release(id, "RESEARCH_FAILED:Error", { count: true, maxAttempts: 2 })).toBe("WITHDRAWN");
+    await q.claimNext(new Date(), []); expect(await q.release(id, "RESEARCH_FAILED:Error", { count: true, maxAttempts: 2 })).toBe("RETRY");
+    await q.claimNext(new Date(), []); expect(await q.release(id, "RESEARCH_FAILED:Error", { count: true, maxAttempts: 2 })).toBe("WITHDRAWN");
     expect(await getCandidate(db, id)).toMatchObject({ state: "WITHDRAWN", attempts: 2 });
-    const id2 = await make(u); await q.claimNext(NOW, []);
+    const id2 = await make(u); await q.claimNext(new Date(), []);
     expect(await q.recoverStale(new Date(Date.now() + 3_600_000), 60_000, 3)).toBeGreaterThanOrEqual(1);
     expect(await getCandidate(db, id2)).toMatchObject({ state: "NEW", attempts: 1, stateReason: "RESEARCH_LEASE_LOST" });
     const id3 = await make(u, { createdAt: new Date(Date.now() - 7_200_000), expiresAt: new Date(Date.now() - 3_600_000) });
@@ -120,7 +120,7 @@ describe("the research queue", () => {
   });
   it("a candidate ended while a worker held it is not resurrected by that worker", async () => {
     const u = sym(); const q = createCandidateQueue(db, { underlyings: [u] }); const id = await make(u);
-    await q.claimNext(NOW, []);
+    await q.claimNext(new Date(), []);
     const admin = await owner(); await admin.query("update opportunity_candidates set state = 'INVALIDATED', state_reason = 'STOP_BREACHED' where id = $1", [id]);
     await q.complete(id);
     expect(await q.release(id, "x", { count: true, maxAttempts: 3 })).toBe("WITHDRAWN");
@@ -140,9 +140,9 @@ describe("the research queue", () => {
 describe("a full cycle (fixture data only)", () => {
   it("scans, ranks, revalidates and researches; a repeat of the slot changes nothing; a price through the stop invalidates", async () => {
     const u = sym(); const series = breakoutUp(u);
-    const ohlc = memoryOhlcProvider({ name: "fixture-ohlc", asOf: NOW.toISOString(), series: { [u]: series } });
+    const ohlc = memoryOhlcProvider({ name: "fixture-ohlc", asOf: NOW.toISOString(), series: { [`NSE:${u}`]: series } });
     const lastClose = series.bars[series.bars.length - 1]!.close;
-    const price = (p: number) => memoryLastPrice({ name: "fixture-price", prices: { [u]: { price: p, asOf: NOW.toISOString() } } });
+    const price = (p: number) => memoryLastPrice({ name: "fixture-price", prices: { [`NSE:${u}`]: { price: p, asOf: NOW.toISOString() } } });
     const registry = createProductionRegistry({ rules: DEFAULT_AGENT_RULES });
     const agentConfig = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" });
     const deps = (lastPrice: ReturnType<typeof price>) => ({ db, config: cfg({ universe: [u], minRankScore: 20 }), ohlc, lastPrice, regime: null, registry, agentConfig, now: () => NOW, scope: { underlyings: [u] }, refuse: async () => undefined });

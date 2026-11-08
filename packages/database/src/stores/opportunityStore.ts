@@ -112,7 +112,7 @@ export async function withdrawCandidate(db: Pick<Db, "execute">, id: string, rea
 export function createCandidateQueue(db: Pick<Db, "execute">, scope?: CandidateScope) {
   return {
     async expireDue(now: Date): Promise<number> {
-      const r = await db.execute(sql`update opportunity_candidates set state = 'EXPIRED', state_reason = 'PAST_EXPIRY', updated_at = ${iso(now)}::timestamptz where state in ('NEW', 'IN_RESEARCH', 'READY_FOR_DECISION') and expires_at <= ${iso(now)}::timestamptz returning id`);
+      const r = await db.execute(sql`update opportunity_candidates set state = 'EXPIRED', state_reason = 'PAST_EXPIRY', updated_at = ${iso(now)}::timestamptz where state in ('NEW', 'IN_RESEARCH', 'READY_FOR_DECISION') and expires_at <= ${iso(now)}::timestamptz and ${scopeSql(scope)} returning id`);
       return r.rows.length;
     },
     async recoverStale(now: Date, leaseMs: number, maxAttempts: number): Promise<number> {
@@ -122,7 +122,7 @@ export function createCandidateQueue(db: Pick<Db, "execute">, scope?: CandidateS
           research_attempts = research_attempts + 1,
           state_reason = case when research_attempts + 1 >= ${maxAttempts} then 'RESEARCH_LEASE_LOST_MAX_ATTEMPTS' else 'RESEARCH_LEASE_LOST' end,
           updated_at = ${iso(now)}::timestamptz
-        where state = 'IN_RESEARCH' and updated_at < ${iso(cutoff)}::timestamptz returning id`);
+        where state = 'IN_RESEARCH' and updated_at < ${iso(cutoff)}::timestamptz and ${scopeSql(scope)} returning id`);
       return r.rows.length;
     },
     async claimNext(now: Date, exclude: readonly string[] = []): Promise<(Omit<StoredCandidate, "state" | "targets"> & { targets: number[]; expiresAt: Date; attempts: number; id: string }) | null> {
