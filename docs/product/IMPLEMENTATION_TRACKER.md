@@ -2,14 +2,14 @@
 
 > GENERATED from `docs/product/tracker.json` by `node scripts/product/tracker.mjs render`. Edit the JSON, never this file. Rules (enforced by `tests/unit/product/tracker.test.ts`): IMPLEMENTED and VERIFIED need evidence, BLOCKED needs a blocker, and VERIFIED is reserved for evidence gathered by the testing stage.
 
-Requirements: **386**. NOT_STARTED: 267 · IN_PROGRESS: 36 · IMPLEMENTED: 82 · BLOCKED: 0 · VERIFIED: 1
+Requirements: **386**. NOT_STARTED: 255 · IN_PROGRESS: 43 · IMPLEMENTED: 87 · BLOCKED: 0 · VERIFIED: 1
 
 ## Summary by module
 
 | Module | Name | Total | NOT_STARTED | IN_PROGRESS | IMPLEMENTED | BLOCKED | VERIFIED |
 |---|---|---|---|---|---|---|---|
 | M01 | Signal Intelligence & Telegram Integration | 25 | 8 | 0 | 17 | 0 | 0 |
-| M02 | Signal Understanding & Classification | 13 | 12 | 0 | 1 | 0 | 0 |
+| M02 | Signal Understanding & Classification | 13 | 0 | 7 | 6 | 0 | 0 |
 | M03 | Evidence Ledger & Historical Pattern Intelligence | 13 | 7 | 0 | 6 | 0 | 0 |
 | M04 | Research & Validation AI Agents | 27 | 5 | 6 | 16 | 0 | 0 |
 | M05 | Market Intelligence & Regime Detection | 14 | 10 | 0 | 4 | 0 | 0 |
@@ -62,19 +62,19 @@ Requirements: **386**. NOT_STARTED: 267 · IN_PROGRESS: 36 · IMPLEMENTED: 82 ·
 
 | ID | Area | Feature | Existing implementation | Stage | Status | Evidence | Blockers |
 |---|---|---|---|---|---|---|---|
-| M02-01 | Required functionality | Signal type classification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
+| M02-01 | Required functionality | Signal type classification. | signal type from the parsed action or update wording; futures/equity types are in the vocabulary but the claim parser is options-only | 03 | IN_PROGRESS |  |  |
 | M02-02 | Required functionality | Market and instrument identification. | options claim fields; instrument-verification agent / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | IMPLEMENTED | Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5 |  |
-| M02-03 | Required functionality | Strategy identification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-04 | Required functionality | Breakout classification. | partial: breakout detection exists only inside technical/price-action agents / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-05 | Required functionality | Reversal classification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-06 | Required functionality | Momentum classification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-07 | Required functionality | Gap strategy classification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-08 | Required functionality | Scalping classification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-09 | Required functionality | Entry condition extraction. | partial: entry kinds above / at / range / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-10 | Required functionality | Exit pattern extraction. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-11 | Required functionality | Risk-profile identification. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-12 | Required functionality | Setup-context reconstruction. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
-| M02-13 | Required functionality | Structure validation. | none identified in the Phase 00 audit / schema in migration 0033 (written, not yet applied or integration-tested) | 03 | NOT_STARTED |  |  |
+| M02-03 | Required functionality | Strategy identification. | setup from explicit cues now; channel-level strategy identification is Stage 03 item 3 | 03 | IN_PROGRESS |  |  |
+| M02-04 | Required functionality | Breakout classification. | cue-based (explicit BREAKOUT word) only; structure-based breakout detection needs market data (Stage 04/05) | 03 | IN_PROGRESS |  |  |
+| M02-05 | Required functionality | Reversal classification. | cue-based only (explicit REVERSAL word) | 03 | IN_PROGRESS |  |  |
+| M02-06 | Required functionality | Momentum classification. | cue-based only (explicit MOMENTUM word) | 03 | IN_PROGRESS |  |  |
+| M02-07 | Required functionality | Gap strategy classification. | cue-based only (explicit GAP UP/DOWN words) | 03 | IN_PROGRESS |  |  |
+| M02-08 | Required functionality | Scalping classification. | cue-based only (explicit SCALP/SCALPING words); scalping horizon likewise | 03 | IN_PROGRESS |  |  |
+| M02-09 | Required functionality | Entry condition extraction. | entry condition (kind, levels, conditional flag) in classification.entryCondition | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured |  |
+| M02-10 | Required functionality | Exit pattern extraction. | exit pattern (stop present, target count/order, reward-to-risk per target) | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured |  |
+| M02-11 | Required functionality | Risk-profile identification. | descriptive risk band from stop distance (versioned constants; never used to approve) | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured |  |
+| M02-12 | Required functionality | Setup-context reconstruction. | reconstructContext: IST session bucket, weekday, days to expiry (year assumed and flagged), stop and target distance, reward-to-risk | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured |  |
+| M02-13 | Required functionality | Structure validation. | structure issues: entry/stop/targets missing, stop or targets on the wrong side, targets unordered, range inverted, basis unclear, contract incomplete | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured |  |
 
 ## M03 — Evidence Ledger & Historical Pattern Intelligence
 

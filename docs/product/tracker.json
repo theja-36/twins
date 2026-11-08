@@ -548,9 +548,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Signal type classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "signal type from the parsed action or update wording; futures/equity types are in the vocabulary but the claim parser is options-only",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -558,7 +561,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -593,9 +596,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Strategy identification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "setup from explicit cues now; channel-level strategy identification is Stage 03 item 3",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -603,7 +609,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -613,9 +619,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Breakout classification.",
-   "existing": "partial: breakout detection exists only inside technical/price-action agents | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "cue-based (explicit BREAKOUT word) only; structure-based breakout detection needs market data (Stage 04/05)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -623,7 +632,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -633,9 +642,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Reversal classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "cue-based only (explicit REVERSAL word)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -643,7 +655,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -653,9 +665,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Momentum classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "cue-based only (explicit MOMENTUM word)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -663,7 +678,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -673,9 +688,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Gap strategy classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "cue-based only (explicit GAP UP/DOWN words)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -683,7 +701,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -693,9 +711,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Scalping classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "cue-based only (explicit SCALP/SCALPING words); scalping horizon likewise",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -703,7 +724,7 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
+   "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": []
   },
@@ -713,9 +734,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Entry condition extraction.",
-   "existing": "partial: entry kinds above / at / range | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "entry condition (kind, levels, conditional flag) in classification.entryCondition",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -723,8 +747,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+   ],
    "blockers": []
   },
   {
@@ -733,9 +759,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Exit pattern extraction.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "exit pattern (stop present, target count/order, reward-to-risk per target)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -743,8 +772,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+   ],
    "blockers": []
   },
   {
@@ -753,9 +784,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Risk-profile identification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "descriptive risk band from stop distance (versioned constants; never used to approve)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -763,8 +797,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+   ],
    "blockers": []
   },
   {
@@ -773,9 +809,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Setup-context reconstruction.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "reconstructContext: IST session bucket, weekday, days to expiry (year assumed and flagged), stop and target distance, reward-to-risk",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -783,8 +822,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+   ],
    "blockers": []
   },
   {
@@ -793,9 +834,12 @@
    "moduleName": "Signal Understanding & Classification",
    "area": "Required functionality",
    "feature": "Structure validation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "structure issues: entry/stop/targets missing, stop or targets on the wrong side, targets unordered, range inverted, basis unclear, contract incomplete",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/signals/src/classification",
+    "scripts/ops/classify-claims.ts"
+   ],
    "database": [
     "signal_classifications"
    ],
@@ -803,8 +847,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+   ],
    "blockers": []
   },
   {
