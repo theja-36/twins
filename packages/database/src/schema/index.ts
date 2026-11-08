@@ -33,3 +33,8 @@ export * from "./agents";
 export * from "./agentEngineState";
 export * from "./paper";
 export * from "./shadowObservations";
+export * from "./_checks";
+export * from "./userPlatform";
+export * from "./intelligence";
+export * from "./userDecisions";
+export * from "./learning";

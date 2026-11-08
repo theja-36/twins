@@ -35,3 +35,10 @@ Decision outcome (assessment) and workflow state (lifecycle) are separate column
 
 ## ADR-010 (2026-11-08) Safety allow-list extension for the decision vocabulary
 `tests/unit/safety/stopLossCoverage.test.ts` allow-lists every file that names an approval-class state. Two new master-build files name QUALIFIED: `packages/types/src/platform/decision.ts` (vocabulary and state machine only) and `packages/types/src/platform/execution.ts` (the gate only consumes the outcome). Both were added to the allow-list with their reasons. They produce no decision and approve nothing. The producer remains `decide.ts` behind `assertStopLossAllowsEligibility`; when the Stage 07 engine begins to emit QUALIFIED it must route through the same mandatory-stop rule and extend the database invariant first, as the test instructs. Flagged for owner review because it touches a safety test.
+(ADR-010 addendum, 2026-11-08) `packages/database/src/schema/userDecisions.ts` is also allow-listed: it holds the CHECK vocabulary for `user_decisions.outcome` and the constraint `APPROVED => QUALIFIED`.
+
+## ADR-011 (2026-11-08) Per-user decisions beside the immutable chain
+`risk_decisions` is hash-chained and immutable, so the spec's outcome (QUALIFIED/WAIT/REJECT/EVALUATION_ONLY/NO_TRADE) and workflow state live in a NEW table `user_decisions` (private, row-level secured), linked to the chained row through `risk_decision_id` when a decision came through the existing flow. The chain, its triggers and its API are untouched. Existing `orders/fills/positions` already hang off `accounts` (which pin user and trading mode) and are reused unchanged in Stage 02; their row-level policies need an account join and are scheduled for Stage 07.
+
+## ADR-012 (2026-11-08) Database-level execution lock
+`user_execution_permissions` has a CHECK that refuses to record `ASSISTED_LIVE` or `CONTROLLED_AUTO` as enabled. This is defence in depth beside `checkExecutionGate`. Lifting it needs a deliberate new migration after the broker, security, legal and regulatory gates are verified; nothing in the master build does that.

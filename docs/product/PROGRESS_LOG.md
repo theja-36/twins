@@ -5,3 +5,4 @@
 - Stage 01: started (see MODULE_COMPLETION_REPORTS.md).
 
 - Stage 01: contracts and tests written (32 platform tests + 5 tracker tests); tracker updated; enforcement layers deferred to Stage 02.
+- Stage 02: migration 0033 written (24 tables, RLS, append-only triggers, live-mode lock); withUser helper; static tests; unit suite green. Not applied to any database.

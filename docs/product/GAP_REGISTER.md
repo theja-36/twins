@@ -5,8 +5,8 @@ Updated each stage. A gap closes only when the tracker shows the related require
 | ID | Gap | Stage | Status |
 |---|---|---|---|
 | G-01 | No per-user authentication, sessions, roles or row-level security (contracts and helpers exist; DB and routes do not) | 01-02 | open |
-| G-02 | No user capital profile, per-user risk policy or per-user broker connection rows in use | 02, 06 | open |
-| G-03 | Decision outcome vocabulary not in the database or engine | 02, 07 | open |
+| G-02 | Capital profile, risk policy and permission TABLES exist (0033, unapplied); no service uses them and sizing still reads one configured capital | 06 | open |
+| G-03 | Outcome vocabulary is in the schema (`user_decisions`, unapplied); the engine does not produce it | 07 | open |
 | G-04 | Telegram classification (intraday/positional/scalping, setup types), channel playbooks, strategy versioning and drift | 03 | open |
 | G-05 | Market Context agent missing; agents not yet on the spec contract; no LLM adapter | 04 | open |
 | G-06 | Independent Opportunity Engine absent | 05 | open |

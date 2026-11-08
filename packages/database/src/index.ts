@@ -12,3 +12,4 @@ export {
   type PoolErrorStats,
   type PoolErrorSink,
 } from "./client";
+export { withUser, type UserTx } from "./withUser";

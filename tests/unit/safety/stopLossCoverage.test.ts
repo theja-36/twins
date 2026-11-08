@@ -47,6 +47,7 @@ describe("no approval-class state is produced outside the audited places", () =>
     "packages/risk/src/market/engine.ts": "the market-gate outcome CONDITIONAL (a WARNING event window): it maps to a PENDING version and never to an approval (Stage 3 / Task 5)",
     "packages/types/src/platform/decision.ts": "master-build vocabulary only: the spec's decision OUTCOME names and the workflow-state machine (ADR-009/ADR-010). It produces no decision; the single producer stays decide.ts behind assertStopLossAllowsEligibility, and the Stage 07 engine must route every QUALIFIED through the same rule",
     "packages/types/src/platform/execution.ts": "master-build execution gate (ADR-004/ADR-010): it only CONSUMES a QUALIFIED outcome and refuses anything else; it grants nothing and cannot place an order",
+    "packages/database/src/schema/userDecisions.ts": "master-build schema: the CHECK vocabulary of user_decisions.outcome and the constraint that only a QUALIFIED outcome can be APPROVED (ADR-010/ADR-011); it produces no decision",
     "packages/risk/src/market/record.ts": "maps the market-gate CONDITIONAL outcome to a PENDING version; APPROVED_FOR_REVIEW additionally needs the database sized/portfolio/market checks",
   };
   it("only the allow-listed files contain APPROVE / QUALIFIED / CONDITIONAL as a state", () => {

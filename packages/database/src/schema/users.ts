@@ -1,4 +1,5 @@
-import { boolean, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, check, pgTable, text, uniqueIndex } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 
 /**
@@ -14,11 +15,14 @@ export const users = pgTable(
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     displayName: text("display_name"),
+    /** TRADER owns private trading data; ADMIN manages users and reads audit and has no access to private trading data (ADR-003). */
+    role: text("role").notNull().default("TRADER"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: createdAtColumn(),
     updatedAt: updatedAtColumn(),
   },
   (table) => ({
     emailUnique: uniqueIndex("users_email_unique").on(table.email),
+    roleCheck: check("users_role_check", sql`${table.role} in ('ADMIN', 'TRADER')`),
   }),
 );
