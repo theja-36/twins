@@ -1,6 +1,8 @@
 # Stage 01 completion report: session authentication and user isolation
 
-Status: **IMPLEMENTED, NOT YET VERIFIED.** Everything below is in code and covered by unit tests that pass locally (232 files / 3,875 tests). The integration tests that prove the database behaviour (`tests/integration/auth/stage01.test.ts` already green in CI at 64e730a; `userRoutes.test.ts` and `runtimeRole.test.ts` are new) have never run: they need PostgreSQL, which exists only in CI, and pushing needs approval. Nothing here may be called VERIFIED, and G-13 / G-26 may not be called closed, until that run is green.
+Status: **VERIFIED in CI (backend session authentication and ownership scope).** Run https://github.com/theja-36/twins/actions/runs/42516023424 on commit 4807958: all 7 jobs succeeded (static, unit on Node 20 and 22, integration on Node 20 and 22 with PostgreSQL 16 and Redis 7, crash recovery, ci-gate). `userRoutes.test.ts` (12 tests), `runtimeRole.test.ts` (7) and `stage01.test.ts` (9) executed and passed in both integration jobs (confirmed in the job logs, not inferred from the green status); the integration job reports 78 files passed, 2 skipped (the same 2 skipped before this work). Earlier status text below describes the state before that run.
+
+Original status line: **IMPLEMENTED, NOT YET VERIFIED.** Everything below is in code and covered by unit tests that pass locally (232 files / 3,875 tests). The integration tests that prove the database behaviour (`tests/integration/auth/stage01.test.ts` already green in CI at 64e730a; `userRoutes.test.ts` and `runtimeRole.test.ts` are new) have never run: they need PostgreSQL, which exists only in CI, and pushing needs approval. Nothing here may be called VERIFIED, and G-13 / G-26 may not be called closed, until that run is green.
 
 ## What exists
 
@@ -53,7 +55,7 @@ Unit (run): `tests/unit/auth/auth.test.ts` (24), `tests/unit/api/authApi.test.ts
 Integration (CI only, not yet run on this commit): `userRoutes.test.ts` (real users, sessions, RLS: expired / revoked / too-old / deactivated sessions; own vs foreign decisions, accounts, capital, orders, positions; spoof refusal; A cannot approve/reject/cancel B's decision; approval replay; expired approval becomes EXPIRED with no approval row; reject and cancel states; analytics owner scoping with FIXTURE labelling; TRADER cannot change roles; ADMIN has no private data) and `runtimeRole.test.ts` (applies the real `app-role.sql`: the runtime role cannot change `users.role` / `is_active`, insert or delete users, write decision/order/fill/position tables or delete the auth log; the doors work only for the right actor).
 
 ## Remaining Stage 01 gaps (honest)
-- CI has not run on these commits. Until it does, nothing is VERIFIED.
+- MU-14 (broker details) and MU-17 (another user's risk settings) stay IMPLEMENTED, not VERIFIED: there is no broker or risk-write endpoint yet, so there is nothing to attack; they need tests when those endpoints exist.
 - Legacy single-tenant routes (above) are not per-user. Migrating them means migrating the legacy tables (G-28), a separate decision.
 - The frontend still talks to the legacy proxy only; it has no login BFF (httpOnly session cookie) yet, so the new routes are not reachable from the UI (Stage 09 follow-up).
 - The new routes are not yet in `openapi.json`.
