@@ -42,3 +42,4 @@ export * from "./aiUsage";
 export * from "./riskControls";
 export * from "./tradeExecution";
 export * from "./outcomeLearning";
+export * from "./authSecurity";

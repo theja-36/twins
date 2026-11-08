@@ -9,6 +9,9 @@
       "path": "../../packages/alerting"
     },
     {
+      "path": "../../packages/auth"
+    },
+    {
       "path": "../../packages/audit-chain"
     },
     {

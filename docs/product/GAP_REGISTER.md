@@ -4,7 +4,7 @@ Updated each stage. A gap closes only when the tracker shows the related require
 
 | ID | Gap | Stage | Status |
 |---|---|---|---|
-| G-01 | No per-user authentication, sessions, roles or row-level security (contracts and helpers exist; DB and routes do not) | 01-02 | open |
+| G-01 | Per-user authentication and sessions: IMPLEMENTED in code (packages/auth, /auth/* and /admin/users* routes, migration 0040); NOT yet wired into the user-scoped data routes (decisions, risk, capital, analytics, approvals, paper) and the DB doors are CI-unverified. Row-level security from 0033+ already exists | 01-02 | partly closed |
 | G-02 | Capital profile, risk policy and permission TABLES exist (0033, unapplied); no service uses them and sizing still reads one configured capital | 06 | open |
 | G-03 | Outcome vocabulary is in the schema (`user_decisions`, unapplied); the engine does not produce it | 07 | open |
 | G-04 | Stage 03 logic is built, but is not yet fed real data: classification is wired into live intake behind TWINS_CLASSIFY_ON_INTAKE (default false; not enabled anywhere) and classifier accuracy on real messages is unmeasured (M02-15), no loader maps real outcomes/regimes/edits into the learning inputs, structure-based setup detection needs market data, regime-based parts need Stage 04 | 03-04 | partly closed |
@@ -16,7 +16,7 @@ Updated each stage. A gap closes only when the tracker shows the related require
 | G-10 | Frontend: auth and 30 screens on real contracts | 09 | open |
 | G-11 | No Postgres/Docker locally: database changes are verified only by CI after a push (each push is a feature-branch push) | all | environment limit |
 | G-12 | Classic frontend bot link never enables in production builds (env read not inlined); fix is uncommitted in the frontend working copy | 09 | open |
-| G-13 | `users.role` can be changed by any role holding UPDATE on `users` (the runtime role does today). No code does it, but role escalation must be closed when the auth service is built (definer function or revoke) | 01-02 follow-up | open |
+| G-13 | `users.role` escalation: CLOSED IN CODE by migration 0040 (privilege trigger + twins_set_user_role/active/create_user doors bound to the transaction user, last-admin and self-change rules) and app-role.sql (users read-only for the runtime role except password hash and display name). Becomes CLOSED only when the new integration test passes in CI | 01-02 follow-up | implemented, CI pending |
 | G-14 | `performance_snapshots` and other shared tables have no per-writer restriction beyond role grants | 08 | open |
 | G-15 | No hosted AI adapter exists: the gateway runs only against fixtures until Stage 10 (needs provider credentials and an approved budget) | 04/10 | open, by design |
 | G-16 | No live regime source: `market-context-v1` reports UNAVAILABLE until a `RegimeProvider` is wired to real OHLC data; regime rows exist only from fixtures/tests | 04/10 | open |

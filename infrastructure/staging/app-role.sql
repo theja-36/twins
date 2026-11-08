@@ -23,7 +23,7 @@ DECLARE
 	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch
 	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads', 'agent_engine_state_events'];
 	-- read only: the runtime safety controls are changed only through the owner-run safety-control CLI
-	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals', 'agent_engine_state', 'orders', 'fills', 'positions', 'paper_switch', 'paper_switch_events', 'user_decisions', 'user_decision_events']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); orders / fills / positions are the execution tables: no execution service exists and the runtime role gets SELECT only (P1 hardening, migration 0029); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
+	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals', 'agent_engine_state', 'orders', 'fills', 'positions', 'paper_switch', 'paper_switch_events', 'user_decisions', 'user_decision_events', 'users']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); orders / fills / positions are the execution tables: no execution service exists and the runtime role gets SELECT only (P1 hardening, migration 0029); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
 	-- insert only: the approval card is created by the application and then only ever advanced by the approval bot's SECURITY DEFINER functions
 	insert_only text[] := ARRAY['risk_approval_cards'];
 BEGIN
@@ -56,4 +56,7 @@ GRANT EXECUTE ON FUNCTION twins_record_risk_approval(uuid, uuid, text, text, jso
 -- Stage 07: the only doors to user_decisions / user_decision_events (the runtime role has no direct write on them). Each function acts only for the user bound to the transaction.
 GRANT EXECUTE ON FUNCTION twins_create_user_decision(jsonb), twins_end_user_decision(uuid, text, text, text), twins_invalidate_decision(uuid, text, jsonb, text), twins_record_decision_approval(uuid, text, jsonb, text, text) TO :"app_role";
 -- Paper trading switch (migration 0031): the runtime role may READ the switch and its history, and change it ONLY through this audited function (the admin API route is the sole caller).
+-- Stage 01 / G-13: users is read-only for the runtime role except the password hash and display name; the role and active flag change only through the doors; the failed-login log is cleared through its definer function.
+GRANT UPDATE (password_hash, display_name, updated_at) ON users TO :"app_role";
+GRANT EXECUTE ON FUNCTION twins_create_user(text, text, text, text, uuid), twins_set_user_role(uuid, uuid, text), twins_set_user_active(uuid, uuid, boolean), twins_clear_login_failures(text) TO :"app_role";
 GRANT EXECUTE ON FUNCTION twins_paper_set_switch(boolean, text, text) TO :"app_role";

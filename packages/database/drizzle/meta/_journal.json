@@ -281,6 +281,13 @@
       "when": 1794133287602,
       "tag": "0039_outcome_learning",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794161282272,
+      "tag": "0040_auth_security",
+      "breakpoints": true
     }
   ]
 }

@@ -17,6 +17,7 @@
     { "path": "packages/agents" },
     { "path": "packages/opportunity" },
     { "path": "packages/confidence" },
+    { "path": "packages/auth" },
     { "path": "packages/planning" },
     { "path": "packages/decision" },
     { "path": "packages/execution" },
