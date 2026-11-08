@@ -76,7 +76,7 @@ describe("outcome attribution", () => {
   it("paper only: a LIVE attribution is impossible while no live execution exists, and FINAL needs the recorded outcome", async () => {
     const p = await pipeline(); await trade(p, "close"); await ingestOutcomes(db, p.userId, 50);
     const pos = (await getPositionForDecision(db, p.userId, p.decisionId))!, v1 = (await latestAttributionForPosition(db, p.userId, pos.id))!;
-    await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: pretend this was live", mode: "LIVE" }), /paper_only_check|mode_check/);
+    await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: pretend this was live", mode: "LIVE" }), /paper_only_check|mode_check|cannot change which position/);
     await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: remove the recorded outcome", outcomeId: null }), /final_check/);
     await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: a final result with no exit", exitPrice: null }), /final_check/);
   });
@@ -121,7 +121,8 @@ describe("the learning cycle", () => {
     const runs = await listJobRuns(db, LEARNING_JOB, 5); expect(runs.slice(0, 2).map((r) => r.status)).toEqual(["COMPLETED", "COMPLETED"]);
     // everything is fixture-backed: nothing is called validated, and calibration stays uncalibrated
     const ins = await listInsights(db, p.userId, { limit: 200 });
-    const perf = ins.find((i) => i.kind === "PERFORMANCE" && i.subject === "all paper outcomes")!; expect(perf.reliability).toMatch(/NOT_VALIDATED_FIXTURE|INSUFFICIENT_DATA/); expect((perf.provenance as { fixtureBacked: boolean }).fixtureBacked).toBe(true);
+    expect(r1.usersFailed, `user failures: ${JSON.stringify(r1)}`).toBe(0);
+    const perf = ins.find((i) => i.kind === "PERFORMANCE" && i.subject === "all paper outcomes")!; expect(perf, `insights present: ${ins.map((i) => `${i.kind}|${i.subject}`).join(" ; ")}`).toBeDefined(); expect(perf.reliability).toMatch(/NOT_VALIDATED_FIXTURE|INSUFFICIENT_DATA/); expect((perf.provenance as { fixtureBacked: boolean }).fixtureBacked).toBe(true);
     expect(ins.find((i) => i.kind === "DATA_QUALITY")!.severity).toBe("WARNING");
     expect(ins.every((i) => i.recommendation === null || i.recommendation === "REVIEW")).toBe(true); expect(ins.some((i) => i.reliability === "ADEQUATE")).toBe(false);
     const cal = ins.find((i) => i.kind === "CALIBRATION")!; expect(["NOT_CALIBRATED", "UNAVAILABLE"]).toContain(cal.reliability);
