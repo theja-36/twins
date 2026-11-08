@@ -54,7 +54,7 @@ describe("G-13: role and active changes only through the doors", () => {
   it("a direct UPDATE of users.role is refused even for a role that holds UPDATE on users", async () => {
     const s = svc(), t = await s.register({ email: email(), password: PW }), c = await session(t.id);
     await expectRefused(() => c.query("update users set role = 'ADMIN' where id = $1", [t.id]), /only through twins_set_user_role/);
-    await expectRefused(() => c.query("update users set is_active = false where id = $1", [t.id]), /change only through twins_set_user_role / twins_set_user_active/);
+    await expectRefused(() => c.query("update users set is_active = false where id = $1", [t.id]), /change only through twins_set_user_role \/ twins_set_user_active/);
     const o = await owner(); expect((await o.query("select role from users where id = $1", [t.id])).rows[0].role).toBe("TRADER");
   });
   it("a direct INSERT of an ADMIN is refused; creating one needs an active administrator", async () => {
@@ -70,7 +70,7 @@ describe("G-13: role and active changes only through the doors", () => {
     expect(await store.setRole(t.id, t.id, "ADMIN")).toBe(false); expect(await store.setRole(t.id, v.id, "ADMIN")).toBe(false);
     const c = await session(t.id); const ad = await makeAdmin();   // acting as t but naming the admin as actor: the transaction user must equal the actor
     expect((await c.query("select twins_set_user_role($1::uuid, $2::uuid, 'ADMIN') as ok", [ad.id, v.id])).rows[0].ok).toBe(false);
-    const o = await owner(); expect((await o.query("select role from users where id = any($1::uuid[])", [[t.id, v.id]])).rows.map((r) => r.role)).toEqual(["TRADER", "TRADER"]);
+    const o = await owner(); expect((await o.query("select role from users where id = any($1::uuid[])", [[t.id, v.id]])).rows.map((r: { role: string }) => r.role)).toEqual(["TRADER", "TRADER"]);
   });
   it("an ADMIN promotes another user through the service; the change is audited and the target's sessions are revoked; self-change is refused", async () => {
     const s = svc(), ad = await makeAdmin(), t = await s.register({ email: email(), password: PW });
@@ -102,6 +102,6 @@ describe("G-13: role and active changes only through the doors", () => {
 describe("migration 0040 shape", () => {
   it("the runtime-role grants in app-role.sql make users read-only apart from the password hash and display name", async () => {
     const o = await owner(); const r = await o.query("select proname from pg_proc where proname in ('twins_create_user','twins_set_user_role','twins_set_user_active','twins_clear_login_failures','twins_users_privilege_guard') order by 1");
-    expect(r.rows.map((x) => x.proname)).toEqual(["twins_clear_login_failures", "twins_create_user", "twins_set_user_active", "twins_set_user_role", "twins_users_privilege_guard"]);
+    expect(r.rows.map((x: { proname: string }) => x.proname)).toEqual(["twins_clear_login_failures", "twins_create_user", "twins_set_user_active", "twins_set_user_role", "twins_users_privilege_guard"]);
   });
 });
