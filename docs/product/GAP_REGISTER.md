@@ -20,7 +20,7 @@ Updated each stage. A gap closes only when the tracker shows the related require
 | G-14 | `performance_snapshots` and other shared tables have no per-writer restriction beyond role grants | 08 | open |
 | G-15 | No hosted AI adapter exists: the gateway runs only against fixtures until Stage 10 (needs provider credentials and an approved budget) | 04/10 | open, by design |
 | G-16 | No live regime source: `market-context-v1` reports UNAVAILABLE until a `RegimeProvider` is wired to real OHLC data; regime rows exist only from fixtures/tests | 04/10 | open |
-| G-17 | Dispatch half RESOLVED in Stage 05: the worker's opportunity cycle claims any NEW candidate and calls `runCandidateResearch` (CI pending). The Telegram-side half moved to G-19 | 04/05 | dispatch resolved (CI pending); see G-19 |
+| G-17 | Dispatch half RESOLVED in Stage 05: the worker's opportunity cycle claims any NEW candidate and calls `runCandidateResearch` (CI green). The Telegram-side half moved to G-19 | 04/05 | dispatch resolved (CI run 42459457501); see G-19 |
 | G-18 | Candidate research gives `stop_loss_validation = null`; the decision engine (Stage 07) must run the mandatory stop-loss rule itself | 07 | open, by design |
 | G-19 | Telegram claims are not materialised as `opportunity_candidates` (nothing converts a stored claim into a TELEGRAM-source candidate), so the shared research dispatcher has only independent candidates to work on | 05/07 | open |
 | G-20 | No live market-data provider: the engine scans file/in-memory OHLC and last-price snapshots only, labelled FIXTURE by default; live scanning, live revalidation prices and real-data setup accuracy are unproven | 05/10 | open, by design |

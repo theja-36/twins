@@ -6803,7 +6803,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "data is file/in-memory only: no live market-data provider exists (G-20); scans are labelled FIXTURE unless the operator declares otherwise"
@@ -6832,7 +6833,8 @@
    "stage": "05",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "rules are not backtested or calibrated; pattern quality on real data is unmeasured"
@@ -6861,7 +6863,8 @@
    "stage": "05",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no live regime source (G-16): the worker wires no regime provider, so rankings record the regime as missing"
@@ -6889,7 +6892,8 @@
    "stage": "05",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6916,7 +6920,8 @@
    "stage": "05",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -6942,7 +6947,8 @@
    "stage": "05",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "the scan itself has no calendar/macro provider; both are only reached during research, and no provider data is wired (G-16/G-20)"
@@ -6971,7 +6977,8 @@
    "stage": "05",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no historical pattern/outcome provider is wired in the worker, so that agent reports UNAVAILABLE"
@@ -6999,7 +7006,8 @@
    "stage": "05",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "targets are R multiples by construction; there is no separate reward:risk screen against structure levels, and the stop is unvalidated until Stage 07"
@@ -7030,7 +7038,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7056,7 +7065,8 @@
    "stage": "05",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7083,7 +7093,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7111,7 +7122,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7139,7 +7151,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no live price source (G-20); the worker reads the last-price file snapshot"
@@ -9106,7 +9119,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9134,7 +9148,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9159,7 +9174,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/lifecycle.test.ts (boundaries; local)",
-    "worker/scheduler run only with Redis: exercised by the cycle integration test, not by a queue test"
+    "worker/scheduler run only with Redis: exercised by the cycle integration test, not by a queue test",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9181,7 +9197,8 @@
    "database": [],
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9208,7 +9225,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   }
  ]
