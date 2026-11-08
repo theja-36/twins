@@ -67,7 +67,7 @@ async function make(o: { symbol?: string; instrumentType?: string; expiry?: stri
 }const HC = ["historical-pattern-v1", "independent-challenger-v1", "liquidity-v1", "signal-integrity-v1"];
 // Task 7 scope: the challenger reads every agent that is registered, so this file registers a small, real research set (signal integrity, liquidity, historical pattern) plus the challenger; the "all twelve" test uses the production registry.
 const ENGINE = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true", TWINS_AGENT_ENGINE_REQUIRED: HC.join(",") }), disabledAgents: [] as string[] };
-const ALL12 = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" }), maxConcurrency: 12 }; // the real default path: all twelve production agents REQUIRED
+const ALL12 = { ...loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" }), maxConcurrency: 13 }; // the real default path: all twelve production agents REQUIRED
 const LIVE_TABLES = LIVE;
 
 /** Dynamic providers: the engine derives the real pattern keys from the stored decision, so these answer for whatever level-4 key is asked. */
@@ -136,17 +136,18 @@ describe("clean conditions: independent agents run in parallel, the challenger a
       rules: rulesWithNews({ constituent: { indexUnderlyings: [d.symbol] } }), instrumentReference: ref, holidayCalendar: holidayCalendar(), economicCalendar: economicCalendar(), macroProvider: macroProvider(), newsProvider: newsFeed(),
       constituentProvider: constituents(constituentSet({ index: d.symbol })), ohlcProvider: ohlc(uptrendBars(), { symbol: d.symbol }), quoteProvider: quotes(goodQuote(), `NSE:${d.symbol}`),
       historicalPatternProvider: dynPatterns(), historicalOutcomeProvider: dynOutcomes(),
+      regimeProvider: { name: "test-regime", async regimeFor(u: string) { return { version: "market-regime-v1", underlying: u, asOf: null, dataSource: "LIVE" as const, timeframes: [], direction: "BULLISH" as const, regime: "TRENDING_UP" as const, volatilityRegime: "NORMAL" as const, impliedVolatility: null, eventRisk: "NONE" as const, correlatedIndexAgreement: "ALIGNED" as const, riskOff: false, freshness: { stale: false, usableTimeframes: 3, oldestUsableBarAgeSeconds: 60 }, flags: [], grantsApproval: false as const }; } },
     });
     const out = await runAgentEngine(db(), d.id, { registry: reg, config: ALL12, emit: (e) => events.push(e), ...clock() });
     if (out.skipped) throw new Error("skipped");
-    expect(out).toMatchObject({ status: "COMPLETED", agents: 12 });
+    expect(out).toMatchObject({ status: "COMPLETED", agents: 13 });
     const types = events.map((e) => `${e.type}:${e.agentId ?? ""}`);
     const firstFinish = types.findIndex((t) => t.startsWith("agent.finished"));
-    expect(types.slice(0, firstFinish + 1).filter((t) => t.startsWith("agent.started")).length).toBe(11);
+    expect(types.slice(0, firstFinish + 1).filter((t) => t.startsWith("agent.started")).length).toBe(12);
     const chStart = types.indexOf("agent.started:independent-challenger-v1");
-    expect(types.slice(0, chStart).filter((t) => t.startsWith("agent.finished")).length).toBe(11);
-    expect((await q("select status from agent_runs where orchestrator_run_id = $1", [out.runId])).map((r) => r["status"])).toEqual(Array(12).fill("COMPLETED"));
-    expect((await q("select output_snapshot from agent_runs where orchestrator_run_id = $1 and agent_id = 'independent-challenger-v1'", [out.runId]))[0]!["output_snapshot"]).toMatchObject({ dependencyCount: 11 });
+    expect(types.slice(0, chStart).filter((t) => t.startsWith("agent.finished")).length).toBe(12);
+    expect((await q("select status from agent_runs where orchestrator_run_id = $1", [out.runId])).map((r) => r["status"])).toEqual(Array(13).fill("COMPLETED"));
+    expect((await q("select output_snapshot from agent_runs where orchestrator_run_id = $1 and agent_id = 'independent-challenger-v1'", [out.runId]))[0]!["output_snapshot"]).toMatchObject({ dependencyCount: 12 });
   });
 });
 

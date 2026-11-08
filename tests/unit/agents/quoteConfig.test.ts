@@ -114,9 +114,9 @@ describe("rule configuration for the liquidity and options-risk agents", () => {
 
 describe("registration, worker wiring and source hygiene", () => {
   it("the twelve production agents include liquidity-v1 and options-risk-v1; a missing provider never throws at registration", () => {
-    expect([...PRODUCTION_AGENT_IDS].slice(-4, -2)).toEqual(["liquidity-v1", "options-risk-v1"]);
+    expect([...PRODUCTION_AGENT_IDS].slice(-5, -3)).toEqual(["liquidity-v1", "options-risk-v1"]);
     const ids = createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((x) => x.agentId);
-    expect(ids).toHaveLength(12); expect(ids).toEqual(expect.arrayContaining(["liquidity-v1", "options-risk-v1"]));
+    expect(ids).toHaveLength(13); expect(ids).toEqual(expect.arrayContaining(["liquidity-v1", "options-risk-v1"]));
   });
   it("the worker resolves the quote providers only when the engine is enabled", () => {
     expect(readFileSync(join(__dirname, "../../../services/worker/src/index.ts"), "utf8")).toMatch(/\.\.\.resolveQuoteProviders\(agentRules\), \.\.\.resolveHistoricalProviders\(agentRules\) \}\)\) : null;/);

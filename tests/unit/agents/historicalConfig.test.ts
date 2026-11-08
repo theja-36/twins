@@ -87,12 +87,12 @@ describe("rule configuration for the historical-pattern and challenger agents", 
 });
 
 describe("registration, worker wiring and source hygiene", () => {
-  it("the twelve production agents include the two new ones, the challenger depends on all the others, and the required set is explicit", () => {
-    expect([...PRODUCTION_AGENT_IDS].slice(-2)).toEqual(["historical-pattern-v1", "independent-challenger-v1"]);
+  it("the thirteen production agents include the two new ones and the market-context agent, the challenger depends on all the others, and the required set is explicit", () => {
+    expect([...PRODUCTION_AGENT_IDS].slice(-3)).toEqual(["historical-pattern-v1", "market-context-v1", "independent-challenger-v1"]);
     const snap = createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot();
-    expect(snap).toHaveLength(12);
+    expect(snap).toHaveLength(13);
     const ch = snap.find((x) => x.agentId === "independent-challenger-v1");
-    expect(ch?.dependsOn).toHaveLength(11); expect(ch?.dependsOn).not.toContain("independent-challenger-v1"); expect(ch?.dependsOn).toContain("historical-pattern-v1");
+    expect(ch?.dependsOn).toHaveLength(12); expect(ch?.dependsOn).not.toContain("independent-challenger-v1"); expect(ch?.dependsOn).toContain("historical-pattern-v1");
     expect([...DEFAULT_REQUIRED_AGENTS]).toHaveLength(12);
   });
   it("the worker resolves the historical providers only when the engine is enabled", () => {

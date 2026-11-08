@@ -145,9 +145,9 @@ describe("rule configuration for the calendar and macro agents (conservative def
 });
 
 describe("registration, required set and worker wiring", () => {
-  it("all twelve production agents are registered and the required set is only effective when the engine is explicitly enabled", () => {
-    expect([...PRODUCTION_AGENT_IDS]).toEqual(["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1", "historical-pattern-v1", "independent-challenger-v1"]);
-    expect(createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((c) => c.agentId)).toEqual(["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
+  it("all thirteen production agents are registered (market-context is advisory context and NOT in the default required set) and the required set is only effective when the engine is explicitly enabled", () => {
+    expect([...PRODUCTION_AGENT_IDS]).toEqual(["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1", "historical-pattern-v1", "market-context-v1", "independent-challenger-v1"]);
+    expect(createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot().map((c) => c.agentId)).toEqual(["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "market-context-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
     expect([...DEFAULT_REQUIRED_AGENTS]).toEqual(["historical-pattern-v1", "independent-challenger-v1", "index-constituent-impact-v1", "instrument-verification-v1", "liquidity-v1", "macro-global-v1", "market-calendar-v1", "news-sentiment-v1", "options-risk-v1", "price-action-v1", "signal-integrity-v1", "technical-structure-v1"]);
     const off = loadAgentEngineConfig({});
     expect(off.enabled).toBe(false);

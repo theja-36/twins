@@ -20,6 +20,7 @@ import { optionsRiskAgent } from "./optionsRisk";
 import { fileOutcomeProvider, filePatternProvider, type HistoricalOutcomeProvider, type HistoricalPatternProvider } from "./historicalProviders";
 import { historicalPatternAgent } from "./historicalPattern";
 import { independentChallengerAgent } from "./independentChallenger";
+import { marketContextAgent, type RegimeProvider } from "./marketContext";
 
 export * from "./common";
 export * from "./rules";
@@ -45,9 +46,10 @@ export * from "./optionsRisk";
 export * from "./historicalProviders";
 export * from "./historicalPattern";
 export * from "./independentChallenger";
+export * from "./marketContext";
 
 /** The production research agents, in the order they are listed (Stage 5 / Tasks 2-7). Later tasks append to this list; nothing else is registered. */
-export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1", "historical-pattern-v1", "independent-challenger-v1"] as const;
+export const PRODUCTION_AGENT_IDS = ["signal-integrity-v1", "instrument-verification-v1", "market-calendar-v1", "macro-global-v1", "news-sentiment-v1", "index-constituent-impact-v1", "technical-structure-v1", "price-action-v1", "liquidity-v1", "options-risk-v1", "historical-pattern-v1", "market-context-v1", "independent-challenger-v1"] as const;
 
 export interface ProductionRegistryOptions {
   rules: AgentRulesConfig; instrumentReference?: InstrumentReference | null; historicalReference?: HistoricalInstrumentReference;
@@ -56,6 +58,7 @@ export interface ProductionRegistryOptions {
   ohlcProvider?: OhlcProvider | null; lastPriceProvider?: LastPriceProvider | null;
   quoteProvider?: QuoteProvider | null; optionsQuoteProvider?: OptionsQuoteProvider | null; optionsChainProvider?: OptionsChainProvider | null;
   historicalPatternProvider?: HistoricalPatternProvider | null; historicalOutcomeProvider?: HistoricalOutcomeProvider | null;
+  regimeProvider?: RegimeProvider | null;
 }
 /** Registers the production agents. Used only when the engine is explicitly enabled; a missing provider makes its agent report UNAVAILABLE (never a pass). */
 export function createProductionRegistry(o: ProductionRegistryOptions): AgentRegistry {
@@ -71,6 +74,7 @@ export function createProductionRegistry(o: ProductionRegistryOptions): AgentReg
   r.register(liquidityAgent(o.rules, o.quoteProvider ?? null, o.lastPriceProvider ?? null));
   r.register(optionsRiskAgent(o.rules, o.optionsQuoteProvider ?? null, o.optionsChainProvider ?? null, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
   r.register(historicalPatternAgent(o.rules, o.historicalPatternProvider ?? null, o.historicalOutcomeProvider ?? null, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
+  r.register(marketContextAgent(o.regimeProvider ?? null));
   // the challenger runs after (and reads the results of) every other registered research agent; disabling one of them requires disabling the challenger too
   r.register(independentChallengerAgent(o.rules, r.snapshot().map((c) => c.agentId)));
   return r;

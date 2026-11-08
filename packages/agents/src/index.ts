@@ -17,3 +17,4 @@ export * from "./newsImpact";
 export * from "./channelNews";
 export * from "./channelNewsFeed";
 export * from "./channelNewsSummary";
+export * from "./regime";
