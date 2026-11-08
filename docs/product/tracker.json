@@ -3270,7 +3270,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3297,7 +3298,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3324,7 +3326,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3349,7 +3352,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3375,7 +3379,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "realised loss and open positions have no source yet (G-22)"
@@ -3402,7 +3407,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "open positions have no source yet (G-22)"
@@ -3429,7 +3435,8 @@
    "stage": "06",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no distinct budget concept beyond available capital and the notional cap"
@@ -3456,7 +3463,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3523,7 +3531,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3548,7 +3557,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3574,7 +3584,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3600,7 +3611,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3625,7 +3637,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3650,7 +3663,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3675,7 +3689,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3700,7 +3715,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no margin model: derivative sales are NOT sized (MARGIN_MODEL_UNAVAILABLE)"
@@ -3727,7 +3743,8 @@
    "stage": "06",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "needs a portfolio-state source (G-22)"
@@ -3754,7 +3771,8 @@
    "stage": "06",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "needs a portfolio-state source (G-22)"
@@ -3782,7 +3800,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3808,7 +3827,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
@@ -3836,7 +3856,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
@@ -3864,7 +3885,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3890,7 +3912,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3916,7 +3939,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3942,7 +3966,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -3968,7 +3993,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
@@ -3996,7 +4022,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4022,7 +4049,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4048,7 +4076,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
@@ -4076,7 +4105,8 @@
    "stage": "06",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no strategy-performance provider is wired; the component reports missing (G-23)"
@@ -4104,7 +4134,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4130,7 +4161,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4156,7 +4188,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4182,7 +4215,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4208,7 +4242,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4233,7 +4268,8 @@
    "stage": "06",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "not yet populated on assessments: no resolved outcomes exist (Stage 08)"
@@ -4261,7 +4297,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4288,7 +4325,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no real outcomes exist: nothing is, or can be, calibrated yet (G-24)"
@@ -4315,7 +4353,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4370,7 +4409,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4398,7 +4438,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4426,7 +4467,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4451,7 +4493,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4478,7 +4521,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4506,7 +4550,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4533,7 +4578,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4558,7 +4604,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4585,7 +4632,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4612,7 +4660,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4637,7 +4686,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4662,7 +4712,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4689,7 +4740,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4716,7 +4768,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
-    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4741,7 +4794,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4766,7 +4820,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "group map is configuration, not computed correlation"
@@ -4844,7 +4899,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4872,7 +4928,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4900,7 +4957,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -4928,7 +4986,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "portfolio-state source missing (G-22): the halt only triggers when a portfolio provider exists"
@@ -4957,7 +5016,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "portfolio-state source missing (G-22)"
@@ -4984,7 +5044,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5009,7 +5070,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5034,7 +5096,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5081,7 +5144,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5106,7 +5170,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "portfolio inputs need a source (G-22)"
@@ -5133,7 +5198,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5158,7 +5224,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5183,7 +5250,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5208,7 +5276,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5233,7 +5302,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -5258,7 +5328,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -9603,7 +9674,8 @@
    ],
    "database": [],
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9626,7 +9698,8 @@
    ],
    "database": [],
    "evidence": [
-    "tests/unit/planning/*.test.ts (58 tests, local)"
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9652,7 +9725,8 @@
     "user_risk_policies"
    ],
    "evidence": [
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9677,7 +9751,8 @@
    ],
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9703,7 +9778,8 @@
    ],
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9731,7 +9807,8 @@
     "simulations"
    ],
    "evidence": [
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9756,7 +9833,8 @@
    ],
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -9782,7 +9860,8 @@
    ],
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   }
  ]
