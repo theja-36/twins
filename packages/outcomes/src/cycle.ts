@@ -1,4 +1,4 @@
-import { latestCalibrationRun, listDecisionRows, finishJobRun, insertAttribution, insertInsight, latestAttributionForPosition, latestAttributions, loadAttributionFacts, positionsNeedingAttribution, researchReportsForDecisions, startJobRun, storeCalibrationRun, candidateFunnelCounts, claimFunnelCounts, usersWithPaperActivity, type AttributionRow, type Db } from "@twins/database";
+import { hasPaperActivity, latestCalibrationRun, listDecisionRows, finishJobRun, insertAttribution, insertInsight, latestAttributionForPosition, latestAttributions, loadAttributionFacts, positionsNeedingAttribution, researchReportsForDecisions, startJobRun, storeCalibrationRun, candidateFunnelCounts, claimFunnelCounts, usersWithPaperActivity, type AttributionRow, type Db } from "@twins/database";
 import { CONFIDENCE_MODEL_VERSION } from "@twins/confidence";
 import type { OhlcProvider } from "@twins/agents";
 import { buildAttribution } from "./attribution";
@@ -14,7 +14,8 @@ import { generateInsights } from "./insights";
  * never make a decision QUALIFIED or place an order. It needs no market feed: historical analytics are computed from stored outcomes alone (an optional OHLC provider only enriches unexecuted-decision estimates).
  */
 export const LEARNING_JOB = "learning-cycle";
-export interface LearningDeps { db: Db; config: OutcomeLearningConfig; ohlc?: OhlcProvider | null; now?: () => Date; log?: (event: string, fields: Record<string, unknown>) => void }
+/** `only` restricts the run to these users (staged roll-out and isolated tests); production leaves it unset. */
+export interface LearningDeps { db: Db; config: OutcomeLearningConfig; only?: readonly string[]; ohlc?: OhlcProvider | null; now?: () => Date; log?: (event: string, fields: Record<string, unknown>) => void }
 export interface LearningReport { skipped: "DISABLED" | "ALREADY_RUNNING" | null; runId: string | null; abandonedRuns: number; users: number; usersFailed: number; ingested: { final: number; partial: number; duplicates: number; unchanged: number }; insightsCreated: number; insightsExisting: number; reconciled: number; mismatches: number; calibration: { status: string; holdout: number } | null; failed: boolean }
 export const emptyLearningReport = (): LearningReport => ({ skipped: null, runId: null, abandonedRuns: 0, users: 0, usersFailed: 0, ingested: { final: 0, partial: 0, duplicates: 0, unchanged: 0 }, insightsCreated: 0, insightsExisting: 0, reconciled: 0, mismatches: 0, calibration: null, failed: false });
 
@@ -67,7 +68,9 @@ export async function runLearningCycle(d: LearningDeps): Promise<LearningReport>
   out.runId = run.id; out.abandonedRuns = run.abandoned;
   const pooled: AttributionRow[] = [];
   try {
-    const users = await usersWithPaperActivity(d.db, d.config.maxUsersPerRun); out.users = users.length;
+    const candidates = d.only ? [...d.only] : await usersWithPaperActivity(d.db, d.config.maxUsersPerRun), users: string[] = [];
+    for (const u of candidates) if (await hasPaperActivity(d.db, u).catch(() => true)) users.push(u); // users with nothing to learn from cost one cheap query
+    out.users = users.length;
     for (const userId of users) {
       try {
         const ing = await ingestOutcomes(d.db, userId, d.config.batchPositions);

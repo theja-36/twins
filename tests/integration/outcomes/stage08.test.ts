@@ -11,6 +11,13 @@ import { closeClients, db, finish, newUser, owner, pipeline, session, trade } fr
 afterAll(async () => { await closeClients(); });
 const cfg = { ...DEFAULT_OUTCOME_LEARNING, enabled: true };
 const CONF = "confidence-strength-v1";
+/** The store reports database errors through drizzle's "Failed query" wrapper; the database's own message is on the cause. */
+async function dbError(f: () => Promise<unknown>, re: RegExp): Promise<void> {
+  let err: unknown = null; try { await f(); } catch (e) { err = e; }
+  expect(err, "expected the database to refuse").not.toBeNull();
+  const m = `${(err as { message?: string })?.message ?? ""} ${(err as { cause?: { message?: string } })?.cause?.message ?? ""}`;
+  expect(m).toMatch(re);
+}
 
 describe("outcome attribution", () => {
   it("a closed paper position is attributed once, FINAL, with its provenance, costs, holding time and behaviour; ingestion is idempotent", async () => {
@@ -58,20 +65,20 @@ describe("outcome attribution", () => {
     expect(await insertAttribution(db, p.userId, fixed)).toBeNull();                       // idempotent: the same version again inserts nothing
     const hist = await attributionHistory(db, p.userId, pos.id); expect(hist.map((h) => h.version)).toEqual([1, 2]); expect((await latestAttributionForPosition(db, p.userId, pos.id))!.version).toBe(2);
     const next = (over: Partial<NewAttribution>): NewAttribution => ({ ...fixed, version: 3, supersedesId: hist[1]!.id, correctionReason: "correction: another reasoned change", ...over });
-    await expect(insertAttribution(db, p.userId, next({ finality: "PARTIAL", outcomeId: null, closedAt: null, exitPrice: null, rMultiple: null, holdingSeconds: null, exitReason: null }))).rejects.toThrow(/FINAL outcome cannot be replaced|final_check/);
-    await expect(insertAttribution(db, p.userId, next({ version: 5, supersedesId: hist[1]!.id }))).rejects.toThrow(/must follow and name the previous version/);
-    await expect(insertAttribution(db, p.userId, next({ supersedesId: hist[0]!.id }))).rejects.toThrow(/must follow and name the previous version/);
-    await expect(insertAttribution(db, p.userId, next({ instrument: "OTHER" }))).rejects.toThrow(/cannot change which position/);
-    await expect(insertAttribution(db, p.userId, next({ correctionReason: "short" }))).rejects.toThrow(/version_check/);
+    await dbError(() => insertAttribution(db, p.userId, next({ finality: "PARTIAL", outcomeId: null, closedAt: null, exitPrice: null, rMultiple: null, holdingSeconds: null, exitReason: null })), /FINAL outcome cannot be replaced|final_check/);
+    await dbError(() => insertAttribution(db, p.userId, next({ version: 5, supersedesId: hist[1]!.id })), /must follow and name the previous version/);
+    await dbError(() => insertAttribution(db, p.userId, next({ supersedesId: hist[0]!.id })), /must follow and name the previous version/);
+    await dbError(() => insertAttribution(db, p.userId, next({ instrument: "OTHER" })), /cannot change which position/);
+    await dbError(() => insertAttribution(db, p.userId, next({ correctionReason: "short" })), /version_check/);
     await expect(raw.query("insert into outcome_attributions (id, user_id, account_id, paper_position_id, decision_id, candidate_id, version, finality, mode, data_source, candidate_source, instrument, side, quantity, entry_price, decided_at, opened_at) select gen_random_uuid(), user_id, account_id, paper_position_id, decision_id, candidate_id, 1, 'PARTIAL', mode, data_source, candidate_source, instrument, side, quantity, entry_price, decided_at, opened_at from outcome_attributions where id = $1", [v1.id])).rejects.toThrow(/already has an attribution|position_version_unique/);
     await expect(raw.query("insert into outcome_attributions (id, user_id, account_id, paper_position_id, decision_id, candidate_id, version, finality, mode, data_source, candidate_source, instrument, side, quantity, entry_price, decided_at, opened_at) select gen_random_uuid(), user_id, account_id, paper_position_id, decision_id, candidate_id, 2, 'PARTIAL', 'LIVE', data_source, candidate_source, instrument, side, quantity, entry_price, decided_at, opened_at from outcome_attributions where id = $1", [v1.id])).rejects.toThrow();
   });
   it("paper only: a LIVE attribution is impossible while no live execution exists, and FINAL needs the recorded outcome", async () => {
     const p = await pipeline(); await trade(p, "close"); await ingestOutcomes(db, p.userId, 50);
     const pos = (await getPositionForDecision(db, p.userId, p.decisionId))!, v1 = (await latestAttributionForPosition(db, p.userId, pos.id))!;
-    await expect(insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: pretend this was live", mode: "LIVE" })).rejects.toThrow(/paper_only_check|mode_check/);
-    await expect(insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: remove the recorded outcome", outcomeId: null })).rejects.toThrow(/final_check/);
-    await expect(insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: a final result with no exit", exitPrice: null })).rejects.toThrow(/final_check/);
+    await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: pretend this was live", mode: "LIVE" }), /paper_only_check|mode_check/);
+    await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: remove the recorded outcome", outcomeId: null }), /final_check/);
+    await dbError(() => insertAttribution(db, p.userId, { ...v1, version: 2, supersedesId: v1.id, correctionReason: "correction: a final result with no exit", exitPrice: null }), /final_check/);
   });
 });
 
@@ -84,7 +91,7 @@ describe("isolation", () => {
     const sb = await session(b.userId);
     expect((await sb.query("select 1 from outcome_attributions where user_id = $1", [a.userId])).rows).toEqual([]);
     expect((await sb.query("select 1 from learning_insights where user_id = $1", [a.userId])).rows).toEqual([]);
-    await expect(insertAttribution(db, b.userId, { ...v1, userId: b.userId, accountId: b.accountId, version: 1, supersedesId: null, correctionReason: null })).rejects.toThrow();
+    await dbError(() => insertAttribution(db, b.userId, { ...v1, userId: b.userId, accountId: b.accountId, version: 1, supersedesId: null, correctionReason: null }), /./);
     expect(await latestAttributions(db, b.userId, { limit: 50 })).toEqual([]);
     expect(await listInsights(db, b.userId, { limit: 50 })).toEqual([]);
   });
@@ -107,9 +114,9 @@ describe("the learning cycle", () => {
   it("is off by default; when on it ingests, analyses and writes insights once, and a re-run changes nothing", async () => {
     expect((await runLearningCycle({ db, config: DEFAULT_OUTCOME_LEARNING })).skipped).toBe("DISABLED");
     const p = await pipeline(); await trade(p, "close");
-    const r1 = await runLearningCycle({ db, config: cfg });
+    const r1 = await runLearningCycle({ db, config: cfg, only: [p.userId] });
     expect(r1).toMatchObject({ skipped: null, failed: false }); expect(r1.runId).not.toBeNull(); expect(r1.ingested.final).toBeGreaterThanOrEqual(1); expect(r1.insightsCreated).toBeGreaterThan(0); expect(r1.mismatches).toBe(0);
-    const r2 = await runLearningCycle({ db, config: cfg });
+    const r2 = await runLearningCycle({ db, config: cfg, only: [p.userId] });
     expect(r2.ingested.final + r2.ingested.partial).toBe(0); expect(r2.insightsCreated).toBe(0); expect(r2.insightsExisting).toBeGreaterThan(0);
     const runs = await listJobRuns(db, LEARNING_JOB, 5); expect(runs.slice(0, 2).map((r) => r.status)).toEqual(["COMPLETED", "COMPLETED"]);
     // everything is fixture-backed: nothing is called validated, and calibration stays uncalibrated
@@ -141,10 +148,10 @@ describe("the learning cycle", () => {
   });
   it("a failure while processing one user is isolated and counted; the cycle completes and the next run starts clean", async () => {
     const broken = Object.create(db, { transaction: { value: () => { throw new TypeError("boom"); } } }) as typeof db;
-    await pipeline();
-    const bad = await runLearningCycle({ db: broken, config: cfg });
+    const pp = await pipeline(); await trade(pp, "close");
+    const bad = await runLearningCycle({ db: broken, config: cfg, only: [pp.userId] });
     expect(bad.failed || bad.usersFailed > 0).toBe(true);
-    const ok = await runLearningCycle({ db, config: cfg }); expect(ok.failed).toBe(false); expect(ok.skipped).toBeNull();
+    const ok = await runLearningCycle({ db, config: cfg, only: [pp.userId] }); expect(ok.failed).toBe(false); expect(ok.skipped).toBeNull();
     expect((await listJobRuns(db, LEARNING_JOB, 6)).every((r) => r.status !== "RUNNING")).toBe(true);
   });
 });

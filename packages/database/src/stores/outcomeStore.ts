@@ -182,3 +182,8 @@ export async function usersWithPaperActivity(db: Pick<Db, "execute">, limit: num
   const r = await db.execute(sql`select distinct user_id from accounts where is_active order by user_id limit ${Math.min(Math.max(limit, 1), 1000)}`);
   return r.rows.map((q) => row(q)["user_id"] as string);
 }
+
+/** Cheap per-user check (one row-level-protected query): does this user have any paper position at all? The learning job skips users with nothing to learn from. */
+export async function hasPaperActivity(db: Pick<Db, "transaction">, userId: string): Promise<boolean> {
+  return withUser(db, userId, async (tx) => (await x(tx).execute(sql`select 1 from paper_positions where user_id = ${userId}::uuid limit 1`)).rows.length > 0);
+}
