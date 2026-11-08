@@ -14,3 +14,6 @@ export type { Db } from "./db";
 export * from "./options";
 export * from "./independent";
 export * from "./classification";
+export * from "./telegramCandidate";
+export * from "./telegramCandidateCycle";
+export * from "./channelHealth";

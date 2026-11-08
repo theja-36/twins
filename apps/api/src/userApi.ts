@@ -17,16 +17,16 @@ const SPOOF = ["userId", "user_id", "ownerId", "owner_id", "owner", "accountOwne
 const DECISION_STATES = ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SUPERSEDED", "CANCELLED"];
 
 function rec(v: unknown): Record<string, unknown> { return typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : {}; }
-function refuseSpoof(...sources: unknown[]): void { for (const s of sources) for (const k of Object.keys(rec(s))) if (SPOOF.includes(k)) throw new PlatformError("VALIDATION", "identity comes from the session; this field is not accepted", [`not allowed: ${k}`]); }
-function query(req: FastifyRequest, allowed: readonly string[]): Record<string, string> {
+export function refuseSpoof(...sources: unknown[]): void { for (const s of sources) for (const k of Object.keys(rec(s))) if (SPOOF.includes(k)) throw new PlatformError("VALIDATION", "identity comes from the session; this field is not accepted", [`not allowed: ${k}`]); }
+export function query(req: FastifyRequest, allowed: readonly string[]): Record<string, string> {
   const q = rec(req.query); refuseSpoof(q);
   for (const k of Object.keys(q)) if (!allowed.includes(k)) throw new PlatformError("VALIDATION", "unknown parameter", [`not allowed: ${k.slice(0, 30)}`]);
   const out: Record<string, string> = {}; for (const [k, v] of Object.entries(q)) { if (typeof v !== "string") throw new PlatformError("VALIDATION", "invalid parameter", [`invalid: ${k}`]); out[k] = v; }
   return out;
 }
-function uuid(v: string | undefined, name: string): string { if (!v || !UUID.test(v)) throw new PlatformError("VALIDATION", "invalid id", [`invalid: ${name}`]); return v; }
-function limit(v: string | undefined, def = 50): number { const n = v === undefined ? def : Number(v); if (!Number.isInteger(n) || n < 1 || n > 200) throw new PlatformError("VALIDATION", "limit must be an integer between 1 and 200"); return n; }
-function body(req: FastifyRequest, allowed: readonly string[], required: readonly string[] = []): Record<string, unknown> {
+export function uuid(v: string | undefined, name: string): string { if (!v || !UUID.test(v)) throw new PlatformError("VALIDATION", "invalid id", [`invalid: ${name}`]); return v; }
+export function limit(v: string | undefined, def = 50): number { const n = v === undefined ? def : Number(v); if (!Number.isInteger(n) || n < 1 || n > 200) throw new PlatformError("VALIDATION", "limit must be an integer between 1 and 200"); return n; }
+export function body(req: FastifyRequest, allowed: readonly string[], required: readonly string[] = []): Record<string, unknown> {
   const b = req.body === undefined || req.body === null ? {} : rec(req.body);
   if (req.body !== undefined && req.body !== null && (typeof req.body !== "object" || Array.isArray(req.body))) throw new PlatformError("VALIDATION", "a JSON object is required");
   refuseSpoof(b);

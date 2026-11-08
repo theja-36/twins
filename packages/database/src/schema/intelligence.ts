@@ -177,7 +177,22 @@ export const opportunityCandidates = pgTable("opportunity_candidates", {
   lastValidatedAt: timestamp("last_validated_at", { withTimezone: true }),
   /** Deterministic ordering score (higher is better). A priority for review, NOT a probability and NOT permission to act. Null when not ranked. */
   rankScore: numeric("rank_score"),
+  /** Stage 03 (G-19). The horizon the source states or the classifier read (INTRADAY / POSITIONAL / SCALPING / UNKNOWN). Null for independent candidates (their timeframe is the scan timeframe, in the dedupe key). */
+  timeframe: text("timeframe"),
+  /** A deterministic, field-by-field description of what the SOURCE claims. Never raw message text, never a recommendation. Null for independent candidates. */
+  thesis: text("thesis"),
+  /** Codes of what the source did not say or what could not be verified (stopLoss, targets, expiry, levelBasis, contractVerification ...). A candidate never invents these. */
+  missingInformation: jsonb("missing_information").notNull().default(sql`'[]'::jsonb`),
+  /** UNVERIFIED (nothing checked it against an exchange contract or price), PARTIALLY_VERIFIED, VERIFIED, or NOT_APPLICABLE. Telegram candidates start UNVERIFIED. */
+  validationStatus: text("validation_status").notNull().default("UNVERIFIED"),
+  /** Where it came from: channel, message, revision, capture method and delay, parser / classifier / policy versions. References only. */
+  provenance: jsonb("provenance").notNull().default(sql`'{}'::jsonb`),
+  /** 1 for a first candidate; an edited message produces version N+1 and supersedes version N. */
+  candidateVersion: integer("candidate_version").notNull().default(1),
 }, (t) => ({
+  validationCheck: check("opportunity_candidates_validation_check", sql`${t.validationStatus} in ('UNVERIFIED', 'PARTIALLY_VERIFIED', 'VERIFIED', 'NOT_APPLICABLE')`),
+  versionCheck: check("opportunity_candidates_version_check", sql`${t.candidateVersion} >= 1`),
+  telegramProvenanceCheck: check("opportunity_candidates_telegram_provenance_check", sql`${t.source} <> 'TELEGRAM' or (jsonb_typeof(${t.provenance}) = 'object' and ${t.provenance} ? 'messageId' and ${t.provenance} ? 'channelId' and ${t.thesis} is not null)`),
   dedupeUnique: uniqueIndex("opportunity_candidates_dedupe_unique").on(t.dedupeKey),
   supersededFk: foreignKey({ name: "opp_candidates_superseded_by_fk", columns: [t.supersededBy], foreignColumns: [t.id] }).onDelete("restrict"),
   attemptsCheck: check("opportunity_candidates_attempts_check", sql`${t.researchAttempts} >= 0`),
@@ -220,4 +235,26 @@ export const researchPackages = pgTable("research_packages", {
   versionUnique: uniqueIndex("research_packages_candidate_version_unique").on(t.candidateId, t.version),
   versionCheck: check("research_packages_version_check", sql`${t.version} >= 1`),
   assessmentCheck: check("research_packages_assessment_check", oneOf(t.assessment, ["RESEARCH_SUPPORTIVE", "RESEARCH_NEUTRAL", "RESEARCH_CAUTION", "RESEARCH_ADVERSE", "RESEARCH_INCOMPLETE", "RESEARCH_BLOCKED"])),
+}));
+
+export const CANDIDACY_OUTCOMES = ["CREATED", "DUPLICATE", "EXPIRED", "SUPERSEDED_REVISION", "INCOMPLETE", "CONTRADICTORY", "UNSUPPORTED"] as const;
+/**
+ * Stage 03 (G-19). The audit of every Telegram claim the candidate pipeline looked at: why it became a candidate or why it did not (reason codes, never message text).
+ * Append-only; one row per (claim, policy version), so a retry or a second worker finds the decision instead of repeating it, and a new policy version re-evaluates deliberately.
+ */
+export const telegramClaimCandidacy = pgTable("telegram_claim_candidacy", {
+  id: idColumn(),
+  claimId: uuid("claim_id").notNull().references(() => optionsClaims.id, { onDelete: "restrict" }),
+  policyVersion: text("policy_version").notNull(),
+  outcome: text("outcome").notNull(),
+  reasonCodes: jsonb("reason_codes").notNull().default(sql`'[]'::jsonb`),
+  candidateId: uuid("candidate_id").references(() => opportunityCandidates.id, { onDelete: "restrict" }),
+  detail: jsonb("detail").notNull().default(sql`'{}'::jsonb`),
+  evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  perPolicy: uniqueIndex("telegram_claim_candidacy_claim_policy_unique").on(t.claimId, t.policyVersion),
+  outcomeIdx: index("telegram_claim_candidacy_outcome_idx").on(t.outcome, t.evaluatedAt),
+  outcomeCheck: check("telegram_claim_candidacy_outcome_check", oneOf(t.outcome, CANDIDACY_OUTCOMES)),
+  candidateCheck: check("telegram_claim_candidacy_candidate_check", sql`(${t.outcome} = 'CREATED' and ${t.candidateId} is not null) or (${t.outcome} = 'DUPLICATE' and ${t.candidateId} is not null) or (${t.outcome} not in ('CREATED', 'DUPLICATE') and ${t.candidateId} is null)`),
+  reasonsCheck: check("telegram_claim_candidacy_reasons_check", sql`jsonb_typeof(${t.reasonCodes}) = 'array' and (${t.outcome} = 'CREATED' or jsonb_array_length(${t.reasonCodes}) > 0)`),
 }));

@@ -6,3 +6,4 @@ export * from "./planningStore";
 export * from "./decisionStore";
 export * from "./executionStore";
 export * from "./outcomeStore";
+export * from "./telegramCandidateStore";

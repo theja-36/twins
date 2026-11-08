@@ -35,6 +35,7 @@ import { AuthService, sqlAuditSink, sqlAuthStore } from "@twins/auth";
 import { registerAuthRoutes } from "./authApi.js";
 import { registerUserRoutes } from "./userApi.js";
 import { buildUserOps } from "./userOps.js";
+import { buildTelegramIntelOps, registerTelegramIntelRoutes } from "./telegramIntelApi.js";
 import { STATUS_CODES } from "node:http";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { Queue } from "bullmq";
@@ -340,6 +341,7 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   const authService = new AuthService({ store: sqlAuthStore(db), audit: sqlAuditSink(db), config: { registrationOpen: process.env["TWINS_REGISTRATION_OPEN"] === "true" } });
   registerAuthRoutes(app, { auth: authService });
   registerUserRoutes(app, { auth: authService, ops: buildUserOps(db) }); // session-protected, owner-scoped decisions / approvals / capital / risk / paper / analytics
+  registerTelegramIntelRoutes(app, { auth: authService, ops: buildTelegramIntelOps(db) }); // Stage 03: session-protected, read-only Telegram intelligence (shared data, no raw text)
   registerRiskRoutes(app, { db, authorized: checkBearerToken }); // Stage 3 / Task 6: bearer-protected internal risk approval API
   registerAgentsRoutes(app, { db, authorized: checkBearerToken }); // read-only agent status
   registerNotificationsRoutes(app, { db, authorized: checkBearerToken }); // read-only merged system-event feed

@@ -21,7 +21,7 @@
  */
 
 import { UnrecoverableError, Queue, Worker, type Job } from "bullmq";
-import { assertIntakeEnabled, configureRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
+import { assertIntakeEnabled, configureRuntimeState, currentRuntimeState, pgStateSource, SafetyRefusalError } from "@twins/runtime-state";
 import { loadStopLossConfig } from "@twins/stop-loss";
 import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { DEFAULT_REDUCE_ONLY_POLICY, getRiskDecision, intelligenceOf, reduceOnlySize, runResearchProbe } from "@twins/risk";
@@ -56,7 +56,7 @@ import {
   resolveTelegramSource,
   runIngestionJob,
 } from "@twins/ingestion";
-import { classifyClaimOnIntake, loadClassifyOnIntakeFlag, analyzeTelegramText, applySourceDefaultBasis, assessOptionsClaim, parseSourceBasisConfig, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
+import { loadTelegramCandidateConfig, runTelegramCandidateCycle, classifyClaimOnIntake, loadClassifyOnIntakeFlag, analyzeTelegramText, applySourceDefaultBasis, assessOptionsClaim, parseSourceBasisConfig, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
 import { readFileSync } from "node:fs";
 import { findValidationByKey, validateSignal } from "@twins/decision-intelligence";
 import {
@@ -1006,6 +1006,15 @@ if (process.env["NODE_ENV"] !== "test" && learningConfig.enabled) {
   learningTimer = setInterval(() => { if (learningRunning) return; learningRunning = true; void runLearningCycle({ db: workerDb.db, config: learningConfig, log: (event, fields) => defaultWorkerLogger.info(event, fields) }).then((r) => defaultWorkerLogger.info("learning.cycle.done", { skipped: r.skipped, users: r.users, usersFailed: r.usersFailed, ingested: r.ingested, insightsCreated: r.insightsCreated, calibration: r.calibration, failed: r.failed })).catch((e: unknown) => defaultWorkerLogger.warn("learning.cycle_error", { errorName: e instanceof Error ? e.name : "Error" })).finally(() => { learningRunning = false; }); }, learningConfig.intervalMs);
 }
 
+// Telegram claim -> candidate cycle (Stage 03, G-19): ONE bounded batch per run turns parsed Telegram claims into NEW candidates (or records why not) for the SHARED research dispatch. It writes only candidates and its append-only
+// candidacy audit; it cannot research, size, decide or approve. Off by default; stops with the intake control / kill switch.
+const telegramCandidateConfig = observeConfigLoad(defaultWorkerLogger, "telegram-candidates", () => loadTelegramCandidateConfig());
+let telegramCandidateTimer: ReturnType<typeof setInterval> | null = null;
+if (process.env["NODE_ENV"] !== "test" && telegramCandidateConfig.enabled) {
+  let telegramCandidateRunning = false;
+  telegramCandidateTimer = setInterval(() => { if (telegramCandidateRunning) return; telegramCandidateRunning = true; void runTelegramCandidateCycle({ db: workerDb.db, config: telegramCandidateConfig, allowed: () => currentRuntimeState().isIntakeEnabled(), log: (event, fields) => defaultWorkerLogger.info(event, fields) }).then((r) => defaultWorkerLogger.info("telegram.candidate.cycle.done", { skipped: r.skipped, examined: r.examined, created: r.created, superseded: r.superseded, failed: r.failed, byOutcome: r.byOutcome })).catch((e) => defaultWorkerLogger.error("telegram.candidate.cycle.failed", { errorName: e instanceof Error ? e.name : "Error" })).finally(() => { telegramCandidateRunning = false; }); }, telegramCandidateConfig.intervalMs);
+}
+
 // Outbox reconciler (Stage 2 / Task 2): re-enqueues outbox rows whose Redis job was never created or was lost, and recovers rows orphaned by a dead worker.
 // It does nothing while intake is disabled or the kill switch is active. Interval / lease are configurable; defaults 10 s / 5 min.
 const positiveMs = (name: string, fallback: number): number => {
@@ -1071,6 +1080,7 @@ export async function shutdown(signal: string): Promise<void> {
   paperLoop?.stop();
   if (managementTimer) clearInterval(managementTimer);
   if (learningTimer) clearInterval(learningTimer);
+  if (telegramCandidateTimer) clearInterval(telegramCandidateTimer);
   outboxReconciler?.stop();
   const closers: Array<Promise<unknown>> = [];
   if (outboxQueue) closers.push(outboxQueue.close());

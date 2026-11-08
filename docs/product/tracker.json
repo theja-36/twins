@@ -74,7 +74,9 @@
    "dependencies": [],
    "stage": "03",
    "status": "NOT_STARTED",
-   "evidence": [],
+   "evidence": [
+    "Read-only channel registry with health (GET /intelligence/channels). Enabling or disabling a channel stays a host allow-list setting by design (production capture gating is Stage 10), so this stays IN_PROGRESS. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -228,8 +230,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "capture delay is measured per candidate (DELAYED_CAPTURE, FIRST_SEEN_EDITED) and per channel (delayed share, median delay). Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -246,8 +250,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "claim validity from the message time (90 min default, ends at the contract close); expired claims never enter research. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -264,8 +270,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "assessChannelHealth (ACTIVE / QUIET / STALE / SILENT / NO_DATA, capture TIMELY / DELAYED) served by /intelligence/channels. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -309,7 +317,9 @@
    "dependencies": [],
    "stage": "03",
    "status": "NOT_STARTED",
-   "evidence": [],
+   "evidence": [
+    "Channel reliability is reported NOT_AVAILABLE until resolved real outcomes exist (G-30); scorecards remain offline. Stays IN_PROGRESS. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -502,8 +512,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "signal type (OPTIONS_BUY ...) from signal-classifier-v1, stored per claim and shown on the claim view. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -520,8 +532,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "horizon (INTRADAY / POSITIONAL / SCALPING / UNKNOWN) and setup stored per claim and copied to the candidate timeframe / setup. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -538,8 +552,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "entry condition, stop, targets and structure issues from the classifier; contradictions refuse the claim, absences are listed as missing information. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
