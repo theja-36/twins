@@ -177,10 +177,10 @@ export async function listJobRuns(db: Pick<Db, "execute">, job: string, limit: n
   const r = await db.execute(sql`select * from learning_job_runs where job = ${job} order by started_at desc limit ${Math.min(Math.max(limit, 1), 200)}`);
   return r.rows.map((q) => { const w = row(q); return { id: w["id"] as string, status: w["status"] as string, startedAt: d(w["started_at"]), finishedAt: w["finished_at"] ? d(w["finished_at"]) : null, counts: w["counts"], errorKind: s(w["error_kind"]) }; });
 }
-/** Users with an active account (the population the learning jobs iterate; accounts are not row-level protected, the per-user data is), bounded. */
+/** Users with an active account (the population the learning jobs iterate), bounded. Accounts are row-level protected (0041), so this goes through the identifiers-only definer function. */
 export async function usersWithPaperActivity(db: Pick<Db, "execute">, limit: number): Promise<string[]> {
-  const r = await db.execute(sql`select distinct user_id from accounts where is_active order by user_id limit ${Math.min(Math.max(limit, 1), 1000)}`);
-  return r.rows.map((q) => row(q)["user_id"] as string);
+  const r = await db.execute(sql`select a_user_id from twins_list_active_account_users(${Math.min(Math.max(limit, 1), 1000)})`);
+  return r.rows.map((q) => row(q)["a_user_id"] as string);
 }
 
 /** Cheap per-user check (one row-level-protected query): does this user have any paper position at all? The learning job skips users with nothing to learn from. */

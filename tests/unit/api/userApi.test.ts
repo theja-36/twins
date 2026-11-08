@@ -31,6 +31,7 @@ function fakeOps(calls: string[] = []) {
     async capital(u) { return { effective: { id: "c", accountId: "a", version: 1, totalCapital: "100000.00", availableCapital: "90000.00", maxPositionNotionalPct: null, currency: "INR", effectiveFrom: NOW, createdBy: u }, versions: [] } as never; },
     async riskPolicy() { return null; }, async controls() { return []; },
     async orders(u) { calls.push(`orders:${u}`); return []; }, async fills() { return []; }, async positions(u) { calls.push(`positions:${u}`); return []; }, async positionEvents() { return []; },
+    async portfolio(u) { calls.push(`portfolio:${u}`); return null; },
     async analytics(u) { calls.push(`analytics:${u}`); return { report: { generatedAt: NOW.toISOString(), modes: { PAPER: { overview: { u }, validatedOnly: {}, fixtureOnly: {}, strategy: {}, telegram: {}, independent: {}, agents: {}, decisionQuality: {} } }, drift: {}, dataQuality: { partial: 0 }, calibration: {} } as never, records: (decisions.get(u) ?? []).length ? ([{ id: "r", finality: "FINAL", closedAt: NOW }] as never) : [] }; },
     async insights() { return []; },
   };
@@ -44,7 +45,7 @@ async function build() {
   const call = (method: "GET" | "POST", url: string, token?: string, payload?: unknown) => app.inject({ method, url, headers: token ? { authorization: `Bearer ${token}` } : {}, ...(payload !== undefined ? { payload: payload as object } : {}) });
   return { app, auth, store, call, mk, calls, ...f };
 }
-const GETS = ["/accounts", `/capital/profile?accountId=${ID(1)}`, `/risk/policy?accountId=${ID(1)}`, "/risk/controls", "/decisions", `/decisions/${ID(1)}`, "/approvals", "/execution/orders", `/execution/orders/${ID(1)}/fills`, "/execution/positions", `/execution/positions/${ID(1)}/events`,
+const GETS = ["/accounts", `/portfolio?accountId=${ID(1)}`, `/capital/profile?accountId=${ID(1)}`, `/risk/policy?accountId=${ID(1)}`, "/risk/controls", "/decisions", `/decisions/${ID(1)}`, "/approvals", "/execution/orders", `/execution/orders/${ID(1)}/fills`, "/execution/positions", `/execution/positions/${ID(1)}/events`,
   "/analytics/overview", "/analytics/strategies", "/analytics/channels", "/analytics/independent", "/analytics/agents", "/analytics/decisions", "/analytics/outcomes", "/analytics/insights", "/analytics/drift", "/analytics/data-quality", "/analytics/calibration"];
 const POSTS = [`/decisions/${ID(1)}/approve`, `/decisions/${ID(1)}/reject`, `/decisions/${ID(1)}/cancel`];
 

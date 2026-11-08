@@ -1,5 +1,5 @@
 import {
-  getApproval, getDecision, getEffectiveCapitalProfile, getEffectiveRiskPolicy, latestAttributions, listActiveControls, listCapitalProfileVersions, listDecisionEvents, listDecisions, listInsights, listPaperFills, listPaperOrders, listPaperPositions, listUserAccounts, listPositionEvents,
+  getAccountPortfolioFacts, getApproval, getDecision, getEffectiveCapitalProfile, getEffectiveRiskPolicy, latestAttributions, listActiveControls, listCapitalProfileVersions, listDecisionEvents, listDecisions, listInsights, listPaperFills, listPaperOrders, listPaperPositions, listUserAccounts, listPositionEvents,
   type Db,
 } from "@twins/database";
 import { ApprovalError, approveDecision, cancelDecision, rejectDecision } from "@twins/decision";
@@ -28,6 +28,7 @@ export interface UserOps {
   fills(userId: string, orderId: string): Promise<Awaited<ReturnType<typeof listPaperFills>>>;
   positions(userId: string, o: { status?: "OPEN" | "CLOSED"; limit: number }): Promise<Awaited<ReturnType<typeof listPaperPositions>>>;
   positionEvents(userId: string, positionId: string): Promise<Awaited<ReturnType<typeof listPositionEvents>>>;
+  portfolio(userId: string, accountId: string): Promise<Awaited<ReturnType<typeof getAccountPortfolioFacts>>>;
   analytics(userId: string, now: Date): Promise<{ report: AnalyticsReport; records: Awaited<ReturnType<typeof latestAttributions>> }>;
   insights(userId: string, o: { kind?: string; limit: number }): Promise<Awaited<ReturnType<typeof listInsights>>>;
 }
@@ -51,6 +52,7 @@ export function buildUserOps(db: Db, env: NodeJS.ProcessEnv = process.env): User
     fills: (u, orderId) => listPaperFills(db, u, orderId),
     positions: (u, o) => listPaperPositions(db, u, o),
     positionEvents: (u, id) => listPositionEvents(db, u, id),
+    portfolio: (u, accountId) => getAccountPortfolioFacts(db, u, accountId),
     analytics: async (u, now) => { const r = await analyzeUser({ db, config: DEFAULT_OUTCOME_LEARNING }, u, now); return { report: r.report, records: r.records }; },
     insights: (u, o) => listInsights(db, u, o),
   };

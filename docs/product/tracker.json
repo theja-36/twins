@@ -8144,8 +8144,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "accounts are owner-only RLS (0041); an account can only use its owner's broker connection. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8197,8 +8199,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_capital_profiles per account (0033) with composite owner key; GET /capital/profile. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8222,8 +8226,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "available_capital per profile; account_portfolio_facts. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8247,8 +8253,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_risk_policies.risk_percent per account; GET /risk/policy. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8272,8 +8280,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_risk_policies.max_daily_loss per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8297,8 +8307,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_risk_policies max_concurrent_positions / max_lots per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8322,8 +8334,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_execution_permissions per account and mode (live forced off by constraint). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8347,8 +8361,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "broker_connections owner-only RLS, secretref credential reference, composite ownership key; no connection API yet (Stage 10). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8397,8 +8413,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "account_portfolio_facts view + GET /portfolio (paper notional; no live source). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8422,8 +8440,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "orders / positions / decisions history routes (Stage 01), paper_position_fill_check. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {
@@ -8447,8 +8467,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "GET /analytics/* (Stage 01), owner-scoped. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+   ],
    "blockers": []
   },
   {

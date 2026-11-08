@@ -1,0 +1,94 @@
+ALTER TABLE "broker_connections" ADD COLUMN "credential_ref" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "broker_connections_id_user_unique" ON "broker_connections" USING btree ("id","user_id");--> statement-breakpoint
+ALTER TABLE "accounts" ADD CONSTRAINT "accounts_broker_owner_fk" FOREIGN KEY ("broker_connection_id","user_id") REFERENCES "public"."broker_connections"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "broker_connections" ADD CONSTRAINT "broker_connections_credential_ref_check" CHECK ("broker_connections"."credential_ref" is null or "broker_connections"."credential_ref" ~ '^secretref:[A-Za-z0-9_.-]{1,100}$');
+--> statement-breakpoint
+-- HAND-APPENDED (Master Build Stage 02). accounts and broker_connections are user-owned, so they get the same owner-only row-level security as every other user table. Anything that must see ACCOUNTS ACROSS USERS (the worker and scheduler cycles) now uses the two SECURITY DEFINER functions below, which return identifiers only (account id, user id), never names, brokers or capital.
+--> statement-breakpoint
+ALTER TABLE "accounts" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "accounts" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "accounts_owner_only" ON "accounts" USING (user_id = nullif(current_setting('twins.user_id', true), '')::uuid) WITH CHECK (user_id = nullif(current_setting('twins.user_id', true), '')::uuid);
+--> statement-breakpoint
+ALTER TABLE "broker_connections" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "broker_connections" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "broker_connections_owner_only" ON "broker_connections" USING (user_id = nullif(current_setting('twins.user_id', true), '')::uuid) WITH CHECK (user_id = nullif(current_setting('twins.user_id', true), '')::uuid);
+--> statement-breakpoint
+CREATE FUNCTION "twins_list_active_accounts"() RETURNS TABLE (a_account_id uuid, a_user_id uuid) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+	SELECT id, user_id FROM accounts WHERE is_active ORDER BY created_at, id
+$$;
+--> statement-breakpoint
+CREATE FUNCTION "twins_list_active_account_users"(p_limit integer) RETURNS TABLE (a_user_id uuid) LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public, pg_temp AS $$
+	SELECT DISTINCT user_id FROM accounts WHERE is_active ORDER BY user_id LIMIT least(greatest(p_limit, 1), 1000)
+$$;
+--> statement-breakpoint
+-- HAND-APPENDED. The legacy account-owned tables (orders, fills, positions, portfolio_snapshots) carry an account but no user id: they get owner-only policies through the account, so no runtime path can read another user's legacy rows either. The runtime role is read-only on orders, fills and positions (app-role.sql).
+--> statement-breakpoint
+ALTER TABLE "orders" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "orders" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "orders_owner_only" ON "orders" USING (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "orders".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid)) WITH CHECK (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "orders".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid));
+--> statement-breakpoint
+ALTER TABLE "positions" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "positions" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "positions_owner_only" ON "positions" USING (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "positions".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid)) WITH CHECK (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "positions".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid));
+--> statement-breakpoint
+ALTER TABLE "portfolio_snapshots" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "portfolio_snapshots" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "portfolio_snapshots_owner_only" ON "portfolio_snapshots" USING (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "portfolio_snapshots".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid)) WITH CHECK (EXISTS (SELECT 1 FROM accounts a WHERE a.id = "portfolio_snapshots".account_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid));
+--> statement-breakpoint
+ALTER TABLE "fills" ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE "fills" FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY "fills_owner_only" ON "fills" USING (EXISTS (SELECT 1 FROM orders o JOIN accounts a ON a.id = o.account_id WHERE o.id = "fills".order_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid)) WITH CHECK (EXISTS (SELECT 1 FROM orders o JOIN accounts a ON a.id = o.account_id WHERE o.id = "fills".order_id AND a.user_id = nullif(current_setting('twins.user_id', true), '')::uuid));
+--> statement-breakpoint
+-- HAND-APPENDED. A decision's linked risk assessment and simulation must belong to the SAME user, account AND candidate (the composite foreign keys of 0033 already pin the user; this adds account and candidate, for every outcome and not only QUALIFIED).
+--> statement-breakpoint
+CREATE FUNCTION "twins_user_decision_links_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+	IF NEW.risk_assessment_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM risk_assessments r WHERE r.id = NEW.risk_assessment_id AND r.user_id = NEW.user_id AND r.account_id = NEW.account_id AND r.candidate_id = NEW.candidate_id) THEN
+		RAISE EXCEPTION 'the risk assessment of a decision must belong to the same user, account and candidate' USING ERRCODE = 'check_violation';
+	END IF;
+	IF NEW.simulation_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM simulations s WHERE s.id = NEW.simulation_id AND s.user_id = NEW.user_id AND s.account_id = NEW.account_id AND s.candidate_id = NEW.candidate_id) THEN
+		RAISE EXCEPTION 'the simulation of a decision must belong to the same user, account and candidate' USING ERRCODE = 'check_violation';
+	END IF;
+	RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER "user_decisions_links_guard" BEFORE INSERT ON "user_decisions" FOR EACH ROW EXECUTE FUNCTION "twins_user_decision_links_guard"();
+--> statement-breakpoint
+-- HAND-APPENDED. Per-account portfolio facts, derived in exact decimals (SQL numeric) from the account's own open paper positions and effective capital profile. security_invoker: the CALLER's row-level security applies, so a user sees only their own accounts. allocated_notional is paper notional at entry price; margin is NOT modelled (G-25) and no live portfolio source exists (G-22), so nothing here claims a live balance.
+--> statement-breakpoint
+CREATE VIEW "account_portfolio_facts" WITH (security_invoker = true) AS
+SELECT a.id AS account_id, a.user_id,
+	(SELECT count(*) FROM paper_positions p WHERE p.account_id = a.id AND p.user_id = a.user_id AND p.status = 'OPEN')::int AS open_positions,
+	COALESCE((SELECT sum(p.quantity * p.avg_entry_price) FROM paper_positions p WHERE p.account_id = a.id AND p.user_id = a.user_id AND p.status = 'OPEN'), 0) AS allocated_notional,
+	COALESCE((SELECT sum(p.realized_pnl) FROM paper_positions p WHERE p.account_id = a.id AND p.user_id = a.user_id), 0) AS realized_pnl,
+	c.total_capital, c.available_capital, c.version AS capital_profile_version,
+	CASE WHEN c.total_capital IS NULL THEN NULL ELSE c.total_capital - COALESCE((SELECT sum(p.quantity * p.avg_entry_price) FROM paper_positions p WHERE p.account_id = a.id AND p.user_id = a.user_id AND p.status = 'OPEN'), 0) END AS unallocated_capital
+FROM accounts a
+LEFT JOIN LATERAL (SELECT cp.total_capital, cp.available_capital, cp.version FROM user_capital_profiles cp WHERE cp.account_id = a.id AND cp.user_id = a.user_id AND cp.effective_from <= now() ORDER BY cp.effective_from DESC, cp.version DESC LIMIT 1) c ON true;
+--> statement-breakpoint
+-- HAND-APPENDED. Position quantity is derived from fills: entry fills minus exit fills of the position's own orders. This view recomputes it so tests and operators can prove (and monitor) that the stored position agrees with the fill history.
+--> statement-breakpoint
+CREATE VIEW "paper_position_fill_check" WITH (security_invoker = true) AS
+SELECT d.position_id, d.user_id, d.position_quantity, d.entry_filled, d.exit_filled, d.entry_filled - d.exit_filled AS derived_quantity, (d.entry_filled - d.exit_filled) = d.position_quantity AS matches
+FROM (
+	SELECT p.id AS position_id, p.user_id, p.quantity AS position_quantity,
+		COALESCE(sum(f.quantity) FILTER (WHERE o.purpose = 'ENTRY'), 0) AS entry_filled,
+		COALESCE(sum(f.quantity) FILTER (WHERE o.purpose = 'EXIT'), 0) AS exit_filled
+	FROM paper_positions p
+	LEFT JOIN paper_orders o ON o.user_id = p.user_id AND ((o.purpose = 'EXIT' AND o.position_id = p.id) OR (o.purpose = 'ENTRY' AND o.decision_id = p.decision_id))
+	LEFT JOIN paper_fills f ON f.order_id = o.id AND f.user_id = o.user_id
+	GROUP BY p.id, p.user_id, p.quantity
+) d;

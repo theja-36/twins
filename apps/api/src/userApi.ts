@@ -85,6 +85,12 @@ export function registerUserRoutes(app: FastifyInstance, deps: { auth: AuthServi
     if (!(await ops.accounts(u)).some((a) => a.id === accountId)) throw new PlatformError("NOT_FOUND", "not found");
     return { accountId, policy: await ops.riskPolicy(u, accountId, now()) };
   });
+  get("/portfolio", "positions:read", async (u, req) => {
+    const q = query(req, ["accountId"]), accountId = uuid(q["accountId"], "accountId");
+    if (!(await ops.accounts(u)).some((a) => a.id === accountId)) throw new PlatformError("NOT_FOUND", "not found");
+    const facts = await ops.portfolio(u, accountId);
+    return { accountId, mode: "PAPER", isolation: "PER_USER_ACCOUNT", facts, notes: ["Allocated notional is paper notional at entry price; margin is not modelled and no live portfolio source is connected, so no live balance is shown."] };
+  });
   get("/risk/controls", "risk:read", async (u, req) => { query(req, []); return { controls: await ops.controls(u, now()) }; });
 
   // ── decisions ─────────────────────────────────────────────────────────────

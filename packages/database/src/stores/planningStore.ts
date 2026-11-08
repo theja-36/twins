@@ -124,10 +124,20 @@ export async function listUserAccounts(db: Pick<Db, "transaction">, userId: stri
     return r.rows.map((q) => { const w = q as Record<string, unknown>; return { id: w["id"] as string, name: w["name"] as string, tradingMode: w["trading_mode"] as string, baseCurrency: w["base_currency"] as string, isActive: w["is_active"] as boolean }; });
   });
 }
-/** Accounts to evaluate: every active account (id and owner only; capital and policy are read per user under row-level security). */
+/** Per-account portfolio facts derived in exact decimals by the database view `account_portfolio_facts` (0041): open paper positions, allocated notional at entry price, realised P&L, the effective capital profile. Security-invoker view: the caller's row-level security applies. Values are decimal STRINGS; null where no capital profile exists (never invented). */
+export interface AccountPortfolioFacts { accountId: string; openPositions: number; allocatedNotional: string; realizedPnl: string; totalCapital: string | null; availableCapital: string | null; unallocatedCapital: string | null; capitalProfileVersion: number | null }
+export async function getAccountPortfolioFacts(db: Pick<Db, "transaction">, userId: string, accountId: string): Promise<AccountPortfolioFacts | null> {
+  return withUser(db, userId, async (tx) => {
+    const r = await (tx as unknown as Pick<Db, "execute">).execute(sql`select account_id, open_positions, allocated_notional::text, realized_pnl::text, total_capital::text, available_capital::text, unallocated_capital::text, capital_profile_version from account_portfolio_facts where user_id = ${userId}::uuid and account_id = ${accountId}::uuid`);
+    const w = r.rows[0] as Record<string, unknown> | undefined; if (!w) return null;
+    const sv = (v: unknown): string | null => (v === null || v === undefined ? null : String(v));
+    return { accountId: w["account_id"] as string, openPositions: Number(w["open_positions"]), allocatedNotional: String(w["allocated_notional"]), realizedPnl: String(w["realized_pnl"]), totalCapital: sv(w["total_capital"]), availableCapital: sv(w["available_capital"]), unallocatedCapital: sv(w["unallocated_capital"]), capitalProfileVersion: w["capital_profile_version"] === null || w["capital_profile_version"] === undefined ? null : Number(w["capital_profile_version"]) };
+  });
+}
+/** Accounts to evaluate: every active account (id and owner only; capital and policy are read per user under row-level security). Goes through the identifiers-only definer function because accounts are row-level protected (0041). */
 export async function listActiveAccounts(db: Pick<Db, "execute">): Promise<Array<{ accountId: string; userId: string }>> {
-  const r = await db.execute(sql`select id, user_id from accounts where is_active order by created_at, id`);
-  return r.rows.map((x) => ({ accountId: (x as { id: string }).id, userId: (x as { user_id: string }).user_id }));
+  const r = await db.execute(sql`select a_account_id, a_user_id from twins_list_active_accounts()`);
+  return r.rows.map((x) => ({ accountId: (x as { a_account_id: string }).a_account_id, userId: (x as { a_user_id: string }).a_user_id }));
 }
 export async function hasRecentRiskAssessment(db: Pick<Db, "transaction">, userId: string, accountId: string, candidateId: string, researchPackageId: string | null, withinMinutes: number): Promise<boolean> {
   return withUser(db, userId, async (tx) => {

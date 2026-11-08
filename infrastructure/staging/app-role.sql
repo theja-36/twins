@@ -59,4 +59,6 @@ GRANT EXECUTE ON FUNCTION twins_create_user_decision(jsonb), twins_end_user_deci
 -- Stage 01 / G-13: users is read-only for the runtime role except the password hash and display name; the role and active flag change only through the doors; the failed-login log is cleared through its definer function.
 GRANT UPDATE (password_hash, display_name, updated_at) ON users TO :"app_role";
 GRANT EXECUTE ON FUNCTION twins_create_user(text, text, text, text, uuid), twins_set_user_role(uuid, uuid, text), twins_set_user_active(uuid, uuid, boolean), twins_clear_login_failures(text) TO :"app_role";
+-- Stage 02: accounts and broker_connections are row-level protected; the worker / scheduler cycles list accounts across users only through these identifier-only definer functions.
+GRANT EXECUTE ON FUNCTION twins_list_active_accounts(), twins_list_active_account_users(integer) TO :"app_role";
 GRANT EXECUTE ON FUNCTION twins_paper_set_switch(boolean, text, text) TO :"app_role";

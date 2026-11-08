@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, foreignKey, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { tradingModeEnum } from "./enums";
 import { users } from "./users";
@@ -28,4 +28,6 @@ export const accounts = pgTable("accounts", {
 }, (t) => ({
   /** Target of the composite (account_id, user_id) foreign keys of the master-build tables: a row can never name another user's account. */
   idUserUnique: uniqueIndex("accounts_id_user_unique").on(t.id, t.userId),
+  /** An account can only point at a broker connection of the SAME user (no cross-user relationship). */
+  brokerOwnerFk: foreignKey({ name: "accounts_broker_owner_fk", columns: [t.brokerConnectionId, t.userId], foreignColumns: [brokerConnections.id, brokerConnections.userId] }),
 }));
