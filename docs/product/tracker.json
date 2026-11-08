@@ -8471,9 +8471,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -8498,9 +8499,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -8525,9 +8527,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -8552,9 +8555,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -8579,9 +8583,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -8606,9 +8611,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -9660,8 +9666,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
+   ],
    "blockers": []
   },
   {
@@ -9701,7 +9709,8 @@
    "stage": "01",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Stage 01 (this branch): packages/auth (scrypt, opaque hashed sessions, lockout, role doors), migration 0040, apps/api/src/authApi.ts; 34 new unit tests, full unit suite 231 files / 3,857 tests pass locally; DB doors + SQL store are covered by tests/integration/auth/stage01.test.ts which has NOT yet run (no local Postgres, G-11): VERIFIED only after CI"
+    "Stage 01 (this branch): packages/auth (scrypt, opaque hashed sessions, lockout, role doors), migration 0040, apps/api/src/authApi.ts; 34 new unit tests, full unit suite 231 files / 3,857 tests pass locally; DB doors + SQL store are covered by tests/integration/auth/stage01.test.ts which has NOT yet run (no local Postgres, G-11): VERIFIED only after CI",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },
@@ -9719,9 +9728,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
+    "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI"
    ],
    "blockers": []
   },

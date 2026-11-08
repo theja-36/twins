@@ -117,6 +117,13 @@ export async function listActiveControls(db: Pick<Db, "transaction">, userId: st
   return userId ? withUser(db, userId, (tx) => q(t(tx))) : q(db as unknown as Pick<Db, "execute">);
 }
 
+/** The calling user's own accounts (row-level security plus an explicit owner filter). Never accepts another user id from a request: the caller passes the id of the verified session. */
+export async function listUserAccounts(db: Pick<Db, "transaction">, userId: string): Promise<Array<{ id: string; name: string; tradingMode: string; baseCurrency: string; isActive: boolean }>> {
+  return withUser(db, userId, async (tx) => {
+    const r = await (tx as unknown as Pick<Db, "execute">).execute(sql`select id, name, trading_mode, base_currency, is_active from accounts where user_id = ${userId}::uuid order by created_at, id`);
+    return r.rows.map((q) => { const w = q as Record<string, unknown>; return { id: w["id"] as string, name: w["name"] as string, tradingMode: w["trading_mode"] as string, baseCurrency: w["base_currency"] as string, isActive: w["is_active"] as boolean }; });
+  });
+}
 /** Accounts to evaluate: every active account (id and owner only; capital and policy are read per user under row-level security). */
 export async function listActiveAccounts(db: Pick<Db, "execute">): Promise<Array<{ accountId: string; userId: string }>> {
   const r = await db.execute(sql`select id, user_id from accounts where is_active order by created_at, id`);

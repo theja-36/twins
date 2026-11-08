@@ -33,6 +33,8 @@
 
 import { AuthService, sqlAuditSink, sqlAuthStore } from "@twins/auth";
 import { registerAuthRoutes } from "./authApi.js";
+import { registerUserRoutes } from "./userApi.js";
+import { buildUserOps } from "./userOps.js";
 import { STATUS_CODES } from "node:http";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
 import { Queue } from "bullmq";
@@ -337,6 +339,7 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   // Stage 01: accounts and sessions (session tokens only; the shared service key is never a user identity). Registration is closed unless TWINS_REGISTRATION_OPEN=true.
   const authService = new AuthService({ store: sqlAuthStore(db), audit: sqlAuditSink(db), config: { registrationOpen: process.env["TWINS_REGISTRATION_OPEN"] === "true" } });
   registerAuthRoutes(app, { auth: authService });
+  registerUserRoutes(app, { auth: authService, ops: buildUserOps(db) }); // session-protected, owner-scoped decisions / approvals / capital / risk / paper / analytics
   registerRiskRoutes(app, { db, authorized: checkBearerToken }); // Stage 3 / Task 6: bearer-protected internal risk approval API
   registerAgentsRoutes(app, { db, authorized: checkBearerToken }); // read-only agent status
   registerNotificationsRoutes(app, { db, authorized: checkBearerToken }); // read-only merged system-event feed

@@ -6,6 +6,18 @@
   },
   "references": [
     {
+      "path": "../../packages/execution"
+    },
+    {
+      "path": "../../packages/outcomes"
+    },
+    {
+      "path": "../../packages/planning"
+    },
+    {
+      "path": "../../packages/decision"
+    },
+    {
       "path": "../../packages/alerting"
     },
     {
