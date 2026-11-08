@@ -5,7 +5,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
-import { createExecutionRequest, createPaperOrder, getPositionForDecision, insertPaperFill, setOrderStatus, updateExecutionRequest } from "../../../packages/database/src/index";
+import { appendCapitalProfile, createExecutionRequest, createPaperOrder, getPositionForDecision, insertPaperFill, setOrderStatus, updateExecutionRequest } from "../../../packages/database/src/index";
 import { approveDecision } from "../../../packages/decision/src/index";
 import { requestPaperExecution } from "../../../packages/execution/src/index";
 import { closeClients, db, evalDeps, execDeps, newUser, NOW, owner, pipeline, session, trade, type Pipe } from "../support/tradingPipeline";
@@ -17,11 +17,14 @@ async function refused(f: () => Promise<unknown>, re: RegExp): Promise<void> {
   expect(err, "expected the database to refuse").not.toBeNull();
   expect(`${(err as { message?: string })?.message ?? ""} ${(err as { cause?: { message?: string } })?.cause?.message ?? ""} ${(err as { code?: string })?.code ?? ""}`).toMatch(re);
 }
-const scalar = async (sql: string, p: unknown[] = []): Promise<unknown> => { const c = await owner(); const r = await c.query(sql, p); return r.rows[0] ? Object.values(r.rows[0])[0] : null; };
+let sharedOwner: Awaited<ReturnType<typeof owner>> | null = null;
+/** One shared owner connection for the whole file: the database has a limited number of connections and this file runs many small queries. */
+const own = async (): Promise<Awaited<ReturnType<typeof owner>>> => (sharedOwner ??= await owner());
+const scalar = async (sql: string, p: unknown[] = []): Promise<unknown> => { const c = await own(); const r = await c.query(sql, p); return r.rows[0] ? Object.values(r.rows[0])[0] : null; };
 
 describe("migration chain", () => {
   it("the target database is exactly at the repository's chain (every migration applied once, in order, with the committed content)", async () => {
-    const c = await owner(); const rec = (await c.query("select hash, created_at from drizzle.__drizzle_migrations order by id")).rows;
+    const c = await own(); const rec = (await c.query("select hash, created_at from drizzle.__drizzle_migrations order by id")).rows;
     expect(describeMigrationMismatch(loadExpectedMigrations(), rec)).toBeNull();
     expect(rec.length).toBeGreaterThanOrEqual(42);
   });
@@ -34,7 +37,7 @@ describe("migration chain", () => {
 
 describe("ownership is enforced by the database, not only by the API", () => {
   it("EVERY table that carries a user id is row-level protected and forced, except the documented session-lookup table", async () => {
-    const c = await owner();
+    const c = await own();
     const r = await c.query(`select c.relname, c.relrowsecurity, c.relforcerowsecurity from pg_class c join information_schema.columns k on k.table_name = c.relname and k.table_schema = 'public' and k.column_name = 'user_id'
                               where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' order by 1`);
     const unprotected = r.rows.filter((x: { relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }) => !(x.relrowsecurity && x.relforcerowsecurity)).map((x: { relname: string }) => x.relname);
@@ -42,7 +45,7 @@ describe("ownership is enforced by the database, not only by the API", () => {
     expect(r.rows.length).toBeGreaterThan(20);
   });
   it("every account-owned legacy table (account id, no user id) is protected through its account", async () => {
-    const c = await owner();
+    const c = await own();
     for (const t of ["orders", "positions", "portfolio_snapshots", "fills"]) {
       const r = await c.query("select relrowsecurity, relforcerowsecurity from pg_class where relname = $1 and relnamespace = 'public'::regnamespace", [t]);
       expect(r.rows[0], t).toEqual({ relrowsecurity: true, relforcerowsecurity: true });
@@ -50,7 +53,7 @@ describe("ownership is enforced by the database, not only by the API", () => {
     }
   });
   it("user A cannot read, change, delete or create rows of user B's account or broker connection", async () => {
-    const a = await newUser(), b = await newUser(), o = await owner(), conn = randomUUID();
+    const a = await newUser(), b = await newUser(), o = await own(), conn = randomUUID();
     await o.query("insert into broker_connections (id, user_id, provider, credential_ref) values ($1, $2, 'kite', 'secretref:kite_main')", [conn, b.userId]);
     const ca = await session(a.userId);
     expect((await ca.query("select count(*)::int as n from accounts where id = $1", [b.accountId])).rows[0].n).toBe(0);
@@ -64,11 +67,11 @@ describe("ownership is enforced by the database, not only by the API", () => {
     const cb = await session(b.userId); expect((await cb.query("select count(*)::int as n from broker_connections where id = $1", [conn])).rows[0].n).toBe(1);
   });
   it("the cross-user listing functions return identifiers only", async () => {
-    const o = await owner(); const r = await o.query("select * from twins_list_active_accounts() limit 1");
+    const o = await own(); const r = await o.query("select * from twins_list_active_accounts() limit 1");
     expect(Object.keys(r.rows[0] ?? { a_account_id: 1, a_user_id: 1 }).sort()).toEqual(["a_account_id", "a_user_id"]);
   });
   it("an account can only use its OWNER's broker connection, and a connection can only hold a secret REFERENCE", async () => {
-    const a = await newUser(), b = await newUser(), o = await owner(), connB = randomUUID();
+    const a = await newUser(), b = await newUser(), o = await own(), connB = randomUUID();
     await o.query("insert into broker_connections (id, user_id, provider) values ($1, $2, 'kite')", [connB, b.userId]);
     await refused(() => o.query("update accounts set broker_connection_id = $1 where id = $2", [connB, a.accountId]), /accounts_broker_owner_fk|foreign key|23503/);
     const connA = randomUUID(); await o.query("insert into broker_connections (id, user_id, provider) values ($1, $2, 'kite')", [connA, a.userId]);
@@ -81,14 +84,14 @@ describe("ownership is enforced by the database, not only by the API", () => {
     await refused(() => ca.query("insert into user_capital_profiles (id, user_id, account_id, version, total_capital, available_capital, currency, effective_from, created_by) values (gen_random_uuid(), $1, $2, 1, 1000, 1000, 'INR', now(), 'x')", [a.userId, b.accountId]), /foreign key|23503/);
     await refused(() => ca.query("insert into user_capital_profiles (id, user_id, account_id, version, total_capital, available_capital, currency, effective_from, created_by) values (gen_random_uuid(), $1, $2, 1, 1000, 1000, 'INR', now(), 'x')", [b.userId, b.accountId]), /row-level security|42501/);
     await refused(() => ca.query("insert into user_execution_permissions (user_id, account_id, mode, enabled, changed_by) values ($1, $2, 'PAPER', true, 'x')", [a.userId, b.accountId]), /foreign key|23503/);
-    const o = await owner();
+    const o = await own();
     for (const [t, col] of [["user_capital_profiles", "account_id"], ["user_risk_policies", "account_id"], ["user_execution_permissions", "account_id"], ["risk_assessments", "account_id"], ["simulations", "account_id"], ["user_decisions", "account_id"], ["execution_requests", "account_id"], ["paper_orders", "account_id"], ["paper_positions", "account_id"], ["outcome_attributions", "account_id"]] as const) {
       const n = await o.query(`select count(*)::int as n from pg_constraint where contype = 'f' and conrelid = $1::regclass and confrelid = 'accounts'::regclass and array_length(conkey, 1) = 2`, [t]);
       expect(n.rows[0].n, `${t}.${col} must reference accounts(id, user_id)`).toBeGreaterThanOrEqual(1);
     }
   });
   it("live execution modes cannot be enabled for any account, by any role", async () => {
-    const a = await newUser(), o = await owner();
+    const a = await newUser(), o = await own();
     for (const mode of ["ASSISTED_LIVE", "CONTROLLED_AUTO"]) await refused(() => o.query("insert into user_execution_permissions (user_id, account_id, mode, enabled, changed_by) values ($1, $2, $3, true, 'x')", [a.userId, a.accountId, mode]), /live_disabled|23514/);
     expect(await scalar("select count(*)::int from user_execution_permissions where mode <> 'PAPER' and enabled")).toBe(0);
   });
@@ -111,7 +114,7 @@ describe("the trading lifecycle: Decision -> Approval -> Request -> Order -> Fil
   let closed: Pipe, partial: Pipe;
   it("a full paper trade leaves one consistent, owner-pure chain", async () => {
     closed = await pipeline(); await trade(closed, "close");
-    const o = await owner(), id = closed.decisionId, uid = closed.userId;
+    const o = await own(), id = closed.decisionId, uid = closed.userId;
     expect(await scalar("select workflow_state from user_decisions where id = $1", [id])).toBe("APPROVED");
     expect(await scalar("select count(*)::int from decision_approvals where decision_id = $1 and action = 'APPROVE' and approver_user_id = user_id", [id])).toBe(1);
     expect(Number(await scalar("select count(*)::int from execution_requests where decision_id = $1 and mode = 'PAPER'", [id]))).toBeGreaterThanOrEqual(1);
@@ -125,21 +128,27 @@ describe("the trading lifecycle: Decision -> Approval -> Request -> Order -> Fil
   it("position quantity equals entry fills minus exit fills for an open, a partly exited and a closed position", async () => {
     const open = await pipeline(); await trade(open, "open"); partial = await pipeline(); await trade(partial, "partial");
     for (const p of [open, partial, closed]) {
-      const r = await (await owner()).query("select position_quantity::text as q, derived_quantity::text as d, matches from paper_position_fill_check where user_id = $1", [p.userId]);
+      const r = await (await own()).query("select position_quantity::text as q, derived_quantity::text as d, matches from paper_position_fill_check where user_id = $1", [p.userId]);
       expect(r.rows.length).toBe(1); expect(r.rows[0], `${p.decisionId}: ${JSON.stringify(r.rows[0])}`).toMatchObject({ matches: true });
     }
     expect(Number(await scalar("select derived_quantity from paper_position_fill_check where user_id = $1", [closed.userId]))).toBe(0);
   });
-  it("account portfolio facts are exact decimals, per account, and null (not invented) without a capital profile", async () => {
-    const o = await owner();
+  it("account portfolio facts are exact decimals, per account, and null (not invented) when no capital profile is in force", async () => {
+    const o = await own();
+    // the fixture capital profile is effective from 2030, i.e. NOT in force yet: the view must say so (null), not assume a balance
     const r = (await o.query("select open_positions, allocated_notional::text as n, total_capital::text as tc, unallocated_capital::text as u from account_portfolio_facts where account_id = $1", [partial.accountId])).rows[0];
-    expect(r.open_positions).toBe(1); expect(r.n).toMatch(/^\d+(\.\d+)?$/); expect(Number(r.u)).toBeCloseTo(Number(r.tc) - Number(r.n), 6);
-    const bare = await newUser(); const e = (await o.query("select open_positions, allocated_notional::text as n, total_capital, unallocated_capital from account_portfolio_facts where account_id = $1", [bare.accountId])).rows[0];
-    expect(e).toMatchObject({ open_positions: 0, total_capital: null, unallocated_capital: null }); expect(Number(e.n)).toBe(0);
+    expect(r.open_positions).toBe(1); expect(r.n).toMatch(/^\d+(\.\d+)?$/); expect(r.tc).toBeNull(); expect(r.u).toBeNull();
+    expect(r.n).toBe(String(await scalar("select sum(quantity * avg_entry_price)::text from paper_positions where account_id = $1 and status = 'OPEN'", [partial.accountId])));
+    // an account whose profile IS in force: exact decimal arithmetic, nothing allocated
+    const live = await newUser(); await appendCapitalProfile(db, live.userId, { accountId: live.accountId, totalCapital: "1000000.50", availableCapital: "999999.25", maxPositionNotionalPct: null, effectiveFrom: new Date("2020-01-01T00:00:00Z"), createdBy: "test" });
+    const e = (await o.query("select open_positions, allocated_notional::text as n, total_capital::text as tc, available_capital::text as ac, unallocated_capital::text as u from account_portfolio_facts where account_id = $1", [live.accountId])).rows[0];
+    expect(e).toMatchObject({ open_positions: 0, n: "0", tc: "1000000.50", ac: "999999.25", u: "1000000.50" });
+    const bare = await newUser(); const b = (await o.query("select total_capital, unallocated_capital from account_portfolio_facts where account_id = $1", [bare.accountId])).rows[0];
+    expect(b).toMatchObject({ total_capital: null, unallocated_capital: null });
     const other = await session(bare.userId); expect((await other.query("select count(*)::int as n from account_portfolio_facts where account_id = $1", [partial.accountId])).rows[0].n).toBe(0); // the view honours the caller's RLS
   });
   it("a decision cannot become an order or a position without approval, and a REJECTED decision cannot open anything", async () => {
-    const p = await pipeline(), o = await owner();
+    const p = await pipeline(), o = await own();
     const unapprovedOrder = async (): Promise<unknown> => {
       const r = await createExecutionRequest(db, p.userId, { accountId: p.accountId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: `unapproved-${randomUUID()}`, state: "REQUESTED", checks: [], refusalReasons: [] });
       await updateExecutionRequest(db, p.userId, r.request.id, "ELIGIBLE", [], []);
@@ -169,7 +178,7 @@ describe("the trading lifecycle: Decision -> Approval -> Request -> Order -> Fil
 
 describe("fills, partial fills and exact money", () => {
   async function exitOrder(p: Pipe, qty: string): Promise<{ orderId: string }> {
-    const pos = (await getPositionForDecision(db, p.userId, p.decisionId))!, o = await owner();
+    const pos = (await getPositionForDecision(db, p.userId, p.decisionId))!, o = await own();
     const req = String(await scalar("select id from execution_requests where decision_id = $1 and mode = 'PAPER' limit 1", [p.decisionId]));
     expect(Number(qty)).toBeLessThanOrEqual(Number(pos.quantity));
     const created = await createPaperOrder(db, p.userId, { accountId: p.accountId, decisionId: p.decisionId, executionRequestId: req, positionId: pos.id, purpose: "EXIT", exitReason: "MANUAL", instrument: pos.instrument, exchange: pos.exchange, side: pos.side === "BUY" ? "SELL" : "BUY", orderType: "MARKET", quantity: qty, limitPrice: null, idempotencyKey: `exit-${randomUUID()}` });
@@ -233,7 +242,7 @@ describe("concurrency and replay", () => {
 
 describe("append-only history and exact money", () => {
   it("approvals, fills, position events and decision events can be neither changed nor deleted, even by the table owner", async () => {
-    const p = await pipeline(); await trade(p, "close"); const o = await owner();
+    const p = await pipeline(); await trade(p, "close"); const o = await own();
     for (const [t, set] of [["decision_approvals", "reason = 'x'"], ["paper_fills", "quantity = quantity + 1"], ["paper_position_events", "kind = 'X'"]] as const) {
       await refused(() => o.query(`update ${t} set ${set} where user_id = $1`, [p.userId]), /append-only|not allowed|audit/i);
       await refused(() => o.query(`delete from ${t} where user_id = $1`, [p.userId]), /append-only|not allowed|audit/i);
@@ -241,7 +250,7 @@ describe("append-only history and exact money", () => {
     }
   });
   it("no money column is a binary float or an integer: every price, P&L, capital, notional and cost column is exact numeric", async () => {
-    const o = await owner();
+    const o = await own();
     const r = await o.query(`select table_name, column_name, data_type from information_schema.columns where table_schema = 'public'
       and column_name ~ '(price|pnl|capital|amount|notional|costs|loss|exposure|equity|balance|fee|charge|brokerage|slippage)'
       and data_type in ('double precision', 'real', 'integer', 'bigint', 'smallint') and column_name !~ '(_pct|_seconds|_ms|_count|_minutes|_bps|_version|_rank)'`);

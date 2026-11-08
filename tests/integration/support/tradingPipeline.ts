@@ -15,6 +15,9 @@ export const URL_ = requireTestDatabaseUrl();
 export const db = createDb(URL_);
 export const NOW = new Date("2031-01-06T05:00:00Z");
 const clients: pg.Client[] = [];
+let sharedOwnerClient: pg.Client | null = null;
+/** One long-lived owner connection for the fixtures that only run plain autocommit statements (newUser, pipeline): a test file that builds many pipelines would otherwise open one connection per call and exhaust the server. Never use it for transactions or SET ROLE. */
+export async function ownerShared(): Promise<pg.Client> { return (sharedOwnerClient ??= await owner()); }
 export async function owner(): Promise<pg.Client> { const c = new pg.Client({ connectionString: URL_ }); await c.connect(); clients.push(c); return c; }
 export async function session(userId: string): Promise<pg.Client> {
   const c = await owner();
@@ -37,13 +40,13 @@ const research = (candidateId: string) => ({ packageVersion: "research-package-v
 const draft = (u: string, o: Partial<CandidateInsert> = {}): CandidateInsert => ({ dedupeKey: randomUUID(), underlying: u, exchange: "NSE", side: "BUY", setup: "BREAKOUT", entryKind: "at", entryLow: 100, entryHigh: 100, stopLoss: 98, targets: [104, 108, 112], invalidation: { price: 98, breachWhen: "BELOW", condition: "x" }, rankScore: 60, evidence: [{ kind: "setup", setupClass: "BREAKOUT_LONG", detector: "opportunity-setups-v1", timeframeSeconds: 900, signalBarAt: NOW.toISOString(), reasons: [] }], dataSource: "LIVE", correlationId: randomUUID(), createdAt: new Date("2031-01-06T04:50:00Z"), expiresAt: new Date("2031-01-06T08:00:00Z"), ...o });
 export interface Pipe { u: string; userId: string; accountId: string; candId: string; decisionId: string }
 export async function newUser(): Promise<{ userId: string; accountId: string }> {
-  const a = await owner(), userId = randomUUID(), accountId = randomUUID();
+  const a = await ownerShared(), userId = randomUUID(), accountId = randomUUID();
   await a.query("insert into users (id, email, password_hash) values ($1, $2, 'x')", [userId, `${userId}@example.invalid`]);
   await a.query("insert into accounts (id, user_id, name, trading_mode) values ($1, $2, 'paper account', 'paper')", [accountId, userId]);
   return { userId, accountId };
 }
 export async function pipeline(user?: { userId: string; accountId: string }): Promise<Pipe> {
-  const a = await owner(), { userId, accountId } = user ?? (await newUser()), u = sym();
+  const a = await ownerShared(), { userId, accountId } = user ?? (await newUser()), u = sym();
   if (!user) {
     await a.query("insert into user_execution_permissions (user_id, account_id, mode, enabled, changed_by) values ($1, $2, 'PAPER', true, 'test')", [userId, accountId]);
     await appendCapitalProfile(db, userId, { accountId, totalCapital: "1000000", availableCapital: "1000000", maxPositionNotionalPct: null, effectiveFrom: new Date("2030-01-01T00:00:00Z"), createdBy: "test" });
