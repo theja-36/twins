@@ -78,7 +78,8 @@ beforeAll(async () => {
   registerHistoryIntelRoutes(app, { auth, ops }); registerTelegramIntelRoutes(app, { auth, ops, now: () => NOW });
   await auth.register({ email: "t@example.com", password: "correct horse battery staple" }); token = (await auth.login({ email: "t@example.com", password: "correct horse battery staple" })).token;
 });
-const get = (url: string, t: string | undefined = token) => app.inject({ method: "GET", url, headers: t ? { authorization: `Bearer ${t}` } : {} });
+// `null` means "send no credentials". (A default parameter would silently turn an explicit `undefined` into the session token, which made the unauthenticated checks run authenticated.)
+const get = (url: string, t: string | null = token) => app.inject({ method: "GET", url, headers: t ? { authorization: `Bearer ${t}` } : {} });
 const liveClaim = (o: Record<string, unknown> = {}) => ({ action: "buy", intent: "long_entry_presumed", underlying: "NIFTY", underlyingAliasUsed: false, strike: 24500, optionType: "CE", compactCodeUnrecognized: false, optionTypeConflict: false, expiry: { status: "full", day: 28, month: 3, year: 2024, raw: "28 MAR 2024" }, entry: { type: "at", price: 100 }, stopLoss: 80, targets: [120, 140], levelBasis: "premium", levelBasisConflict: false, impliedUnderlyingView: "bullish", ...o });
 async function liveClaimAt(ts: string, claim: Record<string, unknown> = liveClaim()): Promise<string> {
   const src = randomUUID(), m = randomUUID(), c = randomUUID();
@@ -100,7 +101,7 @@ async function buildArchive(): Promise<void> {
 describe("historical matches are computed as of the claim's own time", () => {
   it("requires a session and validates the id", async () => {
     await buildArchive(); const c = await liveClaimAt("2024-06-03T00:00:00Z");
-    expect((await get(`/intelligence/claims/${c}/historical-matches`, undefined)).statusCode).toBe(401);
+    expect((await get(`/intelligence/claims/${c}/historical-matches`, null)).statusCode).toBe(401);
     expect((await get("/intelligence/claims/not-a-uuid/historical-matches")).statusCode).toBe(422); expect((await get(`/intelligence/claims/${randomUUID()}/historical-matches`)).statusCode).toBe(404);
   });
   it("a claim made AFTER the outcome was known sees the archived win, labelled as insufficient evidence and as association only", async () => {
@@ -136,7 +137,7 @@ describe("playbook, performance and archive reads", () => {
     expect((await get(`/intelligence/playbooks/${randomUUID()}`)).statusCode).toBe(404);
     for (const u of ["/intelligence/playbooks?limit=0", "/intelligence/playbooks?limit=201", "/intelligence/playbooks?offset=-1", "/intelligence/playbooks?channelId=x", "/intelligence/playbooks?bogus=1", "/intelligence/archive/channels?limit=101"]) expect((await get(u)).statusCode, u).toBe(422);
     expect((await get("/intelligence/playbooks?channelId=" + randomUUID())).json()).toMatchObject({ state: "EMPTY", playbooks: [] });
-    expect((await get("/intelligence/playbooks", undefined)).statusCode).toBe(401);
+    expect((await get("/intelligence/playbooks", null)).statusCode).toBe(401);
   });
   it("pagination is deterministic and does not repeat or skip records", async () => {
     for (let i = 0; i < 3; i++) await playbook();
