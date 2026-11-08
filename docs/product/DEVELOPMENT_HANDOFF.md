@@ -39,3 +39,7 @@ Unstarted/limits: see GAP_REGISTER G-15..G-18.
 1. Push, confirm CI green for the Stage 04 commit (integration: `stage04Stores`, `historicalChallengerAgents`, migration chain 36).
 2. Record CI run id on M04-17..M04-20; then Stage 05 (Independent Opportunity Engine, Module 16): scanner producing `opportunity_candidates` with `source = INDEPENDENT`, calling `runCandidateResearch`.
 3. Stage 01 remainder (auth) before any multi-user exposure.
+
+## Stage 03 closure handoff (2026-11-08)
+Backend `feat/master-build` at `67dee94` (CI run 42528709453 green). Frontend `feat/stage09-frontend` at `9abf640`. New read APIs: `/intelligence/claims/:id/historical-matches`, `/intelligence/channels/:id/performance`, `/intelligence/playbooks[/:id]`, `/intelligence/archive/channels` (session-protected, shared permissions, read-only). Migration 0043 guards playbook versions. Frontend e2e: `npm run test:e2e` (Playwright + axe, demo and non-demo builds). Stage 03 remains NOT COMPLETE: see the open blockers in `STAGE_03_COMPLETION_REPORT.md`.
+

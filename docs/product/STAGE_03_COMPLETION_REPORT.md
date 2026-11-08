@@ -48,7 +48,7 @@ M01-03 (channel enable / disable stays a host allow-list), M01-14 (reliability n
 
 **Decision: Stage 03 is NOT COMPLETE.** G-19 is closed and verified. Still open and not implied by the green CI: G-37, G-38, real-message classifier accuracy (M02-15), real channel reliability and outcome validation, historical future-data-leakage verification, historical / channel-performance / playbook read APIs, Stage 09 UI integration.
 
-## Closure pass (local, unpushed, not yet CI-verified)
+## Closure pass (CI-verified for the backend and frontend items listed below)
 Status vocabulary: IMPLEMENTED = code and local tests exist; VERIFIED = proven in CI or on real data.
 - **Read APIs (IMPLEMENTED):** `GET /intelligence/claims/:id/historical-matches`, `/intelligence/channels/:id/performance`, `/intelligence/playbooks`, `/intelligence/playbooks/:id`, `/intelligence/archive/channels`. Session-authenticated with shared permissions, read-only, bounded limit/offset, masked channel ids, fixed error codes, honest UNAVAILABLE / NOT_AVAILABLE / EMPTY states. Unit tests pass locally; the PostgreSQL integration test `strategyReads.test.ts` is CI-only (no local Postgres) and not yet run.
 - **Historical temporal integrity (IMPLEMENTED, unit-tested):** matcher excludes future cases, own-message revisions and duplicates, and demotes outcomes not yet known at decision time to UNRESOLVED (16 deterministic tests). **Limitation:** archive cases are assumed available at message time plus resolution time (import time ignored); archived cases carry no setup/regime, so the default coverage floor yields mostly NO_COMPARABLE_CASES. No real-data leakage guarantee is claimed; the requirement stays open.
@@ -58,4 +58,23 @@ Status vocabulary: IMPLEMENTED = code and local tests exist; VERIFIED = proven i
 - **Frontend (IMPLEMENTED, local):** twins-frontend branch `feat/stage03-frontend` (d8bc20b): typed contracts, NEEDS_SESSION registry entries (LIVE shows sign-in required, no login BFF exists), DEMO fixtures, pipeline card, historical-matches card, playbooks and channel-strategy pages. Typecheck, 70 tests, build and bundle check pass. Desktop/mobile visual verification was not performed.
 
 **Decision: Stage 03 remains NOT COMPLETE.**
+
+### Closure CI evidence
+- Backend `6951c0a`: run 42527794649 FAILED on two `strategyReads` assertions: a test-helper default parameter turned `undefined` into the session token, so the unauthenticated checks ran authenticated (an application defect was ruled out: unit tests prove 401 without a token, with the shared service key, and with a malformed token). Fix `67dee94` changes only the helper and two call sites; no assertion was weakened.
+- Backend `67dee94`: https://github.com/theja-36/twins/actions/runs/42528709453: static, unit Node 20 and 22 (239 files / 3,962 tests each), integration Node 20 and 22 on PostgreSQL 16 + Redis 7 (81 files passed, 2 skipped; 1,086 tests passed, 4 skipped), crash recovery, ci-gate all success. Migration 0043 applied; `strategyReads.test.ts` 13 of 13 passed on both Node versions. The Vitest worker timeout seen once locally under load did not occur in any CI job.
+- Frontend: run 42530425464 (`d67ef74`): build job and the new dedicated e2e job green; 21 of 21 Playwright tests passed in 37 s on Chromium 158 (installed in CI), report artifact uploaded. Run 42531055911 (`9abf640`) adds the live-build suite (37 tests).
+- Browser verification is of a DEMO build plus a non-demo build with no backend; it does not exercise a real authenticated session (the web app has none) and is not an accessibility certification.
+
+### Requirement states changed in this pass
+M07-06 and M06-39 -> VERIFIED (evidence in tracker). M03-03 and M03-06 stay IMPLEMENTED: leakage is unit-tested and the as-of read is integration-tested on synthetic data only. M02-15 stays IN_PROGRESS (needs real labelled messages). M01-14 (channel reliability) stays open (G-30: no resolved real outcomes).
+
+### Open blockers (exact)
+| Item | Needs |
+|---|---|
+| M02-15 classifier accuracy | approved real channel messages with human labels (data + approval) |
+| M01-14 / channel reliability | resolved real outcomes linked to live channels (data; Stage 10 integrations) |
+| G-37 entry semantics | product decision, see `STAGE_03_G37_DECISION_BRIEF.md` |
+| G-38 contract master | approved authoritative instrument master source (data + approval) |
+| Historical leakage on real data | real archive import with ingestion timestamps (approval) |
+| Frontend LIVE reads | a user login / session BFF in the web app (not in Stage 03 scope) |
 

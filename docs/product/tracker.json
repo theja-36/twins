@@ -942,7 +942,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Revision-aware matching and candidacy (SUPERSEDED_REVISION) covered by temporalIntegrity, adversarial and stage03 integration tests (https://github.com/theja-36/twins/actions/runs/42528709453)"
    ],
    "blockers": []
   },
@@ -1012,7 +1013,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
-    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)",
+    "Temporal integrity: tests/unit/historical/temporalIntegrity.test.ts (16) and as-of integration test in strategyReads.test.ts pass (https://github.com/theja-36/twins/actions/runs/42528709453). NOT VERIFIED on real data: archive availability assumed at message time + resolution time; archived cases lack setup/regime so default coverage mostly yields NO_COMPARABLE_CASES"
    ],
    "blockers": []
   },
@@ -2779,10 +2781,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
     "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)",
-    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)",
+    "GET /intelligence/playbooks/:id returns versions with audited state events; tests/integration/telegram/strategyReads.test.ts, 13 tests, https://github.com/theja-36/twins/actions/runs/42528709453"
    ],
    "blockers": []
   },
@@ -2951,10 +2954,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
     "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)",
-    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)",
+    "Migration 0043 trigger twins_playbook_version_guard (immutable content, legal transitions, ACTIVE needs sample >= 30) exercised by tests/integration/telegram/strategyReads.test.ts on PostgreSQL 16, Node 20 and 22: https://github.com/theja-36/twins/actions/runs/42528709453 (67dee94)"
    ],
    "blockers": []
   },
@@ -6486,7 +6490,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: Simulated order placement.",
+   "feature": "Mode A — Paper Trading: Simulated order placement.",
    "existing": "packages/paper (off by default) | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6518,7 +6522,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: Simulated fills.",
+   "feature": "Mode A — Paper Trading: Simulated fills.",
    "existing": "packages/paper manager | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6549,7 +6553,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: Simulated trade lifecycle.",
+   "feature": "Mode A — Paper Trading: Simulated trade lifecycle.",
    "existing": "paper_trade_events | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6581,7 +6585,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: P&L calculation.",
+   "feature": "Mode A — Paper Trading: P&L calculation.",
    "existing": "packages/paper/src/pnl.ts | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6612,7 +6616,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: Trade history.",
+   "feature": "Mode A — Paper Trading: Trade history.",
    "existing": "paper_outcomes; GET /paper/outcomes | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6643,7 +6647,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode A \u2014 Paper Trading: No real money.",
+   "feature": "Mode A — Paper Trading: No real money.",
    "existing": "LIVE_TRADING guard; paper never calls a broker | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
@@ -6674,7 +6678,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode B \u2014 Assisted Live: User reviews the proposed order.",
+   "feature": "Mode B — Assisted Live: User reviews the proposed order.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6694,7 +6698,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode B \u2014 Assisted Live: User explicitly confirms each live order.",
+   "feature": "Mode B — Assisted Live: User explicitly confirms each live order.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6714,7 +6718,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode B \u2014 Assisted Live: System rechecks risk and eligibility.",
+   "feature": "Mode B — Assisted Live: System rechecks risk and eligibility.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6734,7 +6738,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode B \u2014 Assisted Live: Broker adapter executes only after valid authorisation.",
+   "feature": "Mode B — Assisted Live: Broker adapter executes only after valid authorisation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6754,7 +6758,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode B \u2014 Assisted Live: Order and fill status are reconciled.",
+   "feature": "Mode B — Assisted Live: Order and fill status are reconciled.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6774,7 +6778,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Explicitly authorised automation.",
+   "feature": "Mode C — Controlled Auto: Explicitly authorised automation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6794,7 +6798,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Pre-approved strategy and risk policy.",
+   "feature": "Mode C — Controlled Auto: Pre-approved strategy and risk policy.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6814,7 +6818,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Strict capital and quantity limits.",
+   "feature": "Mode C — Controlled Auto: Strict capital and quantity limits.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6834,7 +6838,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Kill switches.",
+   "feature": "Mode C — Controlled Auto: Kill switches.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6854,7 +6858,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Order monitoring.",
+   "feature": "Mode C — Controlled Auto: Order monitoring.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6874,7 +6878,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Emergency stop.",
+   "feature": "Mode C — Controlled Auto: Emergency stop.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -6894,7 +6898,7 @@
    "module": "M13",
    "moduleName": "Human Approval & Execution",
    "area": "Three execution modes",
-   "feature": "Mode C \u2014 Controlled Auto: Complete audit trail.",
+   "feature": "Mode C — Controlled Auto: Complete audit trail.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [],
@@ -9985,7 +9989,8 @@
    "status": "IN_PROGRESS",
    "evidence": [],
    "blockers": [
-    "owner go to read staging messages for labelling"
+    "owner go to read staging messages for labelling",
+    "Needs approved real channel messages with human labels; synthetic adversarial tests (tests/unit/telegramCandidates/adversarial.test.ts) are NOT accuracy evidence"
    ]
   },
   {
