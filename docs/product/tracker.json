@@ -749,7 +749,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured",
+    "CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text)"
    ],
    "blockers": []
   },
@@ -774,7 +775,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured",
+    "CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text)"
    ],
    "blockers": []
   },
@@ -799,7 +801,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured",
+    "CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text)"
    ],
    "blockers": []
   },
@@ -824,7 +827,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured",
+    "CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text)"
    ],
    "blockers": []
   },
@@ -849,7 +853,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured"
+    "tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured",
+    "CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text)"
    ],
    "blockers": []
   },
@@ -972,16 +977,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Similar signal matching.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "matchSimilar: weighted per-dimension comparison; unknown never matches; leakage control (no future, no self); deterministic ranking",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1014,16 +1023,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Setup similarity analysis.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "setup dimension (BREAKOUT/REVERSAL/...) and horizon, entry type, stop distance, reward-to-risk in the similarity weights",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1032,16 +1045,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Market-regime matching.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "regime dimension in matchSimilar (value comes from market_regimes, Stage 04); unknown regime lowers coverage, never matches",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1050,16 +1067,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Volatility matching.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "volatility dimension in matchSimilar (value from market_regimes.volatility_regime); same unknown rule",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1068,16 +1089,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Time-of-day matching.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "timeOfDay dimension in matchSimilar (buckets from the pattern features / classification session bucket)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1086,16 +1111,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Historical outcome matching.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "aggregateOutcomes: wins, losses, breakeven, unresolved, win rate with Wilson interval, average R; INSUFFICIENT_EVIDENCE under 30 resolved; NO_COMPARABLE_CASES reported as missing evidence",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {
@@ -1104,16 +1133,20 @@
    "moduleName": "Evidence Ledger & Historical Pattern Intelligence",
    "area": "Required functionality",
    "feature": "Evidence completeness checks.",
-   "existing": "none identified in the Phase 00 audit",
+   "existing": "checkEvidenceCompleteness for RESEARCH and DECISION stages: missing, stale and fixture-backed evidence all block completeness; future-dated evidence ignored",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/similarity"
+   ],
    "database": [],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+   ],
    "blockers": []
   },
   {

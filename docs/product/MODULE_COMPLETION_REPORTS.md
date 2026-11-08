@@ -21,7 +21,12 @@
 - Findings CI produced: (1) composite foreign keys were emitted before their referenced unique indexes, so the migration failed on first run; fixed by ordering in `scripts/product/append-0033.py` and pinned by a test. (2) The CI connection is a superuser and bypasses RLS even when forced, so the RLS test now uses an unprivileged role.
 - Still open: row policies for orders/fills/positions (Stage 07); services that use these tables (later stages).
 
-## Stage 03 item 1 — Signal classification and context reconstruction (Module 02): IMPLEMENTED, CI pending
+## Stage 03 item 1 — Signal classification and context reconstruction (Module 02): IMPLEMENTED, CI green (run 42446377229)
 - `packages/signals/src/classification`: `classifySignal` (signal type, horizon, setup, descriptive risk band, entry condition, exit pattern, structure validity with issue codes, completeness score, evidence codes), `reconstructContext` (IST session bucket, days to expiry with the year assumed and flagged, stop and target distance, reward-to-risk), `storeClassification` (append-only, idempotent per claim and version), `loadPendingClaims` and `classifyBatch`. CLI: `scripts/ops/classify-claims.ts` (counts only; not installed, not wired into live intake).
 - Rules kept: fixed whole-word cues only, no model; conflicting cues report a conflict and resolve to UNKNOWN/OTHER; message text is never stored or returned; a missing stop is UNKNOWN risk, not aggressive; the completeness score is not a probability.
 - Limits: breakout/reversal/momentum/gap/scalp are cue-based. Structure-based detection needs market data (Stages 04-05). Accuracy on real channel messages has not been measured.
+
+## Stage 03 item 2 — Evidence ledger and historical pattern intelligence (Module 03): IMPLEMENTED (pure logic)
+- Already existing and preserved: immutable messages, edit/delete events, revisions, evidence references, historical import, offline pattern library.
+- Added `packages/historical/src/similarity`: `matchSimilar` (weighted comparison over instrument, setup, horizon, time of day, expiry proximity, entry type, stop distance, reward-to-risk, regime, volatility; unknown is never a match and only lowers coverage; no future cases, no self), `aggregateOutcomes` (Wilson interval, INSUFFICIENT_EVIDENCE under 30 resolved, no comparable case reported as missing evidence), `checkEvidenceCompleteness` (research and decision stages; missing, stale and fixture-backed evidence all block).
+- Not done: a loader that turns imported outcome labels into cases, and real data (history import needs a separate owner go). Regime and volatility dimensions fill in once market regimes exist (Stage 04).

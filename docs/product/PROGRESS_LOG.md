@@ -9,3 +9,4 @@
 - Pre-push review: `tsc -b` clean (forced rebuild). Migration 0033 reviewed and hardened (see DATABASE_CHANGE_LOG). QUALIFIED-producer proof test added.
 - Stage 02 VERIFIED in CI (run 42445765317). Starting Stage 03.
 - Stage 03 item 1 (Module 02): rule-based classifier, context reconstruction, idempotent storage, owner-run backfill CLI (not wired into live intake). 21 unit tests + 2 integration tests written; accuracy on real messages unmeasured.
+- Stage 03 item 2 (Module 03): similar-signal matcher, outcome aggregation, evidence completeness check (pure, 17 unit tests). History loader and real cases pending.

@@ -14,3 +14,4 @@ export * from "./patterns/index";
 export * from "./intelligence/index";
 export * from "./archiveProfile";
 export * from "./captureExport";
+export * from "./similarity";
