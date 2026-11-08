@@ -7302,7 +7302,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no predicted-versus-actual summary view yet beyond calibration bins and the stored fields; no real-price outcomes exist (G-20, G-29)"
@@ -7333,7 +7334,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "MAE / MFE are not recorded, so 'why' is limited to the exit reason and rule behaviour"
@@ -7364,7 +7366,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "Telegram-originated candidates do not exist yet (G-19), so channel outcomes are empty; duplicate and stale analysis unavailable"
@@ -7394,7 +7397,8 @@
    "stage": "08",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "comparable-pattern listing missing (G-27); historical provider not wired (G-23)"
@@ -7425,7 +7429,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "figures rest on fixture-backed paper outcomes: not validated performance"
@@ -7456,7 +7461,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no valid non-fixture outcomes exist, so nothing is or can be calibrated (G-24 stays open)"
@@ -7486,7 +7492,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7513,7 +7520,8 @@
    "stage": "08",
    "status": "NOT_STARTED",
    "evidence": [
-    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "MAE / MFE and reference prices are not recorded for paper fills; listed as missing on every outcome and as a research area"
@@ -7544,7 +7552,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no MAE / MFE, so 'was the stop too tight / wide' cannot be judged"
@@ -7575,7 +7584,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "no MFE, so 'was the target too near / far' cannot be judged"
@@ -7606,7 +7616,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -7634,7 +7645,8 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "estimates need later price bars from an OHLC provider; none is wired in the worker (G-20); verdict accuracy is not claimed"
@@ -7665,7 +7677,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "playbook version attribution is null (no playbook is bound to independent candidates; Telegram candidates do not exist, G-19)"
@@ -7695,7 +7708,8 @@
    "stage": "08",
    "status": "IN_PROGRESS",
    "evidence": [
-    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": [
     "automatic adjustment is intentionally not implemented; any change must go through learning_versions with its own evaluation and activation controls"
@@ -7725,7 +7739,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -10634,7 +10649,8 @@
    ],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10658,7 +10674,8 @@
    ],
    "database": [],
    "evidence": [
-    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10684,7 +10701,8 @@
    ],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10710,7 +10728,8 @@
    ],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10734,7 +10753,8 @@
    ],
    "database": [],
    "evidence": [
-    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   },
   {
@@ -10759,7 +10779,8 @@
    "database": [],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (52 tests, local)",
-    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
+    "CI green on 61ab9d8 (run 42473777077): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ]
   }
  ]
