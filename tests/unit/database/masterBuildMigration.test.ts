@@ -55,6 +55,18 @@ describe("migration 0033 review hardening", () => {
     expect(sql).toMatch(/CONSTRAINT "trade_outcomes_order_fk" FOREIGN KEY \("order_id","account_id"\) REFERENCES "public"."orders"\("id","account_id"\)/);
     expect(sql).toContain('CREATE UNIQUE INDEX "orders_id_account_unique" ON "orders" USING btree ("id","account_id")');
   });
+  it("each unique index that a composite foreign key references is created BEFORE the first foreign key (Postgres refuses the key otherwise; found by CI)", () => {
+    const parts = sql.split("--> statement-breakpoint\n");
+    const firstFk = parts.findIndex((x) => x.includes("FOREIGN KEY"));
+    for (const n of ["accounts_id_user_unique", "orders_id_account_unique", "risk_assessments_id_user_unique", "simulations_id_user_unique", "user_decisions_id_user_unique"]) {
+      const at = parts.findIndex((x) => x.includes(`INDEX "${n}"`)); expect(at, n).toBeGreaterThan(-1); expect(at, n).toBeLessThan(firstFk);
+    }
+    // and every referenced table exists before an index on it is created
+    const created = parts.map((x, i) => [i, /CREATE TABLE "([a-z_]+)"/.exec(x)?.[1]] as const).filter(([, t]) => t);
+    for (const [n, table] of [["risk_assessments_id_user_unique", "risk_assessments"], ["simulations_id_user_unique", "simulations"], ["user_decisions_id_user_unique", "user_decisions"]] as const) {
+      expect(created.find(([, t]) => t === table)?.[0] ?? 999, n).toBeLessThan(parts.findIndex((x) => x.includes(`INDEX "${n}"`)));
+    }
+  });
   it("no identifier exceeds Postgres's 63-byte limit (longer names are silently truncated)", () => {
     const ids = new Set([...sql.matchAll(/(?:CONSTRAINT|INDEX|TRIGGER|POLICY) "([a-z0-9_]+)"/g)].map((m) => m[1] as string));
     expect([...ids].filter((i) => Buffer.byteLength(i) > 63)).toEqual([]);

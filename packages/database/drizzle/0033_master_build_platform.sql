@@ -383,6 +383,11 @@ CREATE TABLE "performance_snapshots" (
 );
 --> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "role" text DEFAULT 'TRADER' NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "risk_assessments_id_user_unique" ON "risk_assessments" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "simulations_id_user_unique" ON "simulations" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_decisions_id_user_unique" ON "user_decisions" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "accounts_id_user_unique" ON "accounts" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "orders_id_account_unique" ON "orders" USING btree ("id","account_id");--> statement-breakpoint
 ALTER TABLE "user_capital_profiles" ADD CONSTRAINT "user_capital_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_capital_profiles" ADD CONSTRAINT "user_capital_profiles_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_execution_permissions" ADD CONSTRAINT "user_execution_permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -445,21 +450,16 @@ CREATE UNIQUE INDEX "strategy_playbooks_source_name_unique" ON "strategy_playboo
 CREATE UNIQUE INDEX "strategy_playbooks_independent_name_unique" ON "strategy_playbooks" USING btree ("name") WHERE "strategy_playbooks"."telegram_source_id" is null;--> statement-breakpoint
 CREATE UNIQUE INDEX "confidence_assessments_candidate_model_unique" ON "confidence_assessments" USING btree ("candidate_id","model_version");--> statement-breakpoint
 CREATE INDEX "risk_assessments_user_candidate_idx" ON "risk_assessments" USING btree ("user_id","candidate_id","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "risk_assessments_id_user_unique" ON "risk_assessments" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "simulations_user_candidate_idx" ON "simulations" USING btree ("user_id","candidate_id","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "simulations_id_user_unique" ON "simulations" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "trade_monitoring_events_user_idx" ON "trade_monitoring_events" USING btree ("user_id","at");--> statement-breakpoint
 CREATE INDEX "trade_outcomes_user_idx" ON "trade_outcomes" USING btree ("user_id","mode","closed_at");--> statement-breakpoint
 CREATE INDEX "user_decision_events_decision_idx" ON "user_decision_events" USING btree ("decision_id","at");--> statement-breakpoint
 CREATE INDEX "user_decision_events_user_idx" ON "user_decision_events" USING btree ("user_id","at");--> statement-breakpoint
-CREATE UNIQUE INDEX "user_decisions_id_user_unique" ON "user_decisions" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "user_decisions_user_idx" ON "user_decisions" USING btree ("user_id","workflow_state","valid_until");--> statement-breakpoint
 CREATE INDEX "user_decisions_candidate_idx" ON "user_decisions" USING btree ("candidate_id");--> statement-breakpoint
 CREATE INDEX "learning_version_events_version_idx" ON "learning_version_events" USING btree ("learning_version_id","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "learning_versions_unique" ON "learning_versions" USING btree ("kind","subject_id","version");--> statement-breakpoint
 CREATE INDEX "performance_snapshots_scope_idx" ON "performance_snapshots" USING btree ("scope","scope_id","mode","period_end");--> statement-breakpoint
-CREATE UNIQUE INDEX "accounts_id_user_unique" ON "accounts" USING btree ("id","user_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "orders_id_account_unique" ON "orders" USING btree ("id","account_id");--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_check" CHECK ("users"."role" in ('ADMIN', 'TRADER'));
 --> statement-breakpoint
 -- HAND-APPENDED (Master Build Stage 02, ADR-002/003/008/011/012). Append-only evidence tables reject UPDATE / DELETE / TRUNCATE through the existing twins_audit_forbid_change() function; the trigger names end in _no_update_delete so infrastructure/staging/app-role.sql grants the runtime role SELECT and INSERT only.

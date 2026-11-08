@@ -4,6 +4,15 @@ Regenerate flow (migration not yet applied anywhere): remove 0033 files + journa
 import sys
 p = "packages/database/drizzle/0033_master_build_platform.sql"; s = open(p).read().rstrip("\n")
 if "HAND-APPENDED (Master Build" in s: sys.exit("already appended")
+# drizzle-kit writes every CREATE INDEX after the foreign keys, but a composite foreign key needs its referenced UNIQUE index to exist first (Postgres: "no unique constraint matching given keys"). Move those unique indexes ahead of the first foreign key.
+REFERENCED = ["accounts_id_user_unique", "orders_id_account_unique", "risk_assessments_id_user_unique", "simulations_id_user_unique", "user_decisions_id_user_unique"]
+BP = "--> statement-breakpoint\n"
+parts = s.split(BP)
+moved = [x for x in parts if any(f'INDEX "{n}"' in x for n in REFERENCED)]
+assert len(moved) == len(REFERENCED), "referenced unique indexes not found"
+rest = [x for x in parts if x not in moved]
+first_fk = next(i for i, x in enumerate(rest) if "FOREIGN KEY" in x)
+s = BP.join(rest[:first_fk] + moved + rest[first_fk:]).rstrip("\n")
 APPEND = ["user_capital_profiles", "user_risk_policies", "risk_assessments", "simulations", "user_decision_events", "trade_monitoring_events", "trade_outcomes", "strategy_drift_events", "learning_version_events", "signal_classifications", "market_regimes", "confidence_assessments", "confidence_calibration_runs", "counterfactual_reviews", "research_packages", "performance_snapshots"]
 RLS = ["user_capital_profiles", "user_risk_policies", "user_execution_permissions", "risk_assessments", "simulations", "user_decisions", "user_decision_events", "trade_monitoring_events", "trade_outcomes"]
 CUR = "nullif(current_setting('twins.user_id', true), '')::uuid"
