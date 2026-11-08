@@ -6785,9 +6785,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Independent market scanning.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: universe + eligibility, idempotent per-slot scans, explicit skip reasons, honest FAILED when nothing is scannable",
+   "packages": [
+    "packages/opportunity/src/scan.ts",
+    "packages/opportunity/src/config.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6797,9 +6800,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "data is file/in-memory only: no live market-data provider exists (G-20); scans are labelled FIXTURE unless the operator declares otherwise"
+   ]
   },
   {
    "id": "M16-02",
@@ -6807,9 +6815,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Pattern detection.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: breakout/breakdown/pullback (existing generator) + new reversal and momentum rules; each with a protective stop and invalidation level",
+   "packages": [
+    "packages/opportunity/src/setups.ts",
+    "packages/signals/src/independent.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6819,9 +6830,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
+   "blockers": [
+    "rules are not backtested or calibrated; pattern quality on real data is unmeasured"
+   ]
   },
   {
    "id": "M16-03",
@@ -6829,9 +6844,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Market-regime analysis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: scan consumes a RegimeProvider: HIGH_VOLATILITY / RISK_OFF suppress candidates; unknown or stale regime is recorded as missing evidence",
+   "packages": [
+    "packages/opportunity/src/scan.ts",
+    "packages/opportunity/src/rank.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6841,9 +6859,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
+   "blockers": [
+    "no live regime source (G-16): the worker wires no regime provider, so rankings record the regime as missing"
+   ]
   },
   {
    "id": "M16-04",
@@ -6851,9 +6873,11 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Technical setup detection.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: trend (fast/slow MA), swing structure, RSI band, resampled multi-timeframe trend",
+   "packages": [
+    "packages/opportunity/src/setups.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6863,8 +6887,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -6873,9 +6899,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Price-action confluence.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: candle-pattern reversals at swing extremes, higher-timeframe confluence, same-bar setup agreement in the rank",
+   "packages": [
+    "packages/opportunity/src/setups.ts",
+    "packages/opportunity/src/rank.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6885,8 +6914,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -6895,9 +6926,11 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Macro and calendar analysis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: event risk and index agreement come from the regime object; calendar and macro agents evaluate every candidate in the common research path",
+   "packages": [
+    "packages/opportunity/src/rank.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6907,9 +6940,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
+   "blockers": [
+    "the scan itself has no calendar/macro provider; both are only reached during research, and no provider data is wired (G-16/G-20)"
+   ]
   },
   {
    "id": "M16-07",
@@ -6917,9 +6954,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Historical pattern matching.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: independent candidates are researched by the historical-pattern agent through the common path",
+   "packages": [
+    "packages/agents/src/research/run.ts",
+    "packages/opportunity/src/cycle.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6929,9 +6969,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no historical pattern/outcome provider is wired in the worker, so that agent reports UNAVAILABLE"
+   ]
   },
   {
    "id": "M16-08",
@@ -6939,9 +6983,11 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Risk-to-reward screening.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: every setup has a stop, an R-multiple target ladder (1R/2R/3R) and a recorded risk per unit",
+   "packages": [
+    "packages/opportunity/src/setups.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6951,9 +6997,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
+   "blockers": [
+    "targets are R multiples by construction; there is no separate reward:risk screen against structure levels, and the stop is unvalidated until Stage 07"
+   ]
   },
   {
    "id": "M16-09",
@@ -6961,9 +7011,13 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Candidate generation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: candidate drafts in the common opportunity_candidates shape with invalidation, evidence, provenance, expiry and a dedupe key",
+   "packages": [
+    "packages/opportunity/src/candidate.ts",
+    "packages/opportunity/src/cycle.ts",
+    "packages/database/src/stores/opportunityStore.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6973,8 +7027,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -6983,9 +7040,11 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Candidate ranking.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: deterministic explainable rank (rank-model v1): factors with points, missing evidence scored zero and listed, confidence null",
+   "packages": [
+    "packages/opportunity/src/rank.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -6995,8 +7054,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -7005,9 +7066,11 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Opportunity evidence creation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: setup, rank, stop-loss (validated:false) and provenance evidence stored on each candidate",
+   "packages": [
+    "packages/opportunity/src/candidate.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -7017,8 +7080,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -7027,9 +7093,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Candidate expiry.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: per-candidate expiry (TTL) enforced by the dispatcher and by a database check; expired candidates end with a recorded reason",
+   "packages": [
+    "packages/opportunity/src/dispatch.ts",
+    "packages/database/src/stores/opportunityStore.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -7039,8 +7108,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -7049,9 +7121,12 @@
    "moduleName": "Independent Opportunity Engine",
    "area": "Required functionality",
    "feature": "Revalidation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "existing": "reuses signals/independent.ts, agents (OHLC providers, swings/RSI/patterns, regime, research runner); tables from migration 0033; migration 0036 extends them",
+   "change": "Stage 05: revalidation against the latest price: VALID / INVALIDATED (stop or target hit) / EXPIRED / UNVERIFIABLE (never refreshes)",
+   "packages": [
+    "packages/opportunity/src/lifecycle.ts",
+    "packages/opportunity/src/cycle.ts"
+   ],
    "database": [
     "opportunity_scans",
     "opportunity_candidates",
@@ -7061,9 +7136,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no live price source (G-20); the worker reads the last-price file snapshot"
+   ]
   },
   {
    "id": "MU-01",
@@ -8999,6 +9079,137 @@
     "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
+  },
+  {
+   "id": "M16-14",
+   "module": "M16",
+   "moduleName": "Independent Opportunity Engine",
+   "area": "Stage 05 additions",
+   "stage": "05",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "feature": "Candidate lifecycle: NEW > IN_RESEARCH > READY_FOR_DECISION and EXPIRED / INVALIDATED / SUPERSEDED / WITHDRAWN, enforced in the database (immutable thesis, legal transitions, reasons, successor, automatic history); migration 0036",
+   "existing": "Stage 05",
+   "change": "Stage 05",
+   "packages": [
+    "packages/database/drizzle/0036_opportunity_engine.sql",
+    "scripts/product/append-0036.py",
+    "packages/opportunity/src/lifecycle.ts"
+   ],
+   "database": [
+    "opportunity_candidates",
+    "opportunity_candidate_events",
+    "opportunity_scans"
+   ],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M16-15",
+   "module": "M16",
+   "moduleName": "Independent Opportunity Engine",
+   "area": "Stage 05 additions",
+   "stage": "05",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "feature": "Research dispatch: source-agnostic atomic claim (SKIP LOCKED), bounded retries, lease recovery, safety-refusal stop; resolves the dispatch half of G-17",
+   "existing": "Stage 05",
+   "change": "Stage 05",
+   "packages": [
+    "packages/opportunity/src/dispatch.ts",
+    "packages/opportunity/src/cycle.ts",
+    "packages/database/src/stores/opportunityStore.ts"
+   ],
+   "database": [
+    "opportunity_candidates",
+    "research_packages"
+   ],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M16-16",
+   "module": "M16",
+   "moduleName": "Independent Opportunity Engine",
+   "area": "Stage 05 additions",
+   "stage": "05",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "feature": "Worker and scheduler: one idempotent opportunity_queue job per cron slot; OFF by default; scheduler job effect research_intake (intake control + kill switch, fail closed)",
+   "existing": "Stage 05",
+   "change": "Stage 05",
+   "packages": [
+    "services/scheduler/src/index.ts",
+    "services/scheduler/src/scheduledJob.ts",
+    "services/worker/src/index.ts"
+   ],
+   "database": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/lifecycle.test.ts (boundaries; local)",
+    "worker/scheduler run only with Redis: exercised by the cycle integration test, not by a queue test"
+   ]
+  },
+  {
+   "id": "M16-17",
+   "module": "M16",
+   "moduleName": "Independent Opportunity Engine",
+   "area": "Stage 05 additions",
+   "stage": "05",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "feature": "Independence and safety boundary: the engine imports no Telegram, broker, network or approval code, creates research candidates only, and writes the database only through stores",
+   "existing": "Stage 05",
+   "change": "Stage 05",
+   "packages": [
+    "packages/opportunity/src/index.ts"
+   ],
+   "database": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)"
+   ]
+  },
+  {
+   "id": "M16-18",
+   "module": "M16",
+   "moduleName": "Independent Opportunity Engine",
+   "area": "Stage 05 additions",
+   "stage": "05",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "feature": "Duplicate suppression: setup-identity dedupe key (unique), supersession of older active setups of the same instrument/side, slot-keyed scans",
+   "existing": "Stage 05",
+   "change": "Stage 05",
+   "packages": [
+    "packages/opportunity/src/candidate.ts",
+    "packages/database/src/stores/opportunityStore.ts"
+   ],
+   "database": [
+    "opportunity_candidates",
+    "opportunity_scans"
+   ],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
+    "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI pending)"
+   ]
   }
  ]
 }

@@ -16,6 +16,7 @@
     "ioredis": "^5.11.1",
     "node-cron": "^4.6.0",
     "@twins/database": "*",
+    "@twins/opportunity": "*",
     "@twins/risk": "*",
     "@twins/alerting": "*",
     "@twins/shared": "*"

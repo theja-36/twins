@@ -29,6 +29,7 @@
     "@twins/alerting": "*",
     "@twins/paper": "*",
     "@twins/providers": "*",
+    "@twins/opportunity": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {

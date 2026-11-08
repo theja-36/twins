@@ -23,6 +23,9 @@
       "path": "../../packages/risk"
     },
     {
+      "path": "../../packages/opportunity"
+    },
+    {
       "path": "../../packages/alerting"
     },
     {

@@ -15,6 +15,7 @@
     { "path": "packages/providers" },
     { "path": "packages/historical" },
     { "path": "packages/agents" },
+    { "path": "packages/opportunity" },
     { "path": "packages/stop-loss" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },

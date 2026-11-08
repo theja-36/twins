@@ -33,6 +33,7 @@ import { createBoundedDb } from "@twins/database";
 import { alerterFromEnv } from "@twins/alerting";
 import { createStructuredLogger } from "@twins/shared";
 import { breakerAlert, evaluateCircuitBreakers, expireStaleRiskDecisions, loadBreakerConfig, loadExpiryConfig, loadSizingConfig } from "@twins/risk";
+import { loadOpportunityConfig } from "@twins/opportunity";
 import { runScheduledJob } from "./scheduledJob.js";
 
 enforceLiveTradingGuard("scheduler");
@@ -186,12 +187,32 @@ if (riskDb) {
   console.log(`[scheduler] risk housekeeping: expiry "${expiryCron}", circuit breakers "${breakerCron}"`);
 }
 
+// ─── Independent Opportunity Engine (Stage 05) ──────────────────────────────
+// Enqueues ONE cycle job per cron slot (scan -> revalidate -> research). OFF unless TWINS_OPPORTUNITY_ENABLED=true; the slot is the job id, so a double fire or a restart enqueues the same job once.
+// Creates research candidates only ("research_intake": skipped under the kill switch or while intake is off). TWINS_OPPORTUNITY_CRON (default every 15 minutes, 03:45-10:00 UTC Mon-Fri = 09:15-15:30 IST).
+const opportunityConfig = loadOpportunityConfig();
+const opportunityQueue = opportunityConfig.enabled && process.env["NODE_ENV"] !== "test" ? new Queue("opportunity_queue", { connection: redis }) : null;
+if (opportunityQueue) {
+  const oppCron = process.env["TWINS_OPPORTUNITY_CRON"] ?? "*/15 3-10 * * 1-5";
+  if (!cron.validate(oppCron)) throw new Error(`TWINS_OPPORTUNITY_CRON "${oppCron}" is not a valid cron expression.`);
+  cron.schedule(oppCron, () => {
+    void runScheduledJob({ name: "opportunity_cycle_enqueue", effect: "research_intake" }, async () => {
+      const slot = new Date(Math.floor(Date.now() / 60_000) * 60_000).toISOString().slice(0, 16) + "Z"; // minute resolution: the same fire is the same slot
+      await opportunityQueue.add("opportunity_cycle", { jobType: "opportunity_cycle", slotKey: slot }, { jobId: `opportunity-${slot}`, attempts: 3, backoff: { type: "exponential", delay: 5000 }, removeOnComplete: 500, removeOnFail: 500 });
+    }, { log: (event, fields) => console.warn(`[scheduler] ${event} ${JSON.stringify(fields)}`) }).catch((err: unknown) => {
+      console.error(`[scheduler] opportunity enqueue failed: ${err instanceof Error ? err.name : "Error"}`);
+    });
+  });
+  console.log(`[scheduler] opportunity engine: "${oppCron}" (universe ${opportunityConfig.universe.length}, data source ${opportunityConfig.dataSource})`);
+}
+
 // ─── Graceful shutdown ──────────────────────────────────────────────────────
 
 async function shutdown(signal: string): Promise<void> {
   console.log(`[scheduler] received ${signal}, shutting down gracefully`);
   try {
     await marketQueue.close();
+    await opportunityQueue?.close();
   } catch (err) {
     console.error(`[scheduler] queue close failed: ${err instanceof Error ? err.message : String(err)}`);
   }

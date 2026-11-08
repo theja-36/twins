@@ -253,6 +253,13 @@
       "when": 1794116967629,
       "tag": "0035_ai_usage_records",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794122216821,
+      "tag": "0036_opportunity_engine",
+      "breakpoints": true
     }
   ]
 }

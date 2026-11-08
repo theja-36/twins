@@ -30,6 +30,7 @@ import { recordShadowObservation } from "./shadowStore.js";
 import { loadReduceOnlyShadowFlag, loadShadowPersistFlag, runReduceOnlyShadow, type ShadowDeps, type ShadowInputs } from "./reduceOnlyShadow.js";
 import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/paper";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
+import { loadOpportunityConfig, runOpportunityCycle } from "@twins/opportunity";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
@@ -358,11 +359,15 @@ function alertMarket(log: StructuredLogger, a: MarketAlert): void {
 // Stage 5 / Task 9: a malformed configuration is logged (redacted: setting names, never values) before start-up fails; the engine's records are bounded (see observability.ts).
 const observabilityConfig = observeConfigLoad(defaultWorkerLogger, "agent-observability", () => loadObservabilityConfig());
 const agentEngineConfig = observeConfigLoad(defaultWorkerLogger, "agent-engine", () => loadAgentEngineConfig());
+// Stage 05: the Independent Opportunity Engine. DISABLED by default; a malformed setting fails start-up (fail closed). When enabled it reads the OHLC / last-price providers from the agent rules, loaded SEPARATELY below so that the production agents still exist only when the agent engine is explicitly enabled.
+const opportunityConfig = observeConfigLoad(defaultWorkerLogger, "opportunity-engine", () => loadOpportunityConfig());
 const agentRules = agentEngineConfig.enabled || agentEngineConfig.shadow ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
 const agentProviders = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-providers", () => ({ ...resolveCalendarMacroProviders(agentRules), ...resolveNewsConstituentProviders(agentRules), ...resolveOhlcProviders(agentRules), ...resolveQuoteProviders(agentRules), ...resolveHistoricalProviders(agentRules) })) : null;
 if (agentRules) logProviderAvailability(defaultWorkerLogger, observabilityConfig, { ...(agentProviders ?? {}), instrumentReference: agentReference }, { enabled: agentEngineConfig.enabled, shadow: agentEngineConfig.shadow });
+// Stage 05: provider settings for the opportunity engine (file snapshots only; nothing live exists). Independent of the agent engine's own gating.
+const opportunityProviders = opportunityConfig.enabled ? (agentProviders ?? observeConfigLoad(defaultWorkerLogger, "opportunity-providers", () => resolveOhlcProviders(loadAgentRulesConfig()))) : null;
 const agentRegistryFor = (db: Db): ReturnType<typeof createDefaultRegistry> => {
   if (!agentRules) return createDefaultRegistry();
   let r = agentRegistries.get(db);
@@ -936,6 +941,29 @@ export const marketWorker =
         },
       );
 
+// Independent Opportunity Engine (Stage 05). One job per scheduler slot: scan -> revalidate -> research. Candidates are research evidence only. The live regime source is not wired yet (G-16): the regime provider is null, so
+// rankings record the regime as missing and the Market Context agent reports UNAVAILABLE. The runtime safety state is checked inside the cycle (kill switch / intake off => the slot is skipped, not failed).
+export const opportunityWorker =
+  process.env["NODE_ENV"] === "test" || !opportunityConfig.enabled
+    ? (null as unknown as Worker<{ jobType: "opportunity_cycle"; slotKey: string }>)
+    : new Worker<{ jobType: "opportunity_cycle"; slotKey: string }>(
+        "opportunity_queue",
+        async (job) => {
+          const report = await runOpportunityCycle(job.data.slotKey, {
+            db: workerDb.db, config: opportunityConfig, ohlc: opportunityProviders?.ohlcProvider ?? null, lastPrice: opportunityProviders?.lastPriceProvider ?? null, regime: null,
+            registry: agentRegistryFor(workerDb.db), agentConfig: agentEngineConfig, log: (event, fields) => defaultWorkerLogger.info(event, fields),
+          });
+          defaultWorkerLogger.info("opportunity.cycle.done", { slotKey: report.slotKey, skipped: report.skipped, scanStatus: report.scan?.status ?? null, created: report.scan?.created ?? 0, researched: report.research?.researched ?? 0 });
+          return report;
+        },
+        { connection: createWorkerRedis(), concurrency: 1 },
+      );
+if (opportunityWorker) {
+  opportunityWorker.on("failed", (job, err) => {
+    defaultWorkerLogger.warn("worker.queue.job_failed", { queue: "opportunity_queue", jobId: job?.id, attemptsMade: job?.attemptsMade, maxAttempts: job?.opts?.attempts, ...describeErrorSafely(err) });
+  });
+}
+
 // Outbox reconciler (Stage 2 / Task 2): re-enqueues outbox rows whose Redis job was never created or was lost, and recovers rows orphaned by a dead worker.
 // It does nothing while intake is disabled or the kill switch is active. Interval / lease are configurable; defaults 10 s / 5 min.
 const positiveMs = (name: string, fallback: number): number => {
@@ -1004,6 +1032,7 @@ export async function shutdown(signal: string): Promise<void> {
   if (outboxQueue) closers.push(outboxQueue.close());
   if (signalWorker) closers.push(signalWorker.close());
   if (marketWorker) closers.push(marketWorker.close());
+  if (opportunityWorker) closers.push(opportunityWorker.close());
   for (const r of await Promise.allSettled(closers)) {
     if (r.status === "rejected") console.error(`[worker] close failed: ${String(r.reason)}`);
   }

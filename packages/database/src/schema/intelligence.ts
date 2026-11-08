@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, date, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, date, foreignKey, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { oneOf } from "./_checks";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { optionsClaims } from "./optionsClaims";
@@ -127,13 +127,21 @@ export const opportunityScans = pgTable("opportunity_scans", {
   candidateCount: integer("candidate_count").notNull().default(0),
   startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+  /** Stage 05: identifies the scheduled slot (for example 2031-01-05T09:45Z), so one slot is scanned once however many times the job is delivered. */
+  slotKey: text("slot_key"),
+  universeSize: integer("universe_size").notNull().default(0),
+  /** Underlyings that were not scanned and why (no data, stale, ineligible, malformed): a skipped instrument is recorded, never silently dropped. */
+  skipped: jsonb("skipped").notNull().default(sql`'[]'::jsonb`),
+  errorKind: text("error_kind"),
 }, (t) => ({
+  slotUnique: uniqueIndex("opportunity_scans_slot_unique").on(t.scanKind, t.slotKey),
   statusCheck: check("opportunity_scans_status_check", oneOf(t.status, ["RUNNING", "COMPLETED", "FAILED"])),
   sourceCheck: check("opportunity_scans_source_check", oneOf(t.dataSource, DATA_SOURCES)),
   countCheck: check("opportunity_scans_count_check", sql`${t.candidateCount} >= 0`),
 }));
 
-export const CANDIDATE_STATE_VALUES = ["NEW", "IN_RESEARCH", "READY_FOR_DECISION", "EXPIRED", "WITHDRAWN"] as const;
+export const CANDIDATE_STATE_VALUES = ["NEW", "IN_RESEARCH", "READY_FOR_DECISION", "EXPIRED", "WITHDRAWN", "INVALIDATED", "SUPERSEDED"] as const;
+export const CANDIDATE_TERMINAL_STATES = ["EXPIRED", "WITHDRAWN", "INVALIDATED", "SUPERSEDED"] as const;
 export const opportunityCandidates = pgTable("opportunity_candidates", {
   id: idColumn(),
   source: text("source").notNull(),
@@ -159,7 +167,20 @@ export const opportunityCandidates = pgTable("opportunity_candidates", {
   createdAt: createdAtColumn(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
   updatedAt: updatedAtColumn(),
+  /** Stage 05. Identity of the setup (underlying, setup, side, signal bar, detector version): the same setup found twice is one candidate. Null for Telegram candidates (they are unique per claim). */
+  dedupeKey: text("dedupe_key"),
+  /** The condition that voids the setup (a price beyond which the thesis is wrong). Evidence for revalidation; never an order. */
+  invalidation: jsonb("invalidation"),
+  supersededBy: uuid("superseded_by"),
+  stateReason: text("state_reason"),
+  researchAttempts: integer("research_attempts").notNull().default(0),
+  lastValidatedAt: timestamp("last_validated_at", { withTimezone: true }),
+  /** Deterministic ordering score (higher is better). A priority for review, NOT a probability and NOT permission to act. Null when not ranked. */
+  rankScore: numeric("rank_score"),
 }, (t) => ({
+  dedupeUnique: uniqueIndex("opportunity_candidates_dedupe_unique").on(t.dedupeKey),
+  supersededFk: foreignKey({ name: "opp_candidates_superseded_by_fk", columns: [t.supersededBy], foreignColumns: [t.id] }).onDelete("restrict"),
+  attemptsCheck: check("opportunity_candidates_attempts_check", sql`${t.researchAttempts} >= 0`),
   onePerClaim: uniqueIndex("opportunity_candidates_claim_unique").on(t.claimId),
   stateIdx: index("opportunity_candidates_state_idx").on(t.state, t.expiresAt),
   sourceIdx: index("opportunity_candidates_source_idx").on(t.source, t.createdAt),
@@ -171,6 +192,19 @@ export const opportunityCandidates = pgTable("opportunity_candidates", {
   entryCheck: check("opportunity_candidates_entry_check", oneOf(t.entryKind, ["above", "below", "at", "range", "market"])),
   sourceDataCheck: check("opportunity_candidates_data_source_check", oneOf(t.dataSource, DATA_SOURCES)),
   expiryCheck: check("opportunity_candidates_expiry_check", sql`${t.expiresAt} > ${t.createdAt}`),
+}));
+
+/** Append-only lifecycle history of a candidate; written by a trigger on opportunity_candidates so a state change cannot skip the audit. */
+export const opportunityCandidateEvents = pgTable("opportunity_candidate_events", {
+  id: idColumn(),
+  candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
+  fromState: text("from_state"),
+  toState: text("to_state").notNull(),
+  reason: text("reason"),
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  idx: index("opportunity_candidate_events_candidate_idx").on(t.candidateId, t.occurredAt),
+  toCheck: check("opportunity_candidate_events_to_check", oneOf(t.toState, CANDIDATE_STATE_VALUES)),
 }));
 
 export const researchPackages = pgTable("research_packages", {

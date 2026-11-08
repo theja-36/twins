@@ -46,3 +46,9 @@
 - Tests: `tests/unit/agents/{marketRegime,marketContext,research}.test.ts`, `tests/unit/ai/gateway.test.ts`, `tests/unit/database/stage04Stores.test.ts`, `tests/integration/database/stage04Stores.test.ts`.
 - Preserved: the agent contract, all 12 existing agents and their semantics, the orchestrator and `synthesize` (unchanged), the agents-package write guard.
 - Not done / limits: no hosted AI adapter (G-15); no live regime source (G-16); nothing calls the runner from the worker or from Stage 05 (G-17); candidate stop-loss validation deferred to Stage 07 (G-18). Regime accuracy is unmeasured on real data. No requirement is VERIFIED.
+
+## Stage 05 — Independent Opportunity Engine (Module 16): IMPLEMENTED in code; CI confirmation pending for migration 0036 and the real-database tests
+- Files: `packages/opportunity/src/{config,setups,rank,candidate,lifecycle,scan,dispatch,cycle}.ts`; `packages/database/drizzle/0036_opportunity_engine.sql` (+ `scripts/product/append-0036.py`); `packages/database/src/stores/opportunityStore.ts`; `services/scheduler/src/{index,scheduledJob}.ts`; `services/worker/src/index.ts`.
+- Tests: `tests/unit/opportunity/{scan,lifecycle}.test.ts` (35), `tests/integration/opportunity/engine.test.ts` (lifecycle guard, scan idempotency, dedupe/supersession, concurrent claims, retries, lease recovery, full fixture cycle, safety refusal).
+- Preserved: Telegram pipeline untouched; the agents package, its write guard and its enable-gating test; the common candidate table, research path and package builder; kill switch / intake control; no order, approval or execution code introduced.
+- Not done / limits: G-19 (no Telegram candidate materialisation), G-20 (no live data; scans are FIXTURE-labelled), G-21 (rules not backtested), G-15/G-16 unchanged (no hosted AI adapter, no live regime source: the worker wires none), G-18 unchanged (stops are unvalidated proposals). No requirement is VERIFIED; real-market accuracy is unmeasured.
