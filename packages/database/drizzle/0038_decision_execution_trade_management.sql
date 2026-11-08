@@ -128,6 +128,9 @@ CREATE TABLE "paper_positions" (
 	CONSTRAINT "paper_positions_closed_check" CHECK (("paper_positions"."status" = 'OPEN' and "paper_positions"."quantity" > 0 and "paper_positions"."closed_at" is null and "paper_positions"."exit_reason" is null) or ("paper_positions"."status" = 'CLOSED' and "paper_positions"."quantity" = 0 and "paper_positions"."closed_at" is not null and "paper_positions"."exit_reason" is not null))
 );
 --> statement-breakpoint
+CREATE UNIQUE INDEX "execution_requests_id_user_unique" ON "execution_requests" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "paper_orders_id_user_unique" ON "paper_orders" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "paper_positions_id_user_unique" ON "paper_positions" USING btree ("id","user_id");--> statement-breakpoint
 ALTER TABLE "trade_monitoring_events" DROP CONSTRAINT "trade_monitoring_events_kind_check";--> statement-breakpoint
 ALTER TABLE "trade_outcomes" DROP CONSTRAINT "trade_outcomes_source_check";--> statement-breakpoint
 ALTER TABLE "trade_outcomes" ADD COLUMN "paper_position_id" uuid;--> statement-breakpoint
@@ -162,14 +165,11 @@ CREATE UNIQUE INDEX "decision_approvals_id_user_unique" ON "decision_approvals" 
 CREATE UNIQUE INDEX "decision_invalidations_decision_unique" ON "decision_invalidations" USING btree ("decision_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "execution_requests_decision_mode_unique" ON "execution_requests" USING btree ("decision_id","mode");--> statement-breakpoint
 CREATE UNIQUE INDEX "execution_requests_key_unique" ON "execution_requests" USING btree ("user_id","idempotency_key");--> statement-breakpoint
-CREATE UNIQUE INDEX "execution_requests_id_user_unique" ON "execution_requests" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "paper_fills_order_idx" ON "paper_fills" USING btree ("order_id","filled_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "paper_orders_key_unique" ON "paper_orders" USING btree ("user_id","idempotency_key");--> statement-breakpoint
-CREATE UNIQUE INDEX "paper_orders_id_user_unique" ON "paper_orders" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "paper_orders_decision_idx" ON "paper_orders" USING btree ("decision_id","status");--> statement-breakpoint
 CREATE INDEX "paper_position_events_position_idx" ON "paper_position_events" USING btree ("position_id","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "paper_positions_decision_unique" ON "paper_positions" USING btree ("decision_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "paper_positions_id_user_unique" ON "paper_positions" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "paper_positions_open_idx" ON "paper_positions" USING btree ("status","user_id");--> statement-breakpoint
 ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_research_package_id_research_packages_id_fk" FOREIGN KEY ("research_package_id") REFERENCES "public"."research_packages"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_kind_check" CHECK ("trade_monitoring_events"."kind" in ('ENTRY_FILLED', 'STOP_HIT', 'TARGET_HIT', 'TRAIL_MOVED', 'TIME_EXIT', 'RISK_BREACH', 'PARTIAL_EXIT', 'RECONCILIATION_MISMATCH', 'PRICE_UNAVAILABLE', 'STOP_MOVED', 'EXPIRY_EXIT', 'ORDER_REJECTED', 'ALERT'));--> statement-breakpoint

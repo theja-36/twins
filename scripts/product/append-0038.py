@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Appends the hand-written part of migration 0038 (decision / approval / execution / trade-management invariants) to the drizzle-generated SQL.
 Regenerate flow (not yet applied anywhere): remove the 0038 files + journal entry, `DATABASE_URL=postgresql://x:y@localhost:5432/z drizzle-kit generate --name decision_execution_trade_management` (inside packages/database), run this script.
-Rollback: DROP the new triggers/functions (twins_*_guard, twins_create_user_decision, twins_end_user_decision, twins_invalidate_decision, twins_record_decision_approval, twins_paper_*), restore twins_user_decision_guard from 0033, drop the seven new tables and the added columns, restore the 0033 trade_outcomes source check and the 8-value monitoring kind check, delete the journal entry."""
+Referenced unique indexes are moved ahead of the foreign keys (see REFERENCED below). Rollback: DROP the new triggers/functions (twins_*_guard, twins_create_user_decision, twins_end_user_decision, twins_invalidate_decision, twins_record_decision_approval, twins_paper_*), restore twins_user_decision_guard from 0033, drop the seven new tables and the added columns, restore the 0033 trade_outcomes source check and the 8-value monitoring kind check, delete the journal entry."""
 import sys
 p = "packages/database/drizzle/0038_decision_execution_trade_management.sql"; s = open(p).read().rstrip("\n")
 if "HAND-APPENDED (Master Build" in s: sys.exit("already appended")
@@ -9,6 +9,14 @@ CUR = "nullif(current_setting('twins.user_id', true), '')::uuid"
 SEP = "\n--> statement-breakpoint\n"
 NEW = ["decision_approvals", "decision_invalidations", "execution_requests", "paper_orders", "paper_fills", "paper_positions", "paper_position_events"]
 APPEND = ["decision_approvals", "decision_invalidations", "paper_fills", "paper_position_events"]
+# Referenced unique indexes must exist before the composite foreign keys that point at them (drizzle emits the FKs first).
+REFERENCED = ["paper_orders_id_user_unique", "paper_positions_id_user_unique", "execution_requests_id_user_unique"]
+GEN = "--> statement-breakpoint\n"
+stmts = s.split(GEN)
+moved = [x for x in stmts if any(f'CREATE UNIQUE INDEX "{r}"' in x for r in REFERENCED)]
+rest = [x for x in stmts if x not in moved]
+last_table = max(i for i, x in enumerate(rest) if x.lstrip().startswith("CREATE TABLE"))
+s = GEN.join(rest[: last_table + 1] + moved + rest[last_table + 1 :]).rstrip("\n")
 o = [s]
 o.append("-- HAND-APPENDED (Master Build Stage 07, ADR-016). Owner-tied reference from a PAPER trade outcome to the paper position it closes.")
 o.append('ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_paper_position_fk" FOREIGN KEY ("paper_position_id", "user_id") REFERENCES "paper_positions"("id", "user_id") ON DELETE no action ON UPDATE no action;')
