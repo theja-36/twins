@@ -54,7 +54,7 @@ describe("G-13: role and active changes only through the doors", () => {
   it("a direct UPDATE of users.role is refused even for a role that holds UPDATE on users", async () => {
     const s = svc(), t = await s.register({ email: email(), password: PW }), c = await session(t.id);
     await expectRefused(() => c.query("update users set role = 'ADMIN' where id = $1", [t.id]), /only through twins_set_user_role/);
-    await expectRefused(() => c.query("update users set is_active = false where id = $1", [t.id]), /only through twins_set_user_active/);
+    await expectRefused(() => c.query("update users set is_active = false where id = $1", [t.id]), /change only through twins_set_user_role / twins_set_user_active/);
     const o = await owner(); expect((await o.query("select role from users where id = $1", [t.id])).rows[0].role).toBe("TRADER");
   });
   it("a direct INSERT of an ADMIN is refused; creating one needs an active administrator", async () => {

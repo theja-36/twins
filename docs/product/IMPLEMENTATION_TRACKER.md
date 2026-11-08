@@ -2,7 +2,7 @@
 
 > GENERATED from `docs/product/tracker.json` by `node scripts/product/tracker.mjs render`. Edit the JSON, never this file. Rules (enforced by `tests/unit/product/tracker.test.ts`): IMPLEMENTED and VERIFIED need evidence, BLOCKED needs a blocker, and VERIFIED is reserved for evidence gathered by the testing stage.
 
-Requirements: **421**. NOT_STARTED: 60 · IN_PROGRESS: 58 · IMPLEMENTED: 302 · BLOCKED: 0 · VERIFIED: 1
+Requirements: **421**. NOT_STARTED: 60 · IN_PROGRESS: 56 · IMPLEMENTED: 304 · BLOCKED: 0 · VERIFIED: 1
 
 ## Summary by module
 
@@ -24,9 +24,9 @@ Requirements: **421**. NOT_STARTED: 60 · IN_PROGRESS: 58 · IMPLEMENTED: 302 ·
 | M14 | Trade Management & Monitoring | 16 | 0 | 0 | 16 | 0 | 0 |
 | M15 | Outcome Learning & Performance Analytics | 21 | 1 | 7 | 13 | 0 | 0 |
 | M16 | Independent Opportunity Engine | 18 | 0 | 4 | 14 | 0 | 0 |
-| MU | Multi-user architecture (Part 4) | 20 | 4 | 15 | 1 | 0 | 0 |
+| MU | Multi-user architecture (Part 4) | 20 | 4 | 14 | 2 | 0 | 0 |
 | UI | Frontend screens (Part 5.4) | 30 | 30 | 0 | 0 | 0 | 0 |
-| PF | Platform foundation (Phase 01) | 13 | 0 | 3 | 9 | 0 | 1 |
+| PF | Platform foundation (Phase 01) | 13 | 0 | 2 | 10 | 0 | 1 |
 
 ## M01 — Signal Intelligence & Telegram Integration
 
@@ -471,7 +471,7 @@ Requirements: **421**. NOT_STARTED: 60 · IN_PROGRESS: 58 · IMPLEMENTED: 302 ·
 | ID | Area | Feature | Existing implementation | Stage | Status | Evidence | Blockers |
 |---|---|---|---|---|---|---|---|
 | MU-01 | Part 4 | Separate account | none identified in the Phase 00 audit (single shared API key; user_id only on accounts and broker_connections) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IN_PROGRESS |  |  |
-| MU-02 | Part 4 | Secure authentication | authorize()/ownerScope() + isolation tests (pure); credentials helpers; DB enforcement pending (Stage 02) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IN_PROGRESS |  |  |
+| MU-02 | Part 4 | Secure authentication | authorize()/ownerScope() + isolation tests (pure); credentials helpers; DB enforcement pending (Stage 02) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IMPLEMENTED | Stage 01 (this branch): packages/auth (scrypt, opaque hashed sessions, lockout, role doors), migration 0040, apps/api/src/authApi.ts; 34 new unit tests, full unit suite 231 files / 3,857 tests pass locally; DB doors + SQL store are covered by tests/integration/auth/stage01.test.ts which has NOT yet run (no local Postgres, G-11): VERIFIED only after CI |  |
 | MU-03 | Part 4 | Individual capital | none identified in the Phase 00 audit (single shared API key; user_id only on accounts and broker_connections) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IN_PROGRESS |  |  |
 | MU-04 | Part 4 | Individual available balance | none identified in the Phase 00 audit (single shared API key; user_id only on accounts and broker_connections) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IN_PROGRESS |  |  |
 | MU-05 | Part 4 | Individual risk percentage | none identified in the Phase 00 audit (single shared API key; user_id only on accounts and broker_connections) / schema in migration 0033 (written, not yet applied or integration-tested) | 01-02 | IN_PROGRESS |  |  |
@@ -535,7 +535,7 @@ Requirements: **421**. NOT_STARTED: 60 · IN_PROGRESS: 58 · IMPLEMENTED: 302 ·
 | P03 | Foundation | Event contracts | packages/types/src/platform/events.ts (envelope + 31 event types, user-scoping rule) | 01 | IMPLEMENTED | tests/unit/platform/contracts.test.ts + credentials.test.ts pass (local run 2026-11-08) |  |
 | P04 | Foundation | API contracts | docs/product/API_CONTRACTS.md: conventions only; per-route contracts follow each stage | 01 | IN_PROGRESS |  |  |
 | P05 | Foundation | Database ownership and relationships | ADR-002/011/012 + migration 0033 applied and integration-tested in CI + withUser helper | 01 | VERIFIED | tests/unit/database/masterBuildMigration.test.ts (static rules) pass; migration not applied (no database available locally); CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) |  |
-| P06 | Foundation | Authentication and authorisation | pure authorize()/hasPermission() + scrypt/session helpers (packages/shared/src/credentials.ts); no DB sessions, login route or middleware yet | 01 | IN_PROGRESS |  |  |
+| P06 | Foundation | Authentication and authorisation | pure authorize()/hasPermission() + scrypt/session helpers (packages/shared/src/credentials.ts); no DB sessions, login route or middleware yet | 01 | IMPLEMENTED | Stage 01 (this branch): packages/auth (scrypt, opaque hashed sessions, lockout, role doors), migration 0040, apps/api/src/authApi.ts; 34 new unit tests, full unit suite 231 files / 3,857 tests pass locally; DB doors + SQL store are covered by tests/integration/auth/stage01.test.ts which has NOT yet run (no local Postgres, G-11): VERIFIED only after CI |  |
 | P07 | Foundation | User isolation | isolation rules tested as pure functions + row-level security policies written in migration 0033 (unapplied); no route or service uses them yet | 01 | IN_PROGRESS | CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED) |  |
 | P08 | Foundation | Configuration management | packages/config + env guards | 01 | IMPLEMENTED | Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5 |  |
 | P09 | Foundation | Audit logging | audit_events + 32 hash chains + verifier | 01 | IMPLEMENTED | Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5 |  |
