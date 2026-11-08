@@ -8868,7 +8868,8 @@
    "stage": "04",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/agents/marketContext.test.ts (6 tests); registration tests updated; local run 2026-11-09. CI: see PROGRESS_LOG"
+    "tests/unit/agents/marketContext.test.ts (6 tests); registration tests updated; local run 2026-11-09. CI: see PROGRESS_LOG",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -8890,7 +8891,8 @@
    "stage": "04",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -8914,7 +8916,8 @@
    "stage": "04",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; real-database save: tests/integration/database/stage04Stores.test.ts (CI pending)"
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; real-database save: tests/integration/database/stage04Stores.test.ts (CI pending)",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -8939,7 +8942,8 @@
    "stage": "04",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; tests/integration/database/stage04Stores.test.ts (CI pending)"
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; tests/integration/database/stage04Stores.test.ts (CI pending)",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -8963,7 +8967,8 @@
    "stage": "04",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/ai/gateway.test.ts (12 tests); tests/unit/database/stage04Stores.test.ts source hygiene. No hosted adapter yet (Stage 10)"
+    "tests/unit/ai/gateway.test.ts (12 tests); tests/unit/database/stage04Stores.test.ts source hygiene. No hosted adapter yet (Stage 10)",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
    "blockers": []
   },
@@ -8988,13 +8993,12 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/database/stage04Stores.test.ts (8 tests, local); tests/integration/database/stage04Stores.test.ts against Postgres 16 (CI pending)"
+    "tests/unit/database/stage04Stores.test.ts (8 tests, local); tests/integration/database/stage04Stores.test.ts against Postgres 16 (CI pending)",
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
    ],
-   "blockers": [
-    "migration 0035 and the real-database tests are not yet confirmed by CI"
-   ]
+   "blockers": []
   }
  ]
 }
