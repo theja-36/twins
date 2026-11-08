@@ -48,7 +48,7 @@ describe("a Telegram claim becomes a candidate (G-19)", () => {
     expect(k).toMatchObject({ source: "TELEGRAM", state: "NEW", underlying: "NIFTY", exchange: "NSE", side: "BUY", option_type: "CE", entry_kind: "above", data_source: "FIXTURE", validation_status: "UNVERIFIED", candidate_version: 1, scan_id: null, dedupe_key: null });
     expect(Number(k["strike"])).toBe(24500); expect(Number(k["entry_low"])).toBe(118); expect(Number(k["stop_loss"])).toBe(96); expect(k["targets"]).toEqual([140, 165]);
     expect(k["thesis"]).toMatch(/Unverified claim, not a recommendation/); expect(k["missing_information"]).toEqual(expect.arrayContaining(["contractVerification", "expiry"]));
-    expect(k["provenance"]).toMatchObject({ source: "TELEGRAM", channelId: s, messageId: m, claimId: undefined, policyVersion: "telegram-candidacy-v1" });
+    expect(k["provenance"]).toMatchObject({ source: "TELEGRAM", channelId: s, messageId: m, claimId: c, policyVersion: "telegram-candidacy-v1" });
     expect(JSON.stringify(k["provenance"])).not.toContain("BUY NIFTY"); expect(String(k["thesis"])).not.toContain("TGT"); // no raw message text is stored
     expect(k["evidence"]).toEqual([{ kind: "telegram_claim", claimId: c, messageId: m }]);
     const a = await one("select outcome, candidate_id, policy_version from telegram_claim_candidacy where claim_id = $1", [c]); expect(a).toMatchObject({ outcome: "CREATED", candidate_id: k["id"], policy_version: "telegram-candidacy-v1" });
