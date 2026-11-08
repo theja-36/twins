@@ -12,3 +12,5 @@ Additive migrations only (ADR-008). Each entry: migration, tables, reason, reuse
 - Deploy note: the Monday runbook expects 33 migrations; this branch makes the chain 34 and is not part of that deploy.
 
 | 0034_one_active_playbook_version | 2026-11-08 | +2 partial unique indexes: one ACTIVE `playbook_versions` per playbook; one live-influencing `learning_versions` per (kind, subject) | additive, no new tables | APPLIED AND VERIFIED IN CI (run 42447431633) |
+
+| 0035_ai_usage_records | 2026-11-09 | +1 table `ai_usage_records` (one row per AI provider attempt: tokens, cost, latency, outcome, prompt id/version/sha256; no text). Append-only triggers; shared-or-owner RLS (FORCE). Rollback: `DROP TABLE "ai_usage_records"` and remove the journal entry (nothing references it) | additive; `market_regimes` and `research_packages` already existed in 0033 and are reused by the new stores | WRITTEN; applied and verified only after CI (see PROGRESS_LOG) |

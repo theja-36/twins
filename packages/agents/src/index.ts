@@ -18,3 +18,4 @@ export * from "./channelNews";
 export * from "./channelNewsFeed";
 export * from "./channelNewsSummary";
 export * from "./regime";
+export * from "./research/index";

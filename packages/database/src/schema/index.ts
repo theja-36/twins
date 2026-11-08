@@ -38,3 +38,4 @@ export * from "./userPlatform";
 export * from "./intelligence";
 export * from "./userDecisions";
 export * from "./learning";
+export * from "./aiUsage";

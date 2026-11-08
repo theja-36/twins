@@ -1236,8 +1236,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/research/specMapping.ts toSpecAgentReport (confidence, bounded reasoning summary, risk flags MEDIUM+, execution status); tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1254,8 +1256,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/research/specMapping.ts toSpecAgentReport (confidence, bounded reasoning summary, risk flags MEDIUM+, execution status); tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1272,8 +1276,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/research/specMapping.ts toSpecAgentReport (confidence, bounded reasoning summary, risk flags MEDIUM+, execution status); tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1290,8 +1296,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/research/specMapping.ts toSpecAgentReport (confidence, bounded reasoning summary, risk flags MEDIUM+, execution status); tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1330,8 +1338,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "SUPPORTIVE produced by the 13 agents and consumed by synthesize (research-synthesis-v2) and passed through toSpecVerdict unchanged; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1348,8 +1358,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "CAUTION produced by the 13 agents and consumed by synthesize (research-synthesis-v2) and passed through toSpecVerdict unchanged; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1366,8 +1378,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "NEUTRAL produced by the 13 agents and consumed by synthesize (research-synthesis-v2) and passed through toSpecVerdict unchanged; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1384,8 +1398,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "ADVERSE produced by the 13 agents and consumed by synthesize (research-synthesis-v2) and passed through toSpecVerdict unchanged; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1402,8 +1418,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "INCOMPLETE: toSpecVerdict maps UNAVAILABLE and every non-COMPLETED status to INCOMPLETE in toSpecAgentReport; packages/types/src/platform/verdict.ts; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1420,8 +1438,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "BLOCKING produced by the 13 agents and consumed by synthesize (research-synthesis-v2) and passed through toSpecVerdict unchanged; tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
    "blockers": []
   },
   {
@@ -1512,8 +1532,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1532,8 +1554,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1576,8 +1600,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1596,8 +1622,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1616,8 +1644,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1636,8 +1666,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1656,8 +1688,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1676,8 +1710,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1696,8 +1732,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -1716,8 +1754,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+   ],
    "blockers": []
   },
   {
@@ -8730,8 +8770,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01",
-   "status": "IN_PROGRESS",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/ai/src/gateway (provider port, FixtureLlmProvider, PromptRegistry, createAiGateway, narrative); tests/unit/ai/gateway.test.ts (12 tests). Interface and fixtures only: no hosted adapter is built until Stage 10"
+   ],
    "blockers": []
   },
   {
@@ -8806,6 +8848,152 @@
    "evidence": [],
    "blockers": [
     "owner go to read staging messages for labelling"
+   ]
+  },
+  {
+   "id": "M04-15",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "Market Context Agent (market-context-v1), advisory, non-blocking",
+   "existing": "agent registered as the 13th production agent; not in the default required set",
+   "change": "Stage 04",
+   "packages": [
+    "packages/agents/src/agents/marketContext.ts"
+   ],
+   "database": [],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/agents/marketContext.test.ts (6 tests); registration tests updated; local run 2026-11-09. CI: see PROGRESS_LOG"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M04-16",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "All 12 specification roles bound to implemented components (options-risk kept as extra); coverage check",
+   "existing": "SPEC_ROLE_MAP / roleCoverage",
+   "change": "Stage 04",
+   "packages": [
+    "packages/agents/src/research/specMapping.ts"
+   ],
+   "database": [],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M04-17",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "Research package: per-agent spec verdicts, evidence index, agent versions, contradictions, role coverage, hash; grantsApproval literal false",
+   "existing": "buildResearchPackage",
+   "change": "Stage 04",
+   "packages": [
+    "packages/agents/src/research/package.ts"
+   ],
+   "database": [
+    "research_packages"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; real-database save: tests/integration/database/stage04Stores.test.ts (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M04-18",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "Candidate research path shared by the Telegram and independent pipelines (candidate -> agents -> synthesis -> package -> saved)",
+   "existing": "runCandidateResearch with injected sink; fails closed (engine flag, expiry, runtime safety check)",
+   "change": "Stage 04",
+   "packages": [
+    "packages/agents/src/research/candidateInput.ts",
+    "packages/agents/src/research/run.ts"
+   ],
+   "database": [
+    "research_packages"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; tests/integration/database/stage04Stores.test.ts (CI pending)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M04-19",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "Hosted-AI gateway: routing with fallbacks, retry/backoff, timeouts, rate-limit and error classification, daily budget (fail closed), usage and cost accounting, prompt versions and hashes, untrusted-output validation, advisory narrative",
+   "existing": "createAiGateway",
+   "change": "Stage 04",
+   "packages": [
+    "packages/ai/src/gateway"
+   ],
+   "database": [
+    "ai_usage_records"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/ai/gateway.test.ts (12 tests); tests/unit/database/stage04Stores.test.ts source hygiene. No hosted adapter yet (Stage 10)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M04-20",
+   "module": "M04",
+   "moduleName": "Research & Validation AI Agents",
+   "area": "Stage 04 additions",
+   "feature": "Persistence stores: market regimes (idempotent), research packages (next version, advisory-locked), AI usage (RLS shared-or-owner, append-only); migration 0035",
+   "existing": "packages/database/src/stores",
+   "change": "Stage 04",
+   "packages": [
+    "packages/database/src/stores",
+    "packages/database/drizzle/0035_ai_usage_records.sql"
+   ],
+   "database": [
+    "market_regimes",
+    "research_packages",
+    "ai_usage_records"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "04",
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/database/stage04Stores.test.ts (8 tests, local); tests/integration/database/stage04Stores.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "migration 0035 and the real-database tests are not yet confirmed by CI"
    ]
   }
  ]

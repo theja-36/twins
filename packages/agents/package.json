@@ -10,6 +10,7 @@
     "@twins/historical": "*",
     "@twins/ingestion": "*",
     "@twins/risk": "*",
+    "@twins/types": "*",
     "drizzle-orm": "^0.45.2"
   }
 }

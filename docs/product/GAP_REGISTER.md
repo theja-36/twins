@@ -18,3 +18,7 @@ Updated each stage. A gap closes only when the tracker shows the related require
 | G-12 | Classic frontend bot link never enables in production builds (env read not inlined); fix is uncommitted in the frontend working copy | 09 | open |
 | G-13 | `users.role` can be changed by any role holding UPDATE on `users` (the runtime role does today). No code does it, but role escalation must be closed when the auth service is built (definer function or revoke) | 01-02 follow-up | open |
 | G-14 | `performance_snapshots` and other shared tables have no per-writer restriction beyond role grants | 08 | open |
+| G-15 | No hosted AI adapter exists: the gateway runs only against fixtures until Stage 10 (needs provider credentials and an approved budget) | 04/10 | open, by design |
+| G-16 | No live regime source: `market-context-v1` reports UNAVAILABLE until a `RegimeProvider` is wired to real OHLC data; regime rows exist only from fixtures/tests | 04/10 | open |
+| G-17 | Nothing yet calls `runCandidateResearch` from the worker or the Independent Opportunity Engine (Stage 05 produces the independent candidates); the Telegram path has no candidate creation wired to intake | 04/05 | open |
+| G-18 | Candidate research gives `stop_loss_validation = null`; the decision engine (Stage 07) must run the mandatory stop-loss rule itself | 07 | open, by design |

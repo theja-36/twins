@@ -13,3 +13,4 @@ export {
   type PoolErrorSink,
 } from "./client";
 export { withUser, type UserTx } from "./withUser";
+export * from "./stores/index";
