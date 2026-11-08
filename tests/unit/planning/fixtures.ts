@@ -1,0 +1,7 @@
+import type { FeeSchedule, InstrumentSpec, SizingInputV2 } from "../../../packages/planning/src/index";
+
+/** TEST DATA ONLY. These numbers are invented for tests and are labelled OFFICIAL here solely to exercise the verified-source path; no shipped code contains any contract or fee value. */
+export const SPEC: InstrumentSpec = { specVersion: "test-spec-1", sourceKind: "OFFICIAL", sourceRef: "TEST-ONLY", effectiveFrom: "2030-01-01T00:00:00Z", effectiveTo: null, exchange: "NSE", underlying: "ACME", instrumentType: "equity", segment: "EQ", lotSize: "25", tickSize: "0.05", freezeQuantity: null, maxLots: null };
+export const FEES: FeeSchedule = { feeVersion: "test-fees-1", sourceKind: "OFFICIAL", sourceRef: "TEST-ONLY", effectiveFrom: "2030-01-01T00:00:00Z", effectiveTo: null, segment: "EQ", brokerage: { kind: "FLAT", perOrder: "20" }, exchangeChargePct: "0.00297", sebiPct: "0.0001", stampDutyBuyPct: "0.003", sttSellPct: "0.1", sttBuyPct: "0", gstPctOnServices: "18", otherPerOrder: "0" };
+export const POLICY = { riskPercent: "1", maxRiskPerTrade: null, maxLots: 1000, maxPositionNotionalPct: null };
+export const base = (o: Partial<SizingInputV2> = {}): SizingInputV2 => ({ side: "BUY", entry: 100, stop: 98, stopBasis: "price", targets: [104, 106], spec: SPEC, fees: FEES, capital: { total: "1000000", available: "1000000" }, policy: POLICY, caps: { remainingDailyRisk: null, remainingPortfolioRisk: null, remainingGroupRisk: null }, sizeMultiplier: 1, slippageBps: { entry: 0, exit: 0 }, ...o });

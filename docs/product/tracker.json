@@ -3254,8 +3254,11 @@
    "area": "User-specific information",
    "feature": "Total trading capital.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: versioned total capital per account (append-only profile versions, effective dates, history)",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3264,8 +3267,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3275,8 +3281,11 @@
    "area": "User-specific information",
    "feature": "Available capital.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: available capital: versioned, checked <= total, used as the sizing and exposure base",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3285,8 +3294,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3296,8 +3308,11 @@
    "area": "User-specific information",
    "feature": "Risk percentage.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: versioned risk percent, DB ceiling 5% (mirrors HARD_MAX_RISK_PCT), sizing budget",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3306,8 +3321,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3317,8 +3335,10 @@
    "area": "User-specific information",
    "feature": "Maximum risk per trade.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: per-trade risk cap enters the budget (binding cap reported)",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3327,8 +3347,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3338,8 +3360,10 @@
    "area": "User-specific information",
    "feature": "Maximum daily loss.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: daily loss limit versioned in the policy; remaining headroom caps the budget",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3348,9 +3372,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "realised loss and open positions have no source yet (G-22)"
+   ]
   },
   {
    "id": "M08-06",
@@ -3359,8 +3388,10 @@
    "area": "User-specific information",
    "feature": "Maximum concurrent positions.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: concurrent-position limit enforced as a block",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3369,9 +3400,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "open positions have no source yet (G-22)"
+   ]
   },
   {
    "id": "M08-07",
@@ -3380,8 +3415,10 @@
    "area": "User-specific information",
    "feature": "Trading budget.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: the trading budget is available capital plus the per-position notional cap; there is no separate period budget",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3390,9 +3427,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "no distinct budget concept beyond available capital and the notional cap"
+   ]
   },
   {
    "id": "M08-08",
@@ -3401,8 +3442,10 @@
    "area": "User-specific information",
    "feature": "Preferred instruments.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: allowed-underlyings list enforced as a block (an allow-list, not a soft preference)",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3411,8 +3454,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3464,9 +3509,9 @@
    "area": "Calculations",
    "feature": "Maximum permissible trade risk.",
    "existing": "sizing engine (single configured capital) | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 06: effective risk budget = min(percent, per-trade cap, daily/portfolio/group headroom) x restriction multiplier",
    "packages": [
-    "packages/risk/src/sizing"
+    "packages/planning/src/sizing.ts"
    ],
    "database": [
     "user_capital_profiles",
@@ -3476,8 +3521,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3487,9 +3534,9 @@
    "area": "Calculations",
    "feature": "Risk per lot.",
    "existing": "sizing engine | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 06: risk per lot at the stop including costs and slippage",
    "packages": [
-    "packages/risk/src/sizing"
+    "packages/planning/src/sizing.ts"
    ],
    "database": [
     "user_capital_profiles",
@@ -3499,8 +3546,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3510,9 +3559,9 @@
    "area": "Calculations",
    "feature": "Number of lots.",
    "existing": "sizing engine | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "Stage 06: whole lots by binary search under every limit; invariants re-checked, fail closed",
    "packages": [
-    "packages/risk/src/sizing"
+    "packages/planning/src/sizing.ts"
    ],
    "database": [
     "user_capital_profiles",
@@ -3522,8 +3571,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3533,8 +3585,11 @@
    "area": "Calculations",
    "feature": "Expected profit.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: gross and net profit per target after round-trip costs and slippage",
+   "packages": [
+    "packages/planning/src/sizing.ts",
+    "packages/planning/src/costs.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3543,8 +3598,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3554,8 +3611,10 @@
    "area": "Calculations",
    "feature": "Expected loss.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: stop-out loss (gross, costs, slippage itemised)",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3564,8 +3623,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3575,8 +3636,10 @@
    "area": "Calculations",
    "feature": "Risk-to-reward ratio.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: gross and net reward-to-risk per target",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3585,8 +3648,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3596,8 +3661,10 @@
    "area": "Calculations",
    "feature": "Break-even price.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: break-even price including round-trip costs and entry slippage",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3606,8 +3673,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -3617,8 +3686,10 @@
    "area": "Calculations",
    "feature": "Capital utilisation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: capital utilisation percent (cash instruments)",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3627,9 +3698,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "no margin model: derivative sales are NOT sized (MARGIN_MODEL_UNAVAILABLE)"
+   ]
   },
   {
    "id": "M08-19",
@@ -3638,8 +3713,10 @@
    "area": "Calculations",
    "feature": "Portfolio exposure.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: exposure arithmetic and limit exist",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3648,9 +3725,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "needs a portfolio-state source (G-22)"
+   ]
   },
   {
    "id": "M08-20",
@@ -3659,8 +3740,10 @@
    "area": "Calculations",
    "feature": "Remaining daily risk capacity.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: remaining daily risk computed from loss and open risk",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_capital_profiles",
     "user_risk_policies"
@@ -3669,9 +3752,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "needs a portfolio-state source (G-22)"
+   ]
   },
   {
    "id": "M09-01",
@@ -3680,8 +3767,10 @@
    "area": "Required inputs",
    "feature": "Agent assessments.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: agent verdicts feed role-grouped components",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3690,8 +3779,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3701,8 +3793,10 @@
    "area": "Required inputs",
    "feature": "Historical outcomes.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: historical-pattern component",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3711,9 +3805,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
+   ]
   },
   {
    "id": "M09-03",
@@ -3722,8 +3821,10 @@
    "area": "Required inputs",
    "feature": "Market regime.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: regime component (direction, volatility, event risk, risk-off)",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3732,9 +3833,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
+   ]
   },
   {
    "id": "M09-04",
@@ -3743,8 +3849,10 @@
    "area": "Required inputs",
    "feature": "Technical structure.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: technical-structure component",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3753,8 +3861,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3764,8 +3875,10 @@
    "area": "Required inputs",
    "feature": "Price action.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: price-action component",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3774,8 +3887,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3785,8 +3901,10 @@
    "area": "Required inputs",
    "feature": "News and sentiment.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: news and index-driver component",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3795,8 +3913,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3806,8 +3927,10 @@
    "area": "Required inputs",
    "feature": "Liquidity.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: liquidity and option-risk component",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3816,8 +3939,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3827,8 +3953,10 @@
    "area": "Required inputs",
    "feature": "Pattern similarity.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: historical pattern similarity via the historical-pattern agent",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3837,9 +3965,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
+   ]
   },
   {
    "id": "M09-09",
@@ -3848,8 +3981,10 @@
    "area": "Required inputs",
    "feature": "Risk flags.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: risk flags collected from agent reports",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3858,8 +3993,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3869,8 +4007,10 @@
    "area": "Required inputs",
    "feature": "Evidence completeness.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: evidence completeness as a weight share, with a cap",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3879,8 +4019,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3890,8 +4033,10 @@
    "area": "Required inputs",
    "feature": "Data freshness.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: stale or unusable evidence is flagged and capped",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3900,9 +4045,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "component data depends on agent providers that are not wired (G-16, G-20): such components report missing"
+   ]
   },
   {
    "id": "M09-12",
@@ -3911,8 +4061,11 @@
    "area": "Required inputs",
    "feature": "Strategy reliability.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: strategy performance component with a 30-outcome minimum; provider interface only",
+   "packages": [
+    "packages/confidence/src/score.ts",
+    "packages/planning/src/evaluate.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3921,9 +4074,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "no strategy-performance provider is wired; the component reports missing (G-23)"
+   ]
   },
   {
    "id": "M09-13",
@@ -3932,8 +4089,10 @@
    "area": "Required outputs",
    "feature": "Overall confidence score.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: explainable 0-100 strength score, never a probability",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3942,8 +4101,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3953,8 +4115,10 @@
    "area": "Required outputs",
    "feature": "Supporting evidence.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: supporting evidence list",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3963,8 +4127,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3974,8 +4141,10 @@
    "area": "Required outputs",
    "feature": "Contradicting evidence.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: contradicting evidence list incl. agent disagreements",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -3984,8 +4153,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -3995,8 +4167,10 @@
    "area": "Required outputs",
    "feature": "Missing evidence.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: missing evidence list; scored zero and capped",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -4005,8 +4179,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4016,8 +4193,10 @@
    "area": "Required outputs",
    "feature": "Risk flags.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: risk flags on the assessment",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -4026,8 +4205,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4037,8 +4219,10 @@
    "area": "Required outputs",
    "feature": "Historical comparison.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: predicted-versus-actual comparison function (bins, win rate, average R)",
+   "packages": [
+    "packages/confidence/src/calibration.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -4047,9 +4231,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "not yet populated on assessments: no resolved outcomes exist (Stage 08)"
+   ]
   },
   {
    "id": "M09-19",
@@ -4058,8 +4246,10 @@
    "area": "Required outputs",
    "feature": "Confidence explanation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: deterministic explanation text with caps and missing evidence",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -4068,8 +4258,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4079,8 +4272,11 @@
    "area": "Required outputs",
    "feature": "Calibration status.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: calibration is a separate capability; every assessment is UNCALIBRATED; CALIBRATED needs >=200 out-of-sample outcomes with monotone bins; a probability exists only from a CALIBRATED run",
+   "packages": [
+    "packages/confidence/src/calibration.ts",
+    "packages/database/src/stores/planningStore.ts"
+   ],
    "database": [
     "confidence_assessments",
     "confidence_calibration_runs"
@@ -4089,9 +4285,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no real outcomes exist: nothing is, or can be, calibrated yet (G-24)"
+   ]
   },
   {
    "id": "M10-01",
@@ -4100,8 +4301,10 @@
    "area": "Required controls",
    "feature": "Maximum risk per trade.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: maximum risk per trade enforced through the sizing budget",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4110,8 +4313,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4123,7 +4328,8 @@
    "existing": "packages/stop-loss + mandatory stop rule | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/stop-loss"
+    "packages/stop-loss",
+    "packages/planning/src/stop.ts"
    ],
    "database": [
     "stop_loss_validations",
@@ -4136,9 +4342,12 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: structural stop checks block missing / wrong-side / off-tick / wrong-basis stops in sizing, risk and simulation"
    ],
-   "blockers": []
+   "blockers": [
+    "G-18: the evidence-based mandatory stop validation must run in the Stage 07 qualification path; every Stage 06 result states independentlyValidated:false"
+   ]
   },
   {
    "id": "M10-03",
@@ -4147,8 +4356,10 @@
    "area": "Required controls",
    "feature": "Maximum loss per trade.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: maximum loss per trade incl. costs and slippage",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4157,8 +4368,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4170,7 +4383,8 @@
    "existing": "loss circuit breakers | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/breakers"
+    "packages/risk/src/breakers",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "circuit_breaker_events",
@@ -4183,7 +4397,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4197,7 +4412,8 @@
    "change": "to be defined when the stage starts",
    "packages": [
     "packages/risk/src/portfolio",
-    "packages/risk/src/exposure"
+    "packages/risk/src/exposure",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4209,7 +4425,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4220,8 +4437,10 @@
    "area": "Required controls",
    "feature": "Maximum concurrent positions.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: maximum concurrent positions",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4230,8 +4449,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4243,7 +4464,8 @@
    "existing": "risk/src/correlation | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/correlation"
+    "packages/risk/src/correlation",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4255,7 +4477,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4268,7 +4491,8 @@
    "existing": "risk/src/market/windows.ts blackout windows | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/market"
+    "packages/risk/src/market",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "event_blackout_windows",
@@ -4281,7 +4505,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4294,7 +4519,8 @@
    "existing": "risk/src/drawdown governor | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/drawdown"
+    "packages/risk/src/drawdown",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4306,7 +4532,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4317,8 +4544,10 @@
    "area": "Required controls",
    "feature": "High-volatility restrictions.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: high-volatility restriction (size multiplier), extreme blocks",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4327,8 +4556,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4340,7 +4571,8 @@
    "existing": "risk/src/liquidity | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/liquidity"
+    "packages/risk/src/liquidity",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4352,7 +4584,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4365,7 +4598,8 @@
    "existing": "risk/src/market/sessions.ts | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/market"
+    "packages/risk/src/market",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4377,7 +4611,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4388,8 +4623,10 @@
    "area": "Required controls",
    "feature": "Maximum lot limits.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: maximum lots (policy, specification, freeze quantity)",
+   "packages": [
+    "packages/planning/src/sizing.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4398,8 +4635,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4409,8 +4648,10 @@
    "area": "Required controls",
    "feature": "Minimum risk-to-reward requirements.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: minimum reward-to-risk (first target)",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4419,8 +4660,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4432,7 +4675,8 @@
    "existing": "circuit breakers | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/breakers"
+    "packages/risk/src/breakers",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4444,7 +4688,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4457,7 +4702,8 @@
    "existing": "drawdown governor | schema in migration 0033 (written, not yet applied or integration-tested)",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/risk/src/drawdown"
+    "packages/risk/src/drawdown",
+    "packages/planning/src/risk.ts"
    ],
    "database": [
     "user_risk_policies",
@@ -4469,7 +4715,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: also enforced in the candidate-level risk assessment (tests/unit/planning/risk.test.ts)"
    ],
    "blockers": []
   },
@@ -4480,8 +4727,10 @@
    "area": "Required controls",
    "feature": "Adaptive risk reduction.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: adaptive risk reduction: drawdown, regime, event and data multipliers, never above 1",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4490,8 +4739,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
    "blockers": []
   },
   {
@@ -4501,8 +4752,10 @@
    "area": "Required controls",
    "feature": "Correlation controls.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: correlated-group open-risk limit (static group map)",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4511,9 +4764,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ],
+   "blockers": [
+    "group map is configuration, not computed correlation"
+   ]
   },
   {
    "id": "M10-19",
@@ -4558,7 +4815,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5"
+    "Phase 00 audit: unit suite 197 files / 3,451 tests pass (local run 2026-11-08); hosted CI (incl. integration) green on 507c6f5",
+    "Stage 06: the candidate-level worker path inherits the global kill switch through the existing intake gate (unchanged)"
    ],
    "blockers": []
   },
@@ -4569,8 +4827,12 @@
    "area": "Kill switches",
    "feature": "Per-market kill switch.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: per-market control (risk_control_events scope MARKET); any active match BLOCKS; owner-set, append-only, audited",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql",
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4579,8 +4841,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4590,8 +4855,12 @@
    "area": "Kill switches",
    "feature": "Per-source kill switch.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: per-source control (scope SOURCE: TELEGRAM / INDEPENDENT); any active match BLOCKS; owner-set, append-only, audited",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql",
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4600,8 +4869,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4611,8 +4883,12 @@
    "area": "Kill switches",
    "feature": "Per-strategy kill switch.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: per-strategy control (scope STRATEGY: setup class); any active match BLOCKS; owner-set, append-only, audited",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql",
+    "packages/planning/src/risk.ts"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4621,8 +4897,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4632,8 +4911,12 @@
    "area": "Kill switches",
    "feature": "Daily-loss kill switch.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: daily-loss halt recorded by the evaluation cycle, expires at the next IST day; recovery policy in the database",
+   "packages": [
+    "packages/planning/src/cycle.ts",
+    "packages/planning/src/risk.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4642,9 +4925,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "portfolio-state source missing (G-22): the halt only triggers when a portfolio provider exists"
+   ]
   },
   {
    "id": "M10-25",
@@ -4653,8 +4941,11 @@
    "area": "Kill switches",
    "feature": "Drawdown kill switch.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: drawdown halt recorded by the evaluation cycle; cleared ONLY by an owner with a reason (database check)",
+   "packages": [
+    "packages/planning/src/cycle.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql"
+   ],
    "database": [
     "user_risk_policies",
     "risk_assessments"
@@ -4663,9 +4954,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "portfolio-state source missing (G-22)"
+   ]
   },
   {
    "id": "M11-01",
@@ -4674,8 +4970,10 @@
    "area": "Required functionality",
    "feature": "Stop-loss loss calculation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: stop-loss loss calculation (gross, costs, slippage)",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4683,8 +4981,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4694,8 +4995,10 @@
    "area": "Required functionality",
    "feature": "Target profit calculation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: target profit calculation, gross and net",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4703,8 +5006,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4714,8 +5020,10 @@
    "area": "Required functionality",
    "feature": "Break-even calculation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: break-even calculation",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4723,8 +5031,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4734,7 +5045,7 @@
    "area": "Required functionality",
    "feature": "Implied-move analysis.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
+   "change": "not implemented: implied-move analysis needs implied-volatility and option-chain data",
    "packages": [],
    "database": [
     "simulations"
@@ -4745,7 +5056,9 @@
    "stage": "06",
    "status": "NOT_STARTED",
    "evidence": [],
-   "blockers": []
+   "blockers": [
+    "no option-chain / implied-volatility source (G-20); first-order vega shocks exist only when greeks are supplied"
+   ]
   },
   {
    "id": "M11-05",
@@ -4754,8 +5067,10 @@
    "area": "Required functionality",
    "feature": "Gap-risk analysis.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: gap-risk analysis: gap through the stop fills at the gap price",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4763,8 +5078,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4774,8 +5092,10 @@
    "area": "Required functionality",
    "feature": "Portfolio impact.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: portfolio and correlated-group impact",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4783,9 +5103,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "portfolio inputs need a source (G-22)"
+   ]
   },
   {
    "id": "M11-07",
@@ -4794,8 +5119,10 @@
    "area": "Required functionality",
    "feature": "Multiple-lot simulation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: multiple-lot and simultaneous-position simulation",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4803,8 +5130,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4814,8 +5144,10 @@
    "area": "Required functionality",
    "feature": "Different entry-price comparison.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: different entry-price scenarios",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4823,8 +5155,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4834,8 +5169,10 @@
    "area": "Required functionality",
    "feature": "Different stop-loss comparison.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: different stop-loss scenarios",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4843,8 +5180,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4854,8 +5194,10 @@
    "area": "Required functionality",
    "feature": "Risk-to-reward comparison.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: risk-to-reward comparison across scenarios",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4863,8 +5205,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4874,8 +5219,10 @@
    "area": "Required functionality",
    "feature": "Cost and slippage estimation.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: cost and slippage estimation (slippage is an assumption, labelled)",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4883,8 +5230,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -4894,8 +5244,10 @@
    "area": "Required functionality",
    "feature": "Scenario comparison.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 06: scenario comparison with permitted flags",
+   "packages": [
+    "packages/planning/src/simulator.ts"
+   ],
    "database": [
     "simulations"
    ],
@@ -4903,8 +5255,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -9227,6 +9582,207 @@
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
     "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
     "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+   ]
+  },
+  {
+   "id": "M08-21",
+   "module": "M08",
+   "moduleName": "Capital Management & Position Sizing",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Fixed-point decimal arithmetic (BigInt, 8 dp) for all money, prices and rates; conservative rounding by direction",
+   "packages": [
+    "packages/planning/src/decimal.ts"
+   ],
+   "database": [],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ]
+  },
+  {
+   "id": "M08-22",
+   "module": "M08",
+   "moduleName": "Capital Management & Position Sizing",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Versioned instrument specifications and fee schedules from providers (memory, file), source kind recorded; nothing built in; unverified sources restrict risk",
+   "packages": [
+    "packages/planning/src/specs.ts",
+    "packages/planning/src/costs.ts"
+   ],
+   "database": [],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)"
+   ]
+  },
+  {
+   "id": "M08-23",
+   "module": "M08",
+   "moduleName": "Capital Management & Position Sizing",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Per-user ownership: composite (account, user) keys, row-level security, writes through withUser, migration 0037 limits",
+   "packages": [
+    "packages/database/src/stores/planningStore.ts",
+    "packages/database/drizzle/0037_capital_risk_confidence.sql"
+   ],
+   "database": [
+    "user_capital_profiles",
+    "user_risk_policies"
+   ],
+   "evidence": [
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M10-26",
+   "module": "M10",
+   "moduleName": "Risk Management & Capital Protection",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Risk decision contract PASS / RESTRICTED / BLOCKED with reasons, limits, exposure, evidence, policy version, corrective actions; confidence is not an input",
+   "packages": [
+    "packages/planning/src/risk.ts"
+   ],
+   "database": [
+    "risk_assessments"
+   ],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M10-27",
+   "module": "M10",
+   "moduleName": "Risk Management & Capital Protection",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Append-only risk_control_events with recovery policy enforced by the database (owner-only clearing of drawdown halts and kill switches, mandatory reasons, expiry only on SET)",
+   "packages": [
+    "packages/database/drizzle/0037_capital_risk_confidence.sql",
+    "packages/database/src/stores/planningStore.ts"
+   ],
+   "database": [
+    "risk_control_events"
+   ],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "MU-S06-1",
+   "module": "MU",
+   "moduleName": "Platform shared infrastructure",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Evaluation cycle: every READY candidate (either source) x every active account with a capital profile and policy; worker-wired behind TWINS_EVALUATION_ENABLED (off by default)",
+   "packages": [
+    "packages/planning/src/evaluate.ts",
+    "packages/planning/src/cycle.ts",
+    "services/worker/src/index.ts"
+   ],
+   "database": [
+    "confidence_assessments",
+    "risk_assessments",
+    "simulations"
+   ],
+   "evidence": [
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M09-21",
+   "module": "M09",
+   "moduleName": "Confidence Scoring & Signal Strength",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Provenance and no double counting: package hash, agent versions, evidence refs per component; correlated families capped; independent rank shown but not scored",
+   "packages": [
+    "packages/confidence/src/score.ts"
+   ],
+   "database": [
+    "confidence_assessments"
+   ],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M11-13",
+   "module": "M11",
+   "moduleName": "Pre-Trade What-If Simulator",
+   "area": "Stage 06 additions",
+   "stage": "06",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 06",
+   "change": "Stage 06",
+   "status": "IMPLEMENTED",
+   "feature": "Explainability: inputs echo, assumptions, limitations, spec/fee/model versions; persisted in simulations linked to the risk assessment",
+   "packages": [
+    "packages/planning/src/simulator.ts",
+    "packages/planning/src/evaluate.ts"
+   ],
+   "database": [
+    "simulations"
+   ],
+   "evidence": [
+    "tests/unit/planning/*.test.ts (58 tests, local)",
+    "tests/integration/planning/stage06.test.ts against Postgres 16 (CI pending)"
    ]
   }
  ]

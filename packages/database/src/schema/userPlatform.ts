@@ -33,10 +33,13 @@ export const userCapitalProfiles = pgTable("user_capital_profiles", {
   totalCapital: numeric("total_capital").notNull(),
   availableCapital: numeric("available_capital").notNull(),
   currency: text("currency").notNull().default("INR"),
+  /** Stage 06: no single position's notional may exceed this percent of available capital (null = no extra per-position cap beyond the risk budget). */
+  maxPositionNotionalPct: numeric("max_position_notional_pct"),
   effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
   createdBy: text("created_by").notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  positionPctCheck: check("user_capital_profiles_position_pct_check", sql`${t.maxPositionNotionalPct} is null or (${t.maxPositionNotionalPct} > 0 and ${t.maxPositionNotionalPct} <= 100)`),
   ownerFk: foreignKey({ name: "user_capital_profiles_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   versionUnique: uniqueIndex("user_capital_profiles_account_version_unique").on(t.accountId, t.version),
   accountIdx: index("user_capital_profiles_account_idx").on(t.accountId, t.effectiveFrom),
@@ -57,6 +60,10 @@ export const userRiskPolicies = pgTable("user_risk_policies", {
   maxLots: integer("max_lots").notNull(),
   minRewardToRisk: numeric("min_reward_to_risk").notNull(),
   allowedUnderlyings: text("allowed_underlyings").array().notNull().default(sql`ARRAY[]::text[]`),
+  /** Stage 06 per-user tightenings of the platform protections (null = the platform default applies; a value can only tighten, never loosen, a platform ceiling). */
+  maxDrawdownPct: numeric("max_drawdown_pct"),
+  maxPortfolioExposurePct: numeric("max_portfolio_exposure_pct"),
+  maxCorrelatedRiskPct: numeric("max_correlated_risk_pct"),
   effectiveFrom: timestamp("effective_from", { withTimezone: true }).notNull().defaultNow(),
   createdBy: text("created_by").notNull(),
   createdAt: createdAtColumn(),
@@ -65,6 +72,7 @@ export const userRiskPolicies = pgTable("user_risk_policies", {
   versionUnique: uniqueIndex("user_risk_policies_account_version_unique").on(t.accountId, t.version),
   accountIdx: index("user_risk_policies_account_idx").on(t.accountId, t.effectiveFrom),
   versionCheck: check("user_risk_policies_version_check", sql`${t.version} >= 1`),
+  extraLimitsCheck: check("user_risk_policies_extra_limits_check", sql`(${t.maxDrawdownPct} is null or (${t.maxDrawdownPct} > 0 and ${t.maxDrawdownPct} <= 100)) and (${t.maxPortfolioExposurePct} is null or (${t.maxPortfolioExposurePct} > 0 and ${t.maxPortfolioExposurePct} <= 100)) and (${t.maxCorrelatedRiskPct} is null or (${t.maxCorrelatedRiskPct} > 0 and ${t.maxCorrelatedRiskPct} <= 5))`),
   riskCheck: check("user_risk_policies_risk_check", sql`${t.riskPercent} > 0 and ${t.riskPercent} <= 5`),
   limitsCheck: check("user_risk_policies_limits_check", sql`${t.maxDailyLoss} > 0 and ${t.maxConcurrentPositions} >= 1 and ${t.maxLots} >= 1 and ${t.minRewardToRisk} > 0 and (${t.maxRiskPerTrade} is null or ${t.maxRiskPerTrade} > 0)`),
 }));

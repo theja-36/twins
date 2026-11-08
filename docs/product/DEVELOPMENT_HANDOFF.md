@@ -6,6 +6,9 @@ Source of truth for requirement status: `docs/product/tracker.json` (render with
 - Branch `feat/master-build` (pushed to origin; `main` untouched at 507c6f5). Last CI-confirmed green: 824593d (run 42447708067). 6a9a7ba failed integration (fixed in ce118b4); later commits' CI must be checked with `gh run list --branch feat/master-build`.
 - Stages: 00 complete; 01 partial (auth sessions, login route, API middleware, per-route contracts outstanding; G-13 role escalation must close before multi-user access); 02 verified by CI for evidenced items; 03 implemented, real-data accuracy IN_PROGRESS (M02-15); 04 implemented in code, CI pending for its new tests and migration 0035; 05-12 not started.
 
+## Stage 06 components (2026-11-08)
+Completed in code: `packages/planning` + `packages/confidence`, migration 0037, planningStore, `runEvaluationCycle` (worker, `TWINS_EVALUATION_ENABLED`, off by default; needs `TWINS_SPECS_FILE` or every instrument BLOCKS). Migration count is 38 (0000-0037). Rules: risk never accepts confidence; sizing multiplier in (0,1]; money uses `decimal.ts`; clearing drawdown halts/kill switches is owner-only (DB check). Limits: G-22..G-25 (and G-15/16/18-21). Next: Stage 07 (decision, approval, execution, trade management) must integrate the mandatory stop-loss validation (G-18), a portfolio-state source (G-22) and qualification using `risk_assessments.verdict`.
+
 ## Stage 05 components (2026-11-08)
 Completed in code: `packages/opportunity` (scan, setups, rank, lifecycle, dispatch, cycle), migration 0036, opportunityStore, worker `opportunity_queue`, scheduler cron enqueue, scheduler effect `research_intake`. All OFF unless `TWINS_OPPORTUNITY_ENABLED=true`; universe via `TWINS_OPPORTUNITY_UNIVERSE`; data from the agent rules' file OHLC / last-price sources only. Limits: G-19..G-21 (and G-15/16/18). Migration count is now 37 (0000-0036); bump the 3 assertion files for each new migration.
 

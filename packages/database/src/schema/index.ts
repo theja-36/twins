@@ -39,3 +39,4 @@ export * from "./intelligence";
 export * from "./userDecisions";
 export * from "./learning";
 export * from "./aiUsage";
+export * from "./riskControls";

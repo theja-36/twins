@@ -16,6 +16,8 @@
     { "path": "packages/historical" },
     { "path": "packages/agents" },
     { "path": "packages/opportunity" },
+    { "path": "packages/confidence" },
+    { "path": "packages/planning" },
     { "path": "packages/stop-loss" },
     { "path": "packages/ai" },
     { "path": "packages/ingestion" },

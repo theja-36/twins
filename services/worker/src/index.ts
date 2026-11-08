@@ -31,6 +31,7 @@ import { loadReduceOnlyShadowFlag, loadShadowPersistFlag, runReduceOnlyShadow, t
 import { loadPaperConfig, snapshotPriceSource, startPaperLoop } from "@twins/paper";
 import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twins/alerting";
 import { loadOpportunityConfig, runOpportunityCycle } from "@twins/opportunity";
+import { loadEvaluationConfig, memorySpecProvider, fileSpecProvider, runEvaluationCycle, type SpecProvider } from "@twins/planning";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
 import { withIntakeGate } from "./safetyGate.js";
@@ -361,6 +362,9 @@ const observabilityConfig = observeConfigLoad(defaultWorkerLogger, "agent-observ
 const agentEngineConfig = observeConfigLoad(defaultWorkerLogger, "agent-engine", () => loadAgentEngineConfig());
 // Stage 05: the Independent Opportunity Engine. DISABLED by default; a malformed setting fails start-up (fail closed). When enabled it reads the OHLC / last-price providers from the agent rules, loaded SEPARATELY below so that the production agents still exist only when the agent engine is explicitly enabled.
 const opportunityConfig = observeConfigLoad(defaultWorkerLogger, "opportunity-engine", () => loadOpportunityConfig());
+// Stage 06: capital / risk / confidence / simulation evaluation of READY candidates. DISABLED by default. Specifications and fees come ONLY from an operator file (TWINS_SPECS_FILE); with none, instruments are BLOCKED (SPEC_UNAVAILABLE), never guessed.
+const evaluationConfig = observeConfigLoad(defaultWorkerLogger, "evaluation", () => loadEvaluationConfig());
+const specProvider: SpecProvider | null = evaluationConfig.enabled ? observeConfigLoad(defaultWorkerLogger, "specs", () => (process.env["TWINS_SPECS_FILE"] ? fileSpecProvider(process.env["TWINS_SPECS_FILE"]) : memorySpecProvider({ name: "no-specs", instruments: [], fees: [] }))) : null;
 const agentRules = agentEngineConfig.enabled || agentEngineConfig.shadow ? observeConfigLoad(defaultWorkerLogger, "agent-rules", () => loadAgentRulesConfig()) : null;
 const agentRegistries = new WeakMap<Db, ReturnType<typeof createDefaultRegistry>>();
 const agentReference = agentRules ? observeConfigLoad(defaultWorkerLogger, "agent-instrument-reference", () => resolveInstrumentReference(agentRules.instrument.referenceSource)) : null;
@@ -953,6 +957,11 @@ export const opportunityWorker =
             db: workerDb.db, config: opportunityConfig, ohlc: opportunityProviders?.ohlcProvider ?? null, lastPrice: opportunityProviders?.lastPriceProvider ?? null, regime: null,
             registry: agentRegistryFor(workerDb.db), agentConfig: agentEngineConfig, log: (event, fields) => defaultWorkerLogger.info(event, fields),
           });
+          if (evaluationConfig.enabled) {
+            // portfolio state, quotes, strategy performance and the live regime have no source yet (G-16, G-22): they are null, so every evaluation is BLOCKED (portfolio unknown) rather than assumed safe
+            const ev = await runEvaluationCycle({ db: workerDb.db, config: evaluationConfig, specs: specProvider, regime: null, portfolio: null, quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });
+            defaultWorkerLogger.info("planning.cycle.done", { evaluated: ev.evaluated, failed: ev.failed, verdicts: ev.verdicts, skipped: ev.skipped });
+          }
           defaultWorkerLogger.info("opportunity.cycle.done", { slotKey: report.slotKey, skipped: report.skipped, scanStatus: report.scan?.status ?? null, created: report.scan?.created ?? 0, researched: report.research?.researched ?? 0 });
           return report;
         },

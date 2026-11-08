@@ -30,6 +30,7 @@
     "@twins/paper": "*",
     "@twins/providers": "*",
     "@twins/opportunity": "*",
+    "@twins/planning": "*",
     "@twins/risk": "*"
   },
   "devDependencies": {

@@ -4,7 +4,7 @@ import { oneOf } from "./_checks";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { accounts } from "./accounts";
 import { orders } from "./execution";
-import { opportunityCandidates } from "./intelligence";
+import { opportunityCandidates, researchPackages } from "./intelligence";
 import { paperTrades } from "./paper";
 import { riskDecisions } from "./riskDecisions";
 import { users } from "./users";
@@ -44,11 +44,15 @@ export const riskAssessments = pgTable("risk_assessments", {
   candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
   policyVersion: integer("policy_version").notNull(),
   passed: boolean("passed").notNull(),
+  /** Stage 06: PASS, RESTRICTED or BLOCKED. `passed` is true only for PASS (a restricted result is not a pass). */
+  verdict: text("verdict").notNull().default("BLOCKED"),
+  researchPackageId: uuid("research_package_id").references(() => researchPackages.id, { onDelete: "restrict" }),
   blockers: jsonb("blockers").notNull().default(sql`'[]'::jsonb`),
   result: jsonb("result").notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
   idx: index("risk_assessments_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt),
+  verdictCheck: check("risk_assessments_verdict_check", sql`${t.verdict} in ('PASS', 'RESTRICTED', 'BLOCKED') and ${t.passed} = (${t.verdict} = 'PASS')`),
   ownerFk: foreignKey({ name: "risk_assessments_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   idUserUnique: uniqueIndex("risk_assessments_id_user_unique").on(t.id, t.userId),
 }));
@@ -61,8 +65,11 @@ export const simulations = pgTable("simulations", {
   params: jsonb("params").notNull(),
   scenarios: jsonb("scenarios").notNull(),
   costModelVersion: text("cost_model_version").notNull(),
+  /** Stage 06: the risk assessment these scenarios were run beside (same owner enforced by the composite key). */
+  riskAssessmentId: uuid("risk_assessment_id"),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  assessmentFk: foreignKey({ name: "simulations_assessment_owner_fk", columns: [t.riskAssessmentId, t.userId], foreignColumns: [riskAssessments.id, riskAssessments.userId] }),
   idx: index("simulations_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt),
   ownerFk: foreignKey({ name: "simulations_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   idUserUnique: uniqueIndex("simulations_id_user_unique").on(t.id, t.userId),
