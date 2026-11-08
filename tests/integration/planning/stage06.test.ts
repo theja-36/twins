@@ -82,7 +82,7 @@ describe("risk controls", () => {
     const sb = await session(b.userId);
     expect((await sb.query("select id from risk_control_events where scope_key = $1", [key])).rows).toHaveLength(1);
     expect((await sb.query("select id from risk_control_events where user_id = $1", [a.userId])).rows).toEqual([]);
-    await expect(sb.query("insert into risk_control_events (id, user_id, scope, scope_key, kind, action, reason, actor, actor_kind) values ($1, $2, 'USER', $2::text, 'RESTRICTION', 'SET', 'writing for another user', 'x', 'OWNER')", [randomUUID(), a.userId])).rejects.toThrow(/row-level security/);
+    await expect(sb.query("insert into risk_control_events (id, user_id, scope, scope_key, kind, action, reason, actor, actor_kind) values ($1, $2::uuid, 'USER', $2::text, 'RESTRICTION', 'SET', 'writing for another user', 'x', 'OWNER')", [randomUUID(), a.userId])).rejects.toThrow(/row-level security/);
     expect((await listActiveControls(db, a.userId, new Date(Date.now() + 7_200_000))).some((c) => c.kind === "DAILY_LOSS_HALT" && c.userId === a.userId)).toBe(false); // expired
     await clearRiskControl(db, { scope: "MARKET", scopeKey: key, kind: "RESTRICTION", userId: null }, { reason: "restriction lifted after review", actor: "ops", actorKind: "OWNER" });
     expect((await listActiveControls(db, a.userId, new Date(Date.now() + 1000))).some((c) => c.scopeKey === key)).toBe(false);
