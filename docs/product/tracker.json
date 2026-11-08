@@ -989,7 +989,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1035,7 +1036,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1057,7 +1059,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1079,7 +1082,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1101,7 +1105,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1123,7 +1128,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1145,7 +1151,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)"
+    "tests/unit/historical/similarity.test.ts (17 tests, local run 2026-11-08); pure logic, no real historical cases exist yet (history import needs a separate owner go)",
+    "CI run 42446705078 (ce14ab0) all jobs green (pure logic: unit tests in the unit jobs; no integration surface)"
    ],
    "blockers": []
   },
@@ -1719,9 +1726,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify entry style.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): entry style distribution",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1730,8 +1739,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1740,9 +1751,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify CE / PE preference.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): option-type distribution; preference only with >=20 known signals and a 60% majority",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1751,8 +1764,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1761,9 +1776,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify strike-distance preference.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): strike-distance quantiles are computed only when an underlying price is supplied; none exists in the data yet (market data stage)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1772,8 +1789,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1782,9 +1801,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify preferred trading times.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): trading-time (session bucket) distribution",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1793,8 +1814,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1803,9 +1826,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify market conditions used by the channel.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): market conditions distribution needs regimes (Stage 04); unknown is reported, never guessed",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1814,8 +1839,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1824,9 +1851,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Detect recurring strategy clusters.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): recurring clusters of (setup, horizon, option type, entry kind), minimum size 5",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1835,8 +1864,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1845,9 +1876,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify breakout strategies.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): BREAKOUT share of the setup distribution; setups come from explicit message cues only (structure-based detection needs market data)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1856,8 +1889,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1866,9 +1901,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify reversal strategies.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): REVERSAL share of the setup distribution; setups come from explicit message cues only (structure-based detection needs market data)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1877,8 +1914,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1887,9 +1926,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify momentum strategies.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): MOMENTUM share of the setup distribution; setups come from explicit message cues only (structure-based detection needs market data)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1898,8 +1939,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1908,9 +1951,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify gap strategies.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): GAP share of the setup distribution; setups come from explicit message cues only (structure-based detection needs market data)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1919,8 +1964,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1929,9 +1976,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Identify scalping strategies.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): SCALP share of the setup distribution; setups come from explicit message cues only (structure-based detection needs market data)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1940,8 +1989,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1950,9 +2001,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Infer entry rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): entry rules from the entry-style and option-side preferences",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1961,8 +2014,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1971,9 +2026,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Infer exit rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): exit rules: target count, first-target distance, reward-to-risk quantiles",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -1982,8 +2039,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -1992,9 +2051,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Infer stop-loss rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): stop rules: present share, stop-distance quantiles, share with a stated basis",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2003,8 +2064,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2013,9 +2076,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Infer target rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): target rules: count, first-target distance",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2024,8 +2089,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2034,9 +2101,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Required functionality",
    "feature": "Infer risk behaviour.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): risk behaviour: risk-band distribution and share with no stop",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2045,8 +2114,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2202,9 +2273,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Strategy confidence.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): UNKNOWN (<10), LOW (<50 or no cluster), MEDIUM; describes consistency of behaviour, not profitability",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2213,8 +2286,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2223,9 +2298,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Strategy classification.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildChannelProfile (pure, versioned channel-profile-v1): clusters; a named taxonomy over clusters comes with performance analysis (item 5)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2234,8 +2311,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2244,9 +2323,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Playbook generation.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "buildPlaybookContent (deterministic, from a channel profile)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2255,8 +2336,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2265,9 +2348,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Strategy description.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.description",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2276,8 +2361,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2286,9 +2373,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Entry context.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.entry context",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2297,8 +2386,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2307,9 +2398,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Entry rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.entry rules",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2318,8 +2411,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2328,9 +2423,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Exit rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.exit rules",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2339,8 +2436,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2349,9 +2448,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Stop-loss behaviour.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.stop-loss behaviour",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2360,8 +2461,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2370,9 +2473,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Target behaviour.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.target behaviour",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2381,8 +2486,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2391,9 +2498,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Risk rules.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.risk rules",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2402,8 +2511,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2412,9 +2523,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Preferred instruments.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.preferred instruments (top underlyings)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2423,8 +2536,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2433,9 +2548,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Preferred market regimes.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.preferred regimes (empty until regimes exist)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2444,8 +2561,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2454,9 +2573,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Historical performance.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.historicalPerformance is null until an out-of-sample evaluation exists (item 5); activation stores the evaluation metrics",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2465,8 +2586,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2475,9 +2598,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Sample size.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.sample size",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2486,8 +2611,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2496,9 +2623,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Confidence and limitations.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "PlaybookContent.confidence and limitations",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2507,8 +2636,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2517,19 +2648,24 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Version history.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "playbook_versions numbered versions + learning_version_events append-only history (migrations 0033, 0034)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
-    "strategy_playbooks",
-    "playbook_versions"
+    "playbook_versions",
+    "learning_versions",
+    "learning_version_events"
    ],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+   ],
    "blockers": []
   },
   {
@@ -2538,9 +2674,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Strategy inference.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "strategy inference = channel profile + playbook content (descriptive, versioned)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2552,8 +2690,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2634,9 +2774,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Evidence chain.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "append-only learning_version_events record every state change and actor; links from a playbook to the signals behind it come with item 5",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2648,8 +2790,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {
@@ -2658,13 +2802,14 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Playbook versioning.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "proposeVersion/transitionVersion: DRAFT -> EVALUATING -> ACTIVE (owner only, passing out-of-sample evaluation), one ACTIVE per playbook (DB unique index, migration 0034)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
-    "strategy_drift_events",
     "learning_versions",
     "learning_version_events"
    ],
@@ -2672,8 +2817,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+   ],
    "blockers": []
   },
   {
@@ -2706,13 +2853,13 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Strategy rollback.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "rollbackPlaybook: ACTIVE -> ROLLED_BACK and the earlier evaluated version is restored; owner only",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
-    "strategy_playbooks",
     "playbook_versions",
-    "strategy_drift_events",
     "learning_versions",
     "learning_version_events"
    ],
@@ -2720,8 +2867,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+   ],
    "blockers": []
   },
   {
@@ -2778,9 +2927,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Source profiles.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "channel profile per source (buildChannelProfile over one channel's signals)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2792,8 +2943,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+   ],
    "blockers": []
   },
   {

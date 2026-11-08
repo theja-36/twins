@@ -10,3 +10,4 @@
 - Stage 02 VERIFIED in CI (run 42445765317). Starting Stage 03.
 - Stage 03 item 1 (Module 02): rule-based classifier, context reconstruction, idempotent storage, owner-run backfill CLI (not wired into live intake). 21 unit tests + 2 integration tests written; accuracy on real messages unmeasured.
 - Stage 03 item 2 (Module 03): similar-signal matcher, outcome aggregation, evidence completeness check (pure, 17 unit tests). History loader and real cases pending.
+- Stage 03 items 3-4 (Modules 06, 07): channel profile inference, playbook content, versioned lifecycle with owner-only activation and rollback (migration 0034: one ACTIVE per playbook). CI pending.

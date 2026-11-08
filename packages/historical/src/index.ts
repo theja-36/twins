@@ -15,3 +15,4 @@ export * from "./intelligence/index";
 export * from "./archiveProfile";
 export * from "./captureExport";
 export * from "./similarity";
+export * from "./strategy";

@@ -239,6 +239,13 @@
       "when": 1794110067318,
       "tag": "0033_master_build_platform",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794111986938,
+      "tag": "0034_one_active_playbook_version",
+      "breakpoints": true
     }
   ]
 }

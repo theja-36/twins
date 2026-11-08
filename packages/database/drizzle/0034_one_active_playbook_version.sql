@@ -1,0 +1,2 @@
+CREATE UNIQUE INDEX "playbook_versions_one_active" ON "playbook_versions" USING btree ("playbook_id") WHERE "playbook_versions"."state" = 'ACTIVE';--> statement-breakpoint
+CREATE UNIQUE INDEX "learning_versions_one_live" ON "learning_versions" USING btree ("kind","subject_id") WHERE "learning_versions"."influences_live" = true;

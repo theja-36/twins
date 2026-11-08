@@ -24,6 +24,8 @@ export const learningVersions = pgTable("learning_versions", {
   activatedAt: timestamp("activated_at", { withTimezone: true }),
 }, (t) => ({
   versionUnique: uniqueIndex("learning_versions_unique").on(t.kind, t.subjectId, t.version),
+  /** At most one version per (kind, subject) may influence live policy at a time (migration 0034). */
+  oneLive: uniqueIndex("learning_versions_one_live").on(t.kind, t.subjectId).where(sql`${t.influencesLive} = true`),
   kindCheck: check("learning_versions_kind_check", oneOf(t.kind, LEARNING_KINDS)),
   stateCheck: check("learning_versions_state_check", oneOf(t.state, LEARNING_STATES)),
   versionCheck: check("learning_versions_version_check", sql`${t.version} >= 1`),

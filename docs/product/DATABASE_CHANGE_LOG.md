@@ -10,3 +10,5 @@ Additive migrations only (ADR-008). Each entry: migration, tables, reason, reuse
 - Row-level policies for `orders`, `fills`, `positions` (account join) - Stage 07.
 - `app-role.sql` needs no change: the existing loop grants SELECT+INSERT on append-only tables (trigger name ends `_no_update_delete`) and SELECT,INSERT,UPDATE on the mutable ones; to be confirmed when the migration is applied.
 - Deploy note: the Monday runbook expects 33 migrations; this branch makes the chain 34 and is not part of that deploy.
+
+| 0034_one_active_playbook_version | 2026-11-08 | +2 partial unique indexes: one ACTIVE `playbook_versions` per playbook; one live-influencing `learning_versions` per (kind, subject) | additive, no new tables | pending CI |

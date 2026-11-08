@@ -94,6 +94,8 @@ export const playbookVersions = pgTable("playbook_versions", {
   updatedAt: updatedAtColumn(),
 }, (t) => ({
   versionUnique: uniqueIndex("playbook_versions_unique").on(t.playbookId, t.version),
+  /** At most one ACTIVE version per playbook (migration 0034): activating a new version retires the previous one in the same transaction. */
+  oneActive: uniqueIndex("playbook_versions_one_active").on(t.playbookId).where(sql`${t.state} = 'ACTIVE'`),
   stateCheck: check("playbook_versions_state_check", oneOf(t.state, PLAYBOOK_STATES)),
   versionCheck: check("playbook_versions_version_check", sql`${t.version} >= 1 and ${t.sampleSize} >= 0`),
   /** Learning must be evaluated before it can influence live policy: ACTIVE requires recorded performance and a sample. */
