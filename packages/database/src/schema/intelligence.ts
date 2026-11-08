@@ -74,6 +74,7 @@ export const strategyPlaybooks = pgTable("strategy_playbooks", {
   createdAt: createdAtColumn(),
 }, (t) => ({
   perSource: uniqueIndex("strategy_playbooks_source_name_unique").on(t.telegramSourceId, t.name),
+  independentName: uniqueIndex("strategy_playbooks_independent_name_unique").on(t.name).where(sql`${t.telegramSourceId} is null`),
   kindCheck: check("strategy_playbooks_kind_check", oneOf(t.sourceKind, ["TELEGRAM_CHANNEL", "INDEPENDENT"])),
   ownerCheck: check("strategy_playbooks_owner_check", sql`(${t.sourceKind} = 'TELEGRAM_CHANNEL' and ${t.telegramSourceId} is not null) or (${t.sourceKind} = 'INDEPENDENT' and ${t.telegramSourceId} is null)`),
 }));

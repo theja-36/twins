@@ -43,6 +43,39 @@ describe("migration 0033 (master build platform)", () => {
   it("paper and live outcomes must cite their own source", () => { expect(sql).toMatch(/trade_outcomes_source_check/); });
 });
 
+
+describe("migration 0033 review hardening", () => {
+  const OWNED = ["user_capital_profiles", "user_risk_policies", "user_execution_permissions", "risk_assessments", "simulations", "user_decisions", "trade_monitoring_events", "trade_outcomes"];
+  it("every account-bound private table has a composite (account_id, user_id) foreign key, so a row can never name another user's account", () => {
+    expect(sql).toContain('CREATE UNIQUE INDEX "accounts_id_user_unique" ON "accounts" USING btree ("id","user_id")');
+    for (const t of OWNED) expect(sql, t).toMatch(new RegExp(`ALTER TABLE "${t}" ADD CONSTRAINT "${t}_owner_fk" FOREIGN KEY \\("account_id","user_id"\\) REFERENCES "public"."accounts"\\("id","user_id"\\)`));
+  });
+  it("decision links are owner-tied: assessments, simulations, events, monitoring and outcomes can only cite the same user's rows", () => {
+    for (const n of ["user_decisions_risk_assessment_fk", "user_decisions_simulation_fk", "user_decisions_supersedes_fk", "user_decision_events_decision_fk", "trade_monitoring_events_decision_fk", "trade_outcomes_decision_fk"]) expect(sql, n).toMatch(new RegExp(`CONSTRAINT "${n}" FOREIGN KEY \\("[a-z_]+","user_id"\\)`));
+    expect(sql).toMatch(/CONSTRAINT "trade_outcomes_order_fk" FOREIGN KEY \("order_id","account_id"\) REFERENCES "public"."orders"\("id","account_id"\)/);
+    expect(sql).toContain('CREATE UNIQUE INDEX "orders_id_account_unique" ON "orders" USING btree ("id","account_id")');
+  });
+  it("no identifier exceeds Postgres's 63-byte limit (longer names are silently truncated)", () => {
+    const ids = new Set([...sql.matchAll(/(?:CONSTRAINT|INDEX|TRIGGER|POLICY) "([a-z0-9_]+)"/g)].map((m) => m[1] as string));
+    expect([...ids].filter((i) => Buffer.byteLength(i) > 63)).toEqual([]);
+  });
+  it("user_decisions: starts PENDING, only workflow_state may change, final states are final, no delete or truncate", () => {
+    expect(sql).toContain('CREATE TRIGGER "user_decisions_guard" BEFORE INSERT OR UPDATE ON "user_decisions"');
+    expect(sql).toContain("a decision must start PENDING"); expect(sql).toContain("only workflow_state of a decision may change"); expect(sql).toContain("a decision in a final state cannot change");
+    for (const col of ["outcome", "user_id", "account_id", "candidate_id", "explanation", "valid_from", "valid_until", "risk_decision_id", "supersedes_id"]) expect(sql, col).toMatch(new RegExp(`NEW\\.${col} (<>|IS DISTINCT FROM) OLD\\.${col}`));
+    expect(sql).toContain('CREATE TRIGGER "user_decisions_no_delete" BEFORE DELETE ON "user_decisions"'); expect(sql).toContain('CREATE TRIGGER "user_decisions_no_truncate" BEFORE TRUNCATE ON "user_decisions"');
+  });
+  it("the runtime and bot roles cannot write decisions until the Stage 07 doors exist (revoke here, read-only in app-role.sql)", () => {
+    expect(sql).toMatch(/ARRAY\['user_decisions', 'user_decision_events'\]/); expect(sql).toContain("REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER");
+    const role = readFileSync("infrastructure/staging/app-role.sql", "utf8"); const ro = /read_only text\[\] := ARRAY\[([^\]]*)\]/.exec(role)?.[1] ?? "";
+    for (const t of ["user_decisions", "user_decision_events"]) expect(ro, t).toContain(`'${t}'`);
+  });
+  it("a shared performance snapshot can be written only with no user context", () => {
+    expect(sql).toMatch(/performance_snapshots_shared_or_owner" ON "performance_snapshots" USING \(user_id is null or user_id = .*\) WITH CHECK \(\(user_id is null and nullif\(current_setting\('twins.user_id', true\), ''\)::uuid is null\) or user_id = /);
+  });
+  it("independent playbooks have unique names too (a nullable unique index alone would allow duplicates)", () => { expect(sql).toContain('CREATE UNIQUE INDEX "strategy_playbooks_independent_name_unique" ON "strategy_playbooks" USING btree ("name") WHERE "strategy_playbooks"."telegram_source_id" is null'); });
+});
+
 describe("withUser", () => {
   const U = "11111111-1111-4111-8111-111111111111";
   it("sets the transaction-local user before running the callback and returns its result", async () => {

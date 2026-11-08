@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, foreignKey, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { oneOf } from "./_checks";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { accounts } from "./accounts";
@@ -18,7 +18,7 @@ import { users } from "./users";
 export const CALIBRATION_STATUSES = ["UNCALIBRATED", "CALIBRATING", "CALIBRATED"] as const;
 export const confidenceAssessments = pgTable("confidence_assessments", {
   id: idColumn(),
-  candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
+  candidateId: uuid("candidate_id").notNull(),
   score: numeric("score").notNull(),
   components: jsonb("components").notNull(),
   supporting: jsonb("supporting").notNull().default(sql`'[]'::jsonb`),
@@ -31,6 +31,7 @@ export const confidenceAssessments = pgTable("confidence_assessments", {
   modelVersion: text("model_version").notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  candidateFk: foreignKey({ name: "confidence_assessments_candidate_fk", columns: [t.candidateId], foreignColumns: [opportunityCandidates.id] }),
   perModel: uniqueIndex("confidence_assessments_candidate_model_unique").on(t.candidateId, t.modelVersion),
   scoreCheck: check("confidence_assessments_score_check", sql`${t.score} >= 0 and ${t.score} <= 100`),
   calibrationCheck: check("confidence_assessments_calibration_check", oneOf(t.calibrationStatus, CALIBRATION_STATUSES)),
@@ -39,38 +40,46 @@ export const confidenceAssessments = pgTable("confidence_assessments", {
 export const riskAssessments = pgTable("risk_assessments", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
   policyVersion: integer("policy_version").notNull(),
   passed: boolean("passed").notNull(),
   blockers: jsonb("blockers").notNull().default(sql`'[]'::jsonb`),
   result: jsonb("result").notNull(),
   createdAt: createdAtColumn(),
-}, (t) => ({ idx: index("risk_assessments_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt) }));
+}, (t) => ({
+  idx: index("risk_assessments_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt),
+  ownerFk: foreignKey({ name: "risk_assessments_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
+  idUserUnique: uniqueIndex("risk_assessments_id_user_unique").on(t.id, t.userId),
+}));
 
 export const simulations = pgTable("simulations", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
   params: jsonb("params").notNull(),
   scenarios: jsonb("scenarios").notNull(),
   costModelVersion: text("cost_model_version").notNull(),
   createdAt: createdAtColumn(),
-}, (t) => ({ idx: index("simulations_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt) }));
+}, (t) => ({
+  idx: index("simulations_user_candidate_idx").on(t.userId, t.candidateId, t.createdAt),
+  ownerFk: foreignKey({ name: "simulations_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
+  idUserUnique: uniqueIndex("simulations_id_user_unique").on(t.id, t.userId),
+}));
 
 export const OUTCOME_VALUES = ["QUALIFIED", "WAIT", "REJECT", "EVALUATION_ONLY", "NO_TRADE"] as const;
 export const WORKFLOW_STATE_VALUES = ["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SUPERSEDED", "CANCELLED"] as const;
 export const userDecisions = pgTable("user_decisions", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   candidateId: uuid("candidate_id").notNull().references(() => opportunityCandidates.id, { onDelete: "restrict" }),
   outcome: text("outcome").notNull(),
   workflowState: text("workflow_state").notNull().default("PENDING"),
-  confidenceAssessmentId: uuid("confidence_assessment_id").references(() => confidenceAssessments.id, { onDelete: "restrict" }),
-  riskAssessmentId: uuid("risk_assessment_id").references(() => riskAssessments.id, { onDelete: "restrict" }),
-  simulationId: uuid("simulation_id").references(() => simulations.id, { onDelete: "restrict" }),
+  confidenceAssessmentId: uuid("confidence_assessment_id"),
+  riskAssessmentId: uuid("risk_assessment_id"),
+  simulationId: uuid("simulation_id"),
   /** the immutable chained decision this one builds on, when it came through the existing risk flow */
   riskDecisionId: uuid("risk_decision_id").references(() => riskDecisions.id, { onDelete: "restrict" }),
   /** why it qualified or not, why not larger, what supports it, what would invalidate it, comparable patterns, agent agreement */
@@ -81,6 +90,12 @@ export const userDecisions = pgTable("user_decisions", {
   createdAt: createdAtColumn(),
   updatedAt: updatedAtColumn(),
 }, (t) => ({
+  ownerFk: foreignKey({ name: "user_decisions_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
+  confidenceFk: foreignKey({ name: "user_decisions_confidence_fk", columns: [t.confidenceAssessmentId], foreignColumns: [confidenceAssessments.id] }),
+  riskAssessmentFk: foreignKey({ name: "user_decisions_risk_assessment_fk", columns: [t.riskAssessmentId, t.userId], foreignColumns: [riskAssessments.id, riskAssessments.userId] }),
+  simulationFk: foreignKey({ name: "user_decisions_simulation_fk", columns: [t.simulationId, t.userId], foreignColumns: [simulations.id, simulations.userId] }),
+  supersedesFk: foreignKey({ name: "user_decisions_supersedes_fk", columns: [t.supersedesId, t.userId], foreignColumns: [t.id, t.userId] }),
+  idUserUnique: uniqueIndex("user_decisions_id_user_unique").on(t.id, t.userId),
   userIdx: index("user_decisions_user_idx").on(t.userId, t.workflowState, t.validUntil),
   candidateIdx: index("user_decisions_candidate_idx").on(t.candidateId),
   outcomeCheck: check("user_decisions_outcome_check", oneOf(t.outcome, OUTCOME_VALUES)),
@@ -93,7 +108,7 @@ export const userDecisions = pgTable("user_decisions", {
 export const userDecisionEvents = pgTable("user_decision_events", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  decisionId: uuid("decision_id").notNull().references(() => userDecisions.id, { onDelete: "restrict" }),
+  decisionId: uuid("decision_id").notNull(),
   fromState: text("from_state"),
   toState: text("to_state").notNull(),
   actor: text("actor").notNull(),
@@ -101,6 +116,8 @@ export const userDecisionEvents = pgTable("user_decision_events", {
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   idx: index("user_decision_events_decision_idx").on(t.decisionId, t.at),
+  userIdx: index("user_decision_events_user_idx").on(t.userId, t.at),
+  decisionFk: foreignKey({ name: "user_decision_events_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
   toCheck: check("user_decision_events_to_check", oneOf(t.toState, WORKFLOW_STATE_VALUES)),
   fromCheck: check("user_decision_events_from_check", sql`${t.fromState} is null or ${t.fromState} in ('PENDING', 'APPROVED', 'REJECTED', 'EXPIRED', 'SUPERSEDED', 'CANCELLED')`),
 }));
@@ -109,14 +126,16 @@ export const MONITORING_KINDS = ["ENTRY_FILLED", "STOP_HIT", "TARGET_HIT", "TRAI
 export const tradeMonitoringEvents = pgTable("trade_monitoring_events", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
-  decisionId: uuid("decision_id").references(() => userDecisions.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
+  decisionId: uuid("decision_id"),
   mode: text("mode").notNull(),
   kind: text("kind").notNull(),
   payload: jsonb("payload").notNull().default(sql`'{}'::jsonb`),
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   idx: index("trade_monitoring_events_user_idx").on(t.userId, t.at),
+  ownerFk: foreignKey({ name: "trade_monitoring_events_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
+  decisionFk: foreignKey({ name: "trade_monitoring_events_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
   kindCheck: check("trade_monitoring_events_kind_check", oneOf(t.kind, MONITORING_KINDS)),
   modeCheck: check("trade_monitoring_events_mode_check", oneOf(t.mode, ["PAPER", "LIVE"])),
 }));
@@ -125,11 +144,11 @@ export const tradeMonitoringEvents = pgTable("trade_monitoring_events", {
 export const tradeOutcomes = pgTable("trade_outcomes", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
-  decisionId: uuid("decision_id").references(() => userDecisions.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
+  decisionId: uuid("decision_id"),
   mode: text("mode").notNull(),
   paperTradeId: uuid("paper_trade_id").references(() => paperTrades.id, { onDelete: "restrict" }),
-  orderId: uuid("order_id").references(() => orders.id, { onDelete: "restrict" }),
+  orderId: uuid("order_id"),
   instrument: text("instrument").notNull(),
   side: text("side").notNull(),
   quantity: numeric("quantity").notNull(),
@@ -143,6 +162,9 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   createdAt: createdAtColumn(),
 }, (t) => ({
   idx: index("trade_outcomes_user_idx").on(t.userId, t.mode, t.closedAt),
+  ownerFk: foreignKey({ name: "trade_outcomes_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
+  decisionFk: foreignKey({ name: "trade_outcomes_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
+  orderFk: foreignKey({ name: "trade_outcomes_order_fk", columns: [t.orderId, t.accountId], foreignColumns: [orders.id, orders.accountId] }),
   modeCheck: check("trade_outcomes_mode_check", oneOf(t.mode, ["PAPER", "LIVE"])),
   sourceCheck: check("trade_outcomes_source_check", sql`(${t.mode} = 'PAPER' and ${t.paperTradeId} is not null and ${t.orderId} is null) or (${t.mode} = 'LIVE' and ${t.orderId} is not null and ${t.paperTradeId} is null)`),
   timeCheck: check("trade_outcomes_time_check", sql`${t.closedAt} >= ${t.openedAt} and ${t.quantity} > 0`),

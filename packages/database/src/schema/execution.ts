@@ -52,6 +52,8 @@ export const orders = pgTable(
     idempotencyKeyUnique: uniqueIndex(
       "orders_idempotency_key_unique",
     ).on(table.idempotencyKey),
+    /** Target of trade_outcomes (order_id, account_id): an outcome can only cite an order of its own account. */
+    idAccountUnique: uniqueIndex("orders_id_account_unique").on(table.id, table.accountId),
     accountStatusIdx: index("orders_account_status_idx").on(
       table.accountId,
       table.status,

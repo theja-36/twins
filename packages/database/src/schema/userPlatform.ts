@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, foreignKey, index, integer, numeric, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { oneOf } from "./_checks";
 import { createdAtColumn, idColumn } from "./_columns";
 import { accounts } from "./accounts";
@@ -28,7 +28,7 @@ export const userSessions = pgTable("user_sessions", {
 export const userCapitalProfiles = pgTable("user_capital_profiles", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   version: integer("version").notNull(),
   totalCapital: numeric("total_capital").notNull(),
   availableCapital: numeric("available_capital").notNull(),
@@ -37,6 +37,7 @@ export const userCapitalProfiles = pgTable("user_capital_profiles", {
   createdBy: text("created_by").notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  ownerFk: foreignKey({ name: "user_capital_profiles_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   versionUnique: uniqueIndex("user_capital_profiles_account_version_unique").on(t.accountId, t.version),
   accountIdx: index("user_capital_profiles_account_idx").on(t.accountId, t.effectiveFrom),
   versionCheck: check("user_capital_profiles_version_check", sql`${t.version} >= 1`),
@@ -47,7 +48,7 @@ export const userCapitalProfiles = pgTable("user_capital_profiles", {
 export const userRiskPolicies = pgTable("user_risk_policies", {
   id: idColumn(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   version: integer("version").notNull(),
   riskPercent: numeric("risk_percent").notNull(),
   maxRiskPerTrade: numeric("max_risk_per_trade"),
@@ -60,6 +61,7 @@ export const userRiskPolicies = pgTable("user_risk_policies", {
   createdBy: text("created_by").notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  ownerFk: foreignKey({ name: "user_risk_policies_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   versionUnique: uniqueIndex("user_risk_policies_account_version_unique").on(t.accountId, t.version),
   accountIdx: index("user_risk_policies_account_idx").on(t.accountId, t.effectiveFrom),
   versionCheck: check("user_risk_policies_version_check", sql`${t.version} >= 1`),
@@ -74,13 +76,14 @@ export const EXECUTION_MODE_VALUES = ["PAPER", "ASSISTED_LIVE", "CONTROLLED_AUTO
  */
 export const userExecutionPermissions = pgTable("user_execution_permissions", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
-  accountId: uuid("account_id").notNull().references(() => accounts.id, { onDelete: "restrict" }),
+  accountId: uuid("account_id").notNull(),
   mode: text("mode").notNull(),
   enabled: boolean("enabled").notNull().default(false),
   changedBy: text("changed_by").notNull(),
   changedAt: timestamp("changed_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   pk: primaryKey({ columns: [t.accountId, t.mode] }),
+  ownerFk: foreignKey({ name: "user_execution_permissions_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   modeCheck: check("user_execution_permissions_mode_check", oneOf(t.mode, EXECUTION_MODE_VALUES)),
   liveDisabledCheck: check("user_execution_permissions_live_disabled_check", sql`${t.mode} = 'PAPER' or ${t.enabled} = false`),
 }));

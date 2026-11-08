@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { createdAtColumn, idColumn, updatedAtColumn } from "./_columns";
 import { tradingModeEnum } from "./enums";
 import { users } from "./users";
@@ -25,4 +25,7 @@ export const accounts = pgTable("accounts", {
   isActive: boolean("is_active").notNull().default(true),
   createdAt: createdAtColumn(),
   updatedAt: updatedAtColumn(),
-});
+}, (t) => ({
+  /** Target of the composite (account_id, user_id) foreign keys of the master-build tables: a row can never name another user's account. */
+  idUserUnique: uniqueIndex("accounts_id_user_unique").on(t.id, t.userId),
+}));

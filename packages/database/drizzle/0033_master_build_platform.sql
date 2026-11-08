@@ -384,11 +384,11 @@ CREATE TABLE "performance_snapshots" (
 --> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "role" text DEFAULT 'TRADER' NOT NULL;--> statement-breakpoint
 ALTER TABLE "user_capital_profiles" ADD CONSTRAINT "user_capital_profiles_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_capital_profiles" ADD CONSTRAINT "user_capital_profiles_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_capital_profiles" ADD CONSTRAINT "user_capital_profiles_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_execution_permissions" ADD CONSTRAINT "user_execution_permissions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_execution_permissions" ADD CONSTRAINT "user_execution_permissions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_execution_permissions" ADD CONSTRAINT "user_execution_permissions_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_risk_policies" ADD CONSTRAINT "user_risk_policies_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_risk_policies" ADD CONSTRAINT "user_risk_policies_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_risk_policies" ADD CONSTRAINT "user_risk_policies_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_sessions" ADD CONSTRAINT "user_sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "opportunity_candidates" ADD CONSTRAINT "opportunity_candidates_claim_id_options_claims_id_fk" FOREIGN KEY ("claim_id") REFERENCES "public"."options_claims"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "opportunity_candidates" ADD CONSTRAINT "opportunity_candidates_scan_id_opportunity_scans_id_fk" FOREIGN KEY ("scan_id") REFERENCES "public"."opportunity_scans"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
@@ -397,33 +397,34 @@ ALTER TABLE "research_packages" ADD CONSTRAINT "research_packages_candidate_id_o
 ALTER TABLE "signal_classifications" ADD CONSTRAINT "signal_classifications_claim_id_options_claims_id_fk" FOREIGN KEY ("claim_id") REFERENCES "public"."options_claims"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "strategy_drift_events" ADD CONSTRAINT "strategy_drift_events_playbook_id_strategy_playbooks_id_fk" FOREIGN KEY ("playbook_id") REFERENCES "public"."strategy_playbooks"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "strategy_playbooks" ADD CONSTRAINT "strategy_playbooks_telegram_source_id_telegram_sources_id_fk" FOREIGN KEY ("telegram_source_id") REFERENCES "public"."telegram_sources"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "confidence_assessments" ADD CONSTRAINT "confidence_assessments_candidate_id_opportunity_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "confidence_assessments" ADD CONSTRAINT "confidence_assessments_candidate_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "risk_assessments" ADD CONSTRAINT "risk_assessments_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "risk_assessments" ADD CONSTRAINT "risk_assessments_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "risk_assessments" ADD CONSTRAINT "risk_assessments_candidate_id_opportunity_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "risk_assessments" ADD CONSTRAINT "risk_assessments_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "simulations" ADD CONSTRAINT "simulations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "simulations" ADD CONSTRAINT "simulations_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "simulations" ADD CONSTRAINT "simulations_candidate_id_opportunity_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "simulations" ADD CONSTRAINT "simulations_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_decision_id_user_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."user_decisions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trade_monitoring_events" ADD CONSTRAINT "trade_monitoring_events_decision_fk" FOREIGN KEY ("decision_id","user_id") REFERENCES "public"."user_decisions"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_decision_id_user_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."user_decisions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_paper_trade_id_paper_trades_id_fk" FOREIGN KEY ("paper_trade_id") REFERENCES "public"."paper_trades"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_order_id_orders_id_fk" FOREIGN KEY ("order_id") REFERENCES "public"."orders"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_decision_fk" FOREIGN KEY ("decision_id","user_id") REFERENCES "public"."user_decisions"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "trade_outcomes" ADD CONSTRAINT "trade_outcomes_order_fk" FOREIGN KEY ("order_id","account_id") REFERENCES "public"."orders"("id","account_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_decision_events" ADD CONSTRAINT "user_decision_events_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_decision_events" ADD CONSTRAINT "user_decision_events_decision_id_user_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."user_decisions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decision_events" ADD CONSTRAINT "user_decision_events_decision_fk" FOREIGN KEY ("decision_id","user_id") REFERENCES "public"."user_decisions"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_account_id_accounts_id_fk" FOREIGN KEY ("account_id") REFERENCES "public"."accounts"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_candidate_id_opportunity_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_confidence_assessment_id_confidence_assessments_id_fk" FOREIGN KEY ("confidence_assessment_id") REFERENCES "public"."confidence_assessments"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_risk_assessment_id_risk_assessments_id_fk" FOREIGN KEY ("risk_assessment_id") REFERENCES "public"."risk_assessments"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_simulation_id_simulations_id_fk" FOREIGN KEY ("simulation_id") REFERENCES "public"."simulations"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_risk_decision_id_risk_decisions_id_fk" FOREIGN KEY ("risk_decision_id") REFERENCES "public"."risk_decisions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "counterfactual_reviews" ADD CONSTRAINT "counterfactual_reviews_candidate_id_opportunity_candidates_id_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "counterfactual_reviews" ADD CONSTRAINT "counterfactual_reviews_decision_id_user_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."user_decisions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "learning_version_events" ADD CONSTRAINT "learning_version_events_learning_version_id_learning_versions_id_fk" FOREIGN KEY ("learning_version_id") REFERENCES "public"."learning_versions"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_owner_fk" FOREIGN KEY ("account_id","user_id") REFERENCES "public"."accounts"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_confidence_fk" FOREIGN KEY ("confidence_assessment_id") REFERENCES "public"."confidence_assessments"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_risk_assessment_fk" FOREIGN KEY ("risk_assessment_id","user_id") REFERENCES "public"."risk_assessments"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_simulation_fk" FOREIGN KEY ("simulation_id","user_id") REFERENCES "public"."simulations"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_decisions" ADD CONSTRAINT "user_decisions_supersedes_fk" FOREIGN KEY ("supersedes_id","user_id") REFERENCES "public"."user_decisions"("id","user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "counterfactual_reviews" ADD CONSTRAINT "counterfactual_reviews_candidate_fk" FOREIGN KEY ("candidate_id") REFERENCES "public"."opportunity_candidates"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "counterfactual_reviews" ADD CONSTRAINT "counterfactual_reviews_decision_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."user_decisions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "learning_version_events" ADD CONSTRAINT "learning_version_events_version_fk" FOREIGN KEY ("learning_version_id") REFERENCES "public"."learning_versions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "performance_snapshots" ADD CONSTRAINT "performance_snapshots_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "user_capital_profiles_account_version_unique" ON "user_capital_profiles" USING btree ("account_id","version");--> statement-breakpoint
 CREATE INDEX "user_capital_profiles_account_idx" ON "user_capital_profiles" USING btree ("account_id","effective_from");--> statement-breakpoint
@@ -441,20 +442,27 @@ CREATE UNIQUE INDEX "research_packages_candidate_version_unique" ON "research_pa
 CREATE UNIQUE INDEX "signal_classifications_claim_version_unique" ON "signal_classifications" USING btree ("claim_id","classifier_version");--> statement-breakpoint
 CREATE INDEX "strategy_drift_events_playbook_idx" ON "strategy_drift_events" USING btree ("playbook_id","detected_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "strategy_playbooks_source_name_unique" ON "strategy_playbooks" USING btree ("telegram_source_id","name");--> statement-breakpoint
+CREATE UNIQUE INDEX "strategy_playbooks_independent_name_unique" ON "strategy_playbooks" USING btree ("name") WHERE "strategy_playbooks"."telegram_source_id" is null;--> statement-breakpoint
 CREATE UNIQUE INDEX "confidence_assessments_candidate_model_unique" ON "confidence_assessments" USING btree ("candidate_id","model_version");--> statement-breakpoint
 CREATE INDEX "risk_assessments_user_candidate_idx" ON "risk_assessments" USING btree ("user_id","candidate_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "risk_assessments_id_user_unique" ON "risk_assessments" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "simulations_user_candidate_idx" ON "simulations" USING btree ("user_id","candidate_id","created_at");--> statement-breakpoint
+CREATE UNIQUE INDEX "simulations_id_user_unique" ON "simulations" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "trade_monitoring_events_user_idx" ON "trade_monitoring_events" USING btree ("user_id","at");--> statement-breakpoint
 CREATE INDEX "trade_outcomes_user_idx" ON "trade_outcomes" USING btree ("user_id","mode","closed_at");--> statement-breakpoint
 CREATE INDEX "user_decision_events_decision_idx" ON "user_decision_events" USING btree ("decision_id","at");--> statement-breakpoint
+CREATE INDEX "user_decision_events_user_idx" ON "user_decision_events" USING btree ("user_id","at");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_decisions_id_user_unique" ON "user_decisions" USING btree ("id","user_id");--> statement-breakpoint
 CREATE INDEX "user_decisions_user_idx" ON "user_decisions" USING btree ("user_id","workflow_state","valid_until");--> statement-breakpoint
 CREATE INDEX "user_decisions_candidate_idx" ON "user_decisions" USING btree ("candidate_id");--> statement-breakpoint
 CREATE INDEX "learning_version_events_version_idx" ON "learning_version_events" USING btree ("learning_version_id","at");--> statement-breakpoint
 CREATE UNIQUE INDEX "learning_versions_unique" ON "learning_versions" USING btree ("kind","subject_id","version");--> statement-breakpoint
 CREATE INDEX "performance_snapshots_scope_idx" ON "performance_snapshots" USING btree ("scope","scope_id","mode","period_end");--> statement-breakpoint
+CREATE UNIQUE INDEX "accounts_id_user_unique" ON "accounts" USING btree ("id","user_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "orders_id_account_unique" ON "orders" USING btree ("id","account_id");--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_role_check" CHECK ("users"."role" in ('ADMIN', 'TRADER'));
 --> statement-breakpoint
--- HAND-APPENDED (Master Build Stage 02, ADR-002/ADR-003/ADR-008). Append-only evidence tables reject UPDATE / DELETE / TRUNCATE through the existing twins_audit_forbid_change() function; the trigger names end in _no_update_delete so infrastructure/staging/app-role.sql grants the runtime role SELECT and INSERT only.
+-- HAND-APPENDED (Master Build Stage 02, ADR-002/003/008/011/012). Append-only evidence tables reject UPDATE / DELETE / TRUNCATE through the existing twins_audit_forbid_change() function; the trigger names end in _no_update_delete so infrastructure/staging/app-role.sql grants the runtime role SELECT and INSERT only.
 --> statement-breakpoint
 CREATE TRIGGER "user_capital_profiles_no_update_delete" BEFORE UPDATE OR DELETE ON "user_capital_profiles" FOR EACH ROW EXECUTE FUNCTION "twins_audit_forbid_change"();
 --> statement-breakpoint
@@ -520,7 +528,59 @@ CREATE TRIGGER "performance_snapshots_no_update_delete" BEFORE UPDATE OR DELETE 
 --> statement-breakpoint
 CREATE TRIGGER "performance_snapshots_no_truncate" BEFORE TRUNCATE ON "performance_snapshots" FOR EACH STATEMENT EXECUTE FUNCTION "twins_audit_forbid_change"();
 --> statement-breakpoint
--- HAND-APPENDED. Row-level security on every user-private table: a row is visible and writable only when its user_id equals the transaction's `twins.user_id` setting. With no setting the policy matches nothing (fail closed). FORCE applies it to the table owner too. The application sets the setting per transaction (packages/database withUser); system actors act for a user only by naming that user.
+-- HAND-APPENDED. user_decisions guard: a decision is created PENDING; afterwards ONLY workflow_state (and updated_at) may change, and a decision in a final state never changes again. This stops outcome, owner, evidence links and validity window from being edited after the fact, and stops a row being inserted already APPROVED. The approval itself (a recorded human approval) is added in Stage 07 as the only door; until then the runtime role has no write grant on this table (app-role.sql).
+--> statement-breakpoint
+CREATE FUNCTION "twins_user_decision_guard"() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		IF NEW.workflow_state <> 'PENDING' THEN
+			RAISE EXCEPTION 'a decision must start PENDING' USING ERRCODE = 'check_violation';
+		END IF;
+		-- mandatory stop-loss floor: a QUALIFIED decision cannot be created for a candidate that has no positive stop-loss. This is only a floor; the full rule (basis, validity) stays in packages/stop-loss and the Stage 07 producer must call it first.
+		IF NEW.outcome = 'QUALIFIED' AND NOT EXISTS (SELECT 1 FROM opportunity_candidates c WHERE c.id = NEW.candidate_id AND c.stop_loss IS NOT NULL AND c.stop_loss > 0) THEN
+			RAISE EXCEPTION 'a QUALIFIED decision needs a candidate with a stop-loss' USING ERRCODE = 'check_violation';
+		END IF;
+		RETURN NEW;
+	END IF;
+	IF NEW.id <> OLD.id OR NEW.user_id <> OLD.user_id OR NEW.account_id <> OLD.account_id OR NEW.candidate_id <> OLD.candidate_id
+	   OR NEW.outcome <> OLD.outcome OR NEW.explanation IS DISTINCT FROM OLD.explanation
+	   OR NEW.valid_from <> OLD.valid_from OR NEW.valid_until <> OLD.valid_until OR NEW.created_at <> OLD.created_at
+	   OR NEW.confidence_assessment_id IS DISTINCT FROM OLD.confidence_assessment_id OR NEW.risk_assessment_id IS DISTINCT FROM OLD.risk_assessment_id
+	   OR NEW.simulation_id IS DISTINCT FROM OLD.simulation_id OR NEW.risk_decision_id IS DISTINCT FROM OLD.risk_decision_id
+	   OR NEW.supersedes_id IS DISTINCT FROM OLD.supersedes_id THEN
+		RAISE EXCEPTION 'only workflow_state of a decision may change' USING ERRCODE = 'check_violation';
+	END IF;
+	IF NEW.workflow_state <> OLD.workflow_state AND OLD.workflow_state <> 'PENDING' THEN
+		RAISE EXCEPTION 'a decision in a final state cannot change' USING ERRCODE = 'check_violation';
+	END IF;
+	RETURN NEW;
+END;
+$$;
+--> statement-breakpoint
+CREATE TRIGGER "user_decisions_guard" BEFORE INSERT OR UPDATE ON "user_decisions" FOR EACH ROW EXECUTE FUNCTION "twins_user_decision_guard"();
+--> statement-breakpoint
+CREATE TRIGGER "user_decisions_no_delete" BEFORE DELETE ON "user_decisions" FOR EACH ROW EXECUTE FUNCTION "twins_audit_forbid_change"();
+--> statement-breakpoint
+CREATE TRIGGER "user_decisions_no_truncate" BEFORE TRUNCATE ON "user_decisions" FOR EACH STATEMENT EXECUTE FUNCTION "twins_audit_forbid_change"();
+--> statement-breakpoint
+-- HAND-APPENDED. Until the Stage 07 approval doors exist, the runtime and bot roles must not write user_decisions or user_decision_events (same pattern as migration 0029 for the execution tables; app-role.sql lists them as read-only so a re-run does not grant them back). The roles are skipped when absent (CI and development databases).
+--> statement-breakpoint
+DO $$
+DECLARE
+	r text;
+	t text;
+BEGIN
+	FOREACH r IN ARRAY ARRAY['twins_app', 'twins_bot'] LOOP
+		IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
+			FOREACH t IN ARRAY ARRAY['user_decisions', 'user_decision_events'] LOOP
+				EXECUTE format('REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON %I FROM %I', t, r);
+			END LOOP;
+		END IF;
+	END LOOP;
+END
+$$;
+--> statement-breakpoint
+-- HAND-APPENDED. Row-level security on every user-private table: a row is visible and writable only when its user_id equals the transaction's `twins.user_id` setting. With no setting the policy matches nothing (fail closed). FORCE applies it to the table owner too. The application sets the setting per transaction (packages/database withUser); system actors act for a user only by naming that user. Composite (account_id, user_id) foreign keys additionally guarantee that a row can never name another user's account.
 --> statement-breakpoint
 ALTER TABLE "user_capital_profiles" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -576,8 +636,10 @@ ALTER TABLE "trade_outcomes" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 CREATE POLICY "trade_outcomes_owner_only" ON "trade_outcomes" USING (user_id = nullif(current_setting('twins.user_id', true), '')::uuid) WITH CHECK (user_id = nullif(current_setting('twins.user_id', true), '')::uuid);
 --> statement-breakpoint
+-- HAND-APPENDED. performance_snapshots: shared rows (no user) are readable by all; a user's own rows only by that user; a SHARED row can be written only with NO user context (system actors), never from a user session.
+--> statement-breakpoint
 ALTER TABLE "performance_snapshots" ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
 ALTER TABLE "performance_snapshots" FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY "performance_snapshots_shared_or_owner" ON "performance_snapshots" USING (user_id is null or user_id = nullif(current_setting('twins.user_id', true), '')::uuid) WITH CHECK (user_id is null or user_id = nullif(current_setting('twins.user_id', true), '')::uuid);
+CREATE POLICY "performance_snapshots_shared_or_owner" ON "performance_snapshots" USING (user_id is null or user_id = nullif(current_setting('twins.user_id', true), '')::uuid) WITH CHECK ((user_id is null and nullif(current_setting('twins.user_id', true), '')::uuid is null) or user_id = nullif(current_setting('twins.user_id', true), '')::uuid);

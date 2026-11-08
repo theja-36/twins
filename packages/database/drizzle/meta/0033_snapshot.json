@@ -1,5 +1,5 @@
 {
-  "id": "f5e5f499-472d-47cf-9ec2-56d90fcab30b",
+  "id": "7bcfe608-27fb-4ce1-9abb-f05945848598",
   "prevId": "90521f7e-400d-4f5d-bdae-75873595f9b9",
   "version": "7",
   "dialect": "postgresql",
@@ -233,7 +233,29 @@
           "default": "now()"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "accounts_id_user_unique": {
+          "name": "accounts_id_user_unique",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "accounts_user_id_users_id_fk": {
           "name": "accounts_user_id_users_id_fk",
@@ -3036,6 +3058,27 @@
           "columns": [
             {
               "expression": "idempotency_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "orders_id_account_unique": {
+          "name": "orders_id_account_unique",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "account_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -11047,17 +11090,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "user_capital_profiles_account_id_accounts_id_fk": {
-          "name": "user_capital_profiles_account_id_accounts_id_fk",
+        "user_capital_profiles_owner_fk": {
+          "name": "user_capital_profiles_owner_fk",
           "tableFrom": "user_capital_profiles",
           "tableTo": "accounts",
           "columnsFrom": [
-            "account_id"
+            "account_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -11134,17 +11179,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "user_execution_permissions_account_id_accounts_id_fk": {
-          "name": "user_execution_permissions_account_id_accounts_id_fk",
+        "user_execution_permissions_owner_fk": {
+          "name": "user_execution_permissions_owner_fk",
           "tableFrom": "user_execution_permissions",
           "tableTo": "accounts",
           "columnsFrom": [
-            "account_id"
+            "account_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -11321,17 +11368,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "user_risk_policies_account_id_accounts_id_fk": {
-          "name": "user_risk_policies_account_id_accounts_id_fk",
+        "user_risk_policies_owner_fk": {
+          "name": "user_risk_policies_owner_fk",
           "tableFrom": "user_risk_policies",
           "tableTo": "accounts",
           "columnsFrom": [
-            "account_id"
+            "account_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -12562,6 +12611,22 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "strategy_playbooks_independent_name_unique": {
+          "name": "strategy_playbooks_independent_name_unique",
+          "columns": [
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"strategy_playbooks\".\"telegram_source_id\" is null",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -12707,8 +12772,8 @@
         }
       },
       "foreignKeys": {
-        "confidence_assessments_candidate_id_opportunity_candidates_id_fk": {
-          "name": "confidence_assessments_candidate_id_opportunity_candidates_id_fk",
+        "confidence_assessments_candidate_fk": {
+          "name": "confidence_assessments_candidate_fk",
           "tableFrom": "confidence_assessments",
           "tableTo": "opportunity_candidates",
           "columnsFrom": [
@@ -12717,7 +12782,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -12824,6 +12889,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "risk_assessments_id_user_unique": {
+          "name": "risk_assessments_id_user_unique",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -12833,19 +12919,6 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "risk_assessments_account_id_accounts_id_fk": {
-          "name": "risk_assessments_account_id_accounts_id_fk",
-          "tableFrom": "risk_assessments",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
           ],
           "columnsTo": [
             "id"
@@ -12864,6 +12937,21 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "risk_assessments_owner_fk": {
+          "name": "risk_assessments_owner_fk",
+          "tableFrom": "risk_assessments",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -12954,6 +13042,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "simulations_id_user_unique": {
+          "name": "simulations_id_user_unique",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -12963,19 +13072,6 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "simulations_account_id_accounts_id_fk": {
-          "name": "simulations_account_id_accounts_id_fk",
-          "tableFrom": "simulations",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
           ],
           "columnsTo": [
             "id"
@@ -12994,6 +13090,21 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "simulations_owner_fk": {
+          "name": "simulations_owner_fk",
+          "tableFrom": "simulations",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13095,30 +13206,34 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "trade_monitoring_events_account_id_accounts_id_fk": {
-          "name": "trade_monitoring_events_account_id_accounts_id_fk",
+        "trade_monitoring_events_owner_fk": {
+          "name": "trade_monitoring_events_owner_fk",
           "tableFrom": "trade_monitoring_events",
           "tableTo": "accounts",
           "columnsFrom": [
-            "account_id"
+            "account_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "trade_monitoring_events_decision_id_user_decisions_id_fk": {
-          "name": "trade_monitoring_events_decision_id_user_decisions_id_fk",
+        "trade_monitoring_events_decision_fk": {
+          "name": "trade_monitoring_events_decision_fk",
           "tableFrom": "trade_monitoring_events",
           "tableTo": "user_decisions",
           "columnsFrom": [
-            "decision_id"
+            "decision_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13294,32 +13409,6 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "trade_outcomes_account_id_accounts_id_fk": {
-          "name": "trade_outcomes_account_id_accounts_id_fk",
-          "tableFrom": "trade_outcomes",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "trade_outcomes_decision_id_user_decisions_id_fk": {
-          "name": "trade_outcomes_decision_id_user_decisions_id_fk",
-          "tableFrom": "trade_outcomes",
-          "tableTo": "user_decisions",
-          "columnsFrom": [
-            "decision_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "trade_outcomes_paper_trade_id_paper_trades_id_fk": {
           "name": "trade_outcomes_paper_trade_id_paper_trades_id_fk",
           "tableFrom": "trade_outcomes",
@@ -13333,17 +13422,49 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "trade_outcomes_order_id_orders_id_fk": {
-          "name": "trade_outcomes_order_id_orders_id_fk",
+        "trade_outcomes_owner_fk": {
+          "name": "trade_outcomes_owner_fk",
+          "tableFrom": "trade_outcomes",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trade_outcomes_decision_fk": {
+          "name": "trade_outcomes_decision_fk",
+          "tableFrom": "trade_outcomes",
+          "tableTo": "user_decisions",
+          "columnsFrom": [
+            "decision_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trade_outcomes_order_fk": {
+          "name": "trade_outcomes_order_fk",
           "tableFrom": "trade_outcomes",
           "tableTo": "orders",
           "columnsFrom": [
-            "order_id"
+            "order_id",
+            "account_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "account_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13441,6 +13562,27 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "user_decision_events_user_idx": {
+          "name": "user_decision_events_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -13457,17 +13599,19 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "user_decision_events_decision_id_user_decisions_id_fk": {
-          "name": "user_decision_events_decision_id_user_decisions_id_fk",
+        "user_decision_events_decision_fk": {
+          "name": "user_decision_events_decision_fk",
           "tableFrom": "user_decision_events",
           "tableTo": "user_decisions",
           "columnsFrom": [
-            "decision_id"
+            "decision_id",
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "id",
+            "user_id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13592,6 +13736,27 @@
         }
       },
       "indexes": {
+        "user_decisions_id_user_unique": {
+          "name": "user_decisions_id_user_unique",
+          "columns": [
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "user_decisions_user_idx": {
           "name": "user_decisions_user_idx",
           "columns": [
@@ -13649,64 +13814,12 @@
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
-        "user_decisions_account_id_accounts_id_fk": {
-          "name": "user_decisions_account_id_accounts_id_fk",
-          "tableFrom": "user_decisions",
-          "tableTo": "accounts",
-          "columnsFrom": [
-            "account_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
         "user_decisions_candidate_id_opportunity_candidates_id_fk": {
           "name": "user_decisions_candidate_id_opportunity_candidates_id_fk",
           "tableFrom": "user_decisions",
           "tableTo": "opportunity_candidates",
           "columnsFrom": [
             "candidate_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "user_decisions_confidence_assessment_id_confidence_assessments_id_fk": {
-          "name": "user_decisions_confidence_assessment_id_confidence_assessments_id_fk",
-          "tableFrom": "user_decisions",
-          "tableTo": "confidence_assessments",
-          "columnsFrom": [
-            "confidence_assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "user_decisions_risk_assessment_id_risk_assessments_id_fk": {
-          "name": "user_decisions_risk_assessment_id_risk_assessments_id_fk",
-          "tableFrom": "user_decisions",
-          "tableTo": "risk_assessments",
-          "columnsFrom": [
-            "risk_assessment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "user_decisions_simulation_id_simulations_id_fk": {
-          "name": "user_decisions_simulation_id_simulations_id_fk",
-          "tableFrom": "user_decisions",
-          "tableTo": "simulations",
-          "columnsFrom": [
-            "simulation_id"
           ],
           "columnsTo": [
             "id"
@@ -13725,6 +13838,79 @@
             "id"
           ],
           "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "user_decisions_owner_fk": {
+          "name": "user_decisions_owner_fk",
+          "tableFrom": "user_decisions",
+          "tableTo": "accounts",
+          "columnsFrom": [
+            "account_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_decisions_confidence_fk": {
+          "name": "user_decisions_confidence_fk",
+          "tableFrom": "user_decisions",
+          "tableTo": "confidence_assessments",
+          "columnsFrom": [
+            "confidence_assessment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_decisions_risk_assessment_fk": {
+          "name": "user_decisions_risk_assessment_fk",
+          "tableFrom": "user_decisions",
+          "tableTo": "risk_assessments",
+          "columnsFrom": [
+            "risk_assessment_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_decisions_simulation_fk": {
+          "name": "user_decisions_simulation_fk",
+          "tableFrom": "user_decisions",
+          "tableTo": "simulations",
+          "columnsFrom": [
+            "simulation_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "user_decisions_supersedes_fk": {
+          "name": "user_decisions_supersedes_fk",
+          "tableFrom": "user_decisions",
+          "tableTo": "user_decisions",
+          "columnsFrom": [
+            "supersedes_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "id",
+            "user_id"
+          ],
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13870,8 +14056,8 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "counterfactual_reviews_candidate_id_opportunity_candidates_id_fk": {
-          "name": "counterfactual_reviews_candidate_id_opportunity_candidates_id_fk",
+        "counterfactual_reviews_candidate_fk": {
+          "name": "counterfactual_reviews_candidate_fk",
           "tableFrom": "counterfactual_reviews",
           "tableTo": "opportunity_candidates",
           "columnsFrom": [
@@ -13880,11 +14066,11 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "counterfactual_reviews_decision_id_user_decisions_id_fk": {
-          "name": "counterfactual_reviews_decision_id_user_decisions_id_fk",
+        "counterfactual_reviews_decision_fk": {
+          "name": "counterfactual_reviews_decision_fk",
           "tableFrom": "counterfactual_reviews",
           "tableTo": "user_decisions",
           "columnsFrom": [
@@ -13893,7 +14079,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -13980,8 +14166,8 @@
         }
       },
       "foreignKeys": {
-        "learning_version_events_learning_version_id_learning_versions_id_fk": {
-          "name": "learning_version_events_learning_version_id_learning_versions_id_fk",
+        "learning_version_events_version_fk": {
+          "name": "learning_version_events_version_fk",
           "tableFrom": "learning_version_events",
           "tableTo": "learning_versions",
           "columnsFrom": [
@@ -13990,7 +14176,7 @@
           "columnsTo": [
             "id"
           ],
-          "onDelete": "restrict",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },

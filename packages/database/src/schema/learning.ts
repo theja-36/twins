@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { boolean, check, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { boolean, check, foreignKey, index, integer, jsonb, numeric, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { oneOf } from "./_checks";
 import { createdAtColumn, idColumn } from "./_columns";
 import { opportunityCandidates } from "./intelligence";
@@ -34,7 +34,7 @@ export const learningVersions = pgTable("learning_versions", {
 
 export const learningVersionEvents = pgTable("learning_version_events", {
   id: idColumn(),
-  learningVersionId: uuid("learning_version_id").notNull().references(() => learningVersions.id, { onDelete: "restrict" }),
+  learningVersionId: uuid("learning_version_id").notNull(),
   fromState: text("from_state"),
   toState: text("to_state").notNull(),
   actor: text("actor").notNull(),
@@ -42,6 +42,7 @@ export const learningVersionEvents = pgTable("learning_version_events", {
   at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
   idx: index("learning_version_events_version_idx").on(t.learningVersionId, t.at),
+  versionFk: foreignKey({ name: "learning_version_events_version_fk", columns: [t.learningVersionId], foreignColumns: [learningVersions.id] }),
   toCheck: check("learning_version_events_to_check", oneOf(t.toState, LEARNING_STATES)),
 }));
 
@@ -82,9 +83,13 @@ export const confidenceCalibrationRuns = pgTable("confidence_calibration_runs", 
 
 export const counterfactualReviews = pgTable("counterfactual_reviews", {
   id: idColumn(),
-  candidateId: uuid("candidate_id").references(() => opportunityCandidates.id, { onDelete: "restrict" }),
-  decisionId: uuid("decision_id").references(() => userDecisions.id, { onDelete: "restrict" }),
+  candidateId: uuid("candidate_id"),
+  decisionId: uuid("decision_id"),
   question: text("question").notNull(),
   result: jsonb("result").notNull(),
   createdAt: createdAtColumn(),
-}, (t) => ({ subjectCheck: check("counterfactual_reviews_subject_check", sql`${t.candidateId} is not null or ${t.decisionId} is not null`) }));
+}, (t) => ({
+  candidateFk: foreignKey({ name: "counterfactual_reviews_candidate_fk", columns: [t.candidateId], foreignColumns: [opportunityCandidates.id] }),
+  decisionFk: foreignKey({ name: "counterfactual_reviews_decision_fk", columns: [t.decisionId], foreignColumns: [userDecisions.id] }),
+  subjectCheck: check("counterfactual_reviews_subject_check", sql`${t.candidateId} is not null or ${t.decisionId} is not null`),
+}));

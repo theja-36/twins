@@ -42,3 +42,5 @@ Decision outcome (assessment) and workflow state (lifecycle) are separate column
 
 ## ADR-012 (2026-11-08) Database-level execution lock
 `user_execution_permissions` has a CHECK that refuses to record `ASSISTED_LIVE` or `CONTROLLED_AUTO` as enabled. This is defence in depth beside `checkExecutionGate`. Lifting it needs a deliberate new migration after the broker, security, legal and regulatory gates are verified; nothing in the master build does that.
+
+(ADR-011 addendum, 2026-11-08) Review hardening: `user_decisions` is guarded by a trigger and owner-tied foreign keys; a QUALIFIED row cannot be created for a candidate without a positive stop-loss (a floor beneath, not instead of, the `@twins/stop-loss` rule). `tests/unit/safety/qualifiedProducers.test.ts` proves the three ADR-010 files cannot produce a QUALIFIED decision.
