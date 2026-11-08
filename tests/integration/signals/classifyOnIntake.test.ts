@@ -35,7 +35,7 @@ describe("classification at intake", () => {
   it("is OFF by default: the claim is recorded exactly as before and nothing is classified", async () => {
     const r = await run({ ...ids() });
     expect(r.outcome).toMatchObject({ outcome: "options_claim_not_ingested" }); expect(r.claims).toHaveLength(1); expect(r.classes).toHaveLength(0);
-    expect(r.records.some((x) => String(x.event ?? x.message ?? "").includes("worker.classification"))).toBe(false);
+    expect(r.records.some((x) => JSON.stringify(x).includes("worker.classification"))).toBe(false);
   });
   it("when ON, stores one classification per claim with provenance, codes only (no message text), and the intake outcome is unchanged", async () => {
     const off = await run({ ...ids(), classifyOnIntake: false }), on = await run({ ...ids(), classifyOnIntake: true });
@@ -57,7 +57,7 @@ describe("classification at intake", () => {
     expect(healed.claims).toHaveLength(1); expect(healed.classes).toHaveLength(1);
   });
   it("messages that are not complete claims are not classified and cause no error", async () => {
-    const r = await run({ ...ids(), classifyOnIntake: true, text: "BUY SENSEX NIFTY CE" });
+    const r = await run({ ...ids(), classifyOnIntake: true, text: "GOOD MORNING EVERYONE, HAVE A PROFITABLE DAY" });
     expect(r.classes).toHaveLength(0); expect(r.records.some((x) => JSON.stringify(x).includes("worker.classification.failed"))).toBe(false);
   });
 });

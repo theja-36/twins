@@ -7,7 +7,7 @@ Updated each stage. A gap closes only when the tracker shows the related require
 | G-01 | No per-user authentication, sessions, roles or row-level security (contracts and helpers exist; DB and routes do not) | 01-02 | open |
 | G-02 | Capital profile, risk policy and permission TABLES exist (0033, unapplied); no service uses them and sizing still reads one configured capital | 06 | open |
 | G-03 | Outcome vocabulary is in the schema (`user_decisions`, unapplied); the engine does not produce it | 07 | open |
-| G-04 | Stage 03 logic is built, but is not yet fed real data: classification is not wired into live intake (owner-run backfill only), no loader maps real outcomes/regimes/edits into the learning inputs, structure-based setup detection needs market data, regime-based parts need Stage 04 | 03-04 | partly closed |
+| G-04 | Stage 03 logic is built, but is not yet fed real data: classification is wired into live intake behind TWINS_CLASSIFY_ON_INTAKE (default false; not enabled anywhere) and classifier accuracy on real messages is unmeasured (M02-15), no loader maps real outcomes/regimes/edits into the learning inputs, structure-based setup detection needs market data, regime-based parts need Stage 04 | 03-04 | partly closed |
 | G-05 | Market Context agent missing; agents not yet on the spec contract; no LLM adapter | 04 | open |
 | G-06 | Independent Opportunity Engine absent | 05 | open |
 | G-07 | Charges/brokerage model, single-trade what-if simulator, calibrated 0-100 confidence | 06 | open |

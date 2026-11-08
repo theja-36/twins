@@ -8757,6 +8757,56 @@
     "tests/unit/platform/contracts.test.ts + credentials.test.ts pass (local run 2026-11-08)"
    ],
    "blockers": []
+  },
+  {
+   "id": "M02-14",
+   "module": "M02",
+   "moduleName": "Signal Understanding & Classification",
+   "area": "Intake wiring and accuracy",
+   "feature": "Classification at live intake behind a feature flag (default off), failure-isolated, idempotent, evidence only",
+   "existing": "TWINS_CLASSIFY_ON_INTAKE (strict, default false) -> classifyClaimOnIntake after the claim is recorded; failures are logged (error class only) and healed by retry/backfill; no text stored; no decision, stop-loss or risk coupling",
+   "change": "to be defined when the stage starts",
+   "packages": [
+    "packages/signals/src/classification",
+    "services/worker/src/index.ts"
+   ],
+   "database": [
+    "signal_classifications"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "03",
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/signals/classifyOnIntake.test.ts (7 tests, local run 2026-11-09); tests/integration/signals/classifyOnIntake.test.ts through processTelegramJob (CI result recorded after the run)"
+   ],
+   "blockers": []
+  },
+  {
+   "id": "M02-15",
+   "module": "M02",
+   "moduleName": "Signal Understanding & Classification",
+   "area": "Intake wiring and accuracy",
+   "feature": "Classifier accuracy measured on real channel messages",
+   "existing": "not measured: needs a labelled sample of real messages (reading staging data needs a separate owner go; staging excerpts must not enter the public repo) and an agreed accuracy bar",
+   "change": "to be defined when the stage starts",
+   "packages": [
+    "packages/signals/src/classification",
+    "services/worker/src/index.ts"
+   ],
+   "database": [
+    "signal_classifications"
+   ],
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "stage": "03",
+   "status": "IN_PROGRESS",
+   "evidence": [],
+   "blockers": [
+    "owner go to read staging messages for labelling"
+   ]
   }
  ]
 }

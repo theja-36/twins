@@ -2,14 +2,14 @@
 
 > GENERATED from `docs/product/tracker.json` by `node scripts/product/tracker.mjs render`. Edit the JSON, never this file. Rules (enforced by `tests/unit/product/tracker.test.ts`): IMPLEMENTED and VERIFIED need evidence, BLOCKED needs a blocker, and VERIFIED is reserved for evidence gathered by the testing stage.
 
-Requirements: **386**. NOT_STARTED: 192 · IN_PROGRESS: 57 · IMPLEMENTED: 136 · BLOCKED: 0 · VERIFIED: 1
+Requirements: **388**. NOT_STARTED: 192 · IN_PROGRESS: 58 · IMPLEMENTED: 137 · BLOCKED: 0 · VERIFIED: 1
 
 ## Summary by module
 
 | Module | Name | Total | NOT_STARTED | IN_PROGRESS | IMPLEMENTED | BLOCKED | VERIFIED |
 |---|---|---|---|---|---|---|---|
 | M01 | Signal Intelligence & Telegram Integration | 25 | 8 | 0 | 17 | 0 | 0 |
-| M02 | Signal Understanding & Classification | 13 | 0 | 7 | 6 | 0 | 0 |
+| M02 | Signal Understanding & Classification | 15 | 0 | 8 | 7 | 0 | 0 |
 | M03 | Evidence Ledger & Historical Pattern Intelligence | 13 | 0 | 0 | 13 | 0 | 0 |
 | M04 | Research & Validation AI Agents | 27 | 5 | 6 | 16 | 0 | 0 |
 | M05 | Market Intelligence & Regime Detection | 14 | 10 | 0 | 4 | 0 | 0 |
@@ -75,6 +75,8 @@ Requirements: **386**. NOT_STARTED: 192 · IN_PROGRESS: 57 · IMPLEMENTED: 136 �
 | M02-11 | Required functionality | Risk-profile identification. | descriptive risk band from stop distance (versioned constants; never used to approve) | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured; CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text) |  |
 | M02-12 | Required functionality | Setup-context reconstruction. | reconstructContext: IST session bucket, weekday, days to expiry (year assumed and flagged), stop and target distance, reward-to-risk | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured; CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text) |  |
 | M02-13 | Required functionality | Structure validation. | structure issues: entry/stop/targets missing, stop or targets on the wrong side, targets unordered, range inverted, basis unclear, contract incomplete | 03 | IMPLEMENTED | tests/unit/signals/classification.test.ts (21 tests, local run 2026-11-08); tests/integration/signals/classification.test.ts (CI result recorded after the push); classifier accuracy on real channel messages is NOT yet measured; CI run 42446377229 (feat/master-build, 63d2070) all jobs green incl. tests/integration/signals/classification.test.ts on Postgres 16 (storage, idempotency, append-only, no message text) |  |
+| M02-14 | Intake wiring and accuracy | Classification at live intake behind a feature flag (default off), failure-isolated, idempotent, evidence only | TWINS_CLASSIFY_ON_INTAKE (strict, default false) -> classifyClaimOnIntake after the claim is recorded; failures are logged (error class only) and healed by retry/backfill; no text stored; no decision, stop-loss or risk coupling | 03 | IMPLEMENTED | tests/unit/signals/classifyOnIntake.test.ts (7 tests, local run 2026-11-09); tests/integration/signals/classifyOnIntake.test.ts through processTelegramJob (CI result recorded after the run) |  |
+| M02-15 | Intake wiring and accuracy | Classifier accuracy measured on real channel messages | not measured: needs a labelled sample of real messages (reading staging data needs a separate owner go; staging excerpts must not enter the public repo) and an agreed accuracy bar | 03 | IN_PROGRESS |  | owner go to read staging messages for labelling |
 
 ## M03 — Evidence Ledger & Historical Pattern Intelligence
 
