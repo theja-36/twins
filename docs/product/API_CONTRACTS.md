@@ -13,3 +13,16 @@ See `docs/api/openapi.json` (30 documented routes plus the Telegram webhook and 
 
 ## Planned contract families (added per stage, each with schemas and tests)
 Auth and users · user capital and risk policy · broker connections (per user) · channels (read, then managed) · signals and classifications · evidence · research packages · regimes · playbooks and strategy versions · opportunity candidates · confidence and risk assessments · simulations · decisions and approvals · orders, fills, positions · trade monitoring · analytics and learning versions · notifications · admin and audit.
+
+## Telegram intelligence read API (Stage 03; session-protected, shared data, read-only)
+Auth: `Authorization: Bearer tws_...` (user session; the shared service key is refused with 401). Permissions: `channels:read`, `signals:read`, `opportunities:read`, `strategies:read`. Errors: fixed codes (401, 403, 404, 422). Channel identifiers are masked (`***` + last four); raw message text is never returned. Lists accept a bounded `limit` and `offset`; ordering is deterministic.
+| Route | Notes |
+|---|---|
+| `GET /intelligence/channels`, `/channels/:id` | health, counts; reliability always `NOT_AVAILABLE` |
+| `GET /intelligence/claims`, `/claims/:id` | parsed fields, classification, candidacy decision with reason codes |
+| `GET /intelligence/candidates`, `/pipeline` | candidate state, outcome counts per policy version |
+| `GET /intelligence/claims/:id/historical-matches` | as-of the claim's own time; states UNAVAILABLE, NOT_APPLICABLE, INSUFFICIENT_EVIDENCE, NO_COMPARABLE_CASES; association only, not a prediction |
+| `GET /intelligence/channels/:id/performance` | funnel counts; `outcomes` and `reliability` `NOT_AVAILABLE` until real outcomes are linked |
+| `GET /intelligence/playbooks`, `/playbooks/:id` | versions, audited state events, drift; `limit` <= 200, `offset` <= 100000 |
+| `GET /intelligence/archive/channels` | imported-history score tables (not linked to live channels); `limit` <= 100 else 422 |
+Tests: `tests/unit/telegramCandidates/{api,historyApi}.test.ts`, `tests/integration/telegram/{stage03,strategyReads}.test.ts`.
