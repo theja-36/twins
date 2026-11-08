@@ -1741,7 +1741,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -1766,7 +1767,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -1816,7 +1818,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -1866,7 +1869,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2016,7 +2020,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2041,7 +2046,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2066,7 +2072,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2091,7 +2098,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2116,7 +2124,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2141,7 +2150,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2166,7 +2176,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2241,7 +2252,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2266,7 +2278,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2316,7 +2329,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2366,7 +2380,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2391,7 +2406,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2416,7 +2432,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2441,7 +2458,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2466,7 +2484,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2491,7 +2510,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2516,7 +2536,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2541,7 +2562,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2566,7 +2588,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2591,7 +2614,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2616,7 +2640,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2641,7 +2666,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2666,7 +2692,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2692,7 +2719,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)",
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
    ],
    "blockers": []
   },
@@ -2720,7 +2748,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2748,7 +2777,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2776,7 +2806,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2804,7 +2835,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2859,7 +2891,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)",
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
    ],
    "blockers": []
   },
@@ -2913,7 +2946,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08; tests/integration/database/playbooks.test.ts (5 tests; CI result recorded after the push)",
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
    ],
    "blockers": []
   },
@@ -2941,7 +2975,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -2965,7 +3000,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts + tests/integration/database/playbooks.test.ts (CI result recorded after the push)"
+    "tests/unit/historical/learning.test.ts + tests/integration/database/playbooks.test.ts (CI result recorded after the push)",
+    "CI run 42447431633 (feat/master-build, ce1ee58) all jobs green incl. tests/integration/database/playbooks.test.ts on Postgres 16 (lifecycle, owner-only activation, one-ACTIVE index, rollback, append-only events, drift events)"
    ],
    "blockers": []
   },
@@ -2993,7 +3029,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -3049,7 +3086,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -3077,7 +3115,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -3105,7 +3144,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -3133,7 +3173,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },
@@ -3161,7 +3202,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired",
+    "CI run 42447431633 (ce1ee58) green (unit jobs; pure logic)"
    ],
    "blockers": []
   },

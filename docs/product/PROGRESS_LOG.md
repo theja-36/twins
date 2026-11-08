@@ -12,3 +12,4 @@
 - Stage 03 item 2 (Module 03): similar-signal matcher, outcome aggregation, evidence completeness check (pure, 17 unit tests). History loader and real cases pending.
 - Stage 03 items 3-4 (Modules 06, 07): channel profile inference, playbook content, versioned lifecycle with owner-only activation and rollback (migration 0034: one ACTIVE per playbook). CI pending.
 - Stage 03 item 5 (Modules 06, 07): performance by condition, drift/degradation detection and alert recording, stop behaviour, reason and revision analysis, counterfactual review, out-of-sample evaluation for activation. Pure logic + one DB writer (drift events).
+- Stage 03 complete in code; CI green on ce1ee58 (items 1-5). See GAP_REGISTER for what is not wired.
