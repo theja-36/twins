@@ -8144,9 +8144,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "accounts are owner-only RLS (0041); an account can only use its owner's broker connection. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "accounts are owner-only RLS (0041); an account can only use its owner's broker connection. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8199,9 +8200,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "user_capital_profiles per account (0033) with composite owner key; GET /capital/profile. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "user_capital_profiles per account (0033) with composite owner key; GET /capital/profile. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8226,9 +8228,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "available_capital per profile; account_portfolio_facts. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "available_capital per profile; account_portfolio_facts. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8253,9 +8256,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "user_risk_policies.risk_percent per account; GET /risk/policy. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "user_risk_policies.risk_percent per account; GET /risk/policy. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8280,9 +8284,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "user_risk_policies.max_daily_loss per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "user_risk_policies.max_daily_loss per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8307,9 +8312,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "user_risk_policies max_concurrent_positions / max_lots per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "user_risk_policies max_concurrent_positions / max_lots per account. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8334,9 +8340,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "user_execution_permissions per account and mode (live forced off by constraint). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "user_execution_permissions per account and mode (live forced off by constraint). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8361,9 +8368,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "broker_connections owner-only RLS, secretref credential reference, composite ownership key; no connection API yet (Stage 10). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "broker_connections owner-only RLS, secretref credential reference, composite ownership key; no connection API yet (Stage 10). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8413,9 +8421,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "account_portfolio_facts view + GET /portfolio (paper notional; no live source). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "account_portfolio_facts view + GET /portfolio (paper notional; no live source). Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8440,9 +8449,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "orders / positions / decisions history routes (Stage 01), paper_position_fill_check. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "orders / positions / decisions history routes (Stage 01), paper_position_fill_check. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8467,9 +8477,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "GET /analytics/* (Stage 01), owner-scoped. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run"
+    "GET /analytics/* (Stage 01), owner-scoped. Stage 02 (local commit, CI pending): migration 0041 (RLS on accounts and broker_connections, composite broker ownership key, credential-reference check, decision links guard, account_portfolio_facts and paper_position_fill_check views), tests/integration/database/stage02.test.ts (catalog scan of RLS/force on every user table, cross-user denial, lifecycle invariants, concurrency, exact money) and tests/unit/database/stage02Migration.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8494,11 +8505,12 @@
    "screens": [],
    "dependencies": [],
    "stage": "01-02",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
     "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
     "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI",
-    "Isolation verified for every private route that exists (CI 42516023424); there is no broker or risk-write endpoint yet, so this stays IMPLEMENTED until those endpoints (Stage 02/10) exist and are tested"
+    "Isolation verified for every private route that exists (CI 42516023424); there is no broker or risk-write endpoint yet, so this stays IMPLEMENTED until those endpoints (Stage 02/10) exist and are tested",
+    "CI run https://github.com/theja-36/twins/actions/runs/42518889031 on 9b50eb2: all 7 jobs success; tests/integration/database/stage02.test.ts (25 tests) executed and passed on Node 20 and 22 against PostgreSQL 16; integration 79 files / 1,054 tests passed, unit 233 files / 3,882 tests passed"
    ],
    "blockers": []
   },
@@ -8585,7 +8597,8 @@
    "evidence": [
     "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)",
     "Stage 01 completion (local commit): apps/api/src/userApi.ts + userOps.ts (session-only identity via requireSession/ownerScope/authorize, spoofed user ids refused), 18 route unit tests with a per-user fake data layer; full unit suite 232 files / 3,875 tests pass; tests/integration/auth/{userRoutes,runtimeRole,stage01}.test.ts run against real PostgreSQL ONLY in CI, which has not yet run on this commit: VERIFIED after CI",
-    "Isolation verified for every private route that exists (CI 42516023424); there is no broker or risk-write endpoint yet, so this stays IMPLEMENTED until those endpoints (Stage 02/10) exist and are tested"
+    "Isolation verified for every private route that exists (CI 42516023424); there is no broker or risk-write endpoint yet, so this stays IMPLEMENTED until those endpoints (Stage 02/10) exist and are tested",
+    "Forced owner-only RLS on user_risk_policies and the composite account key are proven by the Stage 02 catalog scans (CI https://github.com/theja-36/twins/actions/runs/42518889031); no risk-write endpoint exists and no direct cross-user write attempt on that table is tested, so it stays IMPLEMENTED"
    ],
    "blockers": []
   },

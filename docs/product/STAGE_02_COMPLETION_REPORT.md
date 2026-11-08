@@ -1,6 +1,8 @@
 # Stage 02 completion report: database architecture and domain model
 
-Status: **IMPLEMENTED, NOT YET VERIFIED.** All code, migration 0041 and the tests exist and the unit suite passes locally (233 files). The PostgreSQL integration tests (`tests/integration/database/stage02.test.ts`) run only in CI; they have not run, so nothing below is VERIFIED and G-34 stays open.
+Status: **VERIFIED in CI (database architecture and domain model scope).** Run https://github.com/theja-36/twins/actions/runs/42518889031 on commit 9b50eb2: all 7 jobs succeeded; migration 0041 applied to PostgreSQL 16 on Node 20 and 22 (the migration-chain test compares the database with the repository's journal and hashes); `tests/integration/database/stage02.test.ts` executed 25 tests and passed in both integration jobs (confirmed in the job logs); integration 79 files / 1,054 tests, unit 233 files / 3,882 tests. History below is kept as written before that run.
+
+Original status line: **IMPLEMENTED, NOT YET VERIFIED.** All code, migration 0041 and the tests exist and the unit suite passes locally (233 files). The PostgreSQL integration tests (`tests/integration/database/stage02.test.ts`) run only in CI; they have not run, so nothing below is VERIFIED and G-34 stays open.
 
 ## Phase A audit (what was found, from the code, migrations 0000-0040)
 Already correct and reused (no rebuild): 119 tables; every master-build table owner-keyed with composite `(account_id, user_id) -> accounts(id, user_id)` keys; forced owner-only RLS on 21 of 24 user tables; the whole lifecycle guard set (decision guard v2, approval door, execution request / paper order / fill / position guards, append-only triggers, live modes refused by constraint); exact `numeric` money everywhere (no float or integer money column found in 119 tables); all timestamps `timestamptz`; SECURITY DEFINER doors; Stage 01 role protection.
@@ -32,10 +34,14 @@ Integration (not yet run): `tests/integration/database/stage02.test.ts` covers m
 ## Requirements
 MU-01, MU-03..09, MU-11..13 set to IMPLEMENTED with evidence; none VERIFIED. MU-10 (per-user approval settings) NOT_STARTED: no table exists and it belongs with Controlled Auto (Stage 07, G-36).
 
+## CI history (what actually happened)
+- Run 42518354069 (f7e230a): migration 0041 applied; 6 Stage 02 tests failed. One was a wrong test assumption: the fixture capital profile is effective from 2030, so `account_portfolio_facts` correctly returned NULL capital (the view does not assume a balance); the test now asserts that and proves exact decimals on an account whose profile is in force. The other five were collateral of `too many clients already`: the new file opened one owner connection per fixture call. Fixed by sharing one owner connection for plain-autocommit fixtures (`ownerShared` in the test support file). No constraint, policy or assertion was weakened.
+- Run 42518889031 (9b50eb2): green.
+
 ## Remaining gaps and risks
-- **CI has not run on 0041.** Risks I expect CI to find, since the SQL was written without a database to run it against: view column names, the legacy-table policies, and the new integration tests' assumptions about helper behaviour. Any fix will be reported, never papered over.
+- MU-17 stays IMPLEMENTED (no direct cross-user write attempt on the risk-policy table is tested; the catalog scans cover its RLS and owner key).
 - User-facing WRITE endpoints for capital, risk policy and execution permissions do not exist (owner-run stores only); broker connections have no API (Stage 10).
 - `user_sessions` has no RLS by design (G-35).
 - No live portfolio, margin or market data source (G-22, G-25, G-20): shown as unavailable.
 - Assisted Live and Controlled Auto remain disabled by constraint and absent as flows (Stage 07).
-- Stage 02 is **not** claimed COMPLETE: verification requires the CI run.
+- **Decision: Stage 02 COMPLETE** for the database architecture and domain-model scope. Open follow-ups are outside that scope: user-facing capital / risk / permission write endpoints, per-user approval settings (G-36, Stage 07), broker connection flow and live data (Stage 10).
