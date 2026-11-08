@@ -178,6 +178,8 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   closedAt: timestamp("closed_at", { withTimezone: true }).notNull(),
   createdAt: createdAtColumn(),
 }, (t) => ({
+  /** Stage 08: target of the owner-tied outcome_attributions foreign key. */
+  idUserUnique: uniqueIndex("trade_outcomes_id_user_unique").on(t.id, t.userId),
   idx: index("trade_outcomes_user_idx").on(t.userId, t.mode, t.closedAt),
   ownerFk: foreignKey({ name: "trade_outcomes_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   decisionFk: foreignKey({ name: "trade_outcomes_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),

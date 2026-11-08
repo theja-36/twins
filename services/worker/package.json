@@ -32,6 +32,7 @@
     "@twins/opportunity": "*",
     "@twins/planning": "*",
     "@twins/decision": "*",
+    "@twins/outcomes": "*",
     "@twins/execution": "*",
     "@twins/risk": "*"
   },

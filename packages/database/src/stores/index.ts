@@ -5,3 +5,4 @@ export * from "./opportunityStore";
 export * from "./planningStore";
 export * from "./decisionStore";
 export * from "./executionStore";
+export * from "./outcomeStore";

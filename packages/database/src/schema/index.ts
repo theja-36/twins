@@ -41,3 +41,4 @@ export * from "./learning";
 export * from "./aiUsage";
 export * from "./riskControls";
 export * from "./tradeExecution";
+export * from "./outcomeLearning";

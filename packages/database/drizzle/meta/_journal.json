@@ -274,6 +274,13 @@
       "when": 1794127246171,
       "tag": "0038_decision_execution_trade_management",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794133287602,
+      "tag": "0039_outcome_learning",
+      "breakpoints": true
     }
   ]
 }

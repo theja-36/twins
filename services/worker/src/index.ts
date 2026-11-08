@@ -33,6 +33,7 @@ import { alerterFromEnv, observe, recordProcessStart, type Alerter } from "@twin
 import { loadOpportunityConfig, runOpportunityCycle } from "@twins/opportunity";
 import { loadEvaluationConfig, memorySpecProvider, fileSpecProvider, runEvaluationCycle, type SpecProvider } from "@twins/planning";
 import { loadDecisionConfig, runDecisionCycle } from "@twins/decision";
+import { loadOutcomeLearningConfig, runLearningCycle } from "@twins/outcomes";
 import { advanceOpenOrders, loadExecutionConfig, monitorPositions, paperPortfolioProvider, priceProviderFrom, type AlertEvent } from "@twins/execution";
 import { createDefaultRegistry, createRunObserver, loadObservabilityConfig, logProviderAvailability, observeConfigLoad, createProductionRegistry, historicalDatasetReference, loadAgentEngineConfig, loadAgentRulesConfig, resolveCalendarMacroProviders, resolveHistoricalProviders, resolveInstrumentReference, resolveNewsConstituentProviders, resolveOhlcProviders, resolveQuoteProviders, runAgentEngine, runAgentEngineShadow } from "@twins/agents";
 import { createPendingRiskDecisionForOptionsClaim, createPendingRiskDecisionForSignal, recordIntelligenceForOptionsClaim, recordIntelligenceForSignal, RiskDecisionError, sizeLatestRiskDecisionForOptionsClaim, sizeLatestRiskDecisionForSignal, evaluatePortfolioRisk, evaluateMarketRisk, type MarketAlert, type MarketDataProvider } from "@twins/risk";
@@ -996,6 +997,15 @@ if (process.env["NODE_ENV"] !== "test" && executionConfig.managementEnabled) {
   managementTimer = setInterval(() => { if (running) return; running = true; void (async () => { try { await advanceOpenOrders(mgmtDeps); const m = await monitorPositions(mgmtDeps); if (m.positions > 0) defaultWorkerLogger.info("management.tick", { positions: m.positions, monitored: m.monitored, unmonitored: m.unmonitored, exits: m.exits, closed: m.closed, alerts: m.alerts }); } catch (e) { defaultWorkerLogger.warn("management.tick_failed", { errorName: e instanceof Error ? e.name : "Error" }); } finally { running = false; } })(); }, Number(process.env["TWINS_MANAGEMENT_INTERVAL_MS"] ?? "15000"));
 }
 
+// Outcome learning (Stage 08): ONE bounded, leased job that attributes closed paper positions to their decisions, computes analytics from stored outcomes only (no market feed needed), detects drift, writes insights and the
+// calibration run log. It READS outcomes and WRITES only attributions, insights and its own run record: it cannot decide, size, approve, execute or change any limit, weight, strategy, playbook or permission. Off by default.
+const learningConfig = observeConfigLoad(defaultWorkerLogger, "outcome-learning", () => loadOutcomeLearningConfig());
+let learningTimer: ReturnType<typeof setInterval> | null = null;
+if (process.env["NODE_ENV"] !== "test" && learningConfig.enabled) {
+  let learningRunning = false;
+  learningTimer = setInterval(() => { if (learningRunning) return; learningRunning = true; void runLearningCycle({ db: workerDb.db, config: learningConfig, log: (event, fields) => defaultWorkerLogger.info(event, fields) }).then((r) => defaultWorkerLogger.info("learning.cycle.done", { skipped: r.skipped, users: r.users, usersFailed: r.usersFailed, ingested: r.ingested, insightsCreated: r.insightsCreated, calibration: r.calibration, failed: r.failed })).catch((e: unknown) => defaultWorkerLogger.warn("learning.cycle_error", { errorName: e instanceof Error ? e.name : "Error" })).finally(() => { learningRunning = false; }); }, learningConfig.intervalMs);
+}
+
 // Outbox reconciler (Stage 2 / Task 2): re-enqueues outbox rows whose Redis job was never created or was lost, and recovers rows orphaned by a dead worker.
 // It does nothing while intake is disabled or the kill switch is active. Interval / lease are configurable; defaults 10 s / 5 min.
 const positiveMs = (name: string, fallback: number): number => {
@@ -1060,6 +1070,7 @@ export async function shutdown(signal: string): Promise<void> {
   console.log(`[worker] received ${signal}, shutting down gracefully`);
   paperLoop?.stop();
   if (managementTimer) clearInterval(managementTimer);
+  if (learningTimer) clearInterval(learningTimer);
   outboxReconciler?.stop();
   const closers: Array<Promise<unknown>> = [];
   if (outboxQueue) closers.push(outboxQueue.close());

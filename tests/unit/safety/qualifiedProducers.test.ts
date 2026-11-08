@@ -49,7 +49,8 @@ describe("the allow-listed master-build files cannot produce a QUALIFIED decisio
     for (const d of ["apps", "services", "packages", "adapters", "scripts"]) walk(d);
     const users = out.filter((f) => /\buserDecisions\b|\buser_decisions\b/.test(readFileSync(f, "utf8"))).sort();
     // schema definitions (and the tables that reference the decision by foreign key) plus the ONE store that calls the database doors and reads decisions
-    expect(users).toEqual(["packages/database/src/schema/index.ts", "packages/database/src/schema/learning.ts", "packages/database/src/schema/tradeExecution.ts", "packages/database/src/schema/userDecisions.ts", "packages/database/src/stores/decisionStore.ts"]);
+    expect(users).toEqual(["packages/database/src/schema/index.ts", "packages/database/src/schema/learning.ts", "packages/database/src/schema/outcomeLearning.ts", "packages/database/src/schema/tradeExecution.ts", "packages/database/src/schema/userDecisions.ts", "packages/database/src/stores/decisionStore.ts", "packages/database/src/stores/outcomeStore.ts"]);
+    // outcomeLearning.ts (a foreign key) and outcomeStore.ts (read-only joins for attribution and decision analytics) only READ decisions; the no-direct-write assertion below covers every file
     for (const f of out) { const code = strip(readFileSync(f, "utf8")); expect(code, f).not.toMatch(/insert\s+into\s+user_decisions|update\s+user_decisions|delete\s+from\s+user_decisions|\.insert\(\s*userDecisions|\.update\(\s*userDecisions/i); }
     const door = out.filter((f) => /twins_create_user_decision/.test(readFileSync(f, "utf8"))).sort();
     expect(door).toEqual(["packages/database/src/stores/decisionStore.ts"]);

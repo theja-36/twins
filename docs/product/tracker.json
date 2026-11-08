@@ -7283,8 +7283,12 @@
    "area": "Required analytics",
    "feature": "Actual versus predicted results.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: outcome attribution keeps what was predicted (strength score, planned reward-to-risk, planned maximum loss, risk verdict) apart from what happened; the analytics compare realised R with planned figures",
+   "packages": [
+    "packages/outcomes/src/attribution.ts",
+    "packages/outcomes/src/metrics.ts",
+    "packages/database/drizzle/0039_outcome_learning.sql"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7295,9 +7299,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no predicted-versus-actual summary view yet beyond calibration bins and the stored fields; no real-price outcomes exist (G-20, G-29)"
+   ]
   },
   {
    "id": "M15-02",
@@ -7306,8 +7315,11 @@
    "area": "Required analytics",
    "feature": "Outcome reasons.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: exit reason, stop and target behaviour recorded per outcome and analysed (exit-reason, stop-behaviour, target-behaviour slices)",
+   "packages": [
+    "packages/outcomes/src/attribution.ts",
+    "packages/outcomes/src/metrics.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7318,9 +7330,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "MAE / MFE are not recorded, so 'why' is limited to the exit reason and rule behaviour"
+   ]
   },
   {
    "id": "M15-03",
@@ -7329,8 +7346,11 @@
    "area": "Required analytics",
    "feature": "Channel performance.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: channel funnel (messages, claims, invalid share, decisions, paper trades) and channel-sliced outcomes with sample-size reliability; channel accuracy is explicitly not claimed",
+   "packages": [
+    "packages/outcomes/src/funnel.ts",
+    "packages/outcomes/src/insights.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7341,9 +7361,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "Telegram-originated candidates do not exist yet (G-19), so channel outcomes are empty; duplicate and stale analysis unavailable"
+   ]
   },
   {
    "id": "M15-04",
@@ -7352,8 +7377,11 @@
    "area": "Required analytics",
    "feature": "Pattern performance.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: performance by setup / pattern class and version; historical-pattern agent association by verdict",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/agents.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7364,9 +7392,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+   ],
+   "blockers": [
+    "comparable-pattern listing missing (G-27); historical provider not wired (G-23)"
+   ]
   },
   {
    "id": "M15-05",
@@ -7375,8 +7407,11 @@
    "area": "Required analytics",
    "feature": "Strategy performance.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: strategy performance by strategy, version (like-for-like), instrument, timeframe, regime, exit, stop and target behaviour, with win rate (Wilson), expectancy (95% interval), profit factor, drawdown and minimum-sample gating",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/analytics.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7387,9 +7422,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "figures rest on fixture-backed paper outcomes: not validated performance"
+   ]
   },
   {
    "id": "M15-06",
@@ -7398,8 +7438,11 @@
    "area": "Required analytics",
    "feature": "Confidence calibration.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: calibration pipeline over valid outcomes (FINAL, non-fixture, prior confidence score, look-ahead excluded) with a chronological held-out set, the unchanged Stage 06 procedure (200 out-of-sample minimum, win rate must rise with score), a stability check and a stored run log",
+   "packages": [
+    "packages/outcomes/src/calibration.ts",
+    "packages/outcomes/src/cycle.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7410,9 +7453,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no valid non-fixture outcomes exist, so nothing is or can be calibrated (G-24 stays open)"
+   ]
   },
   {
    "id": "M15-07",
@@ -7421,8 +7469,10 @@
    "area": "Required analytics",
    "feature": "Agent contribution.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: agent analytics (participation, availability, verdicts, versions, agreement, evidence gaps) and a per-verdict outcome association reported only above the minimum sample and never as accuracy",
+   "packages": [
+    "packages/outcomes/src/agents.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7433,8 +7483,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -7444,8 +7497,10 @@
    "area": "Required analytics",
    "feature": "Entry timing quality.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: not assessable without excursion data (MAE / MFE) or reference prices; recorded as a gap, not guessed",
+   "packages": [
+    "packages/outcomes/src/insights.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7457,8 +7512,12 @@
    "dependencies": [],
    "stage": "08",
    "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+   ],
+   "blockers": [
+    "MAE / MFE and reference prices are not recorded for paper fills; listed as missing on every outcome and as a research area"
+   ]
   },
   {
    "id": "M15-09",
@@ -7467,8 +7526,11 @@
    "area": "Required analytics",
    "feature": "Stop-loss quality.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: stop-loss behaviour per outcome (stop hit, tightened, breakeven) and stop-hit rate; stop distance quality needs excursions",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/attribution.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7479,9 +7541,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no MAE / MFE, so 'was the stop too tight / wide' cannot be judged"
+   ]
   },
   {
    "id": "M15-10",
@@ -7490,8 +7557,11 @@
    "area": "Required analytics",
    "feature": "Target quality.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: target behaviour per outcome (rungs hit) and planned versus realised reward-to-risk fields",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/attribution.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7502,9 +7572,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "no MFE, so 'was the target too near / far' cannot be judged"
+   ]
   },
   {
    "id": "M15-11",
@@ -7513,8 +7588,11 @@
    "area": "Required analytics",
    "feature": "Exit quality.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: exit-reason distribution, holding-time distribution and per-reason performance",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/insights.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7525,8 +7603,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -7536,8 +7617,10 @@
    "area": "Required analytics",
    "feature": "Verdict accuracy.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: decision-quality analytics (outcome distribution, executed results, price-path ESTIMATES for unexecuted decisions, never P&L)",
+   "packages": [
+    "packages/outcomes/src/decisionQuality.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7548,9 +7631,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "estimates need later price bars from an OHLC provider; none is wired in the worker (G-20); verdict accuracy is not claimed"
+   ]
   },
   {
    "id": "M15-13",
@@ -7559,8 +7647,11 @@
    "area": "Required analytics",
    "feature": "Strategy attribution.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: every outcome is attributed to candidate, decision, strategy / setup, detector version, instrument, timeframe, source and channel; corrections are append-only versions",
+   "packages": [
+    "packages/outcomes/src/attribution.ts",
+    "packages/database/drizzle/0039_outcome_learning.sql"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7571,9 +7662,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
+   "blockers": [
+    "playbook version attribution is null (no playbook is bound to independent candidates; Telegram candidates do not exist, G-19)"
+   ]
   },
   {
    "id": "M15-14",
@@ -7582,8 +7678,11 @@
    "area": "Required analytics",
    "feature": "Source-confidence adjustment.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: source reliability findings and drift warnings are produced as REVIEW recommendations only; nothing adjusts any source confidence automatically (by design)",
+   "packages": [
+    "packages/outcomes/src/insights.ts",
+    "packages/outcomes/src/drift.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7594,9 +7693,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+   ],
+   "blockers": [
+    "automatic adjustment is intentionally not implemented; any change must go through learning_versions with its own evaluation and activation controls"
+   ]
   },
   {
    "id": "M15-15",
@@ -7605,8 +7708,10 @@
    "area": "Required analytics",
    "feature": "Historical performance trends.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "to be defined when the stage starts",
-   "packages": [],
+   "change": "Stage 08: performance over time via drift monitoring (like-for-like baseline versus recent window) and distribution-shift checks, built on the Stage 03 detector",
+   "packages": [
+    "packages/outcomes/src/drift.ts"
+   ],
    "database": [
     "trade_outcomes",
     "performance_snapshots",
@@ -7617,8 +7722,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "08",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ],
    "blockers": []
   },
   {
@@ -10501,6 +10609,157 @@
    "evidence": [
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
     "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+   ]
+  },
+  {
+   "id": "M15-16",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Outcome data foundation: outcome_attributions (owner-tied, append-only, RLS, paper-only, PARTIAL / FINAL, versions with reasons, idempotent), separate from decisions and predictions",
+   "packages": [
+    "packages/outcomes/src/attribution.ts",
+    "packages/database/drizzle/0039_outcome_learning.sql"
+   ],
+   "database": [
+    "outcome_attributions"
+   ],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M15-17",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Statistical integrity: minimum sample floors that cannot be lowered, reliability grading, fixture exclusion from validated results, chronological held-out evaluation, look-ahead exclusion, Wilson and normal intervals",
+   "packages": [
+    "packages/outcomes/src/metrics.ts",
+    "packages/outcomes/src/calibration.ts",
+    "packages/outcomes/src/config.ts"
+   ],
+   "database": [],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+   ]
+  },
+  {
+   "id": "M15-18",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Learning insights: reproducible, evidence-linked, versioned, append-only; recommendations limited to REVIEW; no path to change limits, sizes, stops, weights, strategies, playbooks, permissions or kill switches",
+   "packages": [
+    "packages/outcomes/src/insights.ts",
+    "packages/database/drizzle/0039_outcome_learning.sql"
+   ],
+   "database": [
+    "learning_insights"
+   ],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M15-19",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Learning cycle: one bounded, leased, restartable job (ingest, attribute, analyse, drift, insights, reconcile, calibration log), per-user failure isolation, feature flag TWINS_LEARNING_ENABLED (off by default)",
+   "packages": [
+    "packages/outcomes/src/cycle.ts",
+    "services/worker/src/index.ts"
+   ],
+   "database": [
+    "learning_job_runs"
+   ],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
+   ]
+  },
+  {
+   "id": "M15-20",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [
+    "no user-facing route until authentication sessions exist (Stage 01); the contract is ready for Stage 09"
+   ],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Analytics API contracts: typed envelope, 11 owner-scoped endpoints requiring a session and analytics:read; no route registered",
+   "packages": [
+    "packages/outcomes/src/contracts.ts"
+   ],
+   "database": [],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)"
+   ]
+  },
+  {
+   "id": "M15-21",
+   "module": "M15",
+   "moduleName": "Outcome Learning & Performance Analytics",
+   "area": "Stage 08 additions",
+   "stage": "08",
+   "api": [],
+   "screens": [],
+   "dependencies": [],
+   "blockers": [
+    "Telegram side is empty until G-19"
+   ],
+   "existing": "Stage 08",
+   "change": "Stage 08",
+   "status": "IMPLEMENTED",
+   "feature": "Funnels: Telegram-originated and independent pipelines reported separately with explicit numerators and denominators",
+   "packages": [
+    "packages/outcomes/src/funnel.ts"
+   ],
+   "database": [],
+   "evidence": [
+    "tests/unit/outcomes/*.test.ts (52 tests, local)",
+    "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI pending)"
    ]
   }
  ]
