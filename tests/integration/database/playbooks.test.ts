@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createBoundedDb, schema, type BoundedDbHandle } from "../../../packages/database/src/index";
-import { PlaybookError, buildChannelProfile, buildPlaybookContent, createPlaybook, proposeVersion, rollbackPlaybook, transitionVersion, type PlaybookEvaluation } from "../../../packages/historical/src/strategy/index";
+import { PlaybookError, buildChannelProfile, buildPlaybookContent, createPlaybook, detectDrift, proposeVersion, recordDriftEvent, rollbackPlaybook, transitionVersion, type LearningOutcome, type PlaybookEvaluation } from "../../../packages/historical/src/strategy/index";
 import { requireTestDatabaseUrl } from "../targetConfig";
 import { must } from "../runtime/harness";
 
@@ -69,6 +69,19 @@ describe("versioned playbook lifecycle", () => {
     const pb = await newPlaybook();
     const a = await proposeVersion(handle.db, pb, content(), system); await transitionVersion(handle.db, a.versionId, "EVALUATING", system, "e"); await transitionVersion(handle.db, a.versionId, "ACTIVE", owner, "ok", evaluation());
     expect(await rollbackPlaybook(handle.db, pb, owner, "bad")).toEqual({ rolledBack: 1, restored: null }); expect(await states(pb)).toEqual(["1:ROLLED_BACK"]);
-    expect(await code(rollbackPlaybook(handle.db, pb, owner, "again"))).toBe("no_active_version");
+    expect(await code(rollbackPlaybook(handle.db, pb, owner, "again"))).toBe("no_active_version:");
+  });
+});
+
+describe("drift events", () => {
+  const out = (outcome: "WIN" | "LOSS", r: number, day: number): LearningOutcome => ({ id: `o${day}`, at: new Date(Date.UTC(2026, 0, 1) + day * 86_400_000), outcome, rMultiple: r, dims: {} });
+  const run = (w: number, l: number, start: number) => [...Array.from({ length: w }, (_, i) => out("WIN", 1.5, start + i)), ...Array.from({ length: l }, (_, i) => out("LOSS", -1, start + w + i))];
+  it("records a degradation alert append-only, and records nothing when there is no drift", async () => {
+    const pb = await newPlaybook(); await proposeVersion(handle.db, pb, content(), system);
+    expect(await recordDriftEvent(handle.db, pb, 1, detectDrift(run(30, 30, 1).concat(run(15, 15, 100))))).toBe(false); // no drift
+    expect(await recordDriftEvent(handle.db, pb, 1, detectDrift(run(42, 18, 1).concat(run(8, 22, 100))))).toBe(true); // degradation
+    const rows = (await pool.query("select kind, metric, baseline::float as baseline, observed::float as observed from strategy_drift_events where playbook_id = $1", [pb])).rows;
+    expect(rows).toHaveLength(1); expect(rows[0]).toMatchObject({ kind: "DEGRADATION", metric: "win_rate" }); expect(rows[0].observed).toBeLessThan(rows[0].baseline);
+    await expect(pool.query("delete from strategy_drift_events where playbook_id = $1", [pb])).rejects.toThrow(/append-only/);
   });
 });

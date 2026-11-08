@@ -1,5 +1,6 @@
 import { and, desc, eq } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
+import { driftEventOf, type DriftReport } from "./learning";
 import type { ChannelProfile } from "./profile";
 
 /**
@@ -134,4 +135,12 @@ export async function rollbackPlaybook(db: Db, playbookId: string, actor: Actor,
     await tx.insert(E).values({ learningVersionId: lvEarlier, fromState: "REJECTED", toState: "ACTIVE", actor: `${actor.kind}:${actor.id}`, reason: `rollback restored version ${earlier.version}: ${reason}` });
     return { rolledBack: active.version, restored: earlier.version };
   });
+}
+
+/** Records a drift or degradation alert for a playbook version (append-only `strategy_drift_events`). Returns false (writes nothing) when the report has nothing to record. */
+export async function recordDriftEvent(db: Db, playbookId: string, version: number, report: DriftReport): Promise<boolean> {
+  const e = driftEventOf(report);
+  if (e === null) return false;
+  await db.insert(schema.strategyDriftEvents).values({ playbookId, version, kind: e.kind, metric: e.metric, baseline: String(e.baseline), observed: String(e.observed), details: e.details });
+  return true;
 }

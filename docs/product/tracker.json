@@ -2126,9 +2126,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Conditional win rates.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance: win rate with Wilson interval per condition; thin slices marked INSUFFICIENT_EVIDENCE",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2137,8 +2139,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2147,9 +2151,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Historical profitability.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "computeStats: average R, total R, profit factor, max drawdown in R; null (not zero) when there is no data",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2158,8 +2164,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2168,9 +2176,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Best market conditions.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(regime) names the best slice among sufficient ones; regime values arrive with Stage 04 market regimes",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2179,8 +2189,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2189,9 +2201,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Worst market conditions.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(regime) names the worst slice among sufficient ones; regime values arrive with Stage 04",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2200,8 +2214,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2210,9 +2226,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Performance by time of day.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(timeOfDay)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2221,8 +2239,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2231,9 +2251,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Performance by instrument.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(instrument)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2242,8 +2264,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2252,9 +2276,11 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel performance intelligence",
    "feature": "Performance by market regime.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(regime); regime values arrive with Stage 04",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions"
@@ -2263,8 +2289,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2573,10 +2601,10 @@
    "moduleName": "Channel Strategy Learning Engine",
    "area": "Channel playbook",
    "feature": "Historical performance.",
-   "existing": "PlaybookContent.historicalPerformance is null until an out-of-sample evaluation exists (item 5); activation stores the evaluation metrics",
+   "existing": "evaluateOutOfSample builds the evaluation stored on a playbook version at activation (performance + sample size); historicalPerformance stays null until then",
    "change": "to be defined when the stage starts",
    "packages": [
-    "packages/historical/src/strategy"
+    "packages/historical/src/strategy/learning.ts"
    ],
    "database": [
     "strategy_playbooks",
@@ -2586,9 +2614,9 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
-    "tests/unit/historical/channelProfile.test.ts (8) + playbook.test.ts (5) + strategyStorage.test.ts (3), local run 2026-11-08"
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
    ],
    "blockers": []
   },
@@ -2702,9 +2730,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Pattern-to-outcome mapping.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(cluster/setup) maps patterns to outcomes",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2716,8 +2746,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2726,9 +2758,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Outcome-reason analysis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "reasonBreakdown: how trades ended and what each ending was worth",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2740,8 +2774,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2750,9 +2786,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Conditional win rates.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2764,8 +2802,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2829,9 +2869,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Performance tracking.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "computeStats per playbook; persistent performance_snapshots writes belong to Stage 08",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2843,8 +2885,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2879,9 +2923,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Strategy drift detection.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "detectDrift: recent window vs baseline, two-proportion z test; DEGRADATION needs lower win rate AND lower average R",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2893,8 +2939,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2903,22 +2951,22 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Strategy degradation alerts.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "driftEventOf + recordDriftEvent (append-only strategy_drift_events); notification delivery is Stage 10",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
-    "strategy_playbooks",
-    "playbook_versions",
-    "strategy_drift_events",
-    "learning_versions",
-    "learning_version_events"
+    "strategy_drift_events"
    ],
    "api": [],
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts + tests/integration/database/playbooks.test.ts (CI result recorded after the push)"
+   ],
    "blockers": []
   },
   {
@@ -2955,9 +3003,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Regime-specific performance.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(regime); regime values arrive with Stage 04",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2969,8 +3019,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -2979,9 +3031,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Time-specific performance.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(timeOfDay)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -2993,8 +3047,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -3003,9 +3059,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Instrument-specific performance.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "conditionalPerformance(instrument)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -3017,8 +3075,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -3027,9 +3087,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Stop-loss behaviour analysis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "stopBehaviour: stop-hit rate, results by stop width, winners that nearly hit the stop",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -3041,8 +3103,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -3051,9 +3115,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Signal revision and staleness analysis.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "revisionAnalysis: edited share, median first-edit delay, edited vs unedited results (needs edit data from telegram_message_events to be mapped in)",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -3065,8 +3131,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
@@ -3075,9 +3143,11 @@
    "moduleName": "Strategy Intelligence & Learning Database",
    "area": "Required functionality",
    "feature": "Counterfactual review.",
-   "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
+   "existing": "counterfactual: minimum reward-to-risk, exclude a condition, tighter stop (approximation, labelled); review only, never a recommendation",
    "change": "to be defined when the stage starts",
-   "packages": [],
+   "packages": [
+    "packages/historical/src/strategy/learning.ts"
+   ],
    "database": [
     "strategy_playbooks",
     "playbook_versions",
@@ -3089,8 +3159,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "tests/unit/historical/learning.test.ts (18 tests, local run 2026-11-08); pure logic, input mapping from real outcomes and real data not yet wired"
+   ],
    "blockers": []
   },
   {
