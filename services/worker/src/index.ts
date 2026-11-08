@@ -51,7 +51,7 @@ import {
   resolveTelegramSource,
   runIngestionJob,
 } from "@twins/ingestion";
-import { analyzeTelegramText, applySourceDefaultBasis, assessOptionsClaim, parseSourceBasisConfig, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
+import { classifyClaimOnIntake, loadClassifyOnIntakeFlag, analyzeTelegramText, applySourceDefaultBasis, assessOptionsClaim, parseSourceBasisConfig, createManualReferenceContractMaster, createProviderSnapshotContractMaster, parseProviderSnapshotFile, createSignalFromTelegramMessage, parseManualReferenceFile, recordOptionsIntake, unconfiguredContractMaster, unavailablePremiumProvider, TELEGRAM_PARSER_VERSION, type OptionsContractMaster } from "@twins/signals";
 import { readFileSync } from "node:fs";
 import { findValidationByKey, validateSignal } from "@twins/decision-intelligence";
 import {
@@ -170,6 +170,11 @@ export interface TelegramJobOptions {
   optionsMaster?: OptionsContractMaster;
   /** Structured logger (tests inject a capture sink). Defaults to JSON lines on the console. */
   logger?: StructuredLogger;
+  /**
+   * Classify each newly recorded options claim right after it is stored (Master Build Stage 03). Default: TWINS_CLASSIFY_ON_INTAKE read at startup (default false). Evidence only: it
+   * never blocks, delays or fails the intake, and decides nothing.
+   */
+  classifyOnIntake?: boolean;
   /**
    * Which chats may be ingested and whether only options messages may proceed. Default: the policy read from
    * TWINS_TELEGRAM_ALLOWED_CHAT_IDS / TWINS_TELEGRAM_OPTIONS_ONLY at startup (missing/empty = NO chat approved).
@@ -396,6 +401,7 @@ const agentShadowFor = (log: StructuredLogger, db: Db) => async (decisionId: str
 const sourceBasisConfig = parseSourceBasisConfig(process.env);
 // Durable copy of shadow results (HB-25, migration 0032). Default OFF; best-effort; nothing reads it to decide.
 const shadowPersistEnabled = loadShadowPersistFlag(process.env);
+const defaultClassifyOnIntake = loadClassifyOnIntakeFlag(process.env); // strict: a malformed value stops the worker at startup
 const reduceOnlyShadowEnabled = loadReduceOnlyShadowFlag(process.env, { enforcingEngine: agentEngineConfig.enabled });
 const HIGH_IMPACT = new Set(["HIGH", "CRITICAL"]);
 const THIN_SAMPLE = 30;
@@ -710,6 +716,12 @@ export async function processTelegramJob(
       master,
       premium: null,
     });
+    if (intake.kind === "claim" && (options.classifyOnIntake ?? defaultClassifyOnIntake)) {
+      // Evidence only, failure-isolated: a failure is logged (error class name only) and leaves the claim unclassified for the backfill / the next retry of this same message; intake continues.
+      const cls = await classifyClaimOnIntake(db, { claimId: record.id, claim: intake.claim, messageText: normalizedMessage.rawText, messageTimestamp: normalizedMessage.messageTimestamp });
+      if (cls.status === "failed") log.warn("worker.classification.failed", { optionsClaimId: record.id, errorName: cls.errorName });
+      else log.info("worker.classification.recorded", { optionsClaimId: record.id, status: cls.status });
+    }
     const reasonCodes = assessment
       ? assessment.reasons.map((x) => x.code)
       : [intake.kind === "ambiguous" ? "directives.ambiguous" : "underlying.unsupported_options_shape"];
