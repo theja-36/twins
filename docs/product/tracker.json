@@ -4665,7 +4665,9 @@
    "dependencies": [],
    "stage": "07",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "DB constraint APPROVED requires QUALIFIED + guard trigger verified in CI run 42445765317 (workflow engine itself not built)"
+   ],
    "blockers": []
   },
   {
@@ -7024,7 +7026,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -7049,7 +7053,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -7074,7 +7080,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -7099,7 +7107,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -7124,7 +7134,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -7149,7 +7161,9 @@
    "dependencies": [],
    "stage": "01-02",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
@@ -8210,7 +8224,7 @@
    "moduleName": "Platform foundation (Phase 01)",
    "area": "Foundation",
    "feature": "Database ownership and relationships",
-   "existing": "ADR-002/011/012 + migration 0033 (24 additive tables, RLS on 9 private tables, append-only evidence tables) + withUser helper",
+   "existing": "ADR-002/011/012 + migration 0033 applied and integration-tested in CI + withUser helper",
    "change": "to be defined",
    "packages": [],
    "database": [],
@@ -8218,9 +8232,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "01",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "tests/unit/database/masterBuildMigration.test.ts (static rules) pass; migration not applied (no database available locally)"
+    "tests/unit/database/masterBuildMigration.test.ts (static rules) pass; migration not applied (no database available locally)",
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor)"
    ],
    "blockers": []
   },
@@ -8257,7 +8272,9 @@
    "dependencies": [],
    "stage": "01",
    "status": "IN_PROGRESS",
-   "evidence": [],
+   "evidence": [
+    "CI run 42445765317 on 2584bd6 (feat/master-build): all jobs green; migration 0033 applied on Postgres 16 (34 migrations recorded); tests/integration/database/masterBuildPlatform.test.ts 11 tests pass (RLS via unprivileged role, owner-tied FKs, decision guard, live-mode lock, append-only, mandatory-stop floor) (database layer only; API and service layers still to do, so not VERIFIED)"
+   ],
    "blockers": []
   },
   {
