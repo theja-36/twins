@@ -230,9 +230,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "capture delay is measured per candidate (DELAYED_CAPTURE, FIRST_SEEN_EDITED) and per channel (delayed share, median delay). Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "capture delay is measured per candidate (DELAYED_CAPTURE, FIRST_SEEN_EDITED) and per channel (delayed share, median delay). Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
@@ -250,9 +251,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "claim validity from the message time (90 min default, ends at the contract close); expired claims never enter research. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "claim validity from the message time (90 min default, ends at the contract close); expired claims never enter research. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
@@ -270,9 +272,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "assessChannelHealth (ACTIVE / QUIET / STALE / SILENT / NO_DATA, capture TIMELY / DELAYED) served by /intelligence/channels. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "assessChannelHealth (ACTIVE / QUIET / STALE / SILENT / NO_DATA, capture TIMELY / DELAYED) served by /intelligence/channels. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
@@ -512,9 +515,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "03",
-   "status": "IMPLEMENTED",
+   "status": "VERIFIED",
    "evidence": [
-    "signal type (OPTIONS_BUY ...) from signal-classifier-v1, stored per claim and shown on the claim view. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "signal type (OPTIONS_BUY ...) from signal-classifier-v1, stored per claim and shown on the claim view. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
@@ -534,7 +538,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "horizon (INTRADAY / POSITIONAL / SCALPING / UNKNOWN) and setup stored per claim and copied to the candidate timeframe / setup. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "horizon (INTRADAY / POSITIONAL / SCALPING / UNKNOWN) and setup stored per claim and copied to the candidate timeframe / setup. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "Candidate timeframe / setup and the contradiction-versus-absence rules are unit-tested; the integration test does not assert the horizon, so this stays IMPLEMENTED. CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
@@ -554,7 +559,8 @@
    "stage": "03",
    "status": "IMPLEMENTED",
    "evidence": [
-    "entry condition, stop, targets and structure issues from the classifier; contradictions refuse the claim, absences are listed as missing information. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run"
+    "entry condition, stop, targets and structure issues from the classifier; contradictions refuse the claim, absences are listed as missing information. Stage 03 (local commit, CI pending): packages/signals telegramCandidate.ts + telegramCandidateCycle.ts + channelHealth.ts, packages/database telegramCandidateStore.ts, migration 0042, apps/api telegramIntelApi.ts, worker timer behind TWINS_TELEGRAM_CANDIDATES_ENABLED; 45 new unit tests (policy 26, cycle 9, api and static 10) and tests/integration/telegram/stage03.test.ts; VERIFIED only after the CI run",
+    "Candidate timeframe / setup and the contradiction-versus-absence rules are unit-tested; the integration test does not assert the horizon, so this stays IMPLEMENTED. CI run https://github.com/theja-36/twins/actions/runs/42522586920 on 3c4d22c: all 7 jobs success; tests/integration/telegram/stage03.test.ts (19 tests) executed and passed on Node 20 and 22 against PostgreSQL 16 (integration 80 files / 1,073 tests; unit 236 files / 3,927 tests)"
    ],
    "blockers": []
   },
