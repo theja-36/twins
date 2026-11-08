@@ -1,6 +1,11 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { Db } from "@twins/database";
-import { getSignalIntelligence, getSourceIntelligenceSummary, type SignalForConfidence } from "@twins/historical";
+import { dimensionsOfClaim, getSignalIntelligence, getSourceIntelligenceSummary, historicalCaseFromRow, matchSimilar, type SignalForConfidence, type SimilarityTarget } from "@twins/historical";
+import { PlatformError } from "@twins/types";
+import type { AuthService } from "@twins/auth";
+import { limit, query, uuid } from "./userApi.js";
+import { mask, offsetOf, sharedGet, type TelegramIntelOps } from "./telegramIntelApi.js";
+import { safeClaimView } from "./liveApi.js";
 import { getRiskDecision, intelligenceOf, isIntelligenceValid } from "@twins/risk";
 
 /**
@@ -96,4 +101,42 @@ export function registerIntelligenceRoutes(app: FastifyInstance, deps: { db: Db;
       return fail(reply);
     }
   });
+}
+
+/**
+ * Session-protected, read-only HISTORY routes (Stage 03 closure): similar archived cases for a claim, and the archive's channel score tables.
+ * They live in this module because the historical research code may be reached from the API only here (the architecture tests allow-list exactly this file). They read the archive through bounded, deterministically ordered queries and never write.
+ * Temporal integrity: a claim is compared only with archived cases dated before the claim whose outcome was already known at the claim's time (`matchSimilar` with `requireResolvedAt`).
+ */
+export function registerHistoryIntelRoutes(app: FastifyInstance, deps: { auth: AuthService; ops: TelegramIntelOps }): void {
+  const { auth, ops } = deps, get = sharedGet(app, auth);
+  // ── historical matches: the claim is compared ONLY with archived cases that existed, and whose outcome was already known, at the claim's own message time ──
+  get<{ id: string }>("/intelligence/claims/:id/historical-matches", "signals:read", async (req) => {
+    query(req as never, []); const c = await ops.claim(uuid(req.params.id, "id"));
+    if (!c) throw new PlatformError("NOT_FOUND", "not found");
+    if (c.resultKind !== "claim") return { claimId: c.claimId, state: "NOT_APPLICABLE", reason: "only a parsed claim can be compared with history", result: null };
+    const safe = safeClaimView(c.claim) as { underlying?: string | null; entry?: { type?: string | null; price?: number | null; low?: number | null; high?: number | null }; stopLoss?: number | null; targets?: number[]; expiry?: { status?: string | null; day?: number | null; month?: number | null; year?: number | null } } | null;
+    const e = safe?.entry, ex = safe?.expiry;
+    const expiryDate = ex?.status === "full" && ex.year && ex.month && ex.day ? `${ex.year}-${String(ex.month).padStart(2, "0")}-${String(ex.day).padStart(2, "0")}` : null;
+    const target: SimilarityTarget = { id: c.claimId, at: c.messageTimestamp, dimensions: dimensionsOfClaim({ underlying: safe?.underlying ?? null, entry: e && e.type ? { type: e.type, ...(e.price != null ? { price: e.price } : {}), ...(e.low != null ? { low: e.low } : {}), ...(e.high != null ? { high: e.high } : {}) } : null, stopLoss: safe?.stopLoss ?? null, targets: safe?.targets ?? [], expiryDate, setup: c.classification?.setup ?? null, horizon: c.classification?.horizon ?? null }, c.messageTimestamp) };
+    const rows = await ops.historicalRows({ before: c.messageTimestamp, limit: 2000 });
+    const cases = rows.map(historicalCaseFromRow);
+    if (cases.length === 0) return { claimId: c.claimId, asOf: c.messageTimestamp.toISOString(), state: "UNAVAILABLE", reason: "no archived historical case exists before this claim: missing evidence, not a neutral signal", casesConsidered: 0, result: null };
+    const r = matchSimilar(target, cases, { requireResolvedAt: true });
+    return {
+      claimId: c.claimId, asOf: c.messageTimestamp.toISOString(), source: "ARCHIVE_IMPORT", state: r.aggregate.status, casesConsidered: cases.length, targetDimensions: target.dimensions,
+      result: { version: r.version, aggregate: r.aggregate, matches: r.matches.slice(0, 20).map((m) => ({ ...m, observedAt: m.observedAt.toISOString() })), excluded: r.excluded, temporal: r.temporal, notes: r.notes },
+      limitations: ["historical association only: not a prediction and not a probability of success", "only archived cases dated before the claim, whose outcome was already known at the claim's time, count as resolved", "archived cases do not carry setup, regime or volatility, so those dimensions are unknown and never match"],
+    };
+  });
+
+
+  get("/intelligence/archive/channels", "strategies:read", async (req) => {
+    const q = query(req as never, ["limit", "offset"]), lim = limit(q["limit"], 20);
+    if (lim > 100) throw new PlatformError("VALIDATION", "limit must be an integer between 1 and 100");
+    const rows = await ops.archive({ limit: lim, offset: offsetOf(q["offset"]) });
+    const label = (s: string): string => (/^-?\d{6,}$/.test(s) ? mask(s) : s);
+    return { source: "ARCHIVE_IMPORT", state: rows.length === 0 ? "EMPTY" : "OK", scorecards: rows.map((r) => ({ sourceId: r.sourceId, channelLabel: label(r.channelLabel), asOf: r.asOf.toISOString(), algorithmVersion: r.algorithmVersion, trustTier: r.trustTier, windows: r.metrics.map((m) => ({ ...m, windowStart: m.windowStart.toISOString(), windowEnd: m.windowEnd.toISOString() })), snapshot: r.sourceSnapshot })), note: "Archive evidence from imported history only. Small windows carry their own caveats and are not a reliability claim." };
+  });
+
 }

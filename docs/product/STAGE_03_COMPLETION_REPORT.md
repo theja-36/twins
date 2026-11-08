@@ -47,3 +47,15 @@ Integration (not yet run): `tests/integration/telegram/stage03.test.ts`: real me
 M01-03 (channel enable / disable stays a host allow-list), M01-14 (reliability needs outcomes), M02-01/03..08 and M06-xx / M07-xx items that are IN_PROGRESS because they need real data or measured accuracy; G-37 (entry vocabulary), G-38 (no contract verification); historical matches, channel performance and playbook routes were not added (the code exists, a read API for them is not part of this pass); UI wiring (Stage 09). Hosted AI, live data and production Telegram are Stage 10.
 
 **Decision: Stage 03 is NOT COMPLETE.** G-19 is closed and verified. Still open and not implied by the green CI: G-37, G-38, real-message classifier accuracy (M02-15), real channel reliability and outcome validation, historical future-data-leakage verification, historical / channel-performance / playbook read APIs, Stage 09 UI integration.
+
+## Closure pass (local, unpushed, not yet CI-verified)
+Status vocabulary: IMPLEMENTED = code and local tests exist; VERIFIED = proven in CI or on real data.
+- **Read APIs (IMPLEMENTED):** `GET /intelligence/claims/:id/historical-matches`, `/intelligence/channels/:id/performance`, `/intelligence/playbooks`, `/intelligence/playbooks/:id`, `/intelligence/archive/channels`. Session-authenticated with shared permissions, read-only, bounded limit/offset, masked channel ids, fixed error codes, honest UNAVAILABLE / NOT_AVAILABLE / EMPTY states. Unit tests pass locally; the PostgreSQL integration test `strategyReads.test.ts` is CI-only (no local Postgres) and not yet run.
+- **Historical temporal integrity (IMPLEMENTED, unit-tested):** matcher excludes future cases, own-message revisions and duplicates, and demotes outcomes not yet known at decision time to UNRESOLVED (16 deterministic tests). **Limitation:** archive cases are assumed available at message time plus resolution time (import time ignored); archived cases carry no setup/regime, so the default coverage floor yields mostly NO_COMPARABLE_CASES. No real-data leakage guarantee is claimed; the requirement stays open.
+- **Playbook integrity (IMPLEMENTED, migration 0043):** immutable content and legal lifecycle enforced in the database; pending CI proof.
+- **Adversarial classifier tests (IMPLEMENTED):** absence is not contradiction, real contradictions are refused, nothing invented, no unverified claim becomes a qualified decision. Synthetic only: **real-message accuracy (M02-15) and channel reliability remain NOT VERIFIED.**
+- **G-37 / G-38:** documented in the gap register with consumers, tests and required decision/data source; no entry kind changed, no contract data invented.
+- **Frontend (IMPLEMENTED, local):** twins-frontend branch `feat/stage03-frontend` (d8bc20b): typed contracts, NEEDS_SESSION registry entries (LIVE shows sign-in required, no login BFF exists), DEMO fixtures, pipeline card, historical-matches card, playbooks and channel-strategy pages. Typecheck, 70 tests, build and bundle check pass. Desktop/mobile visual verification was not performed.
+
+**Decision: Stage 03 remains NOT COMPLETE.**
+

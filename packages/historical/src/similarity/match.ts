@@ -38,10 +38,26 @@ export function aggregateOutcomes(matches: readonly Match[], cfg: SimilarityConf
 export function matchSimilar(target: SimilarityTarget, cases: readonly HistoricalCase[], override: Partial<SimilarityConfig> = {}): SimilarityResult {
   const cfg: SimilarityConfig = { ...DEFAULT_SIMILARITY, ...override, weights: { ...DEFAULT_SIMILARITY.weights, ...(override.weights ?? {}) } };
   const excluded = { future: 0, sameId: 0, lowCoverage: 0, lowSimilarity: 0 };
-  const matches: Match[] = [];
+  const temporal = { sameGroup: 0, duplicateRevision: 0, outcomeNotYetKnown: 0, unknownResolutionTime: 0 };
+  // Only information available at the target's decision time may be used.
+  const usable: HistoricalCase[] = [];
   for (const c of cases) {
     if (c.id === target.id) { excluded.sameId++; continue; }
     if (c.observedAt.getTime() >= target.at.getTime()) { excluded.future++; continue; }
+    if (target.groupKey !== undefined && c.groupKey === target.groupKey) { temporal.sameGroup++; continue; } // an earlier revision of the target's own message is not a "past case"
+    usable.push(c);
+  }
+  // Among several revisions of one past message only the LATEST revision seen before the target counts.
+  const latest = new Map<string, HistoricalCase>();
+  for (const c of usable) { if (c.groupKey === undefined) continue; const k = latest.get(c.groupKey); if (!k || c.observedAt.getTime() > k.observedAt.getTime() || (c.observedAt.getTime() === k.observedAt.getTime() && c.id > k.id)) latest.set(c.groupKey, c); }
+  const matches: Match[] = [];
+  for (const c0 of usable) {
+    if (c0.groupKey !== undefined && latest.get(c0.groupKey) !== c0) { temporal.duplicateRevision++; continue; }
+    let c = c0;
+    if (c.outcome !== "UNRESOLVED") {
+      if (c.resolvedAt && c.resolvedAt.getTime() >= target.at.getTime()) { temporal.outcomeNotYetKnown++; c = { ...c, outcome: "UNRESOLVED", rMultiple: null }; }          // the outcome was not known yet: unknown, not a win or a loss
+      else if (!c.resolvedAt && cfg.requireResolvedAt) { temporal.unknownResolutionTime++; c = { ...c, outcome: "UNRESOLVED", rMultiple: null }; }                           // cannot prove it pre-dates the target
+    }
     const r = compareCase(target, c, cfg);
     if (r.coverage < cfg.minCoverage) { excluded.lowCoverage++; continue; }
     if (r.similarity < cfg.minSimilarity) { excluded.lowSimilarity++; continue; }
@@ -53,5 +69,6 @@ export function matchSimilar(target: SimilarityTarget, cases: readonly Historica
   const notes: string[] = ["historical association only: not a prediction and not a probability of success"];
   if (aggregate.status === "INSUFFICIENT_EVIDENCE") notes.push(`only ${aggregate.resolved} resolved comparable case(s); at least ${cfg.minResolved} are needed before the rates mean anything`);
   if (aggregate.status === "NO_COMPARABLE_CASES") notes.push("no comparable past case: this is missing evidence, not a neutral or positive signal");
-  return { version: SIMILARITY_VERSION, target: target.id, matches: top, aggregate, excluded, notes };
+  if (temporal.outcomeNotYetKnown + temporal.unknownResolutionTime > 0) notes.push(`${temporal.outcomeNotYetKnown + temporal.unknownResolutionTime} comparable case(s) had no outcome known at the decision time and are counted as unresolved`);
+  return { version: SIMILARITY_VERSION, target: target.id, matches: top, aggregate, excluded, temporal, notes };
 }
