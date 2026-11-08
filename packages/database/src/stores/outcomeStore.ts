@@ -81,7 +81,7 @@ export async function positionsNeedingAttribution(db: Pick<Db, "transaction">, u
       left join lateral (select finality, gross_pnl from outcome_attributions a where a.user_id = p.user_id and a.paper_position_id = p.id order by version desc limit 1) a on true
       where p.user_id = ${userId}::uuid and (
         (a.finality is null and (p.status = 'CLOSED' or p.quantity < p.initial_quantity))
-        or (a.finality = 'PARTIAL' and (p.status = 'CLOSED' or a.gross_pnl is distinct from p.realized_pnl::text)))
+        or (a.finality = 'PARTIAL' and (p.status = 'CLOSED' or a.gross_pnl is distinct from p.realized_pnl)))
       order by p.opened_at, p.id limit ${Math.min(Math.max(limit, 1), 500)}`);
     return r.rows.map((q) => row(q)["id"] as string);
   });
