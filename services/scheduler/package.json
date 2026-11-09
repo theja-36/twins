@@ -12,7 +12,7 @@
     "@twins/runtime-state": "*",
     "@twins/adapter-market": "*",
     "@twins/config": "*",
-    "bullmq": "^6.3.11",
+    "bullmq": "^6.7.1",
     "ioredis": "^5.11.1",
     "node-cron": "^4.6.0",
     "@twins/database": "*",
@@ -22,6 +22,6 @@
   },
   "devDependencies": {
     "@types/node-cron": "^3.0.11",
-    "tsx": "^4.16.0"
+    "tsx": "^4.23.15"
   }
 }

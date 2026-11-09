@@ -13,13 +13,13 @@
   },
   "dependencies": {
     "@twins/config": "*",
-    "drizzle-orm": "^0.45.2",
-    "pg": "^8.12.0",
+    "drizzle-orm": "^0.45.4",
+    "pg": "^8.23.1",
     "@twins/alerting": "*"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.31.10",
-    "tsx": "^4.16.0",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
     "@types/pg": "^8.11.6",
     "dotenv": "^16.4.5"
   }
