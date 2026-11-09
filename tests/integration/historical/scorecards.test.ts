@@ -78,7 +78,7 @@ describe("tiers from real evaluated outcomes", () => {
     const all = must(d.windows.find((w) => w.windowType === "ALL_TIME"));
     expect(all.metrics).toMatchObject({ evaluable: 60, entered: 60, wins: 36, losses: 24, totalR: 48, winRateEntered: 0.6, maxConsecutiveLosses: 1, unverifiableRate: 0, dataQualityScore: 1, evaluationCoverageScore: 1 });
     expect(d.windows.map((w) => w.windowType).sort()).toEqual(["ALL_TIME", "CALENDAR_MONTH", "CALENDAR_MONTH", "CALENDAR_MONTH", "LAST_180D", "LAST_30D", "LAST_365D", "LAST_90D"]);
-    expect(d.run).toMatchObject({ asOf: NOW.toISOString(), algorithmVersion: "source-scorecard-v1+trust-tier-v1" });
+    expect(d.run).toMatchObject({ asOf: NOW.toISOString(), algorithmVersion: "source-scorecard-v2+trust-tier-v1" });
     expect(d.run.inputSummary).toMatchObject({ evaluationRunIds: [evalRunId], labelCount: 60 });
     expect((d.run.inputSummary as { datasetRefs: string[] }).datasetRefs).toHaveLength(1);
     expect(d.run.config).toMatchObject({ unknownBelow: 30, a: { minEvaluable: 50 } }); // the threshold configuration used
@@ -150,14 +150,26 @@ describe("determinism, idempotency and time windows", () => {
   it("time-window scorecards cover the right messages for an as-of inside the archive", async () => {
     const ch = `sc-w-${sfx()}`;
     await seed(ch, mixed(36, 24));
-    await build(ch, { asOf: new Date(D0 + 49 * DAY) }); // 2024-04-22: messages on days 0..49 are known
+    await build(ch, { asOf: new Date(D0 + 49 * DAY) }); // 2024-04-22: messages on days 0..49 are SENT, but a message's outcome is only known when its day-3 daily bar closes (day i + 4)
     const d = must(await showScorecard(db(), ch));
     const w = (t: string) => d.windows.filter((x) => x.windowType === t);
-    expect(must(w("ALL_TIME")[0]).sampleSize).toBe(50);
-    expect(must(w("LAST_30D")[0]).sampleSize).toBe(30);
-    expect(must(w("LAST_90D")[0]).sampleSize).toBe(50);
+    // G-39 (point in time): before the fix these were 50 / 30 / 50 because the outcomes of days 46..49 (known only on days 50..53) were counted. Now only days 0..45 are evaluable.
+    expect(must(w("ALL_TIME")[0]).sampleSize).toBe(46);
+    expect(must(w("LAST_30D")[0]).sampleSize).toBe(26); // messages on days 20..49, minus the four not yet resolved
+    expect(must(w("LAST_90D")[0]).sampleSize).toBe(46);
     expect(w("CALENDAR_MONTH").map((x) => x.windowStart.slice(0, 7))).toEqual(["2024-03", "2024-04"]);
     expect(must(w("LAST_30D")[0]).caveats).toEqual(expect.arrayContaining([{ code: "LATE_SIGNAL_RATE_NOT_MEASURABLE" }]));
+  });
+});
+
+describe("point in time: an outcome is not used before it was known (G-39)", () => {
+  it("the same archive evaluated as of a later date counts the outcomes that resolved in between (built in ascending as-of order, because the latest as-of is the one shown)", async () => {
+    const ch = `sc-pit-${sfx()}`;
+    await seed(ch, mixed(36, 24)); // one message a day, days 0..59; each resolves at its day-3 bar close (day i + 4)
+    const at = async (days: number) => { await build(ch, { asOf: new Date(D0 + days * DAY) }); return must((await showScorecard(db(), ch)).windows.find((x) => x.windowType === "ALL_TIME")).sampleSize; };
+    expect(await at(9)).toBe(6);   // days 0..9 sent; resolved by day 9: i + 4 <= 9, so i <= 5
+    expect(await at(49)).toBe(46);
+    expect(await at(70)).toBe(60); // everything sent has resolved
   });
 });
 

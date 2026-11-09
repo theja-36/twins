@@ -73,14 +73,18 @@ const canon = (v: unknown): string => JSON.stringify(v ?? null);
 
 /** When the outcome became knowable: the latest first touch of a hit target (wins), the stop touch (losses), otherwise the end of the observation window; an invalid signal is known at its message time. Null = cannot be established. */
 export function resolutionTime(outcome: string, messageAt: Date, targets: Array<{ status?: string; firstTouchAt?: string | null }>, slTouch: Date | null, dataWindow: unknown): Date | null {
+  // A touch is stamped with its bar's START; it is only knowable when that bar closes, so the bar length is added. No bar length recorded: not established.
+  const w = typeof dataWindow === "object" && dataWindow !== null ? (dataWindow as Record<string, unknown>) : {};
+  const barMs = typeof w["intervalSeconds"] === "number" && w["intervalSeconds"] > 0 ? w["intervalSeconds"] * 1000 : null;
+  const closes = (d: Date | null): Date | null => (d !== null && barMs !== null ? new Date(d.getTime() + barMs) : null);
   const t = (v: string | null | undefined): Date | null => { const d = v ? new Date(v) : null; return d && Number.isFinite(d.getTime()) ? d : null; };
-  if (outcome.startsWith("WIN_")) { const hits = targets.filter((x) => x.status === "TARGET_HIT").map((x) => t(x.firstTouchAt)); return hits.length > 0 && hits.every((x) => x !== null) ? new Date(Math.max(...hits.map((x) => (x as Date).getTime()))) : null; }
-  if (outcome === "LOSS_SL") return slTouch;
+  if (outcome.startsWith("WIN_")) { const hits = targets.filter((x) => x.status === "TARGET_HIT").map((x) => t(x.firstTouchAt)); return hits.length > 0 && hits.every((x) => x !== null) ? closes(new Date(Math.max(...hits.map((x) => (x as Date).getTime())))) : null; }
+  if (outcome === "LOSS_SL") return closes(slTouch);
   if (outcome === "INVALID_SIGNAL") return messageAt;
   const end = t(typeof dataWindow === "object" && dataWindow !== null ? ((dataWindow as Record<string, unknown>)["validityEnd"] as string | undefined) : undefined);
   return end ?? null;
 }
-async function loadSignals(db: Db, members: string[], evaluationRunIds?: string[], asOf?: Date): Promise<Loaded> {
+async function loadSignals(db: Db, members: string[], evaluationRunIds: string[] | undefined, asOf: Date): Promise<Loaded> {
   const S = schema.historicalSourceRecords, N = schema.historicalNormalizedRecords, L = schema.historicalOutcomeLabels, ER = schema.historicalEvaluationRuns, D = schema.historicalDatasets;
   const rows = await db.select({
     id: S.id, channel: S.channelLabel, mid: S.originalMessageId, rev: S.revisionNo, editOf: S.editOfId, at: S.messageTimestamp, editedAt: S.editedAt, author: S.author,
@@ -107,7 +111,7 @@ async function loadSignals(db: Db, members: string[], evaluationRunIds?: string[
     const label = isSignal && o.nId ? latestLabel.get(o.nId) : undefined;
     if (label) used.push(label);
     // A revision made after the as-of instant did not exist then.
-    const revs = (revsOf.get(o.id) ?? []).filter((r) => asOf === undefined || r.editedAt === null || r.editedAt.getTime() <= asOf.getTime());
+    const revs = (revsOf.get(o.id) ?? []).filter((r) => r.editedAt === null || r.editedAt.getTime() <= asOf.getTime());
     const orig = num(o.stopLoss);
     const buy = String(o.side ?? "").toLowerCase() === "buy";
     const adverse = revs.some((r) => {
@@ -138,21 +142,19 @@ async function loadSignals(db: Db, members: string[], evaluationRunIds?: string[
 }
 
 export interface RebuildResult { sourceLabel: string; sourceId: string; runId: string; created: boolean; tier: Tier; evaluable: number }
-export interface RebuildOptions { asOf: Date; createdBy: string; tierConfig?: Parameters<typeof resolveTierConfig>[0]; evaluationRunIds?: string[];
-  /** Count only outcomes that had resolved, and revisions that existed, at `asOf` (default false: stored tiers keep the older behaviour, see gap G-39). */
-  pointInTimeOutcomes?: boolean }
+export interface RebuildOptions { asOf: Date; createdBy: string; tierConfig?: Parameters<typeof resolveTierConfig>[0]; evaluationRunIds?: string[] }
 
 export async function rebuildScorecard(db: Db, source: CanonicalSource, o: RebuildOptions): Promise<RebuildResult> {
   mustActor(o.createdBy);
   const cfg: TierConfig = resolveTierConfig(o.tierConfig);
-  const loaded = await loadSignals(db, source.members, o.evaluationRunIds, o.pointInTimeOutcomes ? o.asOf : undefined);
-  const windows = computeWindows(loaded.signals, o.asOf, { costPerTradeR: cfg.costPerTradeR }, { pointInTimeOutcomes: o.pointInTimeOutcomes === true });
+  const loaded = await loadSignals(db, source.members, o.evaluationRunIds, o.asOf);
+  const windows = computeWindows(loaded.signals, o.asOf, { costPerTradeR: cfg.costPerTradeR });
   const all = windows[0] as (typeof windows)[number];
   const tier = assignTier(all.metrics, cfg);
   const labelSetSha256 = sha(loaded.labelIds.join(","));
   const inputSha = sha(JSON.stringify(loaded.signals.map((s) => [s.key, s.at.toISOString(), s.isSignal, s.outcome, s.targetHits, s.dataQuality, s.slPresent, s.slValid, s.revisions, s.adverseSlRevision, s.evidenceConflict])));
   const algorithm = `${SCORECARD_ALGORITHM_VERSION}+${TIER_ALGORITHM_VERSION}`;
-  const runKey = sha(JSON.stringify([source.id, o.asOf.toISOString(), algorithm, cfg, labelSetSha256, inputSha, loaded.snapshot, ...(o.pointInTimeOutcomes ? ["point-in-time-outcomes"] : [])]));
+  const runKey = sha(JSON.stringify([source.id, o.asOf.toISOString(), algorithm, cfg, labelSetSha256, inputSha, loaded.snapshot]));
   const snapshot = { ...loaded.snapshot, evaluable: all.metrics.evaluable, unverifiable: all.metrics.unverifiable, windows: windows.length };
   const result = (runId: string, created: boolean): RebuildResult => ({ sourceLabel: source.channelLabel, sourceId: source.id, runId, created, tier: tier.tier, evaluable: all.metrics.evaluable });
 

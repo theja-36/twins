@@ -101,3 +101,9 @@ Session OpenAPI document and test; point-in-time option for scorecards with 8 un
 ### FINAL STATUS: NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY
 Primary blockers are real data (M02-15, M01-14, G-38 contract master, real-archive leakage proof). Owner decisions are also required (G-37, G-39 default, G-42). Implementation of everything that can be honestly built without them is done, except G-40 (needs a reproducing test) and G-41 (needs a consumer trace).
 
+### Owner decisions recorded 2026-11-09
+- **G-37: APPROVED option 1.** Unstated and "near" entries stay INCOMPLETE; no inferred price, tolerance or sixth entry kind. No code change (policy and adversarial tests already pin it). G-37 is DECIDED, not "open".
+- **G-39: APPROVED option 2.** Point-in-time scorecards are the default (`source-scorecard-v2`). Before/after for the archive window test (60 daily messages, outcome known at bar close on day i + 4, as-of day 49): ALL_TIME 50 -> 46, LAST_30D 30 -> 26, LAST_90D 50 -> 46; the four messages of days 46..49 resolve on days 50..53 and were previously counted from the future.
+- **G-42: APPROVED option 1.** Web login on the existing backend authentication (see Stage 09 report when complete).
+- CI evidence for the pushed audit commits: backend `c4b1e73` run 42685359712 (static, unit Node 20/22: 241 files / 3,972 tests each, integration Node 20/22: 81 files passed, 2 skipped, 1,086 tests passed, 4 skipped, crash recovery, ci-gate: all success); frontend `7144db8` run 42685364221 (72 unit, 38 Playwright: success).
+
