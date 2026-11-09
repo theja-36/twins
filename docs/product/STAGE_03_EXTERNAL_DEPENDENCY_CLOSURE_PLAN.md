@@ -6,7 +6,7 @@ Status today: **NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY.** Everything th
 
 | # | Requirement | Kind | What is missing | Approval needed first | Closes when |
 |---|---|---|---|---|---|
-| 1 | G-40 embargo vs horizon, G-41 research-package version | CODE (no data) | a reproducing test (G-40); a consumer trace (G-41) | none | G-40: a failing test, then a fix, then green CI; G-41: consumers traced, hindsight use fixed or ruled out |
+| 1 | G-40 embargo vs horizon, G-41 research-package version | CODE: DONE locally (CI pending) | G-40 reproduced by a failing test and fixed (`pattern-metrics-v2`); G-41 consumers traced and two defects fixed | none | green CI for the introducing commit |
 | 2 | G-38 contract master | DATA + STAGE 10 | an authoritative instrument master (contract id, expiry, lot size, tick size) | the data source and any licence/cost | master imported through the existing `options/master.ts` boundary; every candidate's `contractVerification` becomes verifiable; tests prove lookups, mismatches and unknown contracts are refused; nothing defaulted |
 | 3 | M02-15 classifier accuracy | REAL DATA + HUMAN LABELS | real channel messages, labelled by at least two reviewers | permission to read specific real channels; where the text may live (outside the repo) | the report in `STAGE_03_VALIDATION_PROTOCOLS.md` exists for a named dataset and parser version: per-field precision/recall/F1, confusion matrix, 0 invented values, every labelled contradiction refused, at least 200 labelled claims |
 | 4 | Real-price outcomes (G-30, G-32) | STAGE 10 | a historical or live price source for the claimed instruments | provider choice and budget | resolved outcomes carry real prices and resolution times |
@@ -31,3 +31,7 @@ No real Telegram, user or broker data is imported and no production credential i
 
 ## Not Stage 03 (tracked elsewhere)
 Stage 04-08 verification against real data (Stage 11); live trading modes, approval settings table and live price feed (Stages 07/10); remaining Stage 09 screens' non-demo coverage and a manual screen-reader review.
+
+## Update 2026-11-09 (closure program)
+Prepared and committed locally (see `STAGE_03_DECISION_PACKAGE.md` for the single approval request): canonical contract record (`G38_CONTRACT_MASTER.md`), classifier evaluation harness and dataset/annotation spec (`M02_15_DATASET_AND_ANNOTATION_SPEC.md`), price-quality checks and provider decision (`G30_G32_PRICE_PROVIDER_DECISION.md`), attribution and mapping spec (`M01_14_ATTRIBUTION_SPEC.md`), leakage report and real-archive protocol (`HISTORICAL_LEAKAGE_VALIDATION_REPORT.md`), G-42 staging plan (frontend repo `docs/stage09/g42-staging-verification-plan.md`). The items above that still need your approval are exactly those in the decision package.
+

@@ -46,3 +46,7 @@ Backend `feat/master-build` at `67dee94` (CI run 42528709453 green). Frontend `f
 
 ## Stage 03 final acceptance audit (2026-11-09), local and unpushed
 Backend adds `apps/api/src/openapiSession.ts` and `docs/api/openapi-session.json` (regenerate with `npx tsx scripts/ops/export-openapi.ts`), the opt-in `pointInTimeOutcomes` scorecard option (G-39) and `STAGE_03_VALIDATION_PROTOCOLS.md`, `STAGE_ROADMAP_STATUS.md`. Frontend `7144db8` adds the partial-answer state. Gaps G-39 to G-42 are in the register. Stage 03 status: NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY. The integration suite was not run locally (no Docker daemon); the G-39 default must be flipped only after CI shows the one affected integration assertion.
+
+## Stage 03 closure program handoff (2026-11-09)
+Local, unpushed backend work: G-40 (`patterns/training.ts`, `pattern-metrics-v2`), G-41 (decision cycle reads the evaluation bundle's package; `researchReportsForDecisions` reads decision-time packages; `getResearchPackageById`), legacy scorecard flags (`pointInTime`), `canonicalContract.ts`, `classifierEval.ts`, `priceQuality.ts` and their tests, plus the specs listed in `STAGE_03_COMPLETION_REPORT.md`. The integration tests for G-40/G-41 run only in CI. One approval request: `STAGE_03_DECISION_PACKAGE.md`. Next milestone after approvals: the pilot labelled dataset (item A) and the instrument-master source (item B).
+

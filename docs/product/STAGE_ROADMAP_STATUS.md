@@ -7,7 +7,7 @@ Status words are not interchangeable: IMPLEMENTED = code and local tests exist; 
 | 00 | Baseline and preservation map | COMPLETE (BASELINE_PRESERVATION_MAP, tracker generated) | n/a | no completion report file |
 | 01 | Platform foundation, auth, ownership, audit | VERIFIED in CI | STAGE_01 report | web login BFF (G-42, Stage 09) |
 | 02 | Database and domain models | VERIFIED in CI (run 42445765317; G-34 closed by 42518889031) | STAGE_02 report | none recorded |
-| 03 | Telegram intelligence | NOT COMPLETE | backend 67dee94 run 42528709453 (docs 842e21a run 42531280629); frontend 9abf640 run 42531055911 | M02-15, M01-14, G-37, G-38, G-39, G-40, real-data leakage proof |
+| 03 | Telegram intelligence | NOT COMPLETE (EXTERNAL DATA/PROVIDER DEPENDENCY); G-37 decided, G-39/G-42 done, G-40/G-41 fixed locally | backend 67dee94 run 42528709453 (docs 842e21a run 42531280629); frontend 9abf640 run 42531055911 | M02-15, M01-14, G-37, G-38, G-39, G-40, real-data leakage proof |
 | 04 | Research and market intelligence | IMPLEMENTED + TESTED (46 of 47 IMPLEMENTED, 1 NOT_STARTED); none VERIFIED | run 42452595965 (2fc8c28) | hosted AI gateway fixtures only (G-15), no live regime source (G-16), options-risk mapping A13 |
 | 05 | Independent opportunity engine | IMPLEMENTED + TESTED (14 of 18; 4 IN_PROGRESS) | run 42459457501 (cc7590c) | no live market data (G-20), rules not backtested (G-21) |
 | 06 | Capital, confidence, risk, simulator | IMPLEMENTED + TESTED (76 of 85; 4 NOT_STARTED, 5 IN_PROGRESS) | run 42462060290 (8d60401) | no portfolio state (G-22), no instrument/fee spec (G-23), uncalibrated confidence (G-24), no margin model (G-25) |

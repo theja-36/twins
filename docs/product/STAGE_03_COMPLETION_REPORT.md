@@ -113,3 +113,17 @@ Primary blockers are real data (M02-15, M01-14, G-38 contract master, real-archi
 - **G-42:** IMPLEMENTED and CI-tested in twins-frontend `7ba47bc`, run 42689637294: build and e2e jobs success; 79 unit tests, 50 Playwright tests. The session suite uses a test-only stand-in for the backend's account routes; it is not an end-to-end run against the real backend.
 - Stage 03 status is unchanged: **NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY** (M02-15, M01-14, G-38 contract master, real-archive leakage proof). Still open without a decision: G-40 (embargo vs horizon, needs a reproducing test) and G-41 (research-package version, needs a consumer trace).
 
+## Closure program, 2026-11-09 (local, unpushed; CI pending)
+| Workstream | State | Evidence |
+|---|---|---|
+| G-40 pattern training point-in-time | IMPLEMENTED, TESTED (unit); reproduced by a failing test first | `patternTrainingTemporal.test.ts` (7); `pattern-metrics-v2` |
+| G-41 research-package consumers | IMPLEMENTED (2 defects fixed), integration tests CI-only | `G41_VERSION_CONSUMER_MAP.md`; `stage08.test.ts` |
+| G-38 contract master | domain model IMPLEMENTED and TESTED (11); persistence, API, data NOT STARTED; BLOCKED on a source | `G38_CONTRACT_MASTER.md` |
+| M02-15 classifier validation | harness IMPLEMENTED and TESTED (12, synthetic); dataset and accuracy NOT STARTED, BLOCKED on approved data | `M02_15_DATASET_AND_ANNOTATION_SPEC.md` |
+| G-30/G-32 price validation | quality checks IMPLEMENTED and TESTED (9); provider BLOCKED on approval | `G30_G32_PRICE_PROVIDER_DECISION.md` |
+| M01-14 attribution | specified; NOT STARTED, BLOCKED on real outcomes and an approved mapping | `M01_14_ATTRIBUTION_SPEC.md` |
+| Leakage proof | audit complete, 3 code defects fixed (G-39, G-40, G-41), legacy v1 runs flagged `pointInTime: false`; real-archive proof BLOCKED | `HISTORICAL_LEAKAGE_VALIDATION_REPORT.md` |
+| G-42 real-backend verification | plan written; NOT RUN (no staging backend) | frontend `docs/stage09/g42-staging-verification-plan.md` |
+| Approvals | one consolidated request | `STAGE_03_DECISION_PACKAGE.md` |
+Final status unchanged: **NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY.** No requirement was moved to VERIFIED by this program; M07-06, M06-39 (earlier) and the G-39 behaviour are the VERIFIED items.
+
