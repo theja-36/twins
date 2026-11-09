@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { InputError } from "../readers";
-import { computeWindows, SCORECARD_ALGORITHM_VERSION, type Metrics, type ScoredSignal } from "./metrics";
+import { computeWindows, isPointInTimeScorecard, SCORECARD_ALGORITHM_VERSION, type Metrics, type ScoredSignal } from "./metrics";
 import { assignTier, resolveTierConfig, TIER_ALGORITHM_VERSION, TIER_LABELS, type Tier, type TierConfig } from "./tiers";
 
 /**
@@ -187,7 +187,7 @@ export async function rebuildAll(db: Db, o: RebuildOptions): Promise<RebuildResu
   return out;
 }
 
-export interface TierLookup { tier: Tier; label: string; reason: string; asOf: string | null; scorecardRunId: string | null }
+export interface TierLookup { tier: Tier; label: string; reason: string; asOf: string | null; scorecardRunId: string | null; /** The scorecard algorithm that produced the tier, and whether it is point in time (v2+). A legacy v1 tier is reported with pointInTime false and is not presented as point-in-time. */ algorithmVersion?: string | null; pointInTime?: boolean }
 export type SourceIdentity = string | { channelLabel: string };
 /**
  * Service function for the future sizing / confidence engine. Returns the latest deterministic tier of a source (an alias resolves to its canonical source). Returns UNKNOWN - never throws and
@@ -203,7 +203,9 @@ export async function getLatestSourceTrustTier(db: Db, identity: SourceIdentity)
   const [t] = await db.select().from(T).where(eq(T.sourceId, src.id)).orderBy(desc(T.asOf), desc(T.createdAt), desc(T.id)).limit(1);
   if (!t) return unknown("NO_SCORECARD");
   const tier = t.tier as Tier;
-  return { tier, label: TIER_LABELS[tier], reason: tier === "UNKNOWN" ? "INSUFFICIENT_EVIDENCE" : "SCORECARD", asOf: t.asOf.toISOString(), scorecardRunId: t.runId };
+  const [run] = await db.select({ algorithm: schema.historicalScorecardRuns.algorithmVersion }).from(schema.historicalScorecardRuns).where(eq(schema.historicalScorecardRuns.id, t.runId));
+  const pit = isPointInTimeScorecard(run?.algorithm);
+  return { tier, label: TIER_LABELS[tier], reason: tier === "UNKNOWN" ? "INSUFFICIENT_EVIDENCE" : pit ? "SCORECARD" : "SCORECARD_LEGACY_NOT_POINT_IN_TIME", asOf: t.asOf.toISOString(), scorecardRunId: t.runId, algorithmVersion: run?.algorithm ?? null, pointInTime: pit };
 }
 
 export interface SourceSummary { sourceId: string; channelLabel: string; members: string[]; tier: Tier; tierLabel: string; asOf: string | null; scorecardRunId: string | null; evaluable: number | null; totalEvaluated: number | null; winRateEntered: number | null; netExpectancyR: number | null; grossExpectancyR: number | null; unverifiableRate: number | null; revisionConflictRate: number | null; maxDrawdownR: number | null }

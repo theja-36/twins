@@ -1,4 +1,4 @@
-import { createDecision, endDecision, getCandidate, getLatestEvaluationBundle, getLatestResearchPackage, hasPaperPermission, invalidateDecision, listActiveAccounts, listCandidates, listDecisions, type StoredCandidate } from "@twins/database";
+import { createDecision, endDecision, getCandidate, getLatestEvaluationBundle, getResearchPackageById, hasPaperPermission, invalidateDecision, listActiveAccounts, listCandidates, listDecisions, type StoredCandidate } from "@twins/database";
 import type { ResearchPackage } from "@twins/agents";
 import type { RiskDecision, SizingResultV2, EvaluationDeps } from "@twins/planning";
 import { isQualifiedOutcome } from "@twins/types";
@@ -49,7 +49,8 @@ export async function runDecisionCycle(d: EvaluationDeps & { config: DecisionCon
         if (!live) continue;
         const existing = (await listDecisions(d.db, a.userId, { accountId: a.accountId, candidateId: c.id, states: ["PENDING", "APPROVED"], limit: 5 }))[0] ?? null;
         if (existing && existing.riskAssessmentId === bundle.riskAssessmentId && existing.validUntil.getTime() > now.getTime()) { r.unchanged++; continue; }
-        const stored = await getLatestResearchPackage(d.db, c.id);
+        // The decision is a function of the stored evaluation: it uses the research package the risk assessment and confidence used (by id), never a newer version stored since (G-41). A newer version makes planning re-evaluate (its dedupe compares package ids), and the next cycle then decides on that new evaluation.
+        const stored = bundle.researchPackageId ? await getResearchPackageById(d.db, bundle.researchPackageId) : null;
         const res = bundle.result as { risk: RiskDecision; sizing: SizingResultV2 };
         const comp = (bundle.confidence?.components ?? {}) as { completeness?: number; caps?: Array<{ code: string }> };
         const result: DecisionResult = decide({ now, candidate: toDecisionCandidate(live), research: (stored?.agentResults ?? null) as ResearchPackage | null, researchPackageId: stored?.id ?? null,

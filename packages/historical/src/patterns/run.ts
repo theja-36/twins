@@ -3,12 +3,13 @@ import { and, asc, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { schema, type Db } from "@twins/database";
 import { InputError } from "../readers";
 import type { ScoredSignal } from "../scorecards/metrics";
-import { canonicalSources } from "../scorecards/run";
+import { canonicalSources, resolutionTime } from "../scorecards/run";
 import type { Tier } from "../scorecards/tiers";
 import {
   computeConfidence, CONFIDENCE_ALGORITHM_VERSION, resolveConfidenceConfig, type ConfidenceConfig, type ConfidenceConfigOverride, type ConfidenceEstimate, type DataQualityInput, type MarketContext, type PatternView, type SignalForConfidence,
 } from "./confidence";
 import { deriveFeatures, FEATURE_VERSION, patternKeys, type Features } from "./features";
+import { selectTraining } from "./training";
 import { computePatternStats, PATTERN_ALGORITHM_VERSION, resolvePatternConfig, type PatternConfig, type PatternMetrics } from "./stats";
 
 /**
@@ -35,7 +36,7 @@ async function loadSamples(db: Db): Promise<Sample[]> {
   const latest = new Map<string, (typeof rows)[number]>();
   for (const r of rows) latest.set(r.id, r);
   const labelRows = await db.select({
-    id: L.id, nId: L.normalizedRecordId, outcome: L.finalOutcome, quality: L.dataQuality, targets: L.targetEvaluations, runId: L.runId,
+    id: L.id, nId: L.normalizedRecordId, outcome: L.finalOutcome, quality: L.dataQuality, targets: L.targetEvaluations, slTouch: L.slFirstTouchAt, dataWindow: L.dataWindow, runId: L.runId,
     ds: sql<string | null>`case when ${DS.id} is null then null else ${DS.providerId} || '|' || ${DS.datasetId} || '|' || ${DS.datasetVersion} || '|' || ${DS.contentSha256} end`,
   }).from(L).innerJoin(ER, eq(ER.id, L.runId)).leftJoin(DS, eq(DS.id, L.datasetId)).orderBy(asc(ER.createdAt), asc(L.id));
   const lastLabel = new Map<string, (typeof labelRows)[number]>();
@@ -45,12 +46,13 @@ async function loadSamples(db: Db): Promise<Sample[]> {
     const isSignal = o.parseStatus === "SIGNAL" || o.parseStatus === "OPTIONS_CLAIM";
     if (!isSignal) continue;
     const label = o.nId ? lastLabel.get(o.nId) : undefined;
-    const th = Array.isArray(label?.targets) ? (label?.targets as Array<{ status?: string }>) : [];
+    const th = Array.isArray(label?.targets) ? (label?.targets as Array<{ status?: string; firstTouchAt?: string | null }>) : [];
+    const resolvedAt = label ? resolutionTime(label.outcome, o.at, th, label.slTouch, label.dataWindow) : undefined;
     const tg = Array.isArray(o.targets) ? (o.targets as unknown[]).map(num).filter((x): x is number => x !== null) : [];
     const features = deriveFeatures({ market: o.market, instrumentType: o.instrumentType, underlying: o.underlying, optionType: o.optionType, side: o.side, entry: (o.entry ?? null) as never, stopLoss: num(o.stopLoss), targets: tg, expiryDate: o.expiryDate, timestamp: o.at });
     out.push({
       channel: o.channel, at: o.at, features, labelId: label?.id ?? null, evalRunId: label?.runId ?? null, dataset: label?.ds ?? null,
-      scored: { key: `${o.channel}|${o.mid}`, at: o.at, isSignal: true, outcome: label?.outcome ?? null, targetHits: [th[0]?.status === "TARGET_HIT", th[1]?.status === "TARGET_HIT", th[2]?.status === "TARGET_HIT"], dataQuality: label?.quality ?? null, slPresent: num(o.stopLoss) !== null, slValid: (o.slv as { result?: string } | null)?.result === "VALID", revisions: 0, adverseSlRevision: false, evidenceConflict: false },
+      scored: { key: `${o.channel}|${o.mid}`, at: o.at, isSignal: true, ...(resolvedAt !== undefined ? { resolvedAt } : {}), outcome: label?.outcome ?? null, targetHits: [th[0]?.status === "TARGET_HIT", th[1]?.status === "TARGET_HIT", th[2]?.status === "TARGET_HIT"], dataQuality: label?.quality ?? null, slPresent: num(o.stopLoss) !== null, slValid: (o.slv as { result?: string } | null)?.result === "VALID", revisions: 0, adverseSlRevision: false, evidenceConflict: false },
     });
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime() || (a.scored.key < b.scored.key ? -1 : 1));
@@ -87,7 +89,7 @@ export async function rebuildPatternMetrics(db: Db, o: MetricsOptions): Promise<
   mustActor(o.createdBy);
   const cfg = resolvePatternConfig(o.config);
   const cutoff = new Date(o.asOf.getTime() - cfg.embargoDays * DAY);
-  const training = (await loadSamples(db)).filter((s) => s.at.getTime() <= cutoff.getTime());
+  const training = selectTraining(await loadSamples(db), o.asOf, cfg.embargoDays);
   const groups = new Map<string, { level: number; features: Record<string, string>; samples: Sample[] }>();
   for (const s of training) for (const k of patternKeys(s.features)) (groups.get(k.keyText) ?? groups.set(k.keyText, { level: k.level, features: k.features, samples: [] }).get(k.keyText) as { samples: Sample[] }).samples.push(s);
   // source trust tiers are a descriptive mix per pattern (latest tier per canonical source; not point-in-time - the mix is context, not an input to the metrics)

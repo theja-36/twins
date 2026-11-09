@@ -6,7 +6,8 @@ import { R_MODEL, computeMetrics, round, type Metrics, type ScoredSignal } from 
  * behaves at small n and at proportions near 0 or 1. The conservative expectancy bound is the normal-approximation lower limit of the mean net R per evaluable outcome
  * (mean - z x sd / sqrt(n)); with n < 2 it is null. These are historical ASSOCIATION statistics: they carry no causal claim and no guarantee about future signals.
  */
-export const PATTERN_ALGORITHM_VERSION = "pattern-metrics-v1";
+/** v2 (G-40): training counts only outcomes that had resolved at the run's as-of instant (the embargo alone allowed outcomes that resolve later). Stored v1 runs are NOT point-in-time. */
+export const PATTERN_ALGORITHM_VERSION = "pattern-metrics-v2";
 export type EvidenceStatus = "SUFFICIENT" | "INSUFFICIENT_EVIDENCE" | "LOW_QUALITY_EVIDENCE";
 
 export function wilsonInterval(successes: number, n: number, z: number): { lower: number; upper: number } | null {

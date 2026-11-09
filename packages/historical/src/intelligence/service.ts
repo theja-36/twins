@@ -4,6 +4,7 @@ import { schema, type Db } from "@twins/database";
 import { computeConfidence, CONFIDENCE_ALGORITHM_VERSION, resolveConfidenceConfig, type ConfidenceConfigOverride, type MarketContext, type SignalForConfidence } from "../patterns/confidence";
 import { deriveFeatures, FEATURE_VERSION, patternKeys } from "../patterns/features";
 import { latestPatternRun, loadPatternViews } from "../patterns/run";
+import { isPointInTimeScorecard } from "../scorecards/metrics";
 import { canonicalSources, resolveSource } from "../scorecards/run";
 import { TIER_LABELS, type Tier } from "../scorecards/tiers";
 
@@ -28,6 +29,8 @@ export interface SourceTrust {
   /** The scorecard's as-of (its knowledge cutoff), never later than the instant evaluated. */
   asOf: string | null;
   algorithmVersion: string | null;
+  /** False for a legacy (v1) scorecard, which counted outcomes resolved after its as-of instant: it is context only and must not be presented as point-in-time. */
+  pointInTime?: boolean;
   configSha256: string | null;
   evaluable: number | null;
   dataSufficiency: DataSufficiency;
@@ -54,7 +57,7 @@ export async function getSourceTrustAsOf(db: Db, label: string, asOf: Date): Pro
   const evaluable = Number((t.metrics as { evaluable?: unknown } | null)?.evaluable ?? 0);
   return {
     identity,
-    trust: { status: tier === "UNKNOWN" ? "UNKNOWN" : "AVAILABLE", tier, label: TIER_LABELS[tier], reason: tier === "UNKNOWN" ? "INSUFFICIENT_EVIDENCE" : "SCORECARD", scorecardRunId: t.runId, asOf: t.asOf.toISOString(), algorithmVersion: t.algorithm, configSha256: t.configSha, evaluable, dataSufficiency: tier === "UNKNOWN" ? "INSUFFICIENT" : "SUFFICIENT" },
+    trust: { status: tier === "UNKNOWN" ? "UNKNOWN" : "AVAILABLE", tier, label: TIER_LABELS[tier], reason: tier === "UNKNOWN" ? "INSUFFICIENT_EVIDENCE" : "SCORECARD", scorecardRunId: t.runId, asOf: t.asOf.toISOString(), algorithmVersion: t.algorithm, pointInTime: isPointInTimeScorecard(t.algorithm), configSha256: t.configSha, evaluable, dataSufficiency: tier === "UNKNOWN" ? "INSUFFICIENT" : "SUFFICIENT" },
   };
 }
 

@@ -6,6 +6,8 @@
  * "evaluable" (they are counted and rated separately). Rates are over ALL evaluated (labelled) signals unless the name says otherwise; `...Entered` rates are over entered trades.
  */
 /** v2: outcomes count only once they had resolved at the as-of instant, and revisions only if they existed then (G-39). Stored v1 runs counted later-resolved outcomes and must not be treated as point-in-time. */
+/** True for scorecard algorithms that count only outcomes known at the as-of instant (v2 and later). Legacy v1 runs counted later-resolved outcomes and must never be presented as point-in-time. */
+export const isPointInTimeScorecard = (algorithmVersion: string | null | undefined): boolean => { const m = /^source-scorecard-v(\d+)/.exec(algorithmVersion ?? ""); return m !== null && Number(m[1]) >= 2; };
 export const SCORECARD_ALGORITHM_VERSION = "source-scorecard-v2";
 export const R_MODEL = { WIN_T1: 1, WIN_T2: 2, WIN_T3: 3, LOSS_SL: -1, NO_ENTRY: 0, EXPIRED_NO_ENTRY: 0, EXPIRED_AFTER_ENTRY: 0 } as const;
 const DAY = 86_400_000;
@@ -119,9 +121,14 @@ export interface WindowCard { windowType: WindowType; windowStart: Date; windowE
 const EPOCH = new Date(0);
 
 /** All-time, trailing and calendar-month windows over messages sent up to `asOf` (a message after the as-of instant is unknowable and ignored). No market-regime windows exist yet. */
+/** The signal as it was known at `asOf`: an outcome that resolves AFTER the as-of instant (or whose resolution time cannot be established) was not known then, so the signal counts as not yet evaluated. A signal with no `resolvedAt` (no label carried) is untouched: nothing is invented. */
+export function asKnownAt(s: ScoredSignal, asOf: Date): ScoredSignal {
+  if (s.resolvedAt === undefined || s.outcome === null || (s.resolvedAt !== null && s.resolvedAt.getTime() <= asOf.getTime())) return s;
+  return { ...s, outcome: null, targetHits: [false, false, false], dataQuality: null };
+}
 export function computeWindows(input: ScoredSignal[], asOf: Date, cfg: MetricConfig): WindowCard[] {
-  // A message after the as-of instant is unknowable and ignored. An outcome that resolves AFTER the as-of instant (or whose resolution time cannot be established) was not known then, so the signal counts as not yet evaluated. A signal with no `resolvedAt` (callers that do not carry labels) is untouched: nothing is invented.
-  const known = input.filter((s) => s.at.getTime() <= asOf.getTime()).map((s): ScoredSignal => (s.resolvedAt === undefined || s.outcome === null || (s.resolvedAt !== null && s.resolvedAt.getTime() <= asOf.getTime()) ? s : { ...s, outcome: null, targetHits: [false, false, false], dataQuality: null }));
+  // A message after the as-of instant is unknowable and ignored; an outcome not yet resolved at as-of is not used (see `asKnownAt`).
+  const known = input.filter((s) => s.at.getTime() <= asOf.getTime()).map((s) => asKnownAt(s, asOf));
   const card = (windowType: WindowType, windowStart: Date, windowEnd: Date, set: ScoredSignal[]): WindowCard => {
     const metrics = computeMetrics(set, cfg);
     return { windowType, windowStart, windowEnd, sampleSize: metrics.evaluable, metrics, caveats: caveatsFor(metrics) };

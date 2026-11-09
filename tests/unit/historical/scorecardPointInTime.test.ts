@@ -43,3 +43,12 @@ describe("resolution time of a label", () => {
     expect(resolutionTime("EXPIRED_NO_ENTRY", at, [], null, {})).toBeNull();
   });
 });
+
+import { isPointInTimeScorecard, SCORECARD_ALGORITHM_VERSION } from "../../../packages/historical/src/scorecards/index";
+describe("legacy scorecards stay distinguishable and are never presented as point in time", () => {
+  it("v2 and later are point in time; v1, unknown and missing versions are not", () => {
+    expect(SCORECARD_ALGORITHM_VERSION).toBe("source-scorecard-v2");
+    expect(isPointInTimeScorecard("source-scorecard-v2")).toBe(true); expect(isPointInTimeScorecard("source-scorecard-v3")).toBe(true);
+    for (const v of ["source-scorecard-v1", "source-scorecard-v1+trust-tier-v1", "", null, undefined, "other-v9"]) expect(isPointInTimeScorecard(v as never), String(v)).toBe(false);
+  });
+});

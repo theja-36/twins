@@ -6,7 +6,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, describe, expect, it } from "vitest";
 import { attributionHistory, finishJobRun, insertAttribution, insertInsight, latestAttributionForPosition, latestAttributions, latestCalibrationRun, listInsights, listJobRuns, loadAttributionFacts, getPositionForDecision, startJobRun, type NewAttribution } from "../../../packages/database/src/index";
 import { DEFAULT_OUTCOME_LEARNING, LEARNING_JOB, buildAttribution, buildCorrection, ingestOutcomes, runLearningCycle, analyzeUser } from "../../../packages/outcomes/src/index";
-import { closeClients, db, finish, newUser, owner, pipeline, session, trade } from "../support/tradingPipeline";
+import { storeResearchPackage, researchReportsForDecisions } from "../../../packages/database/src/index";
+import { closeClients, db, finish, getDecision, newUser, owner, pipeline, session, trade } from "../support/tradingPipeline";
 
 afterAll(async () => { await closeClients(); });
 const cfg = { ...DEFAULT_OUTCOME_LEARNING, enabled: true };
@@ -156,3 +157,23 @@ describe("the learning cycle", () => {
     expect((await listJobRuns(db, LEARNING_JOB, 6)).every((r) => r.status !== "RUNNING")).toBe(true);
   });
 });
+
+describe("research packages are read as of the decision (G-41)", () => {
+  it("agent analytics read the package the decision recorded, not a newer version stored afterwards", async () => {
+    const p = await pipeline();
+    const d = (await getDecision(db, p.userId, p.decisionId))!;
+    expect(d.researchPackageId).not.toBeNull();
+    const before = (await researchReportsForDecisions(db, p.userId, 50)).find((x) => x.candidateId === p.candId)!;
+    expect(before.packageId).toBe(d.researchPackageId);
+    const v2 = await storeResearchPackage(db, { candidateId: p.candId, agentResults: { packageVersion: "research-package-v1", candidateId: p.candId, reports: [], contradictions: [], missingRequired: ["later-agent"] }, assessment: "RESEARCH_CAUTION", haltReason: null });
+    expect(v2.version).toBeGreaterThan(before.version);
+    const after = (await researchReportsForDecisions(db, p.userId, 50)).find((x) => x.candidateId === p.candId)!;
+    expect(after.packageId).toBe(d.researchPackageId); expect(after.version).toBe(before.version); expect(after.missingRequired).not.toContain("later-agent");
+  });
+  it("another user's decisions never bring their packages in", async () => {
+    const a = await pipeline(), b = await pipeline();
+    const mine = await researchReportsForDecisions(db, a.userId, 50);
+    expect(mine.map((x) => x.candidateId)).toContain(a.candId); expect(mine.map((x) => x.candidateId)).not.toContain(b.candId);
+  });
+});
+

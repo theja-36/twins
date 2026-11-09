@@ -24,3 +24,9 @@ export async function getLatestResearchPackage(db: Pick<Db, "select">, candidate
   const [r] = await db.select().from(researchPackages).where(and(eq(researchPackages.candidateId, candidateId))).orderBy(desc(researchPackages.version)).limit(1);
   return r ? { id: r.id, version: r.version, assessment: r.assessment, haltReason: r.haltReason, agentResults: r.agentResults, createdAt: r.createdAt } : null;
 }
+/** One research package by its id (the exact version a risk assessment or a decision recorded). Null when it does not exist. */
+export async function getResearchPackageById(db: Pick<Db, "select">, id: string): Promise<{ id: string; version: number; assessment: string; haltReason: string | null; agentResults: unknown; createdAt: Date } | null> {
+  const [r] = await db.select().from(researchPackages).where(eq(researchPackages.id, id)).limit(1);
+  return r ? { id: r.id, version: r.version, assessment: r.assessment, haltReason: r.haltReason, agentResults: r.agentResults, createdAt: r.createdAt } : null;
+}
+
