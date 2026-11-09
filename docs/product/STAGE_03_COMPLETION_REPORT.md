@@ -107,3 +107,9 @@ Primary blockers are real data (M02-15, M01-14, G-38 contract master, real-archi
 - **G-42: APPROVED option 1.** Web login on the existing backend authentication (see Stage 09 report when complete).
 - CI evidence for the pushed audit commits: backend `c4b1e73` run 42685359712 (static, unit Node 20/22: 241 files / 3,972 tests each, integration Node 20/22: 81 files passed, 2 skipped, 1,086 tests passed, 4 skipped, crash recovery, ci-gate: all success); frontend `7144db8` run 42685364221 (72 unit, 38 Playwright: success).
 
+### Outcome of the owner decisions (2026-11-09)
+- **G-37:** DECIDED, no change; behaviour pinned by tests.
+- **G-39:** CLOSED. Backend `29e7fab`, CI run 42686591238: all 7 jobs success; integration on Node 20 and 22 = 81 files passed, 2 skipped; 1,087 tests passed, 4 skipped (one more than before: the new ascending as-of test). The re-derived window assertions (46 / 26 / 46) and as-of 6 / 46 / 60 held on the first CI run.
+- **G-42:** IMPLEMENTED and CI-tested in twins-frontend `7ba47bc`, run 42689637294: build and e2e jobs success; 79 unit tests, 50 Playwright tests. The session suite uses a test-only stand-in for the backend's account routes; it is not an end-to-end run against the real backend.
+- Stage 03 status is unchanged: **NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY** (M02-15, M01-14, G-38 contract master, real-archive leakage proof). Still open without a decision: G-40 (embargo vs horizon, needs a reproducing test) and G-41 (research-package version, needs a consumer trace).
+
