@@ -78,3 +78,26 @@ M07-06 and M06-39 -> VERIFIED (evidence in tracker). M03-03 and M03-06 stay IMPL
 | Historical leakage on real data | real archive import with ingestion timestamps (approval) |
 | Frontend LIVE reads | a user login / session BFF in the web app (not in Stage 03 scope) |
 
+## Final acceptance audit (2026-11-09)
+Verified state: backend `feat/master-build` 842e21a (CI run 42531280629 green, same totals as 42528709453: 239 unit files / 3,962 tests on Node 20 and 22; 81 integration files passed, 2 skipped, 1,086 tests passed, 4 skipped); frontend `feat/stage09-frontend` 9abf640 (run 42531055911: 70 unit, 37 Playwright). Later local, unpushed work is listed in the handoff.
+
+### Classification of every remaining gap
+| ID | Class | Exact reason | Evidence available | Acceptance criteria to close |
+|---|---|---|---|---|
+| G-37 | OWNER DECISION | "near"/unstated entry semantics | `STAGE_03_G37_DECISION_BRIEF.md`; policy and adversarial tests | owner picks option 1, 2 or 3; then policy version bump, tests |
+| G-38 (contract master) | REAL DATA REQUIRED / STAGE 10 | no authoritative instrument master | boundary and tests exist (`options/master.ts`) | approved master imported; contract id, lot, tick, expiry verified by tests |
+| G-38 (HTTP contract, as named in this audit) | FIXED | session routes were undocumented | `docs/api/openapi-session.json` + `tests/unit/api/openapiSession.test.ts` (route parity, read-only, errors, freshness) | done; Stage 01 user routes remain undocumented in OpenAPI (see below) |
+| M02-15 | REAL DATA REQUIRED | no real labelled messages | protocol in `STAGE_03_VALIDATION_PROTOCOLS.md` | report per protocol |
+| M01-14 | REAL DATA REQUIRED / STAGE 10 | no real-price resolved outcomes linked to live channels | protocol doc; funnel API | per protocol |
+| G-39 | FIX NOW (done) + OWNER DECISION | scorecard/tier leakage after as-of | `scorecardPointInTime.test.ts`; opt-in `pointInTimeOutcomes` | flip default, update the one integration assertion, CI green |
+| G-40 | FIX NOW (not done) | embargo vs horizon | audit only | reproduce in a test first |
+| G-41 | needs consumer trace | latest research version | audit only | trace consumers |
+| G-42 | OWNER DECISION / STAGE 09 | no web login | backend auth verified in Stage 01 | login BFF decision, then tests |
+| Real-data leakage proof | STAGE 11 VALIDATION | needs a real archive | synthetic tests | point-in-time run on an approved real archive |
+
+### Changes in the closure audit (local, unpushed)
+Session OpenAPI document and test; point-in-time option for scorecards with 8 unit tests; frontend partial-answer state (commit 7144db8, 72 unit tests, 38 Playwright tests); header title tooltip. Audit by two read-only agents: leakage across learning paths (G-39..G-41) and Stage 04-08 status (`STAGE_ROADMAP_STATUS.md`).
+
+### FINAL STATUS: NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY
+Primary blockers are real data (M02-15, M01-14, G-38 contract master, real-archive leakage proof). Owner decisions are also required (G-37, G-39 default, G-42). Implementation of everything that can be honestly built without them is done, except G-40 (needs a reproducing test) and G-41 (needs a consumer trace).
+

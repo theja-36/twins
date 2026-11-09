@@ -1,0 +1,1210 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "TWINS Telegram intelligence read API (session)",
+    "version": "1.0.0",
+    "description": "Read-only. Shared platform intelligence (channels, claims, candidates, playbooks): no owner, so the shared permissions apply. Authentication is a user session token (`tws_...`); the shared operator key is refused. Channel identifiers are masked (`***` + last four) and raw message text is never returned. Lists use `limit` (1-200 unless stated) and `offset` (0-100000) with a deterministic order. Reliability and outcome-based performance are always NOT_AVAILABLE until resolved real outcomes are linked (gaps G-30, M01-14). A candidate only enters research; it is not a decision."
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionBearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Opaque user session token from POST /auth/login"
+      }
+    },
+    "schemas": {
+      "ChannelHealth": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "NO_DATA",
+              "ACTIVE",
+              "QUIET",
+              "STALE",
+              "SILENT"
+            ]
+          },
+          "lastMessageAgeSeconds": {
+            "type": "integer",
+            "nullable": true
+          },
+          "messages24h": {
+            "type": "integer"
+          },
+          "capture": {
+            "type": "string",
+            "enum": [
+              "NO_DATA",
+              "TIMELY",
+              "DELAYED"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "NOT_AVAILABLE"
+            ]
+          }
+        },
+        "required": [
+          "status",
+          "lastMessageAgeSeconds",
+          "messages24h",
+          "capture",
+          "reasons",
+          "reliability"
+        ]
+      },
+      "Channel": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "channel": {
+            "type": "string",
+            "description": "masked identifier"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "messages": {
+            "type": "integer"
+          },
+          "messages24h": {
+            "type": "integer"
+          },
+          "claims": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "candidates": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "firstMessageAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "lastMessageAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "health": {
+            "$ref": "#/components/schemas/ChannelHealth"
+          }
+        },
+        "required": [
+          "id",
+          "channel",
+          "name",
+          "messages",
+          "messages24h",
+          "claims",
+          "candidates",
+          "firstMessageAt",
+          "lastMessageAt",
+          "health"
+        ]
+      },
+      "Claim": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resultKind": {
+            "type": "string",
+            "enum": [
+              "claim",
+              "ambiguous",
+              "unsupported"
+            ]
+          },
+          "parserVersion": {
+            "type": "string"
+          },
+          "channelId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "messageTimestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "captureMethod": {
+            "type": "string"
+          },
+          "claim": {
+            "type": "object",
+            "nullable": true,
+            "description": "allow-listed parsed fields only"
+          },
+          "classification": {
+            "type": "object",
+            "nullable": true
+          },
+          "candidacy": {
+            "type": "object",
+            "nullable": true,
+            "description": "policyVersion, outcome (CREATED, DUPLICATE, EXPIRED, SUPERSEDED_REVISION, INCOMPLETE, CONTRADICTORY, UNSUPPORTED), reasons, candidateId, evaluatedAt"
+          },
+          "candidate": {
+            "type": "object",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "resultKind",
+          "parserVersion",
+          "channelId",
+          "messageTimestamp",
+          "capturedAt",
+          "captureMethod",
+          "claim",
+          "classification",
+          "candidacy",
+          "candidate"
+        ]
+      },
+      "Candidate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NEW",
+              "IN_RESEARCH",
+              "READY_FOR_DECISION",
+              "EXPIRED",
+              "WITHDRAWN",
+              "INVALIDATED",
+              "SUPERSEDED"
+            ]
+          },
+          "underlying": {
+            "type": "string"
+          },
+          "entryKind": {
+            "type": "string",
+            "enum": [
+              "above",
+              "below",
+              "at",
+              "range",
+              "market"
+            ]
+          },
+          "missingInformation": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "validationStatus": {
+            "type": "string",
+            "enum": [
+              "UNVERIFIED"
+            ]
+          },
+          "candidateVersion": {
+            "type": "integer"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "claimId",
+          "state",
+          "underlying",
+          "entryKind",
+          "missingInformation",
+          "validationStatus",
+          "candidateVersion",
+          "createdAt",
+          "expiresAt"
+        ]
+      },
+      "Pipeline": {
+        "type": "object",
+        "properties": {
+          "policyVersion": {
+            "type": "string"
+          },
+          "claimsTotal": {
+            "type": "integer"
+          },
+          "claimsParsed": {
+            "type": "integer"
+          },
+          "byOutcome": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "candidates": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "oldestPendingMinutes": {
+            "type": "integer",
+            "nullable": true
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "policyVersion",
+          "claimsTotal",
+          "claimsParsed",
+          "byOutcome",
+          "candidates",
+          "oldestPendingMinutes",
+          "note"
+        ]
+      },
+      "HistoricalMatches": {
+        "type": "object",
+        "properties": {
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "UNAVAILABLE",
+              "NOT_APPLICABLE",
+              "SUFFICIENT",
+              "INSUFFICIENT_EVIDENCE",
+              "NO_COMPARABLE_CASES"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "ARCHIVE_IMPORT"
+            ]
+          },
+          "asOf": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "casesConsidered": {
+            "type": "integer"
+          },
+          "limitations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "result": {
+            "type": "object",
+            "nullable": true,
+            "description": "version, aggregate (wins, losses, winRate with interval, status), matches (similarity, coverage, matched/differing/unknown dimensions, outcome, observedAt), excluded, temporal counters, notes"
+          }
+        },
+        "required": [
+          "claimId",
+          "state",
+          "result"
+        ]
+      },
+      "ChannelPerformance": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "object"
+          },
+          "funnel": {
+            "type": "object"
+          },
+          "outcomes": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "NOT_AVAILABLE"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "reason"
+            ]
+          },
+          "reliability": {
+            "type": "string",
+            "enum": [
+              "NOT_AVAILABLE"
+            ]
+          },
+          "archive": {
+            "type": "object",
+            "properties": {
+              "linked": {
+                "type": "boolean",
+                "enum": [
+                  false
+                ]
+              },
+              "note": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "linked",
+              "note"
+            ]
+          }
+        },
+        "required": [
+          "channel",
+          "funnel",
+          "outcomes",
+          "reliability",
+          "archive"
+        ]
+      },
+      "PlaybookSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": [
+              "TELEGRAM_CHANNEL",
+              "INDEPENDENT"
+            ]
+          },
+          "telegramSourceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "name": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "versions": {
+            "type": "integer"
+          },
+          "activeVersion": {
+            "type": "integer",
+            "nullable": true
+          },
+          "latestVersion": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "sourceKind",
+          "telegramSourceId",
+          "name",
+          "createdAt",
+          "versions",
+          "activeVersion",
+          "latestVersion"
+        ]
+      },
+      "PlaybookDetail": {
+        "type": "object",
+        "properties": {
+          "playbook": {
+            "$ref": "#/components/schemas/PlaybookSummary"
+          },
+          "versions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "version, state (DRAFT, EVALUATING, ACTIVE, RETIRED, ROLLED_BACK), sampleSize, confidence, limitations, performance, content, events[]"
+            }
+          },
+          "drift": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "playbook",
+          "versions",
+          "drift",
+          "note"
+        ]
+      },
+      "ArchiveScoreTables": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "ARCHIVE_IMPORT"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "EMPTY",
+              "OK"
+            ]
+          },
+          "scorecards": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "state",
+          "scorecards",
+          "note"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/intelligence/channels": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Channels with message, claim and candidate counts and a health assessment",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "channels:read",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channels": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Channel"
+                      }
+                    },
+                    "reliabilityNote": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "channels",
+                    "reliabilityNote"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/channels/{id}": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "One channel with its 20 most recent claims",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "channels:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "channel": {
+                      "$ref": "#/components/schemas/Channel"
+                    },
+                    "recentClaims": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Claim"
+                      }
+                    }
+                  },
+                  "required": [
+                    "channel",
+                    "recentClaims"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/claims": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Parsed claims, newest first",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "signals:read",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "claim",
+                "ambiguous",
+                "unsupported"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "claims": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Claim"
+                      }
+                    }
+                  },
+                  "required": [
+                    "claims"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/claims/{id}": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "One claim with its classification, candidacy decision and candidate",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "signals:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "claim": {
+                      "$ref": "#/components/schemas/Claim"
+                    }
+                  },
+                  "required": [
+                    "claim"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/candidates": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Telegram candidates (unverified; they only enter research)",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "opportunities:read",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "TELEGRAM"
+                      ]
+                    },
+                    "candidates": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Candidate"
+                      }
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "candidates"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/pipeline": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Claim-to-candidate pipeline counts for the current policy version",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "opportunities:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pipeline"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/claims/{id}/historical-matches": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Archived cases comparable with the claim, using only cases that existed and whose outcome was known at the claim's own message time (association, not prediction)",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "signals:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoricalMatches"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/channels/{id}/performance": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "What the channel claimed and what the pipeline did with it; outcomes and reliability are NOT_AVAILABLE",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "strategies:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChannelPerformance"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/playbooks": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Playbooks with version counts",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "strategies:read",
+        "parameters": [
+          {
+            "name": "channelId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "EMPTY",
+                        "OK"
+                      ]
+                    },
+                    "playbooks": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/PlaybookSummary"
+                      }
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "playbooks"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/playbooks/{id}": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "One playbook: versions with audited state events, and drift events",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "strategies:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaybookDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/intelligence/archive/channels": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Imported-history score tables (not linked to live channels)",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "strategies:read",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveScoreTables"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    }
+  }
+}

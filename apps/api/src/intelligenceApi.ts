@@ -108,6 +108,8 @@ export function registerIntelligenceRoutes(app: FastifyInstance, deps: { db: Db;
  * They live in this module because the historical research code may be reached from the API only here (the architecture tests allow-list exactly this file). They read the archive through bounded, deterministically ordered queries and never write.
  * Temporal integrity: a claim is compared only with archived cases dated before the claim whose outcome was already known at the claim's time (`matchSimilar` with `requireResolvedAt`).
  */
+/** The response key of the archive list (shared with the session OpenAPI document so the contract cannot drift from the handler). */
+export const archiveListKey = (): string => "scorecards";
 export function registerHistoryIntelRoutes(app: FastifyInstance, deps: { auth: AuthService; ops: TelegramIntelOps }): void {
   const { auth, ops } = deps, get = sharedGet(app, auth);
   // ── historical matches: the claim is compared ONLY with archived cases that existed, and whose outcome was already known, at the claim's own message time ──
@@ -136,7 +138,7 @@ export function registerHistoryIntelRoutes(app: FastifyInstance, deps: { auth: A
     if (lim > 100) throw new PlatformError("VALIDATION", "limit must be an integer between 1 and 100");
     const rows = await ops.archive({ limit: lim, offset: offsetOf(q["offset"]) });
     const label = (s: string): string => (/^-?\d{6,}$/.test(s) ? mask(s) : s);
-    return { source: "ARCHIVE_IMPORT", state: rows.length === 0 ? "EMPTY" : "OK", scorecards: rows.map((r) => ({ sourceId: r.sourceId, channelLabel: label(r.channelLabel), asOf: r.asOf.toISOString(), algorithmVersion: r.algorithmVersion, trustTier: r.trustTier, windows: r.metrics.map((m) => ({ ...m, windowStart: m.windowStart.toISOString(), windowEnd: m.windowEnd.toISOString() })), snapshot: r.sourceSnapshot })), note: "Archive evidence from imported history only. Small windows carry their own caveats and are not a reliability claim." };
+    return { source: "ARCHIVE_IMPORT", state: rows.length === 0 ? "EMPTY" : "OK", [archiveListKey()]: rows.map((r) => ({ sourceId: r.sourceId, channelLabel: label(r.channelLabel), asOf: r.asOf.toISOString(), algorithmVersion: r.algorithmVersion, trustTier: r.trustTier, windows: r.metrics.map((m) => ({ ...m, windowStart: m.windowStart.toISOString(), windowEnd: m.windowEnd.toISOString() })), snapshot: r.sourceSnapshot })), note: "Archive evidence from imported history only. Small windows carry their own caveats and are not a reliability claim." };
   });
 
 }

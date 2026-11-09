@@ -43,3 +43,6 @@ Unstarted/limits: see GAP_REGISTER G-15..G-18.
 ## Stage 03 closure handoff (2026-11-08)
 Backend `feat/master-build` at `67dee94` (CI run 42528709453 green). Frontend `feat/stage09-frontend` at `9abf640`. New read APIs: `/intelligence/claims/:id/historical-matches`, `/intelligence/channels/:id/performance`, `/intelligence/playbooks[/:id]`, `/intelligence/archive/channels` (session-protected, shared permissions, read-only). Migration 0043 guards playbook versions. Frontend e2e: `npm run test:e2e` (Playwright + axe, demo and non-demo builds). Stage 03 remains NOT COMPLETE: see the open blockers in `STAGE_03_COMPLETION_REPORT.md`.
 
+
+## Stage 03 final acceptance audit (2026-11-09), local and unpushed
+Backend adds `apps/api/src/openapiSession.ts` and `docs/api/openapi-session.json` (regenerate with `npx tsx scripts/ops/export-openapi.ts`), the opt-in `pointInTimeOutcomes` scorecard option (G-39) and `STAGE_03_VALIDATION_PROTOCOLS.md`, `STAGE_ROADMAP_STATUS.md`. Frontend `7144db8` adds the partial-answer state. Gaps G-39 to G-42 are in the register. Stage 03 status: NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY. The integration suite was not run locally (no Docker daemon); the G-39 default must be flipped only after CI shows the one affected integration assertion.

@@ -16,6 +16,8 @@ export interface ScoredSignal {
   at: Date;
   /** The normalized record is a signal / options claim. */
   isSignal: boolean;
+  /** When the label's outcome became knowable (first touch of the hit target / stop, or the end of the observation window). Absent (older callers): no resolution-time rule; null: unknown, so a labelled outcome is not used for any as-of. */
+  resolvedAt?: Date | null;
   /** The label's final outcome, or null when the signal has not been evaluated. */
   outcome: string | null;
   /** Target k hit before the stop-loss (from the label). */
@@ -116,8 +118,9 @@ export interface WindowCard { windowType: WindowType; windowStart: Date; windowE
 const EPOCH = new Date(0);
 
 /** All-time, trailing and calendar-month windows over messages sent up to `asOf` (a message after the as-of instant is unknowable and ignored). No market-regime windows exist yet. */
-export function computeWindows(input: ScoredSignal[], asOf: Date, cfg: MetricConfig): WindowCard[] {
-  const known = input.filter((s) => s.at.getTime() <= asOf.getTime());
+export function computeWindows(input: ScoredSignal[], asOf: Date, cfg: MetricConfig, opts: { pointInTimeOutcomes?: boolean } = {}): WindowCard[] {
+  // A message after the as-of instant is unknowable and ignored. With `pointInTimeOutcomes`, an outcome that resolves AFTER the as-of instant (or whose resolution time is unknown) was not known then, so the signal counts as not yet evaluated. Off by default: see gap G-39 (the stored tiers still count such outcomes).
+  const known = input.filter((s) => s.at.getTime() <= asOf.getTime()).map((s): ScoredSignal => (!opts.pointInTimeOutcomes || s.resolvedAt === undefined || s.outcome === null || (s.resolvedAt !== null && s.resolvedAt.getTime() <= asOf.getTime()) ? s : { ...s, outcome: null, targetHits: [false, false, false], dataQuality: null }));
   const card = (windowType: WindowType, windowStart: Date, windowEnd: Date, set: ScoredSignal[]): WindowCard => {
     const metrics = computeMetrics(set, cfg);
     return { windowType, windowStart, windowEnd, sampleSize: metrics.evaluable, metrics, caveats: caveatsFor(metrics) };
