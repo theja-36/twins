@@ -9,3 +9,4 @@ export * from "./persist";
 export * from "./providerSnapshot";
 export * from "./dhanImport";
 export * from "./sourceBasis";
+export * from "./canonicalContract";

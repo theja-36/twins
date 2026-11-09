@@ -17,3 +17,4 @@ export * from "./classification";
 export * from "./telegramCandidate";
 export * from "./telegramCandidateCycle";
 export * from "./channelHealth";
+export * from "./evaluation/classifierEval";
