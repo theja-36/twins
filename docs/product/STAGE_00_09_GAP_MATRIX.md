@@ -87,15 +87,15 @@ Source of truth: `docs/product/tracker.json` (421 requirements), `GAP_REGISTER.m
 | 05 | M16-06 | IN_PROGRESS | Macro and calendar analysis. | the scan itself has no calendar/macro provider; both are only reached during research, and no provider data is |
 | 05 | M16-07 | IN_PROGRESS | Historical pattern matching. | no historical pattern/outcome provider is wired in the worker, so that agent reports UNAVAILABLE |
 | 05 | M16-08 | IN_PROGRESS | Risk-to-reward screening. | targets are R multiples by construction; there is no separate reward:risk screen against structure levels, and |
-| 06 | M08-07 | IN_PROGRESS | Trading budget. | no distinct budget concept beyond available capital and the notional cap |
-| 06 | M08-09 | NOT_STARTED | User permissions. | not yet built |
-| 06 | M08-10 | NOT_STARTED | Broker account reference. | not yet built |
-| 06 | M08-19 | IN_PROGRESS | Portfolio exposure. | needs a portfolio-state source (G-22) |
-| 06 | M08-20 | IN_PROGRESS | Remaining daily risk capacity. | needs a portfolio-state source (G-22) |
+| 06 | M08-07 | IMPLEMENTED | Trading budget. | no distinct budget concept beyond available capital and the notional cap |
+| 06 | M08-09 | IMPLEMENTED | User permissions. | not yet built |
+| 06 | M08-10 | IMPLEMENTED | Broker account reference. | not yet built |
+| 06 | M08-19 | IMPLEMENTED | Portfolio exposure. | needs a portfolio-state source (G-22) |
+| 06 | M08-20 | IMPLEMENTED | Remaining daily risk capacity. | needs a portfolio-state source (G-22) |
 | 06 | M09-12 | IN_PROGRESS | Strategy reliability. | no strategy-performance provider is wired; the component reports missing (G-23) |
 | 06 | M09-18 | IN_PROGRESS | Historical comparison. | not yet populated on assessments: no resolved outcomes exist (Stage 08) |
-| 06 | M10-19 | NOT_STARTED | Optional research-only Kelly analysis. | not yet built |
-| 06 | M11-04 | NOT_STARTED | Implied-move analysis. | no option-chain / implied-volatility source (G-20); first-order vega shocks exist only when greeks are supplie |
+| 06 | M10-19 | IMPLEMENTED | Optional research-only Kelly analysis. | not yet built |
+| 06 | M11-04 | IMPLEMENTED | Implied-move analysis. | no option-chain / implied-volatility source (G-20); first-order vega shocks exist only when greeks are supplie |
 | 07 | M12-28 | IN_PROGRESS | Which historical patterns are comparable. | no separate listing of comparable historical patterns; the historical provider is not wired (G-23) |
 | 07 | M13-09 | IN_PROGRESS | Approve / reject / watch actions. | no WATCH action; no user-facing approval API until authentication sessions exist (G-26, Stage 01) |
 | 07 | M13-18 | NOT_STARTED | Mode B — Assisted Live: User reviews the proposed order. | not yet built |

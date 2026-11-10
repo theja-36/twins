@@ -5,7 +5,7 @@
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
-import { createDb, appendCapitalProfile, appendRiskPolicy, clearRiskControl, createCandidateQueue, getCandidate, getConfidenceAssessment, getEffectiveCapitalProfile, getEffectiveRiskPolicy, getLatestRiskAssessment, insertScanCandidates, listActiveControls, listCapitalProfileVersions, beginScan, setRiskControl, storeConfidenceAssessment, storeRiskAssessment, storeSimulation, type CandidateInsert } from "../../../packages/database/src/index";
+import { createDb, persistEvaluation, appendCapitalProfile, appendRiskPolicy, clearRiskControl, createCandidateQueue, getCandidate, getConfidenceAssessment, getEffectiveCapitalProfile, getEffectiveRiskPolicy, getLatestRiskAssessment, insertScanCandidates, listActiveControls, listCapitalProfileVersions, beginScan, setRiskControl, storeConfidenceAssessment, storeRiskAssessment, storeSimulation, type CandidateInsert } from "../../../packages/database/src/index";
 import { evaluateCandidateForAccount, memorySpecProvider, runEvaluationCycle, DEFAULT_EVALUATION_CONFIG, type PortfolioProvider } from "../../../packages/planning/src/index";
 import { FEES, SPEC } from "../../unit/planning/fixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
@@ -174,5 +174,61 @@ describe("candidate evaluation (fixture inputs, real database)", () => {
   });
   it("is disabled by default and does nothing", async () => {
     expect(await runEvaluationCycle({ db, config: DEFAULT_EVALUATION_CONFIG, specs: null, regime: null, portfolio: null, quotes: null, strategy: null })).toMatchObject({ skipped: "DISABLED", evaluated: 0 });
+  });
+});
+
+describe("evaluation persistence: concurrency, idempotency and isolation (G-46)", () => {
+  const MON = new Date("2031-01-06T05:00:00Z");
+  const row = (accountId: string, candidateId: string) => ({ accountId, candidateId, policyVersion: 1, verdict: "PASS" as const, blockers: [], result: { x: 1 }, researchPackageId: null });
+  const sim = { params: { p: 1 }, scenarios: { s: 1 }, costModelVersion: "cost-model-v1" };
+  async function counts(accountId: string, candidateId: string): Promise<{ a: number; s: number; linked: number }> {
+    const admin = await owner();
+    const a = await admin.query("select count(*)::int n from risk_assessments where account_id = $1 and candidate_id = $2", [accountId, candidateId]);
+    const s = await admin.query("select count(*)::int n from simulations where account_id = $1 and candidate_id = $2", [accountId, candidateId]);
+    const l = await admin.query("select count(*)::int n from simulations s join risk_assessments r on r.id = s.risk_assessment_id where s.account_id = $1 and s.candidate_id = $2", [accountId, candidateId]);
+    return { a: a.rows[0].n, s: s.rows[0].n, linked: l.rows[0].n };
+  }
+  it("concurrent identical persists store exactly one assessment and one linked simulation", async () => {
+    const { userId, accountId } = await newUser(), c = await candidate(sym());
+    const results = await Promise.all(Array.from({ length: 8 }, () => persistEvaluation(db, userId, { risk: row(accountId, c), withinMinutes: 15, simulation: sim })));
+    expect(results.filter((r) => r.created)).toHaveLength(1);
+    expect(await counts(accountId, c)).toEqual({ a: 1, s: 1, linked: 1 });
+    expect(await persistEvaluation(db, userId, { risk: row(accountId, c), withinMinutes: 15, simulation: sim })).toEqual({ created: false });
+  });
+  it("a window of zero minutes allows a new evaluation (re-evaluation is explicit), each with its own linked simulation", async () => {
+    const { userId, accountId } = await newUser(), c = await candidate(sym());
+    expect((await persistEvaluation(db, userId, { risk: row(accountId, c), withinMinutes: 0, simulation: sim })).created).toBe(true);
+    expect((await persistEvaluation(db, userId, { risk: row(accountId, c), withinMinutes: 0, simulation: sim })).created).toBe(true);
+    expect(await counts(accountId, c)).toEqual({ a: 2, s: 2, linked: 2 });
+  });
+  it("a failing simulation rolls the assessment back: no assessment without its simulation", async () => {
+    const { userId, accountId } = await newUser(), c = await candidate(sym());
+    await expect(persistEvaluation(db, userId, { risk: row(accountId, c), withinMinutes: 15, simulation: { ...sim, costModelVersion: null as never } })).rejects.toThrow();
+    expect(await counts(accountId, c)).toEqual({ a: 0, s: 0, linked: 0 });
+  });
+  it("two accounts of one user, and two users, evaluate the same candidate independently; nobody can persist for another's account", async () => {
+    const a = await newUser(), b = await newUser(), c = await candidate(sym());
+    const a2 = randomUUID(), admin = await owner();
+    await admin.query("insert into accounts (id, user_id, name, trading_mode) values ($1, $2, 'second', 'paper')", [a2, a.userId]);
+    const rs = await Promise.all([persistEvaluation(db, a.userId, { risk: row(a.accountId, c), withinMinutes: 15, simulation: sim }), persistEvaluation(db, a.userId, { risk: row(a2, c), withinMinutes: 15, simulation: sim }), persistEvaluation(db, b.userId, { risk: row(b.accountId, c), withinMinutes: 15, simulation: sim })]);
+    expect(rs.every((r) => r.created)).toBe(true);
+    await expect(persistEvaluation(db, b.userId, { risk: row(a.accountId, c), withinMinutes: 0, simulation: sim })).rejects.toThrow();
+    expect(await getLatestRiskAssessment(db, b.userId, a.accountId, c)).toBeNull();
+    const sb = await session(b.userId);
+    expect((await sb.query("select id from simulations where account_id = $1", [a.accountId])).rows).toEqual([]);
+    expect(await counts(a.accountId, c)).toEqual({ a: 1, s: 1, linked: 1 });
+  });
+  it("concurrent full evaluations of one candidate for one account store one result; the loser reports RECENT", async () => {
+    const u = sym(), { userId, accountId } = await newUser(), candId = await candidate(u);
+    await appendCapitalProfile(db, userId, { accountId, totalCapital: "1000000", availableCapital: "1000000", maxPositionNotionalPct: null, effectiveFrom: new Date("2030-01-01T00:00:00Z"), createdBy: "test" });
+    await appendRiskPolicy(db, userId, POLICY(accountId, { effectiveFrom: new Date("2030-01-01T00:00:00Z") }));
+    const specs = memorySpecProvider({ instruments: [{ ...SPEC, underlying: u }], fees: [FEES] });
+    const portfolio: PortfolioProvider = { name: "memory", portfolioFor: async () => ({ openPositions: [], realizedLossToday: "0", equityCurve: null, asOf: MON.toISOString() }) };
+    const deps = { db, specs, regime: null, portfolio, quotes: null, strategy: null, now: () => MON };
+    const cand = (await getCandidate(db, candId))!;
+    const outs = await Promise.all(Array.from({ length: 5 }, () => evaluateCandidateForAccount(deps, { userId, accountId, candidate: cand })));
+    expect(outs.filter((o) => o.status === "EVALUATED")).toHaveLength(1);
+    expect(outs.filter((o) => o.status === "RECENT")).toHaveLength(4);
+    expect(await counts(accountId, candId)).toEqual({ a: 1, s: 1, linked: 1 });
   });
 });

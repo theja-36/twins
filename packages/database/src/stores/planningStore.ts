@@ -79,6 +79,22 @@ export async function storeRiskAssessment(db: Pick<Db, "transaction">, userId: s
     return (row as { id: string }).id;
   });
 }
+/**
+ * Stage 06 (G-46): persist one evaluation atomically. Under a per-(account, candidate) advisory lock, ONE transaction re-checks recency, then inserts the risk assessment and the simulation that points at it. Two concurrent
+ * evaluations of the same candidate therefore store one result (the loser gets `created: false`), and a crash can never leave an assessment without its simulation.
+ */
+export async function persistEvaluation(db: Pick<Db, "transaction">, userId: string, i: { risk: RiskAssessmentRow; withinMinutes: number; simulation: { params: unknown; scenarios: unknown; costModelVersion: string } }): Promise<{ created: false } | { created: true; riskAssessmentId: string; simulationId: string }> {
+  return withUser(db, userId, async (tx) => {
+    const r = i.risk;
+    await t(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"evaluation:" + r.accountId + ":" + r.candidateId}, 0))`);
+    const recent = await t(tx).execute(sql`select 1 from risk_assessments where account_id = ${r.accountId} and candidate_id = ${r.candidateId} and research_package_id is not distinct from ${r.researchPackageId} and created_at > now() - (${i.withinMinutes} * interval '1 minute') limit 1`);
+    if (recent.rows.length > 0) return { created: false as const };
+    const [a] = await t(tx).insert(riskAssessments).values({ userId, accountId: r.accountId, candidateId: r.candidateId, policyVersion: r.policyVersion, passed: r.verdict === "PASS", verdict: r.verdict, researchPackageId: r.researchPackageId, blockers: r.blockers, result: r.result }).returning({ id: riskAssessments.id });
+    const riskAssessmentId = (a as { id: string }).id;
+    const [sm] = await t(tx).insert(simulations).values({ userId, accountId: r.accountId, candidateId: r.candidateId, params: i.simulation.params, scenarios: i.simulation.scenarios, costModelVersion: i.simulation.costModelVersion, riskAssessmentId }).returning({ id: simulations.id });
+    return { created: true as const, riskAssessmentId, simulationId: (sm as { id: string }).id };
+  });
+}
 export async function getLatestRiskAssessment(db: Pick<Db, "transaction">, userId: string, accountId: string, candidateId: string): Promise<{ id: string; verdict: string; policyVersion: number; result: unknown; researchPackageId: string | null; createdAt: Date } | null> {
   return withUser(db, userId, async (tx) => {
     const [r] = await t(tx).select().from(riskAssessments).where(and(eq(riskAssessments.accountId, accountId), eq(riskAssessments.candidateId, candidateId))).orderBy(desc(riskAssessments.createdAt)).limit(1);

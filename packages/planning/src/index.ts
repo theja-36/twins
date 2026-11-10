@@ -7,3 +7,4 @@ export * from "./risk";
 export * from "./simulator";
 export * from "./evaluate";
 export * from "./cycle";
+export * from "./analysis";

@@ -3470,14 +3470,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "tests/unit/planning/capitalSemantics.test.ts (5 tests, local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
    ],
-   "blockers": [
-    "no distinct budget concept beyond available capital and the notional cap"
-   ]
+   "blockers": []
   },
   {
    "id": "M08-08",
@@ -3522,9 +3521,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "user_execution_permissions (PAPER only, LIVE blocked by DB CHECK); integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "LIVE permission disabled by design"
+   ]
   },
   {
    "id": "M08-10",
@@ -3543,9 +3546,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "accounts.broker_connection_id with composite owner FK; integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "reference only; no live broker connection (Stage 10)"
+   ]
   },
   {
    "id": "M08-11",
@@ -3778,13 +3785,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "risk.ts ExposureSummary; paperPortfolioProvider (stage07 integration); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
    ],
    "blockers": [
-    "needs a portfolio-state source (G-22)"
+    "PAPER portfolio source only; LIVE source external (G-22 LIVE)"
    ]
   },
   {
@@ -3806,13 +3814,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
-    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "risk.ts RiskCaps; paperPortfolioProvider; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
    ],
    "blockers": [
-    "needs a portfolio-state source (G-22)"
+    "PAPER portfolio source only; LIVE source external (G-22 LIVE)"
    ]
   },
   {
@@ -4881,8 +4890,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/planning/src/analysis.ts; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+   ],
    "blockers": []
   },
   {
@@ -5154,10 +5165,12 @@
    "screens": [],
    "dependencies": [],
    "stage": "06",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "packages/planning/src/analysis.ts impliedMove; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+   ],
    "blockers": [
-    "no option-chain / implied-volatility source (G-20); first-order vega shocks exist only when greeks are supplied"
+    "live option-chain source external (G-20/G-25); the function refuses without a fresh valid straddle"
    ]
   },
   {
@@ -10512,7 +10525,8 @@
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
-    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "persistEvaluation (G-46) links simulation to assessment atomically; integration stage06.test.ts (CI pending)"
    ]
   },
   {

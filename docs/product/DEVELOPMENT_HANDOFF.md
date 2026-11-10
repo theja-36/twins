@@ -65,3 +65,6 @@ Built on top of the verified engine: reward:risk-against-structure screen (`pack
 ## Stage 05 declared ENGINEERING COMPLETE (2026-11-10)
 Backend `69e87d0`, CI run https://github.com/theja-36/twins/actions/runs/42908338203: 7 of 7 jobs green; `stage05Reads.test.ts` 7 of 7 on both Node versions. Stage 06 onward is not started by this work.
 
+
+## Stage 06 handoff (2026-11-10), local and uncommitted
+ENGINEERING IMPLEMENTED — CI PENDING. New: `packages/planning/src/analysis.ts` (`kellyAnalysis`, `impliedMove`, research-only), `persistEvaluation` in `planningStore.ts` (atomic, advisory-locked, G-46) used by `evaluate.ts`, tests `analysis.test.ts`, `capitalSemantics.test.ts` and G-46 cases in `tests/integration/planning/stage06.test.ts`. Docs: `STAGE_06_REQUIREMENT_MATRIX.md` (85 rows), implementation and acceptance reports. The tracker Markdown is generated: edit `tracker.json` then `node scripts/product/tracker.mjs render`. Next: separate authorisation to push, CI on Node 20/22, then declare Stage 06 complete only if green. External dependencies remain: G-16, G-20, G-22 LIVE, G-23, G-24, G-25, Stage 08 outcomes.
