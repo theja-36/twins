@@ -7947,13 +7947,15 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10: scan-level calendar gate (screen.ts gateScan, port ScanCalendar: MARKET_CLOSED, EVENT_WINDOW, CALENDAR_UNAVAILABLE); screens.test.ts, local; stage05Reads.test.ts (CI pending). No calendar source is wired in production (external, Stage 10)"
    ],
    "blockers": [
-    "the scan itself has no calendar/macro provider; both are only reached during research, and no provider data is wired (G-16/G-20)"
+    "the scan itself has no calendar/macro provider; both are only reached during research, and no provider data is wired (G-16/G-20)",
+    "no holiday/event calendar feed is wired (Stage 10)"
    ]
   },
   {
@@ -8006,10 +8008,11 @@
    "screens": [],
    "dependencies": [],
    "stage": "05",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
-    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10: reward:risk against structure (packages/opportunity/src/screen.ts screenRewardRisk, reward-risk-screen-v1; config TWINS_OPPORTUNITY_MIN_REWARD_RISK default 1.5); tests/unit/opportunity/screens.test.ts (20), local; tests/integration/opportunity/stage05Reads.test.ts (CI pending)"
    ],
    "blockers": [
     "targets are R multiples by construction; there is no separate reward:risk screen against structure levels, and the stop is unvalidated until Stage 07"
@@ -10190,7 +10193,8 @@
    "evidence": [
     "tests/unit/opportunity/{scan,lifecycle}.test.ts (35 tests, local)",
     "tests/integration/opportunity/engine.test.ts against Postgres 16 (CI green)",
-    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on cc7590c (run 42459457501): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10: lifecycle history, evidence and research status readable via GET /opportunities/candidates/:id (apps/api/src/opportunityApi.ts, opportunityApi.test.ts 9, local; CI pending)"
    ]
   },
   {

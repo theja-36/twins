@@ -37,6 +37,7 @@ import { registerUserRoutes } from "./userApi.js";
 import { buildUserOps } from "./userOps.js";
 import { buildTelegramIntelOps, registerTelegramIntelRoutes } from "./telegramIntelApi.js";
 import { registerHistoryIntelRoutes } from "./intelligenceApi.js";
+import { buildOpportunityOps, registerOpportunityRoutes } from "./opportunityApi.js";
 import { buildResearchOps, registerResearchRoutes } from "./researchApi.js";
 import { STATUS_CODES } from "node:http";
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from "fastify";
@@ -345,6 +346,7 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
   registerUserRoutes(app, { auth: authService, ops: buildUserOps(db) }); // session-protected, owner-scoped decisions / approvals / capital / risk / paper / analytics
   const intelOps = buildTelegramIntelOps(db);
   registerHistoryIntelRoutes(app, { auth: authService, ops: intelOps }); // Stage 03: archive similarity and score tables (read-only, session-protected)
+  registerOpportunityRoutes(app, { auth: authService, ops: buildOpportunityOps(db) }); // Stage 05: session-protected, read-only opportunity candidates (both sources), lifecycle, evidence and scans (shared data)
   registerResearchRoutes(app, { auth: authService, ops: buildResearchOps(db) }); // Stage 04: session-protected, read-only research packages and the agent registry (shared data)
   registerTelegramIntelRoutes(app, { auth: authService, ops: intelOps }); // Stage 03: session-protected, read-only Telegram intelligence (shared data, no raw text)
   registerRiskRoutes(app, { db, authorized: checkBearerToken }); // Stage 3 / Task 6: bearer-protected internal risk approval API

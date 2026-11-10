@@ -36,3 +36,12 @@ Same authentication and error codes as the Telegram intelligence read API; permi
 | `GET /research/agents` | contract metadata of the thirteen agents, twelve roles, the extra specialist and its supplements, soft dependencies; no model |
 A package is `research-package-v1` JSON: reports, contradictions, roleCoverage, missingRequired, agentVersions, evidenceIndex, optional `optionsRisk` (option candidates only), `asOf` (packages stored before 2026-11-10 lack it), `grantsApproval: false`, hashes. Machine description: `docs/api/openapi-session.json`. Tests: `tests/unit/api/researchApi.test.ts`.
 
+## Opportunity read API (Stage 05; session-protected, shared data, read-only)
+Same authentication and error codes as the other intelligence read APIs; permission `opportunities:read`. Candidates are proposals for research: no order, approval or size field exists.
+| Route | Notes |
+|---|---|
+| `GET /opportunities/candidates` | both sources (TELEGRAM, INDEPENDENT) always labelled; filters `source`, `state`; `limit` 1-200 (default 50), `offset` 0-100000; newest first (created_at, id); `state: EMPTY` on an empty page |
+| `GET /opportunities/candidates/{id}` | candidate, lifecycle history, recorded evidence (setup, rank factors, reward:risk screen, provenance incl. engine version, config hash, calendar status), derived research status and package ref; 404 for an unknown id |
+| `GET /opportunities/scans` | recent scans: slot, status, counts, recorded skip reasons (incl. MARKET_CLOSED, EVENT_WINDOW, REWARD_RISK_BELOW_MIN), parameters |
+Machine description: `docs/api/openapi-session.json`. Tests: `tests/unit/api/opportunityApi.test.ts`.
+

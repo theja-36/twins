@@ -1,7 +1,8 @@
 import { runCandidateResearch, type AgentEngineConfig, type AgentRegistry, type LastPriceProvider, type OhlcProvider, type OrchestrationDeps, type RegimeProvider } from "@twins/agents";
 import { ACTIVE_CANDIDATE_STATES, applyRevalidation, beginScan, completeScan, createCandidateQueue, failScan, insertScanCandidates, listCandidates, storeResearchPackage, type Db } from "@twins/database";
 import { refuseUnlessSafe } from "@twins/risk";
-import type { OpportunityConfig } from "./config";
+import { opportunityConfigSha256, type OpportunityConfig } from "./config";
+import type { ScanCalendar } from "./screen";
 import { dispatchResearch, type DispatchResult } from "./dispatch";
 import { revalidate } from "./lifecycle";
 import { buildUniverse, runOpportunityScan, SCAN_ENGINE_VERSION, SCAN_KIND } from "./scan";
@@ -12,7 +13,7 @@ import { SETUP_DETECTOR_VERSION } from "./setups";
  * Creates RESEARCH candidates only: no order, no approval, no decision. The runtime safety state (kill switch / intake control) is checked first and stops the cycle without an error.
  */
 export interface CycleDeps {
-  db: Db; config: OpportunityConfig; ohlc: OhlcProvider | null; lastPrice: LastPriceProvider | null; regime: RegimeProvider | null; registry: AgentRegistry; agentConfig: AgentEngineConfig;
+  db: Db; config: OpportunityConfig; ohlc: OhlcProvider | null; lastPrice: LastPriceProvider | null; regime: RegimeProvider | null; /** Optional calendar source for the scan gate (none is wired in production yet: the gate then reports CALENDAR_UNAVAILABLE). */ calendar?: ScanCalendar | null; registry: AgentRegistry; agentConfig: AgentEngineConfig;
   /** Limits revalidation and research to these instruments (isolation for tests and staged roll-outs); production leaves it unset. */
   scope?: { underlyings: readonly string[] };
   now?: () => Date; isEligible?: (underlying: string) => boolean | Promise<boolean>; research?: OrchestrationDeps; refuse?: (operation: string) => Promise<void>; log?: (event: string, fields: Record<string, unknown>) => void;
@@ -32,10 +33,10 @@ export async function runOpportunityCycle(slotKey: string, d: CycleDeps): Promis
   try { await (d.refuse ?? refuseUnlessSafe)("opportunity.cycle"); } catch (e) { if (refusal(e)) return { ...report, skipped: "SAFETY_REFUSED" }; throw e; }
 
   // 1. scan (idempotent per slot)
-  const begin = await beginScan(d.db, { scanKind: SCAN_KIND, slotKey, parameters: { universe: c.universe, exchange: c.exchange, confluence: c.confluenceTimeframesSeconds, minRank: c.minRankScore, engine: SCAN_ENGINE_VERSION }, detectorVersion: SETUP_DETECTOR_VERSION, dataSource: c.dataSource, now, leaseMs: c.researchLeaseMinutes * 60_000 });
+  const begin = await beginScan(d.db, { scanKind: SCAN_KIND, slotKey, parameters: { universe: c.universe, exchange: c.exchange, confluence: c.confluenceTimeframesSeconds, minRank: c.minRankScore, minRewardRisk: c.minRewardRisk, configSha256: opportunityConfigSha256(c), engine: SCAN_ENGINE_VERSION }, detectorVersion: SETUP_DETECTOR_VERSION, dataSource: c.dataSource, now, leaseMs: c.researchLeaseMinutes * 60_000 });
   if (begin.state === "STARTED" || begin.state === "RESTARTED") {
     const universe = await buildUniverse(c, d.isEligible);
-    const out = await runOpportunityScan({ universe, ohlc: d.ohlc, regime: d.regime, config: c, now, slotKey });
+    const out = await runOpportunityScan({ universe, ohlc: d.ohlc, regime: d.regime, calendar: d.calendar ?? null, config: c, now, slotKey });
     try {
       if (out.status === "FAILED") {
         await failScan(d.db, begin.scanId, { errorKind: out.errorKind ?? "UNKNOWN", universeSize: out.universeSize, skipped: out.skipped, now });

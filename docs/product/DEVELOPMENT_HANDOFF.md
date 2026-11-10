@@ -58,3 +58,7 @@ Migration 0044 (`research_packages.run_key`, append-only `research_agent_runs`),
 
 ## Stage 04 declared ENGINEERING COMPLETE (2026-11-10)
 Backend `a9431af`, CI run https://github.com/theja-36/twins/actions/runs/42904103501: 7 of 7 jobs green. G-43 and G-44 verified. Next stage: Stage 05 is not started by this work.
+
+## Stage 05 handoff (2026-11-10), local and uncommitted
+Built on top of the verified engine: reward:risk-against-structure screen (`packages/opportunity/src/screen.ts`), scan-level calendar gate, reproducibility provenance (engine version, config hash, calendar status), read API (`apps/api/src/opportunityApi.ts`, 17 session OpenAPI routes), read-only store additions. No migration. 254 unit files / 4,116 tests pass locally; `tests/integration/opportunity/stage05Reads.test.ts` runs only in CI. Reports: `STAGE_05_IMPLEMENTATION_REPORT.md`, `STAGE_05_TEST_AND_ACCEPTANCE_REPORT.md`. Next: owner authorises commit and push; CI on Node 20/22; then declare Stage 05 ENGINEERING COMPLETE if green.
+

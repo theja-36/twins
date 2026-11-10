@@ -1,13 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { ohlcProblem, type OhlcProvider, type OhlcSeries, type RegimeProvider } from "@twins/agents";
-import type { OpportunityConfig } from "./config";
+import { opportunityConfigSha256, type OpportunityConfig } from "./config";
 import { toCandidateDraft, type CandidateDraft } from "./candidate";
+import { gateScan, screenRewardRisk, type ScanCalendar } from "./screen";
 import { rankSetup, withSetupAgreement, type RankDetail, type Trend } from "./rank";
 import { DEFAULT_SETUP_POLICY, SETUP_DETECTOR_VERSION, detectSetups, resample, trendOf, type SetupSignal } from "./setups";
 
 export const SCAN_ENGINE_VERSION = "opportunity-scan-v1";
 export const SCAN_KIND = "TECHNICAL_UNIVERSE";
-export type SkipReason = "INELIGIBLE" | "NO_DATA" | "PROVIDER_ERROR" | "MALFORMED" | "SYMBOL_MISMATCH" | "STALE" | "FROM_FUTURE" | "INSUFFICIENT_HISTORY" | "REGIME_BLOCKED" | "NO_SETUP" | "BELOW_MIN_RANK" | "OVER_SCAN_CAP";
+export type SkipReason = "INELIGIBLE" | "NO_DATA" | "PROVIDER_ERROR" | "MALFORMED" | "SYMBOL_MISMATCH" | "STALE" | "FROM_FUTURE" | "INSUFFICIENT_HISTORY" | "REGIME_BLOCKED" | "NO_SETUP" | "BELOW_MIN_RANK" | "OVER_SCAN_CAP" | "MARKET_CLOSED" | "EVENT_WINDOW" | "REWARD_RISK_BELOW_MIN";
 export interface ScanSkip { underlying: string; reason: SkipReason; detail?: string }
 export interface UniverseEntry { underlying: string; eligible: boolean; reason?: string }
 /** Eligibility is the configured universe, filtered by an optional verifier (for example the instrument reference). An unverifiable instrument is ineligible, never assumed valid. */
@@ -29,12 +30,16 @@ export interface ScanOutcome {
  *  - otherwise COMPLETED, with every skipped instrument and its reason recorded.
  * A missing / unknown regime does not invent support: it is recorded as missing evidence and scored as zero. A HIGH_VOLATILITY or RISK_OFF regime suppresses candidates for that instrument.
  */
-export async function runOpportunityScan(o: { universe: readonly UniverseEntry[]; ohlc: OhlcProvider | null; regime: RegimeProvider | null; config: OpportunityConfig; now: Date; slotKey: string; newId?: () => string }): Promise<ScanOutcome> {
+export async function runOpportunityScan(o: { universe: readonly UniverseEntry[]; ohlc: OhlcProvider | null; regime: RegimeProvider | null; calendar?: ScanCalendar | null; config: OpportunityConfig; now: Date; slotKey: string; newId?: () => string }): Promise<ScanOutcome> {
   const base = { engineVersion: SCAN_ENGINE_VERSION, detectorVersion: SETUP_DETECTOR_VERSION, universeSize: o.universe.length, slotKey: o.slotKey, providerName: o.ohlc?.name ?? null, providerAsOf: o.ohlc?.asOf ?? null };
   const skipped: ScanSkip[] = [];
   if (o.universe.length === 0) return { ...base, status: "FAILED", errorKind: "NO_UNIVERSE", scanned: 0, drafts: [], skipped };
   if (!o.ohlc) return { ...base, status: "FAILED", errorKind: "NO_PROVIDER", scanned: 0, drafts: [], skipped: o.universe.map((u) => ({ underlying: u.underlying, reason: "NO_DATA" as const, detail: "no OHLC provider is configured" })) };
   const cfg = o.config, ids = o.newId ?? randomUUID, drafts: Array<{ draft: CandidateDraft; score: number }> = [];
+  // calendar gate: a closed market or an imminent high-impact event is an explicit, recorded no-op (never an empty success and never a failure); an unavailable calendar is missing evidence, not "all clear"
+  const gate = await gateScan(o.now, o.calendar, { eventBlockMinutes: cfg.eventBlockMinutes });
+  if (gate.status === "MARKET_CLOSED" || gate.status === "EVENT_WINDOW") return { ...base, status: "COMPLETED", errorKind: null, scanned: 0, drafts: [], skipped: o.universe.map((u) => ({ underlying: u.underlying, reason: gate.status as "MARKET_CLOSED" | "EVENT_WINDOW", ...(gate.detail ? { detail: gate.detail } : {}) })) };
+  const configSha = opportunityConfigSha256(cfg);
   let scanned = 0, dataFailures = 0, eligible = 0;
   for (const u of o.universe) {
     if (!u.eligible) { skipped.push({ underlying: u.underlying, reason: "INELIGIBLE", ...(u.reason ? { detail: u.reason } : {}) }); continue; }
@@ -68,7 +73,10 @@ export async function runOpportunityScan(o: { universe: readonly UniverseEntry[]
       const others = signals.filter((x) => x !== s && x.side === s.side).map((x) => x.setup);
       const rank: RankDetail = withSetupAgreement(rankSetup(s, { htfTrend, regime, regimeUsable }), others);
       if (rank.score < cfg.minRankScore) { skipped.push({ underlying: u.underlying, reason: "BELOW_MIN_RANK", detail: `${s.setup}:${rank.score}` }); continue; }
-      drafts.push({ score: rank.score, draft: toCandidateDraft({ underlying: u.underlying, exchange: cfg.exchange, signal: s as SetupSignal, rank, dataSource: cfg.dataSource, now: o.now, ttlMinutes: cfg.candidateTtlMinutes, correlationId: ids(), provenance: { providerName: o.ohlc.name, providerAsOf: o.ohlc.asOf, scanSlot: o.slotKey, regimeRef } }) });
+      // reward:risk against structure (M16-08): a candidate whose path to the reference target is blocked by a near opposing swing level, or whose reward is too small, is screened out with the reason recorded
+      const screen = screenRewardRisk(s, series, { minRewardRisk: cfg.minRewardRisk, lookbackBars: cfg.structureLookbackBars, swingK: DEFAULT_SETUP_POLICY.swingK });
+      if (!screen.passed) { skipped.push({ underlying: u.underlying, reason: "REWARD_RISK_BELOW_MIN", detail: `${s.setup}:${screen.reason}:${screen.structuralRewardRisk ?? "n/a"}` }); continue; }
+      drafts.push({ score: rank.score, draft: toCandidateDraft({ underlying: u.underlying, exchange: cfg.exchange, signal: s as SetupSignal, rank, screen, dataSource: cfg.dataSource, now: o.now, ttlMinutes: cfg.candidateTtlMinutes, correlationId: ids(), provenance: { providerName: o.ohlc.name, providerAsOf: o.ohlc.asOf, scanSlot: o.slotKey, regimeRef, engineVersion: SCAN_ENGINE_VERSION, configSha256: configSha, calendar: gate.status } }) });
     }
   }
   if (eligible > 0 && scanned === 0 && dataFailures === eligible) return { ...base, status: "FAILED", errorKind: "NO_USABLE_DATA", scanned, drafts: [], skipped };

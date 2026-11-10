@@ -590,6 +590,118 @@
           "note"
         ]
       },
+      "OpportunityCandidates": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "EMPTY",
+              "OK"
+            ]
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "id, source, state, underlying, setup, side, entry, stopLoss, targets, rankScore, dataSource (FIXTURE|LIVE|HISTORICAL), createdAt, expiresAt, researchAttempts"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "candidates",
+          "note"
+        ]
+      },
+      "OpportunityCandidateDetail": {
+        "type": "object",
+        "properties": {
+          "candidate": {
+            "type": "object"
+          },
+          "lifecycle": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "research": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "nullable": true,
+                "enum": [
+                  "PENDING",
+                  "RUNNING",
+                  "COMPLETED",
+                  "PARTIAL",
+                  "FAILED",
+                  "EXPIRED",
+                  "SUPERSEDED",
+                  "CANCELLED"
+                ]
+              },
+              "packageId": {
+                "type": "string",
+                "nullable": true
+              },
+              "packageVersion": {
+                "type": "integer",
+                "nullable": true
+              },
+              "assessment": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "status",
+              "packageId",
+              "packageVersion",
+              "assessment"
+            ]
+          }
+        },
+        "required": [
+          "candidate",
+          "lifecycle",
+          "evidence",
+          "research"
+        ]
+      },
+      "OpportunityScans": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "EMPTY",
+              "OK"
+            ]
+          },
+          "scans": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": [
+          "state",
+          "scans"
+        ]
+      },
       "ArchiveScoreTables": {
         "type": "object",
         "properties": {
@@ -1359,6 +1471,202 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ResearchAgents"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/opportunities/candidates": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Opportunity candidates of BOTH sources (TELEGRAM, INDEPENDENT), newest first, always labelled by source; proposals for research, never orders",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "opportunities:read",
+        "parameters": [
+          {
+            "name": "source",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "TELEGRAM",
+                "INDEPENDENT"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NEW",
+                "IN_RESEARCH",
+                "READY_FOR_DECISION",
+                "EXPIRED",
+                "WITHDRAWN",
+                "INVALIDATED",
+                "SUPERSEDED"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityCandidates"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/opportunities/candidates/{id}": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "One candidate with its lifecycle history, recorded evidence (setup, rank factors, reward:risk screen, provenance) and its research status",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "opportunities:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityCandidateDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/opportunities/scans": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Recent opportunity scans with status, counts, recorded skip reasons and the parameters used",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "opportunities:read",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityScans"
                 }
               }
             }

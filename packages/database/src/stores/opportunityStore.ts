@@ -85,10 +85,10 @@ export async function getCandidate(db: Pick<Db, "execute">, id: string): Promise
 /** `underlyings` optionally scopes the listing / queue to those instruments (used to run one universe in isolation). */
 export interface CandidateScope { underlyings?: readonly string[] }
 const scopeSql = (scope?: CandidateScope) => { const l = scope?.underlyings ? scope.underlyings.join(",") : null; return sql`(${l}::text is null or underlying = any(string_to_array(${l}::text, ',')))`; };
-export async function listCandidates(db: Pick<Db, "execute">, o: { states?: readonly string[]; source?: "TELEGRAM" | "INDEPENDENT"; limit: number; scope?: CandidateScope }): Promise<StoredCandidate[]> {
+export async function listCandidates(db: Pick<Db, "execute">, o: { states?: readonly string[]; source?: "TELEGRAM" | "INDEPENDENT"; limit: number; offset?: number; scope?: CandidateScope }): Promise<StoredCandidate[]> {
   const st = o.states?.length ? sql`and state in (${sql.join(o.states.map((s) => sql`${s}`), sql`, `)})` : sql``;
   const src = o.source ? sql`and source = ${o.source}` : sql``;
-  const r = await db.execute(sql`select ${COLS} from opportunity_candidates where ${scopeSql(o.scope)} ${st} ${src} order by created_at desc, id limit ${Math.min(Math.max(o.limit, 1), 200)}`);
+  const r = await db.execute(sql`select ${COLS} from opportunity_candidates where ${scopeSql(o.scope)} ${st} ${src} order by created_at desc, id limit ${Math.min(Math.max(o.limit, 1), 200)} offset ${Math.min(Math.max(o.offset ?? 0, 0), 100_000)}`);
   return r.rows.map((x) => fromRaw(x as Record<string, unknown>));
 }
 export async function listCandidateEvents(db: Pick<Db, "select">, candidateId: string): Promise<Array<{ fromState: string | null; toState: string; reason: string | null; occurredAt: Date }>> {
@@ -147,3 +147,16 @@ export function createCandidateQueue(db: Pick<Db, "execute">, scope?: CandidateS
     },
   };
 }
+
+/** Recent scans, newest first (deterministic: started_at then id): the slot, status, counts and the recorded skip reasons. Read-only. */
+export interface StoredScan { id: string; scanKind: string; slotKey: string | null; status: string; dataSource: string; detectorVersion: string; universeSize: number; candidateCount: number; errorKind: string | null; skipped: unknown; parameters: unknown; startedAt: Date; completedAt: Date | null }
+export async function listScans(db: Pick<Db, "execute">, o: { limit: number; offset?: number }): Promise<StoredScan[]> {
+  const r = await db.execute(sql`select id, scan_kind, slot_key, status, data_source, detector_version, universe_size, candidate_count, error_kind, skipped, parameters, started_at, completed_at from opportunity_scans order by started_at desc, id limit ${Math.min(Math.max(o.limit, 1), 200)} offset ${Math.min(Math.max(o.offset ?? 0, 0), 100_000)}`);
+  return r.rows.map((x) => { const w = x as Record<string, unknown>; return { id: w["id"] as string, scanKind: w["scan_kind"] as string, slotKey: (w["slot_key"] ?? null) as string | null, status: w["status"] as string, dataSource: w["data_source"] as string, detectorVersion: w["detector_version"] as string, universeSize: Number(w["universe_size"]), candidateCount: Number(w["candidate_count"]), errorKind: (w["error_kind"] ?? null) as string | null, skipped: w["skipped"], parameters: w["parameters"], startedAt: date(w["started_at"]), completedAt: w["completed_at"] ? date(w["completed_at"]) : null }; });
+}
+/** The evidence recorded on a candidate (setup, rank factors, reward:risk screen, provenance). Parsed fields only. */
+export async function getCandidateEvidence(db: Pick<Db, "execute">, id: string): Promise<unknown | null> {
+  const r = await db.execute(sql`select evidence from opportunity_candidates where id = ${id}`);
+  return r.rows[0] ? (r.rows[0] as Record<string, unknown>)["evidence"] ?? null : null;
+}
+
