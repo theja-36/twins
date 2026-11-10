@@ -1,8 +1,18 @@
 # Stage 04 test and acceptance report (2026-11-10)
 
-**Status: ENGINEERING IMPLEMENTED: CI PENDING.** Every internal engineering item is built, including G-43 and G-44. ENGINEERING COMPLETE is declared only after the CI verification below passes on Node 20 and 22 with PostgreSQL 16 and Redis 7 and every criterion is satisfied. External-data production validation is deferred to Stage 10/11 and is not part of this status.
+**Status: ENGINEERING COMPLETE (2026-11-10), with two named carry-overs.** Backend `a9431af`, CI run https://github.com/theja-36/twins/actions/runs/42904103501: all 7 jobs green (static; unit Node 20 and 22; integration Node 20 and 22 on PostgreSQL 16 and Redis 7; crash recovery; ci-gate). G-43 and G-44 are VERIFIED by it. External-data production validation is deferred to Stage 10/11 and is not part of this status. Carry-overs (not hidden): M05-13 (swing market structure is carried by `technical-structure-v1`, not the regime object; a design confirmation for the owner) and the regime `as_of <= decision time` read in the Stage 08 outcome store, which has no integration test (Stage 08).
 
-## Local results (this pass; not CI)
+## CI results (run 42904103501, commit a9431af)
+| Job | Result |
+|---|---|
+| static (lint, typecheck, build, secret scan) | success |
+| unit, Node 20 and Node 22 | success: 252 of 252 files, 4,087 of 4,087 tests on each |
+| integration, Node 20 and Node 22 (PostgreSQL 16, Redis 7; migration 0044 applied) | success: 82 files passed, 3 skipped, out of 85; 1,100 tests passed, 6 skipped, out of 1,106, on each (the skips are the gated crash files, run in the crash job) |
+| crash recovery (real SIGKILL, Node 22) | success: 2 files, 3 tests (worker crash, research killed inside the transaction, research killed after commit) |
+| ci-gate | success |
+G-43/G-44 evidence in that run: `researchRuns.test.ts` 11 of 11 on both Node versions (append-only, checks, atomicity, idempotent store and research, 6 concurrent attempts, crash after save, vanished worker, reconstruction); `researchCrashRecovery.test.ts` 2 of 2; `stage04Stores.test.ts` 7 of 7; migration count 45 (`offhostBackup.test.ts`). The first run (42903099428, `dfceb53`) failed one existing test that still expected a duplicate version for an identical repeat; it was updated to assert both the new idempotency and append-only versioning of a changed candidate (`a9431af`).
+
+## Local results before CI (this pass)
 | Check | Result |
 |---|---|
 | TypeScript `tsc -b` | clean |
@@ -32,18 +42,18 @@ Backend, on Node 20 and Node 22: static (lint, typecheck, build, secret scan); u
 |---|---|---|
 | 1 | 12 specialist responsibilities accounted for and contractually defined | MET (`SPEC_ROLE_MAP`, `GET /research/agents`) |
 | 2 | The 13th Market Context agent preserved | MET (registered, runs before the challenger as a soft dependency) |
-| 3 | Orchestration implemented and tested | MET locally; CI pending for the new soft-dependency work |
+| 3 | Orchestration implemented and tested | MET (CI green, including the soft-dependency work) |
 | 4 | Market regime engine implemented and tested | MET on fixtures (live operation is G-16/G-20, Stage 10) |
-| 5 | Research package versioned and auditable | IMPLEMENTED: `asOf`, run key, per-agent run records (G-43, G-44); PostgreSQL proof pending CI |
+| 5 | Research package versioned and auditable | MET and VERIFIED in CI (`asOf`, run key, per-agent run records, append-only, atomic) |
 | 6 | Temporal correctness and no-look-ahead safeguards tested | MET at unit level (`researchTemporal.test.ts`, per-agent stale/future tests); the regime `as_of <= decision time` SQL read still has no integration test |
 | 7 | Cross-user ownership verified | MET for what exists: research data is shared platform data by design; the API needs a session and `research:read`; `ai_usage_records` RLS has integration tests |
-| 8 | APIs and database changes complete | IMPLEMENTED: read API, migration 0044; CI pending |
-| 9 | Unit, integration and regression tests pass | PARTIAL: unit passes locally; integration and Node 20/22 pending CI |
+| 8 | APIs and database changes complete | MET: read API, migration 0044 applied in CI |
+| 9 | Unit, integration and regression tests pass | MET: run 42904103501 |
 | 10 | Documentation and handoff complete | MET |
 | 11 | No known critical engineering blocker hidden | MET: G-45 (Stage 09), G-15, G-16, G-20, G-23, G-25 (Stage 10/11) are listed |
 
 ## Not claimed
 No agent ran against real market, news or option data; every verdict is rule-level on synthetic input; no agent uses a model and nothing calls the AI gateway in production. Re-executing an agent against live providers from a stored run is not possible (provider data is not stored). A re-research with identical candidate inputs but changed provider data is treated as the same run; that is the intended effect for crash recovery.
 
-## To declare ENGINEERING COMPLETE
-You authorise the push; CI passes as listed; every criterion above is then satisfied; the roadmap and tracker are updated with the run id.
+## Declaration
+Every criterion above is satisfied with CI evidence; Stage 04 is ENGINEERING COMPLETE with the two carry-overs named at the top.

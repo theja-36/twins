@@ -10077,7 +10077,8 @@
    "evidence": [
     "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; real-database save: tests/integration/database/stage04Stores.test.ts (CI pending)",
     "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
-    "2026-11-10 (G-43, G-44; local, CI pending): research_packages.run_key + research_agent_runs (migration 0044), research/runRecords.ts, storeResearchPackage; tests/unit/agents/researchRunRecords.test.ts (12), tests/unit/database/researchRunMigration.test.ts (5); PostgreSQL: tests/integration/opportunity/researchRuns.test.ts, tests/integration/runtime/researchCrashRecovery.test.ts (CI only)"
+    "2026-11-10 (G-43, G-44; local, CI pending): research_packages.run_key + research_agent_runs (migration 0044), research/runRecords.ts, storeResearchPackage; tests/unit/agents/researchRunRecords.test.ts (12), tests/unit/database/researchRunMigration.test.ts (5); PostgreSQL: tests/integration/opportunity/researchRuns.test.ts, tests/integration/runtime/researchCrashRecovery.test.ts (CI only)",
+    "CI run 42904103501 (a9431af) green: researchRuns.test.ts 11/11, researchCrashRecovery.test.ts 2/2 on PostgreSQL 16"
    ],
    "blockers": []
   },

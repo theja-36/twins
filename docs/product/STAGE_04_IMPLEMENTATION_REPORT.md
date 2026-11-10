@@ -1,6 +1,6 @@
 # Stage 04 architecture and implementation report: Research & Market Intelligence
 
-**Status (2026-11-10): ENGINEERING IMPLEMENTED: CI PENDING.** All internal engineering items, including G-43 and G-44, are built and locally tested; ENGINEERING COMPLETE is declared only after a green CI run on Node 20 and 22 with PostgreSQL 16 and Redis 7 (`STAGE_04_TEST_AND_ACCEPTANCE_REPORT.md`). External-data production validation is deferred to Stage 10/11.
+**Status (2026-11-10): ENGINEERING COMPLETE** (backend `a9431af`, CI run https://github.com/theja-36/twins/actions/runs/42904103501, green on Node 20 and 22 with PostgreSQL 16 and Redis 7; carry-overs M05-13 and the Stage 08 regime-read test are named in `STAGE_04_TEST_AND_ACCEPTANCE_REPORT.md`). External-data production validation is deferred to Stage 10/11.
 
 ## What already existed (audited, not rebuilt)
 - **12 specialist responsibilities** bound by `SPEC_ROLE_MAP` (`packages/agents/src/research/specMapping.ts`): Signal Integrity `signal-integrity-v1`, Instrument Validation `instrument-verification-v1`, Market Context `market-context-v1` (the preserved 13th production agent, optional, non-blocking), Technical Structure `technical-structure-v1`, Price Action `price-action-v1`, News & Sentiment `news-sentiment-v1`, Liquidity `liquidity-v1`, Historical Pattern `historical-pattern-v1`, Calendar & Macro `market-calendar-v1` + `macro-global-v1`, Index Constituents `index-constituent-impact-v1`, Independent Challenger `independent-challenger-v1`, Research Synthesis `synthesize()` (`research-synthesis-v2`, a pure function, not an agent). `options-risk-v1` is the extra specialist.
@@ -77,13 +77,13 @@ Classification words: IMPLEMENTED AND VERIFIED (code plus tests that passed in C
 | M04-19 | Hosted-AI gateway: routing with fallbacks, retry/backoff, timeouts, ra | IMPLEMENTED AND VERIFIED | gateway contract verified (12 tests); hosted adapter and production wiring BLOCKED BY EXTERNAL DEPENDENCY (G-15) | packages/ai/src/gateway; tests/unit/ai/gateway.test.ts |
 | M04-20 | Persistence stores: market regimes (idempotent), research packages (ne | IMPLEMENTED AND VERIFIED | unit tests plus CI (run 42452595965; later runs 42894318636) | packages/agents, packages/types, packages/database stores; tests/unit/agents, tests/integration/agents |
 
-Tracker statuses were not bulk-changed: A13 moved to IMPLEMENTED and M05-13 to IN_PROGRESS with evidence; the other 45 rows keep IMPLEMENTED, and the classification above is this audit's reading of the evidence.
+CI evidence: all 47 rows' code paths are exercised by the green run 42904103501 (unit and integration); the classification column is this audit's reading. Tracker statuses were not bulk-changed: A13 moved to IMPLEMENTED and M05-13 to IN_PROGRESS with evidence; the other 45 rows keep IMPLEMENTED, and the classification above is this audit's reading of the evidence.
 
 ## Remaining engineering gaps (not hidden)
 | ID | Gap | Why not closed here |
 |---|---|---|
-| G-43 | IMPLEMENTED (see 6 above); PostgreSQL integration and real-SIGKILL tests written, run only in CI | CI pending |
-| G-44 | IMPLEMENTED (see 7 above); PostgreSQL integration tests written, run only in CI | CI pending |
+| G-43 | VERIFIED in CI run 42904103501 (see 6 above) | closed |
+| G-44 | VERIFIED in CI run 42904103501 (see 7 above) | closed |
 | G-45 | Frontend contracts (`research.cases`, `research.agents`, `evidence`) are CONTRACT_ONLY and differ from the backend package (`TIMED_OUT` vs `TIMEOUT`; derived fields such as subject, progress, regime summary) | Stage 09 owns the UI; the API shapes are now defined |
 ## Deferred to Stage 10/11 (external)
 G-15 hosted AI adapter and production wiring; G-16 and G-20 a live regime source and live bars (so `market-context-v1` is UNAVAILABLE in production and no regime row is written); G-23 instrument/fee specifications; G-25 option-chain/IV source and margin model; real-data validation of every agent.

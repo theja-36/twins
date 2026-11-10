@@ -55,3 +55,6 @@ Stage 03 Engineering and External Validation are separate (`STAGE_03_ENGINEERING
 
 ## Stage 04 G-43/G-44 handoff (2026-11-10), local and uncommitted
 Migration 0044 (`research_packages.run_key`, append-only `research_agent_runs`), `research/runRecords.ts`, extended `storeResearchPackage`, new unit tests (252 files / 4,087 tests pass locally), PostgreSQL integration `tests/integration/opportunity/researchRuns.test.ts` and real-SIGKILL `tests/integration/runtime/researchCrashRecovery.test.ts` (CI only; the crash-recovery job now runs both crash files). Next: owner authorises commit and push; CI on Node 20/22 with PostgreSQL 16 and Redis 7; if green and all criteria hold, declare Stage 04 ENGINEERING COMPLETE.
+
+## Stage 04 declared ENGINEERING COMPLETE (2026-11-10)
+Backend `a9431af`, CI run https://github.com/theja-36/twins/actions/runs/42904103501: 7 of 7 jobs green. G-43 and G-44 verified. Next stage: Stage 05 is not started by this work.
