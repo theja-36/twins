@@ -213,8 +213,8 @@ describe("evaluation persistence: concurrency, idempotency and isolation (G-46)"
     const rs = await Promise.all([persistEvaluation(db, a.userId, { risk: row(a.accountId, c), withinMinutes: 15, simulation: sim }), persistEvaluation(db, a.userId, { risk: row(a2, c), withinMinutes: 15, simulation: sim }), persistEvaluation(db, b.userId, { risk: row(b.accountId, c), withinMinutes: 15, simulation: sim })]);
     expect(rs.every((r) => r.created)).toBe(true);
     await expect(persistEvaluation(db, b.userId, { risk: row(a.accountId, c), withinMinutes: 0, simulation: sim })).rejects.toThrow();
-    expect(await getLatestRiskAssessment(db, b.userId, a.accountId, c)).toBeNull();
-    const sb = await session(b.userId);
+    const sb = await session(b.userId); // the restricted role: row-level security applies (the owner connection `db` bypasses it)
+    expect((await sb.query("select id from risk_assessments where account_id = $1", [a.accountId])).rows).toEqual([]);
     expect((await sb.query("select id from simulations where account_id = $1", [a.accountId])).rows).toEqual([]);
     expect(await counts(a.accountId, c)).toEqual({ a: 1, s: 1, linked: 1 });
   });
