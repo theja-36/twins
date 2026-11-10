@@ -62,3 +62,6 @@ Backend `a9431af`, CI run https://github.com/theja-36/twins/actions/runs/4290410
 ## Stage 05 handoff (2026-11-10), local and uncommitted
 Built on top of the verified engine: reward:risk-against-structure screen (`packages/opportunity/src/screen.ts`), scan-level calendar gate, reproducibility provenance (engine version, config hash, calendar status), read API (`apps/api/src/opportunityApi.ts`, 17 session OpenAPI routes), read-only store additions. No migration. 254 unit files / 4,116 tests pass locally; `tests/integration/opportunity/stage05Reads.test.ts` runs only in CI. Reports: `STAGE_05_IMPLEMENTATION_REPORT.md`, `STAGE_05_TEST_AND_ACCEPTANCE_REPORT.md`. Next: owner authorises commit and push; CI on Node 20/22; then declare Stage 05 ENGINEERING COMPLETE if green.
 
+## Stage 05 declared ENGINEERING COMPLETE (2026-11-10)
+Backend `69e87d0`, CI run https://github.com/theja-36/twins/actions/runs/42908338203: 7 of 7 jobs green; `stage05Reads.test.ts` 7 of 7 on both Node versions. Stage 06 onward is not started by this work.
+

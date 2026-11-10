@@ -1,6 +1,6 @@
 # Stage 05 architecture and implementation report: Independent Opportunity Engine (Module 16)
 
-**Status (2026-11-10): ENGINEERING IMPLEMENTED: CI PENDING.** The engine already existed and was verified in CI; this pass audited it against the specification and built the genuinely missing parts. ENGINEERING COMPLETE is declared only after a green CI run (`STAGE_05_TEST_AND_ACCEPTANCE_REPORT.md`). External-provider validation is deferred to Stage 10/11.
+**Status (2026-11-10): ENGINEERING COMPLETE** (backend `69e87d0`, CI run https://github.com/theja-36/twins/actions/runs/42908338203, green on Node 20 and 22 with PostgreSQL 16 and Redis 7; see `STAGE_05_TEST_AND_ACCEPTANCE_REPORT.md`). The engine already existed and was verified in CI; this pass audited it against the specification and built the genuinely missing parts. External-provider validation is deferred to Stage 10/11.
 
 ## Existing functionality reused (audited, not rebuilt)
 `packages/opportunity` (config, setups, rank, candidate, lifecycle, scan, dispatch, cycle); the shared `opportunity_candidates` / `opportunity_scans` / `opportunity_candidate_events` tables and the lifecycle guard triggers (migration 0036); the worker timer (`opportunity_queue`, off by default); the shared research dispatch (Stage 04: `runCandidateResearch`, the 12 specialist roles and the 13th Market Context agent, G-43 idempotent runs, G-44 run records); the instrument-reference eligibility hook; the regime provider port; the independent setup generator in `@twins/signals`. Both sources (TELEGRAM, INDEPENDENT) write the SAME candidate table, distinguishable by `source` and provenance, and enter the same research, risk and decision path. The engine imports no Telegram, broker, network, order or approval code (static tests).
@@ -23,7 +23,7 @@ No migration; no existing table, trigger or constraint changed. No order, approv
 
 # Stage 05 requirement matrix (18 rows, audited 2026-11-10)
 
-Classification words as in the Stage 04 report. IMPLEMENTED AND VERIFIED = code plus tests that passed in CI (run 42904103501 or earlier; synthetic/fixture evidence only); IMPLEMENTED BUT NOT VERIFIED = code and local tests, CI pending.
+Classification words as in the Stage 04 report. IMPLEMENTED AND VERIFIED = code plus tests that passed in CI (run 42904103501 or earlier; synthetic/fixture evidence only); IMPLEMENTED AND VERIFIED (CI run 42908338203) = code and local tests, CI pending.
 
 | ID | Requirement | Classification | Note and external dependency | Evidence |
 |---|---|---|---|---|
@@ -32,9 +32,9 @@ Classification words as in the Stage 04 report. IMPLEMENTED AND VERIFIED = code 
 | M16-03 | Market-regime analysis | IMPLEMENTED AND VERIFIED | fixture-level (regime suppress/qualify/rank verified); live regime BLOCKED BY EXTERNAL DEPENDENCY (G-16) | scan.ts (REGIME_BLOCKED), rank.ts; scan.test.ts |
 | M16-04 | Technical setup detection | IMPLEMENTED AND VERIFIED | - | setups.ts; scan.test.ts |
 | M16-05 | Price-action confluence | IMPLEMENTED AND VERIFIED | - | setups.ts, rank.ts `withSetupAgreement`; scan.test.ts |
-| M16-06 | Macro and calendar analysis | IMPLEMENTED BUT NOT VERIFIED | calendar gate port `gateScan` (MARKET_CLOSED, EVENT_WINDOW, CALENDAR_UNAVAILABLE) built this pass; no calendar source is wired in production (external: holiday/event feed, Stage 10); research still reaches the calendar agents | screen.ts; tests/unit/opportunity/screens.test.ts; tests/integration/opportunity/stage05Reads.test.ts (CI pending) |
+| M16-06 | Macro and calendar analysis | IMPLEMENTED AND VERIFIED (CI run 42908338203) | calendar gate port `gateScan` (MARKET_CLOSED, EVENT_WINDOW, CALENDAR_UNAVAILABLE) built this pass; no calendar source is wired in production (external: holiday/event feed, Stage 10); research still reaches the calendar agents | screen.ts; tests/unit/opportunity/screens.test.ts; tests/integration/opportunity/stage05Reads.test.ts (CI pending) |
 | M16-07 | Historical pattern matching | IMPLEMENTED AND VERIFIED | reached through `historical-pattern-v1` during research; the scan itself has no historical provider; no provider wired (external, G-23/Stage 10) | Stage 04 research; research.test.ts |
-| M16-08 | Risk-to-reward screening | IMPLEMENTED BUT NOT VERIFIED | reward:risk against structure built this pass (`screenRewardRisk`): nearest opposing swing level between entry and the reference target, minimum configurable (default 1.5, 0 = off); recorded in candidate evidence | screen.ts; screens.test.ts (20); stage05Reads.test.ts (CI pending) |
+| M16-08 | Risk-to-reward screening | IMPLEMENTED AND VERIFIED (CI run 42908338203) | reward:risk against structure built this pass (`screenRewardRisk`): nearest opposing swing level between entry and the reference target, minimum configurable (default 1.5, 0 = off); recorded in candidate evidence | screen.ts; screens.test.ts (20); stage05Reads.test.ts (CI pending) |
 | M16-09 | Candidate generation | IMPLEMENTED AND VERIFIED | - | candidate.ts `toCandidateDraft`; scan.test.ts |
 | M16-10 | Candidate ranking | IMPLEMENTED AND VERIFIED | explainable factors, never a probability (`confidence: null`, `calibrated: false`) | rank.ts; scan.test.ts |
 | M16-11 | Opportunity evidence creation | IMPLEMENTED AND VERIFIED | evidence now also carries the reward:risk screen and provenance (engine version, config hash, calendar status) (CI pending for the additions) | candidate.ts; screens.test.ts |
