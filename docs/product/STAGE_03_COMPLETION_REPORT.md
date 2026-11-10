@@ -1,5 +1,8 @@
 # Stage 03 completion report: Telegram intelligence, evidence and strategy learning
 
+> **Update 2026-11-10 (owner decision, Option A):** engineering is separated from external validation; see `STAGE_03_ENGINEERING_BOUNDARY_AND_ACCEPTANCE.md` (Stage 03 Engineering: ENGINEERING COMPLETE for the listed scope with named carry-overs; Stage 03 External Validation: DEFERRED to Stage 10/11). The statements below keep their original dates and are not rewritten.
+
+
 Status: **G-19 and the new Stage 03 code are VERIFIED in CI; Stage 03 as a whole is NOT COMPLETE.** Run https://github.com/theja-36/twins/actions/runs/42522586920 on commit 3c4d22c: all 7 jobs succeeded; migration 0042 applied on PostgreSQL 16 (Node 20 and 22); `tests/integration/telegram/stage03.test.ts` executed 19 tests and passed in both integration jobs (confirmed in the job logs); integration 80 files / 1,073 tests; unit 236 files / 3,927 tests; the Stage 01 and Stage 02 suites stayed green. The text below is kept as written before that run.
 
 Original status: **PARTLY IMPLEMENTED, NOT VERIFIED, NOT COMPLETE.** The G-19 pipeline and the missing channel health / timeliness pieces are built and unit-tested (236 files, 3,927 tests pass locally). The PostgreSQL integration test has not run (CI only), and some Stage 03 requirements cannot be completed without data or approvals I do not have. Stage 03 is **not** claimed complete.

@@ -1,5 +1,8 @@
 # Stage 03 external-dependency closure plan
 
+> **Update 2026-11-10:** these items are now the Stage 03 *external validation deferred register* (`STAGE_03_ENGINEERING_BOUNDARY_AND_ACCEPTANCE.md`). They stay open; Stage 04 engineering proceeds without them.
+
+
 Status today: **NOT COMPLETE: EXTERNAL DATA/PROVIDER DEPENDENCY.** Everything that can be built and proven without real data, a provider or a new owner decision is done and CI-verified (see `STAGE_03_COMPLETION_REPORT.md`). Nothing below starts without the approvals named. No real data is read, no production account is connected and no live trading is enabled by this plan.
 
 ## What remains, in the order I recommend

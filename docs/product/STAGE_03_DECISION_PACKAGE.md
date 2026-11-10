@@ -1,5 +1,8 @@
 # Stage 03 consolidated decision package (one approval request)
 
+> **Update 2026-11-10:** decisions D0 to D7 (see `STAGE_03_OWNER_DECISION_REVIEW_DRAFT.md`, still a DRAFT) remain pending and gate only external validation, not Stage 04 engineering.
+
+
 Nothing below happens without your written approval of that item: no purchase, connection, data import or production access. Research notes mark what was verified from a page and what was not; no provider is claimed approved or licensed.
 
 | # | Decision | Preferred option | Alternative | Reason | Cost and licence | Technical implication | Risk | Exact approval requested |
