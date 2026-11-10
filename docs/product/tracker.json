@@ -3474,7 +3474,8 @@
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
-    "tests/unit/planning/capitalSemantics.test.ts (5 tests, local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "tests/unit/planning/capitalSemantics.test.ts (5 tests, local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": []
   },
@@ -3523,7 +3524,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "user_execution_permissions (PAPER only, LIVE blocked by DB CHECK); integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "user_execution_permissions (PAPER only, LIVE blocked by DB CHECK); integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": [
     "LIVE permission disabled by design"
@@ -3548,7 +3550,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "accounts.broker_connection_id with composite owner FK; integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "accounts.broker_connection_id with composite owner FK; integration stage02.test.ts; docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": [
     "reference only; no live broker connection (Stage 10)"
@@ -3789,7 +3792,8 @@
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
-    "risk.ts ExposureSummary; paperPortfolioProvider (stage07 integration); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "risk.ts ExposureSummary; paperPortfolioProvider (stage07 integration); docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": [
     "PAPER portfolio source only; LIVE source external (G-22 LIVE)"
@@ -3818,7 +3822,8 @@
    "evidence": [
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
-    "risk.ts RiskCaps; paperPortfolioProvider; docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "risk.ts RiskCaps; paperPortfolioProvider; docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": [
     "PAPER portfolio source only; LIVE source external (G-22 LIVE)"
@@ -4892,7 +4897,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "packages/planning/src/analysis.ts; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "packages/planning/src/analysis.ts; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": []
   },
@@ -5167,7 +5173,8 @@
    "stage": "06",
    "status": "IMPLEMENTED",
    "evidence": [
-    "packages/planning/src/analysis.ts impliedMove; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md"
+    "packages/planning/src/analysis.ts impliedMove; tests/unit/planning/analysis.test.ts (local); docs/product/STAGE_06_REQUIREMENT_MATRIX.md",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ],
    "blockers": [
     "live option-chain source external (G-20/G-25); the function refuses without a fresh valid straddle"
@@ -10472,7 +10479,8 @@
    ],
    "evidence": [
     "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
-    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ]
   },
   {
@@ -10526,7 +10534,8 @@
     "tests/unit/planning/*.test.ts (58 tests, local)",
     "tests/integration/planning/stage06.test.ts against Postgres 16 (CI green)",
     "CI green on 8d60401 (run 42462060290): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
-    "persistEvaluation (G-46) links simulation to assessment atomically; integration stage06.test.ts (CI pending)"
+    "persistEvaluation (G-46) links simulation to assessment atomically; integration stage06.test.ts (CI pending)",
+    "CI green on 24d325d (run https://github.com/theja-36/twins/actions/runs/42915810271): static, unit node 20/22 (4135 tests), integration node 20/22 on Postgres 16 + Redis 7 (1112 tests; stage06.test.ts 14 of 14 incl. the five G-46 tests), crash recovery (3 of 3), ci-gate"
    ]
   },
   {

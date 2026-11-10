@@ -1,6 +1,6 @@
 # Stage 06 test and acceptance report (2026-11-10)
 
-State: **ENGINEERING IMPLEMENTED — CI PENDING.** Internal engineering acceptance is separate from external data validation (below).
+State: **ENGINEERING COMPLETE (internal scope)** — CI green on backend `24d325d`. Internal engineering acceptance is separate from external data validation (below).
 
 ## Local results (this machine)
 - Full unit suite, final run after all changes: 256 of 256 files, 4135 of 4135 tests passed (about 81 s). An earlier run had one failure, the tracker Markdown/JSON consistency test, caused by my hand-editing the generated Markdown; fixed by editing `tracker.json` and rendering.
@@ -28,3 +28,7 @@ The PostgreSQL integration tests (including all new G-46 tests) have not run: th
 
 ## External validation (deferred, not waived)
 G-16, G-20, G-22 LIVE, G-23, G-24, G-25 and Stage 08 outcome data; M09-12 and M09-18 remain IN_PROGRESS for that reason.
+
+## CI evidence (2026-11-10)
+Run https://github.com/theja-36/twins/actions/runs/42915810271, commit `24d325d`: all 7 jobs green. Unit node 20 and 22: 256 files, 4135 tests each. Integration node 20 and 22 on PostgreSQL 16 + Redis 7: 83 files, 1112 tests each; `stage06.test.ts` 14 of 14 on both, including the five G-46 tests (concurrent persists, zero-minute window, rollback, account/user isolation, concurrent full evaluations). Crash recovery (real SIGKILL, node 22): 3 of 3. Migration state is exercised by the integration global setup.
+First push (`ba25ce0`, run 42914888775) failed on one of my own assertions: the G-46 isolation test read through the owner connection, which bypasses row-level security. The product code was correct; the test now reads through the restricted role (same property, correct instrument).

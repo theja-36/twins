@@ -1,6 +1,6 @@
 # Stage 06 implementation report — Capital, Confidence, Risk, What-if (2026-11-10)
 
-Status: **ENGINEERING IMPLEMENTED — CI PENDING.** Local only: nothing committed or pushed. Not declared ENGINEERING COMPLETE.
+Status: **ENGINEERING COMPLETE (internal scope).** Backend `24d325d`, CI run https://github.com/theja-36/twins/actions/runs/42915810271 green. External data validation remains deferred.
 Matrix: [STAGE_06_REQUIREMENT_MATRIX.md](STAGE_06_REQUIREMENT_MATRIX.md) (85 rows, re-audited against code and tests). Acceptance: [STAGE_06_TEST_AND_ACCEPTANCE_REPORT.md](STAGE_06_TEST_AND_ACCEPTANCE_REPORT.md).
 
 ## What already existed (reused, unchanged in behaviour)

@@ -68,3 +68,6 @@ Backend `69e87d0`, CI run https://github.com/theja-36/twins/actions/runs/4290833
 
 ## Stage 06 handoff (2026-11-10), local and uncommitted
 ENGINEERING IMPLEMENTED — CI PENDING. New: `packages/planning/src/analysis.ts` (`kellyAnalysis`, `impliedMove`, research-only), `persistEvaluation` in `planningStore.ts` (atomic, advisory-locked, G-46) used by `evaluate.ts`, tests `analysis.test.ts`, `capitalSemantics.test.ts` and G-46 cases in `tests/integration/planning/stage06.test.ts`. Docs: `STAGE_06_REQUIREMENT_MATRIX.md` (85 rows), implementation and acceptance reports. The tracker Markdown is generated: edit `tracker.json` then `node scripts/product/tracker.mjs render`. Next: separate authorisation to push, CI on Node 20/22, then declare Stage 06 complete only if green. External dependencies remain: G-16, G-20, G-22 LIVE, G-23, G-24, G-25, Stage 08 outcomes.
+
+## Stage 06 declared ENGINEERING COMPLETE (2026-11-10)
+Backend `24d325d`, CI run https://github.com/theja-36/twins/actions/runs/42915810271: 7 of 7 jobs green; stage06.test.ts 14 of 14 on Node 20 and 22. External dependencies unchanged: G-16, G-20, G-22 LIVE, G-23, G-24, G-25, Stage 08 outcomes (M09-12, M09-18 stay IN_PROGRESS). Next: Stage 07 review/Stage 10 integrations are not started by this work.
