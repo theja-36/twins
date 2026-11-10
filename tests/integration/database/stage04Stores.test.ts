@@ -106,9 +106,10 @@ describe("candidate research path (both pipelines, real database)", () => {
     const cfg = loadAgentEngineConfig({ TWINS_AGENT_ENGINE_ENABLED: "true" });
     const sink = { save: (id: string, build: Parameters<typeof storeResearchPackage>[1]) => storeResearchPackage(db, build, id) };
     const cand = { id: candidateId, source: "INDEPENDENT" as const, underlying: "NIFTY", exchange: "NSE", strike: 24500, optionType: "CE" as const, expiry: "2026-12-31", side: "BUY" as const, entryKind: "at" as const, entryLow: 120, entryHigh: null, stopLoss: 90, targets: [150], dataSource: "FIXTURE" as const, createdAt: new Date() };
-    const run = () => runCandidateResearch(cand, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES }), config: cfg, sink: sink as never, refuse: async () => undefined });
-    const a = await run(), b = await run();
-    expect(a).toMatchObject({ version: 1, research: { assessment: "RESEARCH_INCOMPLETE", grantsApproval: false } }); expect(b).toMatchObject({ version: 2 });
+    const run = (c: typeof cand = cand) => runCandidateResearch(c, { registry: createProductionRegistry({ rules: DEFAULT_AGENT_RULES }), config: cfg, sink: sink as never, refuse: async () => undefined });
+    // G-43: researching the SAME candidate again is the same run (an identical retry stores nothing new); research of a CHANGED candidate is a new run and a new append-only version
+    const a = await run(), same = await run(), b = await run({ ...cand, stopLoss: 85 });
+    expect(a).toMatchObject({ version: 1, research: { assessment: "RESEARCH_INCOMPLETE", grantsApproval: false } }); expect(same).toMatchObject({ version: 1, deduplicated: true }); expect(b).toMatchObject({ version: 2 });
     const stored = await getLatestResearchPackage(db, candidateId);
     expect(stored).toMatchObject({ version: 2, assessment: "RESEARCH_INCOMPLETE" });
     expect((stored?.agentResults as { version: number; packageSha256: string }).version).toBe(2);
