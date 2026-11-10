@@ -119,7 +119,7 @@ describe("pattern library and metrics from real evaluated outcomes", () => {
     expect(b).toMatchObject({ evidence_status: "INSUFFICIENT_EVIDENCE", sample_size: 12 });
     expect(b["flags"]).toContain("SAMPLE_BELOW_MINIMUM");
     const run = must((await q("select * from historical_pattern_runs where id = $1", [patternRunId]))[0]);
-    expect(run).toMatchObject({ algorithm_version: "pattern-metrics-v1+pattern-features-v1", config_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
+    expect(run).toMatchObject({ algorithm_version: "pattern-metrics-v2+pattern-features-v1", config_sha256: expect.stringMatching(/^[0-9a-f]{64}$/) });
     expect(run["config"]).toMatchObject({ minSample: 30, embargoDays: 30, wilsonZ: 1.96, costPerTradeR: 0.05 });
     expect(run["input_summary"].datasetRefs.length).toBeGreaterThanOrEqual(2);
   });
