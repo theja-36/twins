@@ -495,6 +495,101 @@
           "note"
         ]
       },
+      "ResearchPackageView": {
+        "type": "object",
+        "properties": {
+          "packageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer"
+          },
+          "assessment": {
+            "type": "string",
+            "enum": [
+              "RESEARCH_SUPPORTIVE",
+              "RESEARCH_NEUTRAL",
+              "RESEARCH_CAUTION",
+              "RESEARCH_ADVERSE",
+              "RESEARCH_BLOCKED",
+              "RESEARCH_INCOMPLETE"
+            ]
+          },
+          "haltReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "COMPLETED",
+              "PARTIAL",
+              "FAILED",
+              "EXPIRED",
+              "SUPERSEDED",
+              "CANCELLED"
+            ]
+          },
+          "researchAttempts": {
+            "type": "integer",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "package": {
+            "type": "object",
+            "nullable": true,
+            "description": "research-package-v1: reports, contradictions, roleCoverage, missingRequired, agentVersions, evidenceIndex, optional optionsRisk, grantsApproval false, hashes"
+          }
+        },
+        "required": [
+          "candidateId",
+          "status",
+          "package"
+        ]
+      },
+      "ResearchAgents": {
+        "type": "object",
+        "properties": {
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "extraSpecialists": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "agents",
+          "roles",
+          "extraSpecialists",
+          "note"
+        ]
+      },
       "ArchiveScoreTables": {
         "type": "object",
         "properties": {
@@ -1127,6 +1222,143 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PlaybookDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/research/candidates/{id}/package": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "The latest research package of a candidate with its derived status (PENDING, RUNNING, COMPLETED, PARTIAL, FAILED, EXPIRED, SUPERSEDED, CANCELLED); package is null when none is stored",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "research:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchPackageView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/research/packages/{id}": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "One research package by id (the version a risk assessment or a decision recorded), with the status of its candidate",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "research:read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchPackageView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED: no session, an expired or revoked session, or the shared service key (never accepted here)"
+          },
+          "403": {
+            "description": "FORBIDDEN: the session lacks the permission"
+          },
+          "404": {
+            "description": "NOT_FOUND: no such record (the same answer for every missing id)"
+          },
+          "422": {
+            "description": "VALIDATION: unknown or malformed parameter, limit or offset out of bounds"
+          }
+        }
+      }
+    },
+    "/research/agents": {
+      "get": {
+        "tags": [
+          "telegram-intelligence"
+        ],
+        "summary": "Contract metadata of the thirteen production agents, the twelve specification roles, the extra specialist and the roles it supplements; deterministic rule engines, no model",
+        "security": [
+          {
+            "sessionBearer": []
+          }
+        ],
+        "x-required-permission": "research:read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchAgents"
                 }
               }
             }

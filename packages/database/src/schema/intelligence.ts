@@ -230,11 +230,52 @@ export const researchPackages = pgTable("research_packages", {
   agentResults: jsonb("agent_results").notNull(),
   assessment: text("assessment").notNull(),
   haltReason: text("halt_reason"),
+  /** G-43: identifies the research RUN (candidate, agent versions, each agent's input hash, engine configuration). A second attempt with the same key (a crash between saving the package and completing the queue item) finds this package instead of appending a duplicate version. Null on packages stored before migration 0044. */
+  runKey: text("run_key"),
   createdAt: createdAtColumn(),
 }, (t) => ({
   versionUnique: uniqueIndex("research_packages_candidate_version_unique").on(t.candidateId, t.version),
+  runKeyUnique: uniqueIndex("research_packages_candidate_run_key_unique").on(t.candidateId, t.runKey).where(sql`${t.runKey} is not null`),
+  runKeyCheck: check("research_packages_run_key_check", sql`${t.runKey} is null or ${t.runKey} ~ '^[0-9a-f]{64}$'`),
   versionCheck: check("research_packages_version_check", sql`${t.version} >= 1`),
   assessmentCheck: check("research_packages_assessment_check", oneOf(t.assessment, ["RESEARCH_SUPPORTIVE", "RESEARCH_NEUTRAL", "RESEARCH_CAUTION", "RESEARCH_ADVERSE", "RESEARCH_INCOMPLETE", "RESEARCH_BLOCKED"])),
+}));
+
+/**
+ * G-44: one row per agent run of the research that produced a package version, written in the SAME transaction as the package (all or nothing). It keeps what the agent saw (its declared inputs), what it produced
+ * (output snapshot, verdict, confidence, findings, evidence references), its identity and version, status, error code, attempts and timing, plus the orchestration metadata the synthesis used, so the agent results and the
+ * package's per-agent reports can be reconstructed and compared without re-running anything. Provider data (quotes, bars, news) is NOT stored here; re-executing an agent against a provider is out of scope.
+ * Shared platform data like `research_packages`; append-only.
+ */
+export const researchAgentRuns = pgTable("research_agent_runs", {
+  id: idColumn(),
+  researchPackageId: uuid("research_package_id").notNull().references(() => researchPackages.id, { onDelete: "restrict" }),
+  agentId: text("agent_id").notNull(),
+  agentVersion: text("agent_version").notNull(),
+  status: text("status").notNull(),
+  verdict: text("verdict").notNull(),
+  confidence: numeric("confidence", { precision: 5, scale: 2 }),
+  attempts: integer("attempts").notNull(),
+  /** sha256 of the declared inputs the agent saw (the agent's `inputSnapshotRef`). */
+  inputSnapshotRef: text("input_snapshot_ref").notNull(),
+  inputSnapshot: jsonb("input_snapshot").notNull(),
+  outputSnapshot: jsonb("output_snapshot").notNull(),
+  findings: jsonb("findings").notNull(),
+  evidence: jsonb("evidence").notNull(),
+  /** weight, canBlock, advisoryOnly and the other synthesis metadata of the agent contract. */
+  meta: jsonb("meta").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+  durationMs: integer("duration_ms").notNull(),
+  errorCode: text("error_code"),
+  errorMessage: text("error_message"),
+  createdAt: createdAtColumn(),
+}, (t) => ({
+  perAgentUnique: uniqueIndex("research_agent_runs_package_agent_unique").on(t.researchPackageId, t.agentId),
+  agentIdx: index("research_agent_runs_agent_idx").on(t.agentId, t.agentVersion),
+  valueCheck: check("research_agent_runs_value_check", sql`${t.agentId} ~ '^[a-z][a-z0-9_-]{2,40}$' and ${t.inputSnapshotRef} ~ '^[0-9a-f]{64}$' and ${t.attempts} >= 0 and ${t.durationMs} >= 0 and (${t.errorCode} is null or ${t.errorCode} ~ '^[A-Z][A-Z0-9_]{2,60}$') and (${t.errorMessage} is null or char_length(${t.errorMessage}) <= 300)`),
+  statusCheck: check("research_agent_runs_status_check", sql`${t.status} in ('COMPLETED', 'FAILED', 'TIMEOUT', 'SKIPPED', 'UNAVAILABLE') and ${t.verdict} in ('SUPPORTIVE', 'NEUTRAL', 'CAUTION', 'ADVERSE', 'BLOCKING', 'UNAVAILABLE') and ((${t.status} = 'COMPLETED') = (${t.verdict} <> 'UNAVAILABLE')) and ((${t.status} = 'COMPLETED') = (${t.confidence} is not null)) and (${t.confidence} is null or (${t.confidence} >= 0 and ${t.confidence} <= 100))`),
+  sizeCheck: check("research_agent_runs_size_check", sql`octet_length(${t.inputSnapshot}::text) <= 65536 and octet_length(${t.outputSnapshot}::text) <= 16384 and octet_length(${t.findings}::text) <= 65536 and octet_length(${t.evidence}::text) <= 16384 and octet_length(${t.meta}::text) <= 4096 and jsonb_typeof(${t.findings}) = 'array' and jsonb_typeof(${t.evidence}) = 'array'`),
 }));
 
 export const CANDIDACY_OUTCOMES = ["CREATED", "DUPLICATE", "EXPIRED", "SUPERSEDED_REVISION", "INCOMPLETE", "CONTRADICTORY", "UNSUPPORTED"] as const;

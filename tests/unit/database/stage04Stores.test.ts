@@ -7,11 +7,12 @@ const read = (p: string) => readFileSync(join(root, p), "utf8");
 const code = (p: string) => read(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
 
 describe("Stage 04 stores write only their own table", () => {
-  const stores: Array<[string, string]> = [["packages/database/src/stores/marketRegimeStore.ts", "marketRegimes"], ["packages/database/src/stores/researchPackageStore.ts", "researchPackages"], ["packages/database/src/stores/aiUsageStore.ts", "aiUsageRecords"]];
+  // the research package store writes a package and, in the same transaction, that package's agent runs (G-44): exactly these two tables, in this order
+  const stores: Array<[string, string[]]> = [["packages/database/src/stores/marketRegimeStore.ts", ["marketRegimes"]], ["packages/database/src/stores/researchPackageStore.ts", ["researchPackages", "researchAgentRuns"]], ["packages/database/src/stores/aiUsageStore.ts", ["aiUsageRecords"]]];
   for (const [file, table] of stores) {
-    it(`${file.split("/").pop()} inserts only ${table}, never updates or deletes`, () => {
+    it(`${file.split("/").pop()} inserts only ${table.join(" and ")}, never updates or deletes`, () => {
       const s = code(file);
-      expect([...s.matchAll(/\.insert\((\w+)\)/g)].map((m) => m[1])).toEqual([table]);
+      expect([...s.matchAll(/\.insert\((\w+)\)/g)].map((m) => m[1])).toEqual(table);
       expect(s).not.toMatch(/\.update\(|\.delete\(|truncate/i);
     });
   }

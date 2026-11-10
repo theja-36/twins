@@ -59,7 +59,7 @@ export async function orchestrate(plan: ExecutionPlan, config: AgentEngineConfig
     return r;
   };
 
-  const runAgent = async (def: AgentDefinition, depResults: AgentRunResult[]): Promise<AgentRunResult> => {
+  const runAgent = async (def: AgentDefinition, depResults: AgentRunResult[], softCompleted: AgentRunResult[] = []): Promise<AgentRunResult> => {
     const c = def.contract;
     const declared = [...c.requiredInputs, ...c.optionalInputs];
     const snapshot: Record<string, unknown> = {};
@@ -81,7 +81,7 @@ export async function orchestrate(plan: ExecutionPlan, config: AgentEngineConfig
         const ctx: AgentContext = {
           agentId: c.agentId, attempt, signal: ac.signal, now: now(),
           inputs: frozenCopy(Object.fromEntries(declared.map((k) => [k, inputs[k] ?? null]))),
-          dependencies: frozenCopy(Object.fromEntries(depResults.map((d) => [d.agentId, d]))),
+          dependencies: frozenCopy(Object.fromEntries([...depResults, ...softCompleted].map((d) => [d.agentId, d]))),
         };
         try {
           const running = Promise.resolve().then(() => def.run(ctx));
@@ -114,8 +114,10 @@ export async function orchestrate(plan: ExecutionPlan, config: AgentEngineConfig
   for (const def of plan.agents) {
     promises.set(def.contract.agentId, (async () => {
       const dependencies = await Promise.all(def.contract.dependsOn.map((d) => promises.get(d) as Promise<AgentRunResult>));
+      // soft dependencies: awaited for ordering, passed on only when COMPLETED, never a reason to skip
+      const soft = (await Promise.all((def.contract.softDependsOn ?? []).filter((d) => promises.has(d)).map((d) => promises.get(d) as Promise<AgentRunResult>))).filter((r) => r.status === "COMPLETED");
       try {
-        return await runAgent(def, dependencies);
+        return await runAgent(def, dependencies, soft);
       } catch (error) { // defence in depth: an unexpected orchestrator-side fault is recorded for THIS agent only
         return finish(def, {}, { status: "FAILED", startedAt: now(), attempts: 0, errorCode: "ORCHESTRATOR_FAULT", errorMessage: sanitizeText(error instanceof Error ? error.message : "fault", 200) });
       }

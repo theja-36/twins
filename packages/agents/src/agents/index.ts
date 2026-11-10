@@ -76,7 +76,10 @@ export function createProductionRegistry(o: ProductionRegistryOptions): AgentReg
   r.register(historicalPatternAgent(o.rules, o.historicalPatternProvider ?? null, o.historicalOutcomeProvider ?? null, o.ohlcProvider ?? null, o.lastPriceProvider ?? null));
   r.register(marketContextAgent(o.regimeProvider ?? null));
   // the challenger runs after (and reads the results of) every other registered research agent; disabling one of them requires disabling the challenger too
-  r.register(independentChallengerAgent(o.rules, r.snapshot().map((c) => c.agentId)));
+  // `market-context-v1` is OPTIONAL (no provider exists yet, G-16): it is a SOFT dependency, so the challenger still runs, and still reads its result, whenever the other agents completed. Every other agent stays a hard dependency.
+  const OPTIONAL_PEERS = new Set(["market-context-v1"]);
+  const peers = r.snapshot().map((c) => c.agentId);
+  r.register(independentChallengerAgent(o.rules, peers.filter((a) => !OPTIONAL_PEERS.has(a)), peers.filter((a) => OPTIONAL_PEERS.has(a))));
   return r;
 }
 /** Resolves `TWINS_AGENT_INSTRUMENT_REFERENCE` (`none` | `file:<path>`). A bad file THROWS (start-up fails closed). */

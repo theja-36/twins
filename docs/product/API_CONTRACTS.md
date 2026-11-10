@@ -26,3 +26,13 @@ Auth: `Authorization: Bearer tws_...` (user session; the shared service key is r
 | `GET /intelligence/playbooks`, `/playbooks/:id` | versions, audited state events, drift; `limit` <= 200, `offset` <= 100000 |
 | `GET /intelligence/archive/channels` | imported-history score tables (not linked to live channels); `limit` <= 100 else 422 |
 Tests: `tests/unit/telegramCandidates/{api,historyApi}.test.ts`, `tests/integration/telegram/{stage03,strategyReads}.test.ts`.
+
+## Research read API (Stage 04; session-protected, shared data, read-only)
+Same authentication and error codes as the Telegram intelligence read API; permission `research:read`. Packages and the agent registry are shared platform intelligence (no owner).
+| Route | Notes |
+|---|---|
+| `GET /research/candidates/{id}/package` | latest package of a candidate plus the derived status (PENDING, RUNNING, COMPLETED, PARTIAL, FAILED, EXPIRED, SUPERSEDED, CANCELLED); `package: null` and a note when none is stored; 404 for an unknown candidate |
+| `GET /research/packages/{id}` | one package by id (the version a risk assessment or decision recorded), with its candidate's status |
+| `GET /research/agents` | contract metadata of the thirteen agents, twelve roles, the extra specialist and its supplements, soft dependencies; no model |
+A package is `research-package-v1` JSON: reports, contradictions, roleCoverage, missingRequired, agentVersions, evidenceIndex, optional `optionsRisk` (option candidates only), `asOf` (packages stored before 2026-11-10 lack it), `grantsApproval: false`, hashes. Machine description: `docs/api/openapi-session.json`. Tests: `tests/unit/api/researchApi.test.ts`.
+

@@ -31,6 +31,9 @@ export const SPEC_ROLE_MAP: Readonly<Record<SpecRole, RoleBinding>> = {
 /** Production specialists that are not one of the twelve roles. They stay registered and scored. */
 export const EXTRA_SPECIALISTS: readonly string[] = ["options-risk-v1"];
 
+/** Extra specialists SUPPLEMENT some of the twelve roles without replacing any: `options-risk-v1` adds option-specific market and liquidity risk beside Market Context and Liquidity (A13). `roleOfAgent` still answers "EXTRA". */
+export const EXTRA_SPECIALIST_SUPPLEMENTS: Readonly<Record<string, readonly SpecRole[]>> = { "options-risk-v1": ["MARKET_CONTEXT", "LIQUIDITY"] };
+export const supplementsOf = (agentId: string): SpecRole[] => [...(EXTRA_SPECIALIST_SUPPLEMENTS[agentId] ?? [])];
 export function roleOfAgent(agentId: string): SpecRole | "EXTRA" | null {
   for (const b of Object.values(SPEC_ROLE_MAP)) if (b.kind === "AGENTS" && b.components.includes(agentId)) return b.role;
   return EXTRA_SPECIALISTS.includes(agentId) ? "EXTRA" : null;
@@ -50,6 +53,8 @@ export function roleCoverage(registeredAgentIds: readonly string[]): RoleCoverag
 /** The specification's per-agent report: verdict in the spec vocabulary (UNAVAILABLE and every non-COMPLETED status become INCOMPLETE), evidence references, risk flags and a short reasoning summary. */
 export interface SpecAgentReport {
   agentId: string; agentVersion: string; role: SpecRole | "EXTRA" | null;
+  /** Present only for an extra specialist: the roles it supplements. */
+  supplementsRoles?: SpecRole[];
   verdict: SpecVerdict; executionStatus: AgentRunResult["status"]; confidence: number | null;
   evidenceRefs: string[]; riskFlags: string[]; reasoningSummary: string; inputSnapshotRef: string; errorCode: string | null;
 }
@@ -60,7 +65,7 @@ export function toSpecAgentReport(r: AgentRunResult): SpecAgentReport {
     ? `Did not complete (${r.status}${r.errorCode ? `: ${r.errorCode}` : ""}); reported INCOMPLETE, never a pass.`
     : r.findings.filter((f) => f.severity !== "INFO").slice(0, 3).map((f) => f.summary).join(" ") || "No cautionary findings.";
   return {
-    agentId: r.agentId, agentVersion: r.agentVersion, role: roleOfAgent(r.agentId), verdict: toSpecVerdict(r.verdict, r.status), executionStatus: r.status, confidence: r.confidence,
+    agentId: r.agentId, agentVersion: r.agentVersion, role: roleOfAgent(r.agentId), ...(supplementsOf(r.agentId).length > 0 ? { supplementsRoles: supplementsOf(r.agentId) } : {}), verdict: toSpecVerdict(r.verdict, r.status), executionStatus: r.status, confidence: r.confidence,
     evidenceRefs: [...new Set(r.evidence.map((e) => `${e.kind}:${e.ref}`))].sort().slice(0, 40), riskFlags: flags, reasoningSummary: sanitizeText(summary, 400), inputSnapshotRef: r.inputSnapshotRef, errorCode: r.errorCode,
   };
 }

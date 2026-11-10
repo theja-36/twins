@@ -92,7 +92,9 @@ describe("registration, worker wiring and source hygiene", () => {
     const snap = createProductionRegistry({ rules: DEFAULT_AGENT_RULES }).snapshot();
     expect(snap).toHaveLength(13);
     const ch = snap.find((x) => x.agentId === "independent-challenger-v1");
-    expect(ch?.dependsOn).toHaveLength(12); expect(ch?.dependsOn).not.toContain("independent-challenger-v1"); expect(ch?.dependsOn).toContain("historical-pattern-v1");
+    // every other agent is an ordering dependency of the challenger; the one OPTIONAL agent (market-context, no provider yet) is SOFT: the challenger runs after it and reads it when COMPLETED, but is not skipped without it
+    expect(ch?.dependsOn).toHaveLength(11); expect(ch?.dependsOn).not.toContain("independent-challenger-v1"); expect(ch?.dependsOn).toContain("historical-pattern-v1"); expect(ch?.dependsOn).not.toContain("market-context-v1");
+    expect(ch?.softDependsOn).toEqual(["market-context-v1"]); expect([...(ch?.dependsOn ?? []), ...(ch?.softDependsOn ?? [])]).toHaveLength(12);
     expect([...DEFAULT_REQUIRED_AGENTS]).toHaveLength(12);
   });
   it("the worker resolves the historical providers only when the engine is enabled", () => {

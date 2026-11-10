@@ -35,6 +35,8 @@ export interface AgentContract {
   advisoryOnly: boolean;
   /** Agents whose COMPLETED result this agent needs (run order + data). */
   dependsOn: string[];
+  /** ORDERING-ONLY dependencies on OPTIONAL agents: this agent runs after them and reads their result when COMPLETED, but is NOT skipped when one did not complete (a hard `dependsOn` entry skips it). Absent or disabled soft dependencies are ignored. */
+  softDependsOn?: string[];
 }
 export interface AgentFinding { code: string; severity: FindingSeverity; summary: string; detail?: Record<string, string | number | boolean | null> }
 export interface AgentEvidence { kind: string; ref: string; sha256?: string }
@@ -128,10 +130,13 @@ export function validateAgentContract(raw: unknown): AgentContract {
   if (c["canBlock"] === true && c["advisoryOnly"] === true) fail("ADVISORY_CANNOT_BLOCK", "an advisory-only agent can never block eligibility");
   const dependsOn = c["dependsOn"] ?? [];
   if (!Array.isArray(dependsOn) || dependsOn.some((d) => typeof d !== "string" || !AGENT_ID.test(d)) || new Set(dependsOn).size !== dependsOn.length || dependsOn.includes(c["agentId"] as string)) fail("INVALID_DEPENDENCIES", "dependsOn must be a list of distinct other agent ids");
+  const soft = c["softDependsOn"] ?? [];
+  if (!Array.isArray(soft) || soft.some((d) => typeof d !== "string" || !AGENT_ID.test(d)) || new Set(soft).size !== soft.length || soft.includes(c["agentId"] as string) || (soft as string[]).some((d) => (dependsOn as string[]).includes(d))) fail("INVALID_SOFT_DEPENDENCIES", "softDependsOn must be a list of distinct agent ids that are not this agent and not also in dependsOn");
   return {
     agentId: c["agentId"] as string, agentName: (c["agentName"] as string).trim(), version: c["version"] as string, requiredInputs, optionalInputs, outputSchema: { fields },
     timeoutMs: c["timeoutMs"] as number, retry: { maxAttempts: retry!.maxAttempts as number, backoffMs: retry!.backoffMs as number }, weight: c["weight"] as number,
     canBlock: c["canBlock"] as boolean, advisoryOnly: c["advisoryOnly"] as boolean, dependsOn: [...(dependsOn as string[])].sort(),
+    ...((soft as string[]).length > 0 ? { softDependsOn: [...(soft as string[])].sort() } : {}),
   };
 }
 

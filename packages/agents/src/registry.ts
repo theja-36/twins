@@ -40,7 +40,8 @@ export class AgentRegistry {
     const placed = new Set<string>();
     let remaining = enabled;
     while (remaining.length > 0) {
-      const level = remaining.filter((d) => d.contract.dependsOn.every((dep) => placed.has(dep)));
+      // soft dependencies only order: a registered, enabled one must run first; an absent or disabled one is ignored
+      const level = remaining.filter((d) => d.contract.dependsOn.every((dep) => placed.has(dep)) && (d.contract.softDependsOn ?? []).every((dep) => !ids.has(dep) || placed.has(dep)));
       if (level.length === 0) throw new AgentContractError("DEPENDENCY_CYCLE", "the agent dependency graph has a cycle");
       levels.push(level.map((d) => d.contract.agentId));
       for (const d of level) placed.add(d.contract.agentId);

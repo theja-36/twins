@@ -18,7 +18,7 @@ import type { AgentRulesConfig } from "./rules";
  */
 export const INDEPENDENT_CHALLENGER_AGENT_ID = "independent-challenger-v1";
 
-export function independentChallengerContract(dependsOn: string[]): AgentContract {
+export function independentChallengerContract(dependsOn: string[], softDependsOn: string[] = []): AgentContract {
   return {
     agentId: INDEPENDENT_CHALLENGER_AGENT_ID, agentName: "Independent Challenger Agent", version: "1.0.0",
     requiredInputs: ["risk_decision"], optionalInputs: ["signal_context", "signal_features", "source_intelligence", "stop_loss_validation"],
@@ -26,7 +26,7 @@ export function independentChallengerContract(dependsOn: string[]): AgentContrac
       ...COMMON_OUTPUT_FIELDS, expectedDirection: { type: "string" }, dependencyCount: { type: "number" }, assessedCount: { type: "number" }, supportiveAgents: { type: "number" }, neutralAgents: { type: "number" }, cautionAgents: { type: "number" },
       adverseAgents: { type: "number" }, blockingAgents: { type: "number" }, adverseWeightShare: { type: "number" }, rewardRisk: { type: "number" }, dataQualityFindings: { type: "number" }, sourceIntelligenceStatus: { type: "string" },
     } },
-    timeoutMs: 5000, retry: { maxAttempts: 1, backoffMs: 0 }, weight: 30, canBlock: true, advisoryOnly: false, dependsOn: [...dependsOn].sort(),
+    timeoutMs: 5000, retry: { maxAttempts: 1, backoffMs: 0 }, weight: 30, canBlock: true, advisoryOnly: false, dependsOn: [...dependsOn].sort(), ...(softDependsOn.length > 0 ? { softDependsOn: [...softDependsOn].sort() } : {}),
   };
 }
 type Rd = { id?: string; instrumentType?: string | null; side?: string | null; optionType?: string | null; entryPrice?: number | null; stopLoss?: number | null; targets?: number[] };
@@ -35,10 +35,10 @@ type Slv = { result?: string; riskPct?: number | null } | null;
 const DATA_QUALITY = /_(STALE|UNUSABLE|MISSING|INCOMPLETE|NOT_CONFIGURED|NOT_AVAILABLE|UNAVAILABLE|NOT_RECORDED|NOT_COMPARED|AS_OF_UNKNOWN|DISCONNECT)$/;
 const list = (ids: string[]): string => ids.slice(0, 6).join(",");
 
-export function independentChallengerAgent(rules: AgentRulesConfig, dependsOn: string[]): AgentDefinition {
+export function independentChallengerAgent(rules: AgentRulesConfig, dependsOn: string[], softDependsOn: string[] = []): AgentDefinition {
   const H = rules.challenger;
   return {
-    contract: independentChallengerContract(dependsOn),
+    contract: independentChallengerContract(dependsOn, softDependsOn),
     async run(ctx) {
       const rd = ctx.inputs["risk_decision"] as Rd | null;
       const si = (ctx.inputs["source_intelligence"] ?? null) as Si;

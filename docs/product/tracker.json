@@ -1764,11 +1764,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "IMPLEMENTED",
+   "status": "IN_PROGRESS",
    "evidence": [
-    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data"
+    "packages/agents/src/regime/market.ts analyzeMarketRegime (market-regime-v1); tests/unit/agents/marketRegime.test.ts (11 tests, local run). Fixture and unit evidence only: not measured on live market data",
+    "2026-11-10 audit: regime object has per-timeframe regime, efficiency ratio and slope; swing market structure lives in technical-structure-v1"
    ],
-   "blockers": []
+   "blockers": [
+    "swing-structure evidence is not part of the regime object (design choice to confirm)"
+   ]
   },
   {
    "id": "M05-14",
@@ -8998,8 +9001,10 @@
    "screens": [],
    "dependencies": [],
    "stage": "04",
-   "status": "NOT_STARTED",
-   "evidence": [],
+   "status": "IMPLEMENTED",
+   "evidence": [
+    "2026-11-10: options-risk-v1 mapped as supplementing MARKET_CONTEXT and LIQUIDITY (specMapping.ts EXTRA_SPECIALIST_SUPPLEMENTS) and options-risk-mapping-v1 (research/optionsRiskMapping.ts); tests/unit/agents/optionsRiskMapping.test.ts (28), local; CI pending. Existing agent: tests/unit/agents/optionsRisk.test.ts (27), CI run 42452595965"
+   ],
    "blockers": []
   },
   {
@@ -10071,7 +10076,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; real-database save: tests/integration/database/stage04Stores.test.ts (CI pending)",
-    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10 (G-43, G-44; local, CI pending): research_packages.run_key + research_agent_runs (migration 0044), research/runRecords.ts, storeResearchPackage; tests/unit/agents/researchRunRecords.test.ts (12), tests/unit/database/researchRunMigration.test.ts (5); PostgreSQL: tests/integration/opportunity/researchRuns.test.ts, tests/integration/runtime/researchCrashRecovery.test.ts (CI only)"
    ],
    "blockers": []
   },
@@ -10097,7 +10103,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/agents/research.test.ts (11 tests) + tests/unit/agents/marketContext.test.ts; local run 2026-11-09, full unit suite 214 files / 3639 tests green; tests/integration/database/stage04Stores.test.ts (CI pending)",
-    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10 (G-43, G-44; local, CI pending): research_packages.run_key + research_agent_runs (migration 0044), research/runRecords.ts, storeResearchPackage; tests/unit/agents/researchRunRecords.test.ts (12), tests/unit/database/researchRunMigration.test.ts (5); PostgreSQL: tests/integration/opportunity/researchRuns.test.ts, tests/integration/runtime/researchCrashRecovery.test.ts (CI only)"
    ],
    "blockers": []
   },
@@ -10150,7 +10157,8 @@
    "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/database/stage04Stores.test.ts (8 tests, local); tests/integration/database/stage04Stores.test.ts against Postgres 16 (CI pending)",
-    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 2fc8c28 (run 42452595965): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "2026-11-10 (G-43, G-44; local, CI pending): research_packages.run_key + research_agent_runs (migration 0044), research/runRecords.ts, storeResearchPackage; tests/unit/agents/researchRunRecords.test.ts (12), tests/unit/database/researchRunMigration.test.ts (5); PostgreSQL: tests/integration/opportunity/researchRuns.test.ts, tests/integration/runtime/researchCrashRecovery.test.ts (CI only)"
    ],
    "blockers": []
   },
