@@ -4,6 +4,7 @@
     { "path": "packages/config" },
     { "path": "packages/database" },
     { "path": "packages/types" },
+    { "path": "packages/api-contracts" },
     { "path": "packages/shared" },
     { "path": "packages/runtime-state" },
     { "path": "packages/audit-chain" },
