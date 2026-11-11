@@ -94,7 +94,7 @@ export async function createPaperPositionOnce(db: Pick<Db, "transaction">, userI
 }
 /**
  * Decisions whose committed ENTRY fills are not (yet) reflected in the position or the execution request: the footprint of a worker that died after a fill committed and before the position was written (G-47).
- * Found when (a) an entry order has fills and the decision has no position, (b) an OPEN position's quantity differs from the quantity its fills imply, or (c) the entry order is FILLED and its request is still ELIGIBLE.
+ * Found when (a) an entry order has fills and the decision has no position, (b) an OPEN position's quantity differs from the quantity its fills imply, (c) the entry order is FILLED and its request is still ELIGIBLE, or (d) the position is CLOSED and has no trade outcome (G-49).
  * Read-only; the caller repairs by re-deriving the position from the fills, which is idempotent.
  */
 export async function listDecisionsNeedingPositionSync(db: Pick<Db, "transaction">, userId: string, limit: number): Promise<string[]> {
@@ -105,6 +105,7 @@ export async function listDecisionsNeedingPositionSync(db: Pick<Db, "transaction
         or exists (select 1 from paper_positions p where p.user_id = o.user_id and p.decision_id = o.decision_id and p.status = 'OPEN' and p.quantity <>
              (select coalesce(sum(case when po.purpose = 'ENTRY' then f.quantity else -f.quantity end), 0) from paper_fills f join paper_orders po on po.id = f.order_id and po.user_id = f.user_id where po.user_id = o.user_id and po.decision_id = o.decision_id))
         or (o.status = 'FILLED' and exists (select 1 from execution_requests r where r.user_id = o.user_id and r.decision_id = o.decision_id and r.mode = 'PAPER' and r.state = 'ELIGIBLE'))
+        or exists (select 1 from paper_positions p where p.user_id = o.user_id and p.decision_id = o.decision_id and p.status = 'CLOSED' and not exists (select 1 from trade_outcomes t where t.user_id = p.user_id and t.paper_position_id = p.id))
       ) group by o.decision_id order by min(o.created_at) limit ${limit}`);
     return r.rows.map((q) => String(row(q)["decision_id"]));
   });
@@ -143,15 +144,16 @@ export async function applyPositionEntrySync(db: Pick<Db, "transaction">, userId
 }
 /**
  * The exit counterpart: applies the exit figures the fills imply (partial exit, or the close) and records PARTIAL_EXIT / CLOSED in the same transaction, only if the OPEN row changes. A racing second worker matches nothing and
- * records nothing. Returns whether THIS call changed the position (the caller records the trade outcome only then).
+ * records nothing. When it CLOSES the position, the trade outcome is written in the SAME transaction (a position can never be CLOSED without its outcome). Returns whether THIS call changed the position.
  */
-export async function applyPositionExitSync(db: Pick<Db, "transaction">, userId: string, id: string, p: { quantity: string; realizedPnl: string; realizedCosts: string; close: { reason: string; at: Date } | null; eventPayload: unknown }): Promise<boolean> {
+export async function applyPositionExitSync(db: Pick<Db, "transaction">, userId: string, id: string, p: { quantity: string; realizedPnl: string; realizedCosts: string; close: { reason: string; at: Date } | null; eventPayload: unknown; outcome?: PaperOutcomeInput }): Promise<boolean> {
   return withUser(db, userId, async (tx) => {
     const r = p.close
       ? await x(tx).execute(sql`update paper_positions set quantity = 0, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, status = 'CLOSED', exit_reason = ${p.close.reason}, closed_at = ${p.close.at.toISOString()}::timestamptz, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status = 'OPEN' returning id`)
       : await x(tx).execute(sql`update paper_positions set quantity = ${p.quantity}::numeric, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status = 'OPEN' and (quantity <> ${p.quantity}::numeric or realized_pnl <> ${p.realizedPnl}::numeric or realized_costs <> ${p.realizedCosts}::numeric) returning id`);
     if (r.rows.length === 0) return false;
     await x(tx).execute(sql`insert into paper_position_events (id, user_id, position_id, kind, payload) values (gen_random_uuid(), ${userId}::uuid, ${id}::uuid, ${p.close ? "CLOSED" : "PARTIAL_EXIT"}, ${JSON.stringify(p.eventPayload)}::jsonb)`);
+    if (p.close && p.outcome) await insertOutcome(tx, userId, p.outcome); // A1 (G-49): the close and its trade outcome commit together or not at all
     return true;
   });
 }
@@ -168,8 +170,14 @@ export async function listPositionEvents(db: Pick<Db, "transaction">, userId: st
 export async function addMonitoringEvent(db: Pick<Db, "transaction">, userId: string, e: { accountId: string; decisionId: string | null; kind: string; payload: unknown }): Promise<void> {
   await withUser(db, userId, async (tx) => { await x(tx).execute(sql`insert into trade_monitoring_events (id, user_id, account_id, decision_id, mode, kind, payload) values (gen_random_uuid(), ${userId}::uuid, ${e.accountId}::uuid, ${e.decisionId}::uuid, 'PAPER', ${e.kind}, ${JSON.stringify(e.payload)}::jsonb)`); });
 }
-export async function recordPaperOutcome(db: Pick<Db, "transaction">, userId: string, o: { accountId: string; decisionId: string; positionId: string; instrument: string; side: "BUY" | "SELL"; quantity: string; entryPrice: string; exitPrice: string; pnl: string; rMultiple: string | null; exitReason: string; openedAt: Date; closedAt: Date }): Promise<void> {
-  await withUser(db, userId, async (tx) => { await x(tx).execute(sql`insert into trade_outcomes (id, user_id, account_id, decision_id, mode, paper_position_id, instrument, side, quantity, entry_price, exit_price, pnl, r_multiple, exit_reason, opened_at, closed_at) values (gen_random_uuid(), ${userId}::uuid, ${o.accountId}::uuid, ${o.decisionId}::uuid, 'PAPER', ${o.positionId}::uuid, ${o.instrument}, ${o.side}, ${o.quantity}::numeric, ${o.entryPrice}::numeric, ${o.exitPrice}::numeric, ${o.pnl}::numeric, ${o.rMultiple}::numeric, ${o.exitReason}, ${o.openedAt.toISOString()}::timestamptz, ${o.closedAt.toISOString()}::timestamptz) on conflict do nothing`); });
+export interface PaperOutcomeInput { accountId: string; decisionId: string; positionId: string; instrument: string; side: "BUY" | "SELL"; quantity: string; entryPrice: string; exitPrice: string; pnl: string; rMultiple: string | null; exitReason: string; openedAt: Date; closedAt: Date }
+/** The ONE statement that writes a paper trade outcome. `trade_outcomes_paper_position_unique` makes a position's outcome exactly-once whoever writes it and however they race: the loser inserts nothing. Returns whether THIS call wrote it. */
+async function insertOutcome(tx: unknown, userId: string, o: PaperOutcomeInput): Promise<boolean> {
+  const r = await x(tx).execute(sql`insert into trade_outcomes (id, user_id, account_id, decision_id, mode, paper_position_id, instrument, side, quantity, entry_price, exit_price, pnl, r_multiple, exit_reason, opened_at, closed_at) values (gen_random_uuid(), ${userId}::uuid, ${o.accountId}::uuid, ${o.decisionId}::uuid, 'PAPER', ${o.positionId}::uuid, ${o.instrument}, ${o.side}, ${o.quantity}::numeric, ${o.entryPrice}::numeric, ${o.exitPrice}::numeric, ${o.pnl}::numeric, ${o.rMultiple}::numeric, ${o.exitReason}, ${o.openedAt.toISOString()}::timestamptz, ${o.closedAt.toISOString()}::timestamptz) on conflict (paper_position_id) where paper_position_id is not null do nothing returning id`);
+  return r.rows.length > 0;
+}
+export async function recordPaperOutcome(db: Pick<Db, "transaction">, userId: string, o: PaperOutcomeInput): Promise<boolean> {
+  return withUser(db, userId, (tx) => insertOutcome(tx, userId, o));
 }
 /** Fills grouped by purpose for a position's decision: the figures reconciliation compares with the position. */
 export async function fillTotalsForDecision(db: Pick<Db, "transaction">, userId: string, decisionId: string): Promise<{ entryQty: string; entryValue: string; exitQty: string; exitValue: string; costs: string }> {

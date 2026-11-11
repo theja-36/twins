@@ -1,9 +1,9 @@
 import type { AnalyticsReport } from "./analytics";
 
 /**
- * Stable API contracts for the analytics (Stage 08 §10). These are TYPES and a route table, not routes: every endpoint is user-scoped and requires an authenticated session with the `analytics:read` permission, and the
- * authentication / session / per-route permission architecture (Stage 01) does not exist yet. So no route is registered and none may be added behind the shared bearer token (it cannot say whose analytics to return). The data
- * is available now through the internal services (`analyzeUser`, the stores) and the worker. Stage 09 builds the frontend on these shapes.
+ * Stable API contracts for the analytics (Stage 08 §10). These are TYPES and a route table: every endpoint is user-scoped and requires an authenticated session with the `analytics:read` permission. The routes are registered by the
+ * session-protected user API (`apps/api/src/userApi.ts`, Stage 01) and never on a shared-token surface (it cannot say whose analytics to return). Every response is served from a stored, immutable analytics snapshot and says which one
+ * and whether it is current (`snapshot`, `freshness`); see `snapshot.ts`. Stage 09 builds the frontend on these shapes.
  */
 export const ANALYTICS_CONTRACT_VERSION = "analytics-contract-v1";
 export const ANALYTICS_PERMISSION = "analytics:read" as const;
@@ -11,7 +11,7 @@ export type AnalyticsSection = "overview" | "strategy" | "channels" | "independe
 export interface AnalyticsEndpoint { method: "GET"; path: string; section: AnalyticsSection; permission: typeof ANALYTICS_PERMISSION; auth: "SESSION_REQUIRED"; ownerScoped: true; query: string[]; response: string }
 export const ANALYTICS_ENDPOINTS: readonly AnalyticsEndpoint[] = [
   { method: "GET", path: "/analytics/overview", section: "overview", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: ["accountId?", "dataset=ALL|VALIDATED|FIXTURE"], response: "OverviewResponse" },
-  { method: "GET", path: "/analytics/strategies", section: "strategy", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: ["dimension=strategy|version|instrument|timeframe|regime|exit|stop|target"], response: "StrategyResponse" },
+  { method: "GET", path: "/analytics/strategies", section: "strategy", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: ["dimension=strategy|version|instrument|timeframe|regime|exit|stop|target|confidence|risk|plannedrr|decision|pattern"], response: "StrategyResponse" },
   { method: "GET", path: "/analytics/channels", section: "channels", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: [], response: "ChannelResponse" },
   { method: "GET", path: "/analytics/independent", section: "independent", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: [], response: "IndependentResponse" },
   { method: "GET", path: "/analytics/agents", section: "agents", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true, query: [], response: "AgentResponse" },

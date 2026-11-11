@@ -19,11 +19,14 @@ describe("learning safety: insights cannot change behaviour", () => {
   it("it never touches the learning-version, playbook, risk-policy, permission, decision or execution tables", () => {
     for (const [f, code] of src) expect(code, f).not.toMatch(/learning_versions|learningVersions|strategy_playbooks|playbook_versions|user_risk_policies|user_execution_permissions|user_decisions|execution_requests|paper_orders|paper_positions|system_controls|risk_control_events|users\b.*role/i);
   });
-  it("its only writes are attributions, insights, the calibration run log and its own job run record", () => {
+  it("its only writes are attributions, insights, analytics snapshots, the calibration run log and its own job run record", () => {
     const cycle = src.find(([f]) => f === "cycle.ts")![1];
     const writers = [...cycle.matchAll(/\b(insert\w*|store\w*|finish\w*|start\w*)\(/g)].map((m) => m[1]).filter((n): n is string => !!n);
     expect([...new Set(writers)].sort()).toEqual(["finishJobRun", "insertAttribution", "insertInsight", "startJobRun", "storeCalibrationRun"]);
-    for (const [f, code] of src) if (f !== "cycle.ts") expect(code, f).not.toMatch(/@twins\/database"[\s\S]*\b(insert|store|finish|start)[A-Z]\w*\(/);
+    for (const [f, code] of src) if (f !== "cycle.ts" && f !== "snapshot.ts") expect(code, f).not.toMatch(/@twins\/database"[\s\S]*\b(insert|store|finish|start)[A-Z]\w*\(/);
+    // Stage 08 A2: the one other writer is the analytics snapshot (its own append-only table); nothing else may be written from the snapshot module
+    const snap = src.find(([f]) => f === "snapshot.ts")![1];
+    expect([...new Set([...snap.matchAll(/(?<![.\w])(insert\w*|store\w*|finish\w*|start\w*|update\w*|delete\w*|set[A-Z]\w*)\(/g)].map((m) => m[1]))].sort()).toEqual(["insertSnapshot"]);
   });
   it("an insight's recommendation vocabulary is closed (REVIEW or nothing), in the type, the generator and the database", () => {
     const ins = src.find(([f]) => f === "insights.ts")![1]; const values = [...ins.matchAll(/recommendation: ([^,}]+)/g)].map((m) => (m[1] as string).trim());
@@ -39,7 +42,7 @@ describe("learning safety: insights cannot change behaviour", () => {
 });
 
 describe("security and contracts", () => {
-  it("every analytics endpoint is owner-scoped, needs an authenticated session and the analytics:read permission; none is registered as a route", () => {
+  it("every analytics endpoint is owner-scoped, needs an authenticated session and the analytics:read permission; none is registered on a shared-token API surface (they exist only behind the session-protected user API)", () => {
     expect(ANALYTICS_ENDPOINTS.length).toBeGreaterThanOrEqual(11);
     for (const e of ANALYTICS_ENDPOINTS) { expect(e).toMatchObject({ method: "GET", permission: ANALYTICS_PERMISSION, auth: "SESSION_REQUIRED", ownerScoped: true }); expect(e.path).toMatch(/^\/analytics\//); }
     for (const f of ["apps/api/src/index.ts", "apps/api/src/liveApi.ts", "apps/api/src/intelligenceApi.ts", "apps/api/src/riskApi.ts"]) expect(readFileSync(f, "utf8"), f).not.toMatch(/\/analytics\//);

@@ -13,7 +13,7 @@ const dec = (n: number, user: string, o: Record<string, unknown> = {}) => ({ id:
 
 /** Fake data layer keyed by user: it can only return what belongs to the user id it is given, exactly like the SQL stores, so any route that passed the WRONG id would show up as a leak. */
 function fakeOps(calls: string[] = []) {
-  const decisions = new Map<string, ReturnType<typeof dec>[]>(), approvals = new Set<string>(), watching = new Map<string, boolean>(), watchKeys = new Set<string>();
+  const staleUsers = new Set<string>(), decisions = new Map<string, ReturnType<typeof dec>[]>(), approvals = new Set<string>(), watching = new Map<string, boolean>(), watchKeys = new Set<string>();
   const accounts = new Map<string, Array<{ id: string; name: string; tradingMode: string; baseCurrency: string; isActive: boolean }>>();
   const ops: UserOps = {
     async accounts(u) { calls.push(`accounts:${u}`); return accounts.get(u) ?? []; },
@@ -35,10 +35,15 @@ function fakeOps(calls: string[] = []) {
     async riskPolicy() { return null; }, async controls() { return []; },
     async orders(u) { calls.push(`orders:${u}`); return []; }, async fills() { return []; }, async positions(u) { calls.push(`positions:${u}`); return []; }, async positionEvents() { return []; },
     async portfolio(u) { calls.push(`portfolio:${u}`); return null; },
-    async analytics(u) { calls.push(`analytics:${u}`); return { report: { generatedAt: NOW.toISOString(), modes: { PAPER: { overview: { u }, validatedOnly: {}, fixtureOnly: {}, strategy: {}, telegram: {}, independent: {}, agents: {}, decisionQuality: {} } }, drift: {}, dataQuality: { partial: 0 }, calibration: {} } as never, records: (decisions.get(u) ?? []).length ? ([{ id: "r", finality: "FINAL", closedAt: NOW }] as never) : [] }; },
+    async analytics(u) {
+      calls.push(`analytics:${u}`); const n = (decisions.get(u) ?? []).length ? 1 : 0, stale = staleUsers.has(u);
+      return { report: { generatedAt: NOW.toISOString(), modes: { PAPER: { overview: { u }, validatedOnly: {}, fixtureOnly: {}, strategy: { byConfidenceBand: [], bySignalPattern: { status: "NOT_AVAILABLE" } }, telegram: {}, independent: {}, agents: {}, decisionQuality: {} } }, drift: {}, dataQuality: { partial: 0, records: n }, calibration: {} } as never,
+        snapshot: { id: `snap-${u}`, asOf: NOW.toISOString(), createdAt: NOW.toISOString(), verifiedAt: NOW.toISOString(), evidenceHash: "e".repeat(64), inputHash: "a".repeat(64), configHash: "c".repeat(64), algorithmVersions: { snapshot: "analytics-snapshot-v1" }, createdBy: "API", freshness: stale ? "STALE" : "CURRENT", staleReason: stale ? "the current evidence could not be analysed" : null, complete: true, maxAgeSeconds: 3600 } };
+    },
+    async outcomes(u) { calls.push(`outcomes:${u}`); return []; },
     async insights() { return []; },
   };
-  return { ops, decisions, accounts, approvals };
+  return { ops, decisions, accounts, approvals, staleUsers };
 }
 async function build() {
   const store = memoryAuthStore(), calls: string[] = [];
@@ -159,6 +164,25 @@ describe("analytics API", () => {
     const none = (await b.call("GET", "/analytics/overview", a.token)).json();
     expect(none).toMatchObject({ contractVersion: "analytics-contract-v1", dataset: "PAPER", mode: "PAPER", liveStatus: "UNAVAILABLE", state: "EMPTY" }); expect(none.data.all).toEqual({ u: a.id }); // computed for A, not C
     const some = (await b.call("GET", "/analytics/overview", c.token)).json(); expect(some.state).toBe("OK"); expect(some.data.all).toEqual({ u: c.id });
+  });
+  it("every analytics response names the stored snapshot and says whether it is current; a stale snapshot is served only as STALE, with the reason", async () => {
+    const b = await build(), a = await b.mk("a@example.com");
+    for (const url of ["/analytics/overview", "/analytics/strategies", "/analytics/drift", "/analytics/outcomes", "/analytics/insights"]) {
+      const j = (await b.call("GET", url, a.token)).json();
+      expect(j, url).toMatchObject({ freshness: "CURRENT", snapshot: { id: `snap-${a.id}`, freshness: "CURRENT", staleReason: null, complete: true, algorithmVersions: { snapshot: "analytics-snapshot-v1" } } });
+      expect(j.snapshot.evidenceHash).toMatch(/^[0-9a-f]{64}$/); expect(j.snapshot.inputHash).toMatch(/^[0-9a-f]{64}$/);
+    }
+    b.staleUsers.add(a.id);
+    const stale = (await b.call("GET", "/analytics/overview", a.token)).json();
+    expect(stale).toMatchObject({ freshness: "STALE", snapshot: { freshness: "STALE" } }); expect(stale.snapshot.staleReason).toMatch(/could not be analysed/);
+  });
+  it("dimension and dataset narrow the response to exactly that view; unknown or misplaced values are refused, never ignored", async () => {
+    const b = await build(), a = await b.mk("a@example.com");
+    const all = (await b.call("GET", "/analytics/overview", a.token)).json(), one = (await b.call("GET", "/analytics/overview?dataset=VALIDATED", a.token)).json();
+    expect(Object.keys(all.data).sort()).toEqual(["all", "fixtureOnly", "validatedOnly"]); expect(Object.keys(one.data)).toEqual(["validatedOnly"]);
+    expect(Object.keys((await b.call("GET", "/analytics/strategies?dimension=confidence", a.token)).json().data)).toEqual(["byConfidenceBand"]);
+    expect(Object.keys((await b.call("GET", "/analytics/strategies?dimension=pattern", a.token)).json().data)).toEqual(["bySignalPattern"]);
+    for (const url of ["/analytics/strategies?dimension=bogus", "/analytics/overview?dimension=strategy", "/analytics/strategies?dataset=ALL", "/analytics/drift?dataset=ALL"]) expect((await b.call("GET", url, a.token)).statusCode, url).toBe(422);
   });
   it("validates its parameters", async () => {
     const b = await build(), a = await b.mk("a@example.com");

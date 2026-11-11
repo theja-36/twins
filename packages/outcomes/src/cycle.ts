@@ -1,23 +1,22 @@
-import { hasPaperActivity, latestCalibrationRun, listDecisionRows, finishJobRun, insertAttribution, insertInsight, latestAttributionForPosition, latestAttributions, loadAttributionFacts, positionsNeedingAttribution, researchReportsForDecisions, startJobRun, storeCalibrationRun, candidateFunnelCounts, claimFunnelCounts, usersWithPaperActivity, type AttributionRow, type Db } from "@twins/database";
+import { countClosedWithoutFinal, hasPaperActivity, latestCalibrationRun, finishJobRun, insertAttribution, insertInsight, latestAttributionForPosition, loadAttributionFacts, positionsNeedingAttribution, startJobRun, storeCalibrationRun, usersWithPaperActivity, type AttributionRow, type Db } from "@twins/database";
 import { CONFIDENCE_MODEL_VERSION } from "@twins/confidence";
-import type { OhlcProvider } from "@twins/agents";
 import { buildAttribution } from "./attribution";
-import { buildAnalyticsReport, type AnalyticsReport } from "./analytics";
+import type { AnalyticsReport } from "./analytics";
 import { runCalibration, type CalibrationOutcome } from "./calibration";
 import type { OutcomeLearningConfig } from "./config";
-import { estimateHypothetical, type HypotheticalResult } from "./decisionQuality";
 import { generateInsights } from "./insights";
+import { captureSnapshot, hashesOf, readSnapshotInputs, reportOf } from "./snapshot";
 
 /**
  * The learning cycle (Stage 08 §9): ingest -> validate -> attribute -> aggregate -> analyse -> detect drift -> generate insights -> reconcile, as ONE bounded, leased, restartable job. It reads outcomes and writes ONLY outcome
  * attributions, insights, the shared calibration run log and its own run record. It imports nothing that can decide, size, approve, execute or change a limit, a weight, a strategy, a playbook or a permission, and a failure here can
- * never make a decision QUALIFIED or place an order. It needs no market feed: historical analytics are computed from stored outcomes alone (an optional OHLC provider only enriches unexecuted-decision estimates).
+ * never make a decision QUALIFIED or place an order. It needs no market feed: the analytics are computed from stored outcomes alone, from one consistent database snapshot, and stored as an immutable snapshot. Estimates for unexecuted decisions need price bars, which are not part of any stored input yet (G-32, Stage 10), so they report UNAVAILABLE.
  */
 export const LEARNING_JOB = "learning-cycle";
 /** `only` restricts the run to these users (staged roll-out and isolated tests); production leaves it unset. */
-export interface LearningDeps { db: Db; config: OutcomeLearningConfig; only?: readonly string[]; ohlc?: OhlcProvider | null; now?: () => Date; log?: (event: string, fields: Record<string, unknown>) => void }
-export interface LearningReport { skipped: "DISABLED" | "ALREADY_RUNNING" | null; runId: string | null; abandonedRuns: number; users: number; usersFailed: number; ingested: { final: number; partial: number; duplicates: number; unchanged: number }; insightsCreated: number; insightsExisting: number; reconciled: number; mismatches: number; calibration: { status: string; holdout: number } | null; failed: boolean }
-export const emptyLearningReport = (): LearningReport => ({ skipped: null, runId: null, abandonedRuns: 0, users: 0, usersFailed: 0, ingested: { final: 0, partial: 0, duplicates: 0, unchanged: 0 }, insightsCreated: 0, insightsExisting: 0, reconciled: 0, mismatches: 0, calibration: null, failed: false });
+export interface LearningDeps { db: Db; config: OutcomeLearningConfig; only?: readonly string[]; now?: () => Date; log?: (event: string, fields: Record<string, unknown>) => void }
+export interface LearningReport { skipped: "DISABLED" | "ALREADY_RUNNING" | null; runId: string | null; abandonedRuns: number; users: number; usersFailed: number; ingested: { final: number; partial: number; duplicates: number; unchanged: number }; insightsCreated: number; insightsExisting: number; reconciled: number; mismatches: number; calibration: { status: string; holdout: number } | null; snapshots: { created: number; existing: number }; closedWithoutFinal: number; failed: boolean }
+export const emptyLearningReport = (): LearningReport => ({ skipped: null, runId: null, abandonedRuns: 0, users: 0, usersFailed: 0, ingested: { final: 0, partial: 0, duplicates: 0, unchanged: 0 }, insightsCreated: 0, insightsExisting: 0, reconciled: 0, mismatches: 0, calibration: null, snapshots: { created: 0, existing: 0 }, closedWithoutFinal: 0, failed: false });
 
 export async function ingestOutcomes(db: Db, userId: string, batch: number): Promise<LearningReport["ingested"]> {
   const r = { final: 0, partial: 0, duplicates: 0, unchanged: 0 };
@@ -40,23 +39,10 @@ export async function reconcileOutcomes(db: Db, userId: string, records: readonl
   }
   return { checked, mismatches };
 }
-async function hypotheticals(d: LearningDeps, rows: Awaited<ReturnType<typeof listDecisionRows>>, now: Date): Promise<Map<string, HypotheticalResult>> {
-  const m = new Map<string, HypotheticalResult>();
-  if (!d.ohlc) return m;
-  for (const r of rows.filter((x) => !x.hasPosition).slice(-200)) {
-    let bars: Array<{ t: string; open: number; high: number; low: number; close: number }> = [];
-    try { const s = await d.ohlc.candles({ market: "NSE", symbol: r.instrument, limit: 250, to: now.toISOString() }); bars = s?.bars ?? []; } catch { bars = []; }
-    m.set(r.id, estimateHypothetical(r, bars, now, new Date(r.createdAt.getTime() + 24 * 3600_000)));
-  }
-  return m;
-}
-export async function analyzeUser(d: LearningDeps, userId: string, now: Date): Promise<{ report: AnalyticsReport; records: AttributionRow[]; calibration: CalibrationOutcome; samples: AttributionRow[] }> {
-  const records = await latestAttributions(d.db, userId, { mode: "PAPER", limit: 5000 });
-  const decisions = await listDecisionRows(d.db, userId, 5000), packages = await researchReportsForDecisions(d.db, userId, 5000);
-  const [claimChannels, tg, ind] = [await claimFunnelCounts(d.db), await candidateFunnelCounts(d.db, "TELEGRAM"), await candidateFunnelCounts(d.db, "INDEPENDENT")];
-  const calibration = runCalibration(records, d.config.holdoutFraction);
-  const report = buildAnalyticsReport({ now, minSample: d.config.minSample, minDriftWindow: d.config.minDriftWindow, records, decisions, packages, claimChannels, telegramCandidates: tg.candidates, independentStage: { candidates: ind.scanCandidates || ind.candidates, researched: ind.researched, byState: ind.byState, stateReasons: ind.stateReasons, scans: ind.scans }, hypothetical: await hypotheticals(d, decisions, now), calibration });
-  return { report, records, calibration, samples: records };
+/** Analyses a user from ONE consistent database snapshot (the same read the stored snapshots use). Nothing is stored here. */
+export async function analyzeUser(d: LearningDeps, userId: string, _now: Date): Promise<{ report: AnalyticsReport; records: AttributionRow[]; calibration: CalibrationOutcome; samples: AttributionRow[] }> {
+  const inputs = await readSnapshotInputs(d.db, userId), h = hashesOf(inputs.fingerprint, inputs.pipeline, d.config);
+  return { report: reportOf(inputs, d.config, h.asOf), records: inputs.records, calibration: runCalibration(inputs.records, d.config.holdoutFraction), samples: inputs.records };
 }
 
 export async function runLearningCycle(d: LearningDeps): Promise<LearningReport> {
@@ -75,7 +61,9 @@ export async function runLearningCycle(d: LearningDeps): Promise<LearningReport>
       try {
         const ing = await ingestOutcomes(d.db, userId, d.config.batchPositions);
         out.ingested.final += ing.final; out.ingested.partial += ing.partial; out.ingested.duplicates += ing.duplicates; out.ingested.unchanged += ing.unchanged;
-        const { report, records } = await analyzeUser(d, userId, now);
+        out.closedWithoutFinal += await countClosedWithoutFinal(d.db, userId);
+        const cap = await captureSnapshot({ db: d.db, config: d.config, now: () => now, ...(d.log ? { log: d.log } : {}) }, userId, "LEARNING_CYCLE"), report = cap.view.report, records = cap.inputs.records; // ONE consistent read, stored as an immutable snapshot
+        if (cap.created) out.snapshots.created++; else out.snapshots.existing++;
         pooled.push(...records);
         const rec = await reconcileOutcomes(d.db, userId, records, d.config.batchPositions); out.reconciled += rec.checked; out.mismatches += rec.mismatches.length;
         for (const i of generateInsights(report, records, d.config.minSample)) { if (await insertInsight(d.db, userId, i)) out.insightsCreated++; else out.insightsExisting++; }

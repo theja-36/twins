@@ -48,6 +48,10 @@ const decisionView = (d: NonNullable<Awaited<ReturnType<UserOps["getDecision"]>>
   invalidated: d.invalidated ? { reasonCode: d.invalidated.reasonCode, at: d.invalidated.at.toISOString() } : null, simulationId: d.simulationId, riskAssessmentId: d.riskAssessmentId,
 });
 
+/** `/analytics/strategies?dimension=` -> the view of the report it selects. */
+const STRATEGY_DIMENSIONS: Record<string, string> = { strategy: "byStrategy", version: "byVersion", instrument: "byInstrument", timeframe: "byTimeframe", regime: "byRegime", exit: "byExitReason", stop: "byStopBehaviour", target: "byTargetBehaviour", confidence: "byConfidenceBand", risk: "byRiskVerdict", plannedrr: "byPlannedRewardToRisk", decision: "byDecisionOutcome", pattern: "bySignalPattern" };
+/** `/analytics/overview?dataset=` -> the metrics set it selects. */
+const OVERVIEW_DATASETS: Record<string, string> = { ALL: "all", VALIDATED: "validatedOnly", FIXTURE: "fixtureOnly" };
 export function registerUserRoutes(app: FastifyInstance, deps: { auth: AuthService; ops: UserOps; now?: () => Date }): void {
   const { auth, ops } = deps, now = deps.now ?? (() => new Date());
   const send = (reply: FastifyReply, e: unknown): FastifyReply => { const { status, body: b } = toErrorBody(e); return reply.code(status).send(b); };
@@ -156,26 +160,34 @@ export function registerUserRoutes(app: FastifyInstance, deps: { auth: AuthServi
 
   // ── analytics (Stage 08 contracts; analytics:read; owner-scoped; paper only) ─
   const emptyState = (records: number, partial: number): "EMPTY" | "PARTIAL" | "OK" => (records === 0 ? "EMPTY" : partial > 0 ? "PARTIAL" : "OK");
+  /** Every analytics response says which stored snapshot it is and whether it is current. A stale snapshot is served only as STALE, with the reason, never as current. */
+  const meta = (v: Awaited<ReturnType<UserOps["analytics"]>>) => ({ snapshot: v.snapshot, freshness: v.snapshot.freshness });
   for (const ep of ANALYTICS_ENDPOINTS) {
     if (ep.section === "outcomes" || ep.section === "insights") continue;
     get(ep.path, "analytics:read", async (u, req) => {
       const q = query(req, ["accountId", "dataset", "dimension"]);
       if (q["dataset"] !== undefined && !["ALL", "VALIDATED", "FIXTURE"].includes(q["dataset"])) throw new PlatformError("VALIDATION", "dataset must be ALL, VALIDATED or FIXTURE");
-      const { report, records } = await ops.analytics(u, now()), env = sectionOf(report, ep.section as Exclude<AnalyticsSection, "outcomes" | "insights">);
-      return { ...env, state: emptyState(records.length, report.dataQuality.partial) };
+      if (q["dataset"] !== undefined && ep.section !== "overview") throw new PlatformError("VALIDATION", "dataset applies to /analytics/overview only");
+      if (q["dimension"] !== undefined && !(q["dimension"] in STRATEGY_DIMENSIONS)) throw new PlatformError("VALIDATION", `dimension must be one of ${Object.keys(STRATEGY_DIMENSIONS).join(", ")}`);
+      if (q["dimension"] !== undefined && ep.section !== "strategy") throw new PlatformError("VALIDATION", "dimension applies to /analytics/strategies only");
+      const view = await ops.analytics(u, now()), { report } = view, full = sectionOf(report, ep.section as Exclude<AnalyticsSection, "outcomes" | "insights">);
+      // an explicit dimension / dataset narrows the response to exactly that view (never silently ignored)
+      const narrowed = ep.section === "strategy" && q["dimension"] ? { [STRATEGY_DIMENSIONS[q["dimension"]] as string]: (full.data as Record<string, unknown>)[STRATEGY_DIMENSIONS[q["dimension"]] as string] } : ep.section === "overview" && q["dataset"] ? { [OVERVIEW_DATASETS[q["dataset"]] as string]: (full.data as Record<string, unknown>)[OVERVIEW_DATASETS[q["dataset"]] as string] } : null;
+      const env = narrowed ? { ...full, data: narrowed } : full;
+      return { ...env, ...meta(view), state: emptyState(report.dataQuality.records, report.dataQuality.partial) };
     });
   }
   get("/analytics/outcomes", "analytics:read", async (u, req) => {
     const q = query(req, ["finality", "limit", "cursor"]), p = parseListQuery(q);
     if (!p.ok) throw new PlatformError("VALIDATION", p.error);
-    const { report, records } = await ops.analytics(u, now());
+    const view = await ops.analytics(u, now()), { report } = view, records = await ops.outcomes(u, { ...(p.finality ? { finality: p.finality } : {}), limit: p.limit });
     const rows = records.filter((r) => !p.finality || r.finality === p.finality).slice(0, p.limit).map((r) => ({ id: r.id, paperPositionId: r.paperPositionId, decisionId: r.decisionId, version: r.version, finality: r.finality, mode: r.mode, dataSource: r.dataSource, candidateSource: r.candidateSource, setup: r.setup, instrument: r.instrument, side: r.side, grossPnl: r.grossPnl, costs: r.costs, netPnl: r.netPnl, rMultiple: r.rMultiple, holdingSeconds: r.holdingSeconds, exitReason: r.exitReason, closedAt: r.closedAt ? r.closedAt.toISOString() : null, dataQuality: r.dataQuality, missing: r.missing, correctionReason: r.correctionReason }));
-    return { ...envelope(report, rows), state: emptyState(records.length, report.dataQuality.partial) };
+    return { ...envelope(report, rows), ...meta(view), state: emptyState(report.dataQuality.records, report.dataQuality.partial) };
   });
   get("/analytics/insights", "analytics:read", async (u, req) => {
     const q = query(req, ["kind", "limit"]), p = parseListQuery(q);
     if (!p.ok) throw new PlatformError("VALIDATION", p.error);
-    const { report } = await ops.analytics(u, now()), rows = await ops.insights(u, { ...(p.kind ? { kind: p.kind } : {}), limit: p.limit });
-    return { ...envelope(report, rows), state: rows.length === 0 ? "EMPTY" : "OK" };
+    const view = await ops.analytics(u, now()), { report } = view, rows = await ops.insights(u, { ...(p.kind ? { kind: p.kind } : {}), limit: p.limit });
+    return { ...envelope(report, rows), ...meta(view), state: rows.length === 0 ? "EMPTY" : "OK" };
   });
 }

@@ -3,10 +3,10 @@
  * providers, a FIXTURE price provider), packaged so that the test process AND the child worker process build identical dependencies. Nothing here can reach a broker or a real market feed.
  */
 import { randomUUID } from "node:crypto";
-import { appendCapitalProfile, appendRiskPolicy, beginScan, createCandidateQueue, getCandidate, insertScanCandidates, listDecisions, storeResearchPackage, type CandidateInsert, type Db } from "../../packages/database/src/index";
+import { appendCapitalProfile, appendRiskPolicy, beginScan, createCandidateQueue, createPaperOrder, getCandidate, getDecision, getExecutionRequest, getPositionForDecision, insertPaperFill, insertScanCandidates, listDecisions, listPaperOrders, setOrderStatus, storeResearchPackage, type CandidateInsert, type Db } from "../../packages/database/src/index";
 import { evaluateCandidateForAccount, memorySpecProvider, type InstrumentSpec, type PortfolioProvider } from "../../packages/planning/src/index";
-import { runDecisionCycle, DEFAULT_DECISION_CONFIG } from "../../packages/decision/src/index";
-import { DEFAULT_EXECUTION_CONFIG, type ExecutionDeps, type PriceObservation, type PriceProvider } from "../../packages/execution/src/index";
+import { approveDecision, runDecisionCycle, DEFAULT_DECISION_CONFIG } from "../../packages/decision/src/index";
+import { DEFAULT_EXECUTION_CONFIG, requestPaperExecution, rulesFor, type ExecutionDeps, type PriceObservation, type PriceProvider } from "../../packages/execution/src/index";
 import { FEES, SPEC } from "../unit/planning/fixtures";
 
 export const NOW = new Date("2031-01-06T05:00:00Z");
@@ -48,5 +48,27 @@ export function makeFixtures(db: Db) {
     const d = (await listDecisions(db, userId, { candidateId: candId, limit: 5 }))[0];
     return { u, userId, accountId, candId, decisionId: d?.id ?? "", outcome: d?.outcome ?? null };
   }
-  return { instruments, evalDeps, execDeps, pipeline, spec: SPEC };
+
+  /** A fully filled, OPEN paper position for a fresh approved decision (entry at 100.05 after slippage). `deps` use a price provider that answers only for this instrument. */
+  async function openPosition(ownerQuery: (text: string, params?: unknown[]) => Promise<unknown>) {
+    const p = await pipeline(ownerQuery);
+    if (p.outcome !== "QUALIFIED") throw new Error(`fixture decision is ${p.outcome}`);
+    await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const deps = execDeps(pricesFor(p.u), { orderTtlMinutes: 1e9 });
+    const first = await requestPaperExecution(deps, { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    if (first.status !== "FILLED") throw new Error(`entry did not fill: ${first.status}`);
+    const dec0 = (await getDecision(db, p.userId, p.decisionId))!, cand = (await getCandidate(db, dec0.candidateId))!, pos = (await getPositionForDecision(db, p.userId, p.decisionId))!;
+    const entry = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!;
+    return { ...p, deps, dec0, cand, pos, entry, qty: dec0.permittedSize!.quantity, rules: rulesFor(deps, SPEC.lotSize, cand, FEES, dec0, "equity") };
+  }
+  /** An EXIT order for part or all of the open quantity whose fill is COMMITTED but not yet applied to the position (the state a worker leaves when it dies after the fill). */
+  async function commitExitFill(a: { userId: string; accountId: string; decisionId: string; pos: { id: string }; cand: { underlying: string; exchange: string } }, quantity: number, price: string, key: string) {
+    const rq = (await getExecutionRequest(db, a.userId, a.decisionId, "PAPER"))!;
+    const { order } = await createPaperOrder(db, a.userId, { accountId: a.accountId, decisionId: a.decisionId, executionRequestId: rq.id, positionId: a.pos.id, purpose: "EXIT", exitReason: "TARGET_HIT", instrument: a.cand.underlying, exchange: a.cand.exchange, side: "SELL", orderType: "MARKET", quantity: String(quantity), limitPrice: null, idempotencyKey: key });
+    await setOrderStatus(db, a.userId, order.id, "SUBMITTED", "t"); await setOrderStatus(db, a.userId, order.id, "ACCEPTED", "t");
+    const fillId = await insertPaperFill(db, a.userId, { orderId: order.id, quantity: String(quantity), price, costs: "9.00", priceSource: "FIXTURE", priceAsOf: NOW, expectedFilledQuantity: "0" });
+    if (fillId === null) throw new Error("exit fill was not applied");
+    return order;
+  }
+  return { instruments, evalDeps, execDeps, pipeline, openPosition, commitExitFill, spec: SPEC };
 }

@@ -15,6 +15,8 @@ export interface AnalyticsInputs {
   now: Date; minSample: number; minDriftWindow: number; records: readonly AttributionRow[]; decisions: readonly DecisionRow[]; packages: readonly PackageReports[];
   claimChannels: Parameters<typeof telegramFunnel>[0]; telegramCandidates: number; independentStage: Parameters<typeof independentFunnel>[0]; hypothetical: ReadonlyMap<string, HypotheticalResult>; calibration: CalibrationOutcome | null;
 }
+/** A requested view that cannot be produced from recorded data: stated, with the reason and what it depends on, never approximated. */
+export interface Unavailable { status: "NOT_AVAILABLE"; reason: string; dependsOn: string }
 export interface DataQualityReport { version: string; records: number; final: number; partial: number; correctedVersions: number; fixtureBacked: number; fixtureShare: number | null; codes: Record<string, number>; missingFields: Record<string, number>; warnings: string[]; validatedDataset: { eligible: number; note: string } }
 export interface AnalyticsReport {
   version: string; generatedAt: string; modes: { PAPER: ModeReport; LIVE: { status: "UNAVAILABLE"; reason: string } };
@@ -23,7 +25,7 @@ export interface AnalyticsReport {
 }
 export interface ModeReport {
   overview: PerformanceMetrics; validatedOnly: PerformanceMetrics; fixtureOnly: PerformanceMetrics;
-  strategy: { byStrategy: Slice[]; byVersion: Slice[]; byInstrument: Slice[]; byTimeframe: Slice[]; byRegime: Slice[]; bySignalType: Slice[]; byExitReason: Slice[]; byStopBehaviour: Slice[]; byTargetBehaviour: Slice[]; byStopMoved: Slice[] };
+  strategy: { byStrategy: Slice[]; byVersion: Slice[]; byInstrument: Slice[]; byTimeframe: Slice[]; byRegime: Slice[]; bySignalType: Slice[]; byExitReason: Slice[]; byStopBehaviour: Slice[]; byTargetBehaviour: Slice[]; byStopMoved: Slice[]; byConfidenceBand: Slice[]; byRiskVerdict: Slice[]; byPlannedRewardToRisk: Slice[]; byDecisionOutcome: Slice[]; bySignalPattern: Unavailable };
   telegram: TelegramFunnel; independent: IndependentFunnel; agents: AgentAnalytics; decisionQuality: DecisionQuality;
 }
 const share = (a: number, b: number): number | null => (b > 0 ? Math.round((a / b) * 10_000) / 10_000 : null);
@@ -42,9 +44,13 @@ export function buildAnalyticsReport(i: AnalyticsInputs): AnalyticsReport {
   const slices = (k: string): Slice[] => sliceBy(paper, DIMENSIONS[k] as never, m);
   const fixture = paper.filter((r) => r.dataSource === "FIXTURE"), real = paper.filter((r) => r.dataSource !== "FIXTURE");
   const decisions = i.decisions.filter((d) => true && d);
+  const outcomeOfDecision = new Map(decisions.map((d) => [d.id, d.outcome] as const));
   const modeReport: ModeReport = {
     overview: computeMetrics(paper, m), validatedOnly: computeMetrics(real, m), fixtureOnly: computeMetrics(fixture, m),
-    strategy: { byStrategy: slices("strategy"), byVersion: slices("strategyVersion"), byInstrument: slices("instrument"), byTimeframe: slices("timeframe"), byRegime: slices("regime"), bySignalType: slices("strategy"), byExitReason: slices("exitReason"), byStopBehaviour: slices("stopBehaviour"), byTargetBehaviour: slices("targetBehaviour"), byStopMoved: slices("stopMoved") },
+    strategy: { byStrategy: slices("strategy"), byVersion: slices("strategyVersion"), byInstrument: slices("instrument"), byTimeframe: slices("timeframe"), byRegime: slices("regime"), bySignalType: slices("strategy"), byExitReason: slices("exitReason"), byStopBehaviour: slices("stopBehaviour"), byTargetBehaviour: slices("targetBehaviour"), byStopMoved: slices("stopMoved"),
+      byConfidenceBand: slices("confidenceBand"), byRiskVerdict: slices("riskVerdict"), byPlannedRewardToRisk: slices("plannedRewardToRisk"),
+      byDecisionOutcome: sliceBy(paper, (r) => outcomeOfDecision.get(r.decisionId) ?? null, m),
+      bySignalPattern: { status: "NOT_AVAILABLE", reason: "a signal-pattern view needs the historical pattern of each signal at decision time, which no pattern provider supplies yet (bySignalType is the setup class, the same cut as byStrategy)", dependsOn: "G-23 historical pattern provider" } },
     telegram: telegramFunnel(i.claimChannels, i.telegramCandidates, decisions, paper, m), independent: independentFunnel(i.independentStage, decisions, paper, m),
     agents: analyzeAgents(i.packages, paper, m), decisionQuality: assessDecisionQuality(decisions, paper, i.hypothetical, m),
   };

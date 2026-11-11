@@ -40,7 +40,7 @@ function compose(f: AttributionFacts, prev: AttributionRow | null, reason: strin
     finality, mode: "PAPER", dataSource: source, candidateSource: f.candidate.source, setup: f.candidate.setup, detectorVersion: setupEv?.detector ?? null, channelId: f.candidate.channelId, playbookRef: null,
     instrument: p.instrument, timeframeSeconds: setupEv?.timeframeSeconds ?? null, side: p.side, quantity: p.initialQuantity, entryPrice: p.avgEntryPrice,
     exitPrice: closed ? f.outcome!.exitPrice : null, grossPnl: str(gross, 2), costs: str(costs, 2), netPnl: closed ? f.outcome!.pnl : str(net, 2), riskAmount: risk > ZERO ? str(risk, 2) : null,
-    rMultiple: closed ? (f.outcome!.rMultiple ?? (risk > ZERO ? str(div(dec(f.outcome!.pnl), risk, "down"), 2) : null)) : null,
+    rMultiple: closed ? (f.outcome!.rMultiple ?? (risk > ZERO ? str(div(dec(f.outcome!.pnl), risk, "down"), 8) : null)) : null,
     holdingSeconds: closed && p.closedAt ? Math.max(0, Math.round((f.outcome!.closedAt.getTime() - p.openedAt.getTime()) / 1000)) : null, exitReason: closed ? f.outcome!.exitReason : null,
     trade: { stopMoves, targetsHit: f.events["TARGET_HIT"] ?? 0, partialExits: f.events["PARTIAL_EXIT"] ?? 0, stopHit: closed ? f.outcome!.exitReason === "STOP_HIT" : null, reachedBreakeven: stopMoves > 0, initialStop: p.initialStop, finalStop: p.stopLoss, targetsPlanned: p.targets.length, entryFills: f.fills.entryFills, exitFills: f.fills.exitFills },
     regime: f.regime ? { atDecision: { regime: f.regime.regime, direction: f.regime.direction, volatilityRegime: f.regime.volatilityRegime, asOf: f.regime.asOf.toISOString(), dataSource: f.regime.dataSource }, duringTrade: null } : null,

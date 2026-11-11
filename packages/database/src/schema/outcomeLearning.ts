@@ -138,3 +138,34 @@ export const learningJobRuns = pgTable("learning_job_runs", {
   statusCheck: check("learning_job_runs_status_check", oneOf(t.status, LEARNING_JOB_STATES)),
   finishedCheck: check("learning_job_runs_finished_check", sql`(${t.status} = 'RUNNING') = (${t.finishedAt} is null)`),
 }));
+
+export const SNAPSHOT_CREATORS = ["API", "LEARNING_CYCLE", "OPERATOR"] as const;
+/**
+ * Stage 08 (A2): a stored, immutable analytics report. It is built from ONE consistent database snapshot of the user's evidence; `evidence_hash` identifies the user's evidence (attributions, decisions, research packages) and
+ * `input_hash` additionally covers the pipeline counts, configuration and algorithm versions, so the same inputs always have the same hash and can have only one row (unique per user). The report is never edited: a later state of the
+ * evidence is a NEW snapshot. Owner-only (forced row-level security), append-only.
+ */
+export const analyticsSnapshots = pgTable("analytics_snapshots", {
+  id: idColumn(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  mode: text("mode").notNull(),
+  /** The instant the evidence is as of: derived from the evidence itself (its newest record), never from the wall clock, so the report is reproducible. */
+  asOf: timestamp("as_of", { withTimezone: true }).notNull(),
+  evidenceHash: text("evidence_hash").notNull(),
+  inputHash: text("input_hash").notNull(),
+  algorithmVersions: jsonb("algorithm_versions").notNull(),
+  config: jsonb("config").notNull(),
+  configHash: text("config_hash").notNull(),
+  /** Per source: row counts and newest-record markers read inside the same database snapshot. */
+  watermarks: jsonb("watermarks").notNull(),
+  report: jsonb("report").notNull(),
+  reportSha256: text("report_sha256").notNull(),
+  createdBy: text("created_by").notNull(),
+  createdAt: createdAtColumn(),
+}, (t) => ({
+  inputUnique: uniqueIndex("analytics_snapshots_input_unique").on(t.userId, t.inputHash),
+  latestIdx: index("analytics_snapshots_latest_idx").on(t.userId, t.mode, t.createdAt),
+  modeCheck: check("analytics_snapshots_mode_check", sql`${t.mode} = 'PAPER'`),
+  creatorCheck: check("analytics_snapshots_creator_check", oneOf(t.createdBy, SNAPSHOT_CREATORS)),
+  hashCheck: check("analytics_snapshots_hash_check", sql`${t.evidenceHash} ~ '^[0-9a-f]{64}$' and ${t.inputHash} ~ '^[0-9a-f]{64}$' and ${t.configHash} ~ '^[0-9a-f]{64}$' and ${t.reportSha256} ~ '^[0-9a-f]{64}$'`),
+}));

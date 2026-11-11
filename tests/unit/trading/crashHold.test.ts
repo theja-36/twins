@@ -37,3 +37,32 @@ describe("holdAfterArmedTransaction (crash-test seam)", () => {
     expect(await settled(a)).toBe(false); expect(await settled(b)).toBe(true);
   });
 });
+
+import { sql } from "drizzle-orm";
+import { holdAtStatement, sqlText } from "../../support/crashHold";
+
+describe("holdAtStatement (crash-test seam for a chosen statement)", () => {
+  function txDb() {
+    const log: string[] = [];
+    const db = { async transaction<T>(fn: (tx: { execute(q: unknown): Promise<string> }) => Promise<T>): Promise<T> { log.push("begin"); const r = await fn({ async execute(q: unknown) { log.push(`exec:${sqlText(q).trim().slice(0, 18)}`); return "ok"; } }); log.push("commit"); return r; } };
+    return { db, log };
+  }
+  it("recognises a statement by its text", () => { expect(sqlText(sql`insert into trade_outcomes (id) values (${1})`)).toBe("insert into trade_outcomes (id) values (?)"); });
+  it("before-commit: holds right after the matching statement, inside the open transaction (nothing committed)", async () => {
+    const { db, log } = txDb(); const held: string[] = [];
+    const w = holdAtStatement(db, { match: /insert into trade_outcomes/, when: "before-commit", onHeld: () => held.push(log.join(">")), keepAlive: false });
+    await w.transaction(async (tx) => tx.execute(sql`update paper_positions set x = 1`)); // not the match: passes
+    const stuck = w.transaction(async (tx) => { await tx.execute(sql`insert into trade_outcomes (id) values (${1})`); log.push("after-insert"); return "x"; });
+    expect(await settled(stuck)).toBe(false);
+    expect(held).toEqual(["begin>exec:update paper_posit>commit>begin>exec:insert into trade_"]); // held before 'after-insert' and before any commit
+    expect(log).not.toContain("after-insert");
+  });
+  it("after-commit: the transaction commits, then the caller is held; only the first match is held", async () => {
+    const { db, log } = txDb(); const held: string[] = [];
+    const w = holdAtStatement(db, { match: /insert into outcome_attributions/, when: "after-commit", onHeld: () => held.push(log.join(">")), keepAlive: false });
+    const stuck = w.transaction(async (tx) => { await tx.execute(sql`insert into outcome_attributions (id) values (${1})`); return "x"; });
+    expect(await settled(stuck)).toBe(false);
+    expect(held).toEqual(["begin>exec:insert into outcom>commit"]);
+    expect(await w.transaction(async (tx) => tx.execute(sql`insert into outcome_attributions (id) values (${2})`))).toBe("ok"); // a later match passes
+  });
+});

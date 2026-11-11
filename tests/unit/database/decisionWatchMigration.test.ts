@@ -19,10 +19,10 @@ describe("migration 0045: decision watches", () => {
     expect(sql).toContain('CREATE POLICY "decision_watches_owner_only"');
   });
   it("touches no approval, order or position table", () => { expect(sql).not.toMatch(/user_decision_approvals|paper_orders|paper_positions|paper_fills/); });
-  it("is the last migration in the journal with its snapshot, and the rollback is documented", () => {
+  it("is in the journal right after 0044, in order, with its snapshot, and the rollback is documented", () => {
     const journal = JSON.parse(readFileSync(join(DIR, "meta/_journal.json"), "utf8")) as { entries: Array<{ tag: string; when: number }> };
-    const last = journal.entries[journal.entries.length - 1]!, prev = journal.entries[journal.entries.length - 2]!;
-    expect(last.tag).toBe("0045_decision_watches"); expect(last.when).toBeGreaterThan(prev.when); expect(existsSync(join(DIR, "meta/0045_snapshot.json"))).toBe(true);
+    const i = journal.entries.findIndex((e) => e.tag === "0045_decision_watches"), last = journal.entries[i]!, prev = journal.entries[i - 1]!;
+    expect(i).toBeGreaterThan(0); expect(prev.tag).toBe("0044_research_run_records"); expect(last.when).toBeGreaterThan(prev.when); expect(existsSync(join(DIR, "meta/0045_snapshot.json"))).toBe(true);
     expect(readFileSync(join(__dirname, "../../../scripts/product/append-0045.py"), "utf8")).toMatch(/Rollback \(forward-only/);
   });
 });

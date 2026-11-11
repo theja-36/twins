@@ -323,6 +323,13 @@
       "when": 1794369700666,
       "tag": "0045_decision_watches",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794421031283,
+      "tag": "0046_outcome_integrity_analytics_snapshots",
+      "breakpoints": true
     }
   ]
 }

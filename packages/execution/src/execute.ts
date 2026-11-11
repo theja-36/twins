@@ -1,6 +1,6 @@
 import { ACTION_APPROVE, checkExecutionGate, isQualifiedOutcome, type ExecutionMode } from "@twins/types";
 import { evaluateSafety } from "@twins/runtime-state";
-import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, applyPositionEntrySync, applyPositionExitSync, createPaperPositionOnce, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, setOrderStatus, updateExecutionRequest, type PaperOrderRow, type PaperPositionRow, type StoredDecision } from "@twins/database";
+import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, applyPositionEntrySync, applyPositionExitSync, createPaperPositionOnce, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, setOrderStatus, updateExecutionRequest, type PaperOrderRow, type PaperOutcomeInput, type PaperPositionRow, type StoredDecision } from "@twins/database";
 import { revalidateDecision } from "@twins/decision";
 import { ceilTo2, dec, div, floorTo2, legCosts, mul, str, ZERO, type Dec, type EvaluationDeps, type FeeSchedule } from "@twins/planning";
 import type { ExecutionConfig } from "./config";
@@ -155,13 +155,21 @@ export async function syncPosition(d: ExecutionDeps, o: { userId: string; decisi
       const closing = open === ZERO;
       const exitOrders = (await listPaperOrders(db, o.userId, { decisionId: o.decision.id, limit: 100 })).filter((x) => x.purpose === "EXIT" && dec(x.filledQuantity) > ZERO);
       const reason = exitOrders.length ? (exitOrders[exitOrders.length - 1] as PaperOrderRow).exitReason ?? "EXIT" : "EXIT";
-      const changed = await applyPositionExitSync(db, o.userId, pos.id, { quantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), close: closing ? { reason, at: t } : null, eventPayload: { openQuantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), reason } });
-      if (closing && changed) { // only the worker that actually closed the position records the outcome
-        const net = pnl - costs, risk = mul(abs0(dec(pos.avgEntryPrice) - dec(pos.initialStop)), dec(pos.initialQuantity), "up");
-        await recordPaperOutcome(db, o.userId, { accountId: pos.accountId, decisionId: pos.decisionId, positionId: pos.id, instrument: pos.instrument, side: pos.side, quantity: pos.initialQuantity, entryPrice: str(avg, 8), exitPrice: str(div(dec(tot.exitValue), xq, "down"), 8), pnl: str(net, 2), rMultiple: risk > ZERO ? str(div(net, risk, "down"), 2) : null, exitReason: reason, openedAt: pos.openedAt, closedAt: t });
-      }
+      // A1 (G-49): the trade outcome is written in the SAME transaction as the close, so a position is never CLOSED without it
+      await applyPositionExitSync(db, o.userId, pos.id, { quantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), close: closing ? { reason, at: t } : null, eventPayload: { openQuantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), reason },
+        ...(closing ? { outcome: outcomeOf(pos, { avg, exitValue: dec(tot.exitValue), exitQty: xq, pnl, costs, reason, closedAt: t }) } : {}) });
     }
   }
-  return getPositionForDecision(db, o.userId, o.decision.id);
+  // A CLOSED position must have exactly one trade outcome. One closed by an older run that died before writing it (or by any path that did not) is repaired here from the position's own recorded figures; the unique index makes this a no-op when it exists.
+  const final = await getPositionForDecision(db, o.userId, o.decision.id);
+  if (final && final.status === "CLOSED" && xq > ZERO && final.closedAt) {
+    await recordPaperOutcome(db, o.userId, outcomeOf(final, { avg: dec(final.avgEntryPrice), exitValue: dec(tot.exitValue), exitQty: xq, pnl: dec(final.realizedPnl), costs: dec(final.realizedCosts), reason: final.exitReason ?? "EXIT", closedAt: final.closedAt }));
+  }
+  return final;
+}
+/** The trade outcome of a closed position. Money is exact; the R-multiple is net P&L over the planned risk at the platform's native 8-decimal scale (never rounded to 2 places). */
+function outcomeOf(pos: PaperPositionRow, c: { avg: Dec; exitValue: Dec; exitQty: Dec; pnl: Dec; costs: Dec; reason: string; closedAt: Date }): PaperOutcomeInput {
+  const net = c.pnl - c.costs, risk = mul(abs0(dec(pos.avgEntryPrice) - dec(pos.initialStop)), dec(pos.initialQuantity), "up");
+  return { accountId: pos.accountId, decisionId: pos.decisionId, positionId: pos.id, instrument: pos.instrument, side: pos.side, quantity: pos.initialQuantity, entryPrice: str(c.avg, 8), exitPrice: str(div(c.exitValue, c.exitQty, "down"), 8), pnl: str(net, 2), rMultiple: risk > ZERO ? str(div(net, risk, "down"), 8) : null, exitReason: c.reason, openedAt: pos.openedAt, closedAt: c.closedAt };
 }
 const abs0 = (a: Dec): Dec => (a < ZERO ? -a : a);

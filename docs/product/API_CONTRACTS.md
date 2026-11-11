@@ -54,5 +54,27 @@ Machine description: `docs/api/openapi-session.json`. Tests: `tests/unit/api/opp
 | `GET /decisions/{id}/comparables` | `{comparables: {state: AVAILABLE|NOT_AVAILABLE, patterns, ...}}` taken from the decision's stored research package (historical-pattern agent). NOT_AVAILABLE with a reason code when no pattern provider ran (G-23); never invented. 404 for another user's decision. |
 Tests: `tests/unit/api/userApi.test.ts`, `tests/unit/trading/comparables.test.ts`, integration `tests/integration/trading/stage07.test.ts`.
 
+## Analytics read API (Stage 08; session-protected, owner-only, paper only)
+
+All eleven endpoints are `GET`, need a verified session and the private permission `analytics:read`, and return only the caller's own data (another user's data is never reachable; an ADMIN holds no private permission and gets 404). They are registered by the session-protected user API only; a source-scan test pins that none exists on a shared-token surface. They are NOT in `docs/api/openapi-session.json`, which by design covers only the shared intelligence modules (carry-over, see the gap register).
+
+| Endpoint | Query | Response `data` |
+|---|---|---|
+| `/analytics/overview` | `dataset=ALL\|VALIDATED\|FIXTURE` (optional; narrows `data` to exactly that set; any other value, or use on another endpoint, is 422) | `{all, validatedOnly, fixtureOnly}` performance metrics |
+| `/analytics/strategies` | `dimension=strategy\|version\|instrument\|timeframe\|regime\|exit\|stop\|target\|confidence\|risk\|plannedrr\|decision\|pattern` (optional; narrows `data` to that one slice set; unknown or misplaced = 422) | `byStrategy`, `byVersion`, `byInstrument`, `byTimeframe`, `byRegime`, `byExitReason`, `byStopBehaviour`, `byTargetBehaviour`, `byStopMoved`, `byConfidenceBand`, `byRiskVerdict`, `byPlannedRewardToRisk`, `byDecisionOutcome`, `bySignalType`, `bySignalPattern` |
+| `/analytics/channels`, `/independent`, `/agents`, `/decisions`, `/drift`, `/data-quality`, `/calibration` | none | the section of the report |
+| `/analytics/outcomes` | `finality=FINAL\|PARTIAL`, `limit<=200` | the user's latest attribution of each position (append-only records, newest first) |
+| `/analytics/insights` | `kind`, `limit<=200` | stored REVIEW-only insights |
+
+Every response carries the envelope (`contractVersion`, `generatedAt`, `dataset: PAPER`, `mode: PAPER`, `liveStatus: UNAVAILABLE`, `notice`, `data`, `state`) and, since Stage 08, **which stored snapshot it came from and whether it is current**:
+`snapshot: { id, asOf, createdAt, verifiedAt, evidenceHash, inputHash, configHash, algorithmVersions, createdBy, freshness, staleReason, complete, maxAgeSeconds }` and top-level `freshness`.
+- `freshness: CURRENT` - the snapshot was built from exactly the user's current evidence, settings and algorithm versions and is not older than `TWINS_LEARNING_SNAPSHOT_MAX_AGE_SECONDS` (default 3600; the platform-level pipeline counts it also reports age independently). Otherwise the API builds a new snapshot first.
+- `freshness: STALE` - served ONLY when the current evidence could not be analysed; `staleReason` says why. A stale snapshot is never presented as current. With no snapshot at all the request fails.
+- `complete: false` - an input source reached the 5,000-row read bound (G-50); the report is of the newest rows.
+- `asOf` is the newest record of the evidence (never the wall clock): the same evidence always reproduces the same report (`reportSha256` is stored with it).
+Metrics (`performance-metrics-v2`): `winRate` and `lossRate` (Wilson 95%), `expectancyR` (unrounded R; `exact` 8-place string; Student-t 95% interval with `degreesOfFreedom`), `payoffRatio` and `profitFactor` (computed in exact decimals; `exact` 8-place string; the profit factor reports no interval, with the reason), `maxDrawdown` (cumulative net P&L), `maxDrawdownPct` (**NOT_AVAILABLE**: needs an equity curve), `bySignalPattern` (**NOT_AVAILABLE**: needs the G-23 pattern provider). No figure is reported below the 30-outcome floor.
+
+Operator command (not an HTTP route): `scripts/ops/outcome-correction.ts` (dry run by default; see the acceptance report). It is the only way to supersede a FINAL attribution.
+
 ## Execution modes and lifecycle contract (Stage 07)
 Decision outcome (QUALIFIED, WAIT, REJECT, EVALUATION_ONLY, NO_TRADE) is separate from workflow state (PENDING, APPROVED, REJECTED, EXPIRED, SUPERSEDED, CANCELLED), which is separate from order status (PROPOSED, SUBMITTED, ACCEPTED, PARTIALLY_FILLED, FILLED, REJECTED, CANCELLED, EXPIRED) and position status (OPEN, CLOSED). Approval never creates an order; execution re-checks ownership, permission, approval, gate, fresh revalidation and kill switch, then creates one keyed order; fills are applied once against the order state they were computed from; positions are derived from fills. PAPER is the only operational mode. ASSISTED_LIVE and CONTROLLED_AUTO are refused by `checkExecutionGate`; their rules are specified and tested in `packages/types/src/platform/liveArchitecture.ts` but are called by no application code.

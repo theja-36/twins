@@ -38,5 +38,5 @@ export function telegramFunnel(channels: ReadonlyArray<{ channelId: string; chan
   });
   return { source: "TELEGRAM", channels: out, candidates, decisions: tallyDecisions(mine),
     unavailable: ["duplicate-signal analysis (duplicates are suppressed at intake and not counted per channel)", "stale-signal analysis (no per-claim staleness record)", "channel accuracy (it cannot be established without independently verified outcomes of the channel's calls; paper outcomes of TWINS decisions measure TWINS, not the channel)"],
-    note: "claims-to-candidates conversion is not wired (G-19), so Telegram-originated candidates, decisions and outcomes are expected to be zero until it is" };
+    note: "Telegram claims become candidates through the Stage 03 candidate cycle (G-19, closed); Telegram-originated decisions and outcomes exist only once such a candidate has been researched, decided, approved and executed in paper, so these figures are expected to be small or empty for a long time" };
 }

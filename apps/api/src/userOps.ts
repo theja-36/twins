@@ -4,7 +4,7 @@ import {
 } from "@twins/database";
 import { ApprovalError, approveDecision, cancelDecision, comparablePatterns, rejectDecision, type ComparablePatterns } from "@twins/decision";
 import { paperPortfolioProvider } from "@twins/execution";
-import { DEFAULT_OUTCOME_LEARNING, analyzeUser, type AnalyticsReport } from "@twins/outcomes";
+import { currentAnalytics, loadOutcomeLearningConfig, type AnalyticsView } from "@twins/outcomes";
 import { fileSpecProvider, memorySpecProvider } from "@twins/planning";
 
 /**
@@ -32,11 +32,15 @@ export interface UserOps {
   positions(userId: string, o: { status?: "OPEN" | "CLOSED"; limit: number }): Promise<Awaited<ReturnType<typeof listPaperPositions>>>;
   positionEvents(userId: string, positionId: string): Promise<Awaited<ReturnType<typeof listPositionEvents>>>;
   portfolio(userId: string, accountId: string): Promise<Awaited<ReturnType<typeof getAccountPortfolioFacts>>>;
-  analytics(userId: string, now: Date): Promise<{ report: AnalyticsReport; records: Awaited<ReturnType<typeof latestAttributions>> }>;
+  /** The stored analytics snapshot for the user's CURRENT evidence (rebuilt first when it is not current), with explicit freshness metadata. */
+  analytics(userId: string, now: Date): Promise<AnalyticsView>;
+  /** The user's attribution history (latest version of each position), newest first. */
+  outcomes(userId: string, o: { finality?: "FINAL" | "PARTIAL"; limit: number }): Promise<Awaited<ReturnType<typeof latestAttributions>>>;
   insights(userId: string, o: { kind?: string; limit: number }): Promise<Awaited<ReturnType<typeof listInsights>>>;
 }
 
 export function buildUserOps(db: Db, env: NodeJS.ProcessEnv = process.env): UserOps {
+  const learning = loadOutcomeLearningConfig(env); // the ONE authoritative configuration (strictly validated: an invalid value stops the API at start-up); the worker loads the same function, so both reach identical sufficiency verdicts
   const specs = env["TWINS_SPECS_FILE"] ? fileSpecProvider(env["TWINS_SPECS_FILE"]) : memorySpecProvider({ name: "no-specs", instruments: [], fees: [] });
   const evalDeps = { db, specs, regime: null, portfolio: paperPortfolioProvider(db), quotes: null, strategy: null };
   return {
@@ -59,7 +63,8 @@ export function buildUserOps(db: Db, env: NodeJS.ProcessEnv = process.env): User
     positions: (u, o) => listPaperPositions(db, u, o),
     positionEvents: (u, id) => listPositionEvents(db, u, id),
     portfolio: (u, accountId) => getAccountPortfolioFacts(db, u, accountId),
-    analytics: async (u, now) => { const r = await analyzeUser({ db, config: DEFAULT_OUTCOME_LEARNING }, u, now); return { report: r.report, records: r.records }; },
+    analytics: (u, now) => currentAnalytics({ db, config: learning, now: () => now }, u, "API"),
+    outcomes: (u, o) => latestAttributions(db, u, { mode: "PAPER", ...(o.finality ? { finality: o.finality } : {}), limit: o.limit }),
     insights: (u, o) => listInsights(db, u, o),
   };
 }

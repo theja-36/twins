@@ -181,6 +181,8 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   /** Stage 08: target of the owner-tied outcome_attributions foreign key. */
   idUserUnique: uniqueIndex("trade_outcomes_id_user_unique").on(t.id, t.userId),
   idx: index("trade_outcomes_user_idx").on(t.userId, t.mode, t.closedAt),
+  /** Stage 08 (A1, G-49): a paper position has AT MOST ONE trade outcome. Without this, racing writers could each record one (reproduced: three concurrent writers made three). */
+  paperPositionUnique: uniqueIndex("trade_outcomes_paper_position_unique").on(t.paperPositionId).where(sql`${t.paperPositionId} is not null`),
   ownerFk: foreignKey({ name: "trade_outcomes_owner_fk", columns: [t.accountId, t.userId], foreignColumns: [accounts.id, accounts.userId] }),
   decisionFk: foreignKey({ name: "trade_outcomes_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
   orderFk: foreignKey({ name: "trade_outcomes_order_fk", columns: [t.orderId, t.accountId], foreignColumns: [orders.id, orders.accountId] }),

@@ -90,12 +90,19 @@ export async function latestAttributionForPosition(db: Pick<Db, "transaction">, 
   return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from outcome_attributions where user_id = ${userId}::uuid and paper_position_id = ${positionId}::uuid order by version desc limit 1`); return r.rows[0] ? attrOf(row(r.rows[0])) : null; });
 }
 /** Idempotent on (position, version): a redelivered job inserts nothing. Returns the new id, or null when that version already exists. */
-export async function insertAttribution(db: Pick<Db, "transaction">, userId: string, a: NewAttribution): Promise<string | null> {
-  return withUser(db, userId, async (tx) => {
+async function insertAttributionIn(tx: unknown, userId: string, a: NewAttribution): Promise<string | null> {
     const r = await x(tx).execute(sql`insert into outcome_attributions (id, user_id, account_id, paper_position_id, outcome_id, decision_id, candidate_id, version, supersedes_id, correction_reason, finality, mode, data_source, candidate_source, setup, detector_version, channel_id, playbook_ref, instrument, timeframe_seconds, side, quantity, entry_price, exit_price, gross_pnl, costs, net_pnl, risk_amount, r_multiple, holding_seconds, exit_reason, trade, regime, agent_versions, evidence_refs, predicted, confidence_score, confidence_at, decided_at, opened_at, closed_at, data_quality, missing)
       values (gen_random_uuid(), ${userId}::uuid, ${a.accountId}::uuid, ${a.paperPositionId}::uuid, ${a.outcomeId}::uuid, ${a.decisionId}::uuid, ${a.candidateId}::uuid, ${a.version}, ${a.supersedesId}::uuid, ${a.correctionReason}, ${a.finality}, ${a.mode}, ${a.dataSource}, ${a.candidateSource}, ${a.setup}, ${a.detectorVersion}, ${a.channelId}, ${a.playbookRef === null ? null : JSON.stringify(a.playbookRef)}::jsonb, ${a.instrument}, ${a.timeframeSeconds}, ${a.side}, ${a.quantity}::numeric, ${a.entryPrice}::numeric, ${a.exitPrice}::numeric, ${a.grossPnl}::numeric, ${a.costs}::numeric, ${a.netPnl}::numeric, ${a.riskAmount}::numeric, ${a.rMultiple}::numeric, ${a.holdingSeconds}, ${a.exitReason}, ${JSON.stringify(a.trade)}::jsonb, ${a.regime === null ? null : JSON.stringify(a.regime)}::jsonb, ${JSON.stringify(a.agentVersions)}::jsonb, ${JSON.stringify(a.evidenceRefs)}::jsonb, ${JSON.stringify(a.predicted)}::jsonb, ${a.confidenceScore}::numeric, ${a.confidenceAt?.toISOString() ?? null}::timestamptz, ${a.decidedAt.toISOString()}::timestamptz, ${a.openedAt.toISOString()}::timestamptz, ${a.closedAt?.toISOString() ?? null}::timestamptz, ${JSON.stringify(a.dataQuality)}::jsonb, ${JSON.stringify(a.missing)}::jsonb)
       on conflict (paper_position_id, version) do nothing returning id`);
     return r.rows[0] ? (row(r.rows[0])["id"] as string) : null;
+}
+export async function insertAttribution(db: Pick<Db, "transaction">, userId: string, a: NewAttribution): Promise<string | null> {
+  return withUser(db, userId, async (tx) => {
+    // Concurrent workers queue per position, so the loser finds the winner's version and inserts nothing. (Without this the guard trigger can raise "already has an attribution" for the loser BEFORE ON CONFLICT is evaluated.)
+    await x(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"attribution:" + a.paperPositionId}, 0))`);
+    const have = await x(tx).execute(sql`select 1 from outcome_attributions where user_id = ${userId}::uuid and paper_position_id = ${a.paperPositionId}::uuid and version = ${a.version}`);
+    if (have.rows.length > 0) return null;
+    return insertAttributionIn(tx, userId, a);
   });
 }
 /** The latest version of every position's attribution for a user (the current truth; older versions remain as audit history). */
@@ -186,4 +193,76 @@ export async function usersWithPaperActivity(db: Pick<Db, "execute">, limit: num
 /** Cheap per-user check (one row-level-protected query): does this user have any paper position at all? The learning job skips users with nothing to learn from. */
 export async function hasPaperActivity(db: Pick<Db, "transaction">, userId: string): Promise<boolean> {
   return withUser(db, userId, async (tx) => (await x(tx).execute(sql`select 1 from paper_positions where user_id = ${userId}::uuid limit 1`)).rows.length > 0);
+}
+
+// ── analytics snapshots (Stage 08 A2) ───────────────────────────────────────────────────────────────────────────
+/** What the user's evidence looks like right now, as a small structure of counts, newest-record markers and content digests. Computed by ONE statement, so inside a REPEATABLE READ transaction it is consistent with every other read in that transaction. */
+export interface EvidenceFingerprint { attributions: { count: number; newestMicros: string; lastId: string }; decisions: { count: number; newestMicros: string; digest: string }; positions: { count: number; digest: string } }
+export async function evidenceFingerprint(db: Pick<Db, "transaction">, userId: string): Promise<EvidenceFingerprint> {
+  return withUser(db, userId, async (tx) => {
+    const r = row((await x(tx).execute(sql`select
+      (select count(*)::int from outcome_attributions a where a.user_id = ${userId}::uuid and a.mode = 'PAPER') as attr_n,
+      (select coalesce(floor(extract(epoch from max(a.created_at)) * 1000000)::bigint::text, '') from outcome_attributions a where a.user_id = ${userId}::uuid and a.mode = 'PAPER') as attr_newest,
+      (select coalesce(max(a.id::text), '') from outcome_attributions a where a.user_id = ${userId}::uuid and a.mode = 'PAPER') as attr_last,
+      (select count(*)::int from user_decisions d where d.user_id = ${userId}::uuid) as dec_n,
+      (select coalesce(floor(extract(epoch from max(d.created_at)) * 1000000)::bigint::text, '') from user_decisions d where d.user_id = ${userId}::uuid) as dec_newest,
+      (select coalesce(md5(string_agg(d.id::text || ':' || d.workflow_state || ':' || d.outcome || ':' || coalesce(d.research_package_id::text, '') || ':' || (exists (select 1 from paper_positions p where p.user_id = d.user_id and p.decision_id = d.id))::text || ':' || (exists (select 1 from decision_invalidations i where i.user_id = d.user_id and i.decision_id = d.id))::text, ',' order by d.id)), '') from user_decisions d where d.user_id = ${userId}::uuid) as dec_digest,
+      (select count(*)::int from paper_positions p where p.user_id = ${userId}::uuid) as pos_n,
+      (select coalesce(md5(string_agg(p.id::text || ':' || p.status || ':' || p.quantity::text || ':' || p.realized_pnl::text, ',' order by p.id)), '') from paper_positions p where p.user_id = ${userId}::uuid) as pos_digest`)).rows[0]);
+    return { attributions: { count: Number(r["attr_n"]), newestMicros: String(r["attr_newest"]), lastId: String(r["attr_last"]) }, decisions: { count: Number(r["dec_n"]), newestMicros: String(r["dec_newest"]), digest: String(r["dec_digest"]) }, positions: { count: Number(r["pos_n"]), digest: String(r["pos_digest"]) } };
+  });
+}
+export interface NewSnapshot { mode: "PAPER"; asOf: Date; evidenceHash: string; inputHash: string; algorithmVersions: unknown; config: unknown; configHash: string; watermarks: unknown; report: unknown; reportSha256: string; createdBy: "API" | "LEARNING_CYCLE" | "OPERATOR" }
+export interface SnapshotRow extends NewSnapshot { id: string; userId: string; createdAt: Date }
+const snapOf = (w: Record<string, unknown>): SnapshotRow => ({ id: w["id"] as string, userId: w["user_id"] as string, mode: "PAPER", asOf: d(w["as_of"]), evidenceHash: w["evidence_hash"] as string, inputHash: w["input_hash"] as string, algorithmVersions: w["algorithm_versions"], config: w["config"], configHash: w["config_hash"] as string, watermarks: w["watermarks"], report: w["report"], reportSha256: w["report_sha256"] as string, createdBy: w["created_by"] as SnapshotRow["createdBy"], createdAt: d(w["created_at"]) });
+/** Idempotent on (user, input hash): concurrent identical requests converge on ONE row (the loser reads the winner's). `created` says whether THIS call wrote it. */
+export async function insertSnapshot(db: Pick<Db, "transaction">, userId: string, s: NewSnapshot): Promise<{ snapshot: SnapshotRow; created: boolean }> {
+  return withUser(db, userId, async (tx) => {
+    await x(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"snapshot:" + userId + ":" + s.inputHash}, 0))`);
+    const ins = await x(tx).execute(sql`insert into analytics_snapshots (id, user_id, mode, as_of, evidence_hash, input_hash, algorithm_versions, config, config_hash, watermarks, report, report_sha256, created_by)
+      values (gen_random_uuid(), ${userId}::uuid, ${s.mode}, ${s.asOf.toISOString()}::timestamptz, ${s.evidenceHash}, ${s.inputHash}, ${JSON.stringify(s.algorithmVersions)}::jsonb, ${JSON.stringify(s.config)}::jsonb, ${s.configHash}, ${JSON.stringify(s.watermarks)}::jsonb, ${JSON.stringify(s.report)}::jsonb, ${s.reportSha256}, ${s.createdBy})
+      on conflict (user_id, input_hash) do nothing returning *`);
+    if (ins.rows[0]) return { snapshot: snapOf(row(ins.rows[0])), created: true };
+    const cur = await x(tx).execute(sql`select * from analytics_snapshots where user_id = ${userId}::uuid and input_hash = ${s.inputHash}`);
+    return { snapshot: snapOf(row(cur.rows[0])), created: false };
+  });
+}
+/** The newest snapshot built from exactly this evidence (and settings / algorithm versions), if any. */
+export async function findSnapshotByEvidence(db: Pick<Db, "transaction">, userId: string, evidenceHash: string): Promise<SnapshotRow | null> {
+  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from analytics_snapshots where user_id = ${userId}::uuid and mode = 'PAPER' and evidence_hash = ${evidenceHash} order by created_at desc, id desc limit 1`); return r.rows[0] ? snapOf(row(r.rows[0])) : null; });
+}
+export async function latestSnapshot(db: Pick<Db, "transaction">, userId: string): Promise<SnapshotRow | null> {
+  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from analytics_snapshots where user_id = ${userId}::uuid and mode = 'PAPER' order by created_at desc, id desc limit 1`); return r.rows[0] ? snapOf(row(r.rows[0])) : null; });
+}
+export async function getSnapshot(db: Pick<Db, "transaction">, userId: string, id: string): Promise<SnapshotRow | null> {
+  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from analytics_snapshots where user_id = ${userId}::uuid and id = ${id}::uuid`); return r.rows[0] ? snapOf(row(r.rows[0])) : null; });
+}
+/** CLOSED paper positions that have no FINAL attribution yet (normally 0 right after an ingest; a persistent count means a closed position is waiting for its trade outcome). */
+export async function countClosedWithoutFinal(db: Pick<Db, "transaction">, userId: string): Promise<number> {
+  return withUser(db, userId, async (tx) => Number(row((await x(tx).execute(sql`select count(*)::int as n from paper_positions p where p.user_id = ${userId}::uuid and p.status = 'CLOSED' and not exists (select 1 from outcome_attributions a where a.user_id = p.user_id and a.paper_position_id = p.id and a.finality = 'FINAL')`)).rows[0])["n"]));
+}
+
+// ── audited correction (Stage 08 A4) ────────────────────────────────────────────────────────────────────────────
+export interface CorrectionAudit { actor: string; reason: string; evidence: string; previousId: string; previousVersion: number; changes: string[] }
+/** One attribution of THIS user by id (another user's id is simply not found). */
+export async function getAttributionById(db: Pick<Db, "transaction">, userId: string, id: string): Promise<AttributionRow | null> {
+  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from outcome_attributions where user_id = ${userId}::uuid and id = ${id}::uuid`); return r.rows[0] ? attrOf(row(r.rows[0])) : null; });
+}
+export async function isUserActive(db: Pick<Db, "execute">, userId: string): Promise<boolean> {
+  const r = await db.execute(sql`select is_active from users where id = ${userId}::uuid`); return r.rows[0] ? (row(r.rows[0])["is_active"] as boolean) === true : false;
+}
+/**
+ * Writes a correction VERSION and its audit event in ONE transaction: a correction never exists without its audit record, and an audit record never exists for a correction that was not written. The original attribution is not touched (the table is append-only);
+ * the new version names it. Returns the new id, or null when that version already exists (a concurrent or repeated request: nothing is written, including no audit event).
+ */
+export async function insertCorrectionWithAudit(db: Pick<Db, "transaction">, userId: string, a: NewAttribution, audit: CorrectionAudit): Promise<string | null> {
+  return withUser(db, userId, async (tx) => {
+    await x(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"attribution:" + a.paperPositionId}, 0))`);
+    const have = await x(tx).execute(sql`select 1 from outcome_attributions where user_id = ${userId}::uuid and paper_position_id = ${a.paperPositionId}::uuid and version = ${a.version}`);
+    if (have.rows.length > 0) return null;
+    const id = await insertAttributionIn(tx, userId, a);
+    if (id === null) return null;
+    await x(tx).execute(sql`insert into audit_events (id, event_type, entity_type, entity_id, actor_type, actor_id, metadata) values (gen_random_uuid(), 'outcome.corrected', 'outcome_attribution', ${id}::uuid, 'user', ${audit.actor}, ${JSON.stringify({ ownerUserId: userId, paperPositionId: a.paperPositionId, previousAttributionId: audit.previousId, previousVersion: audit.previousVersion, newVersion: a.version, reason: audit.reason, evidence: audit.evidence, changes: audit.changes })}::jsonb)`);
+    return id;
+  });
 }
