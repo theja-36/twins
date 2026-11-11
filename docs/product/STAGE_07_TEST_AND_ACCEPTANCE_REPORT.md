@@ -1,9 +1,18 @@
 # Stage 07 test and acceptance report (2026-11-11)
 
-State: **ENGINEERING IMPLEMENTED — CI PENDING.**
+State: **ENGINEERING COMPLETE** — hosted CI green on commit 4dbea3f (run 43071795582).
+
+## Hosted CI (GitHub Actions): the completion evidence
+Branch `feat/master-build`. Commits `2a80496` (Stage 07) and `4dbea3f` (test-only correction). Not merged, not deployed.
+| Run | Commit | Result |
+|---|---|---|
+| [43070755420](https://github.com/theja-36/twins/actions/runs/43070755420) | 2a80496 | **failed**: only `offhostBackup.test.ts` ("expected 46 to be 45"): its three migration-count assertions (manifest, drill checks, verify output) still said 45. The test needs `pg_dump`/`pg_restore`, which were not installed locally, so it could not run before the push. Static, unit (20, 22) and crash recovery were already green. |
+| [43071795582](https://github.com/theja-36/twins/actions/runs/43071795582) | 4dbea3f | **success, all 7 jobs** |
+Run 43071795582 jobs: static (lint, typecheck, build, secret scan) OK; unit node 20 OK and node 22 OK (each **261 files, 4,178 tests passed**); integration node 20 OK and node 22 OK on PostgreSQL 16 + Redis 7 (**84 files passed, 4 skipped; 1,123 tests passed, 9 skipped**; includes `offhostBackup.test.ts`, `stage07.test.ts`, `stage07Concurrency.test.ts`, the fresh-chain migration, `verify-migrations` reporting **46 migrations recorded**, and the post-run audit-chain verification); crash recovery (real SIGKILL, node 22) OK (**3 files, 6 tests**: worker, research x2, and the three execution cases); ci-gate OK.
+The only change between the failing and the passing run is the three `45 -> 46` constants in `offhostBackup.test.ts`; no assertion was removed or weakened.
 
 ## Local results (revision 3: real PostgreSQL 16 + Redis 7, 2026-11-11)
-State remains **ENGINEERING IMPLEMENTED — CI PENDING**: hosted CI on Node 20 and Node 22 has not run, and Node 20/22 are not installed locally.
+State at the time of the local run: ENGINEERING IMPLEMENTED — CI PENDING. The hosted result is recorded in the next section.
 
 **Environment.** Docker Desktop (server 29.6.1) with the official `postgres:16-alpine` (PostgreSQL 16.15) and `redis:7-alpine` images, bound to 127.0.0.1 with the CI credentials (`twins_ci`, database `twins_ci`, Redis 6379 for the integration suite and 16379 for the crash tests, one container). Local Node: v26.13.0 (all runs), v24.14.1 (unit suite). No Node 20 or 22 exists on this machine and no Node image was downloaded, so the Node 20/22 matrix is NOT verified.
 
@@ -77,11 +86,6 @@ Local, in-memory evidence of the same logic (tests/unit/trading/fillRecovery.tes
 ## Decision watch authorization (M13-09)
 `decisions:read` was NOT intentionally a write permission: the model separates read and write everywhere else (`capital:*`, `risk-policy:*`, `broker:*`, `orders:*`) and keeps decision mutations behind `decisions:approve`. A bookmark is a write (an append to `decision_watches`), so it now has its own narrowest permission, **`decisions:watch`**: private (owner-scoped, a non-owner gets NOT_FOUND), held by TRADER only, not by ADMIN or a system principal, and not implying `decisions:approve`. Verified: the store function's only write is one insert into `decision_watches` (it reads `user_decisions` to check ownership and touches no approval, decision-state or execution table); the user id comes only from the session (a body `userId` / `user_id` / `ownerId` / `accountId` is rejected 422); the table is append-only with forced owner row-level security and a composite foreign key. Tests: contracts.test.ts (permission model: private, distinct, owner-only, ADMIN/system refused), userApi.test.ts (route registered under `decisions:watch`, no `decisions:read` route writes, `decisions:approve` still guards exactly approve/reject and cancel; another user's watch/unwatch attempts return 404 and only the caller's id reaches the data layer; ADMIN 404; unauthenticated 401), plus the existing integration watch isolation case (CI). The watch routes are new in this stage and not deployed, so no existing client depends on the old permission.
 
-## Not yet proven
-- Hosted CI on **Node 20 and Node 22** (not available locally; the only local runs are Node 26.13 and, for unit tests, 24.14).
-- `offhostBackup.test.ts` (needs `pg_dump`/`pg_restore`, not installed locally).
-- The 12 live-mode rows (M13-18..29) remain IN_PROGRESS and DISABLED by design (G-48).
-Stage 07 cannot be ENGINEERING COMPLETE until hosted CI passes on Node 20 and 22 with PostgreSQL 16 and Redis 7.
-
-## External validation (separate, Stage 10/11)
-Real broker adapter, live market data, real-money execution validation, legal/regulatory gates.
+## Remaining / deferred
+- The 12 live-mode rows (M13-18..29) remain IN_PROGRESS and DISABLED by design (G-48); Assisted Live and Controlled Auto are not enabled and Paper Trading is the only operational mode.
+- External dependencies (Stage 10/11): real broker adapter, live market data, real-money execution validation, legal/regulatory gates.
