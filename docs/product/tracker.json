@@ -7423,7 +7423,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "no predicted-versus-actual summary view yet beyond calibration bins and the stored fields; no real-price outcomes exist (G-20, G-29)"
@@ -7455,7 +7455,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "MAE / MFE are not recorded, so 'why' is limited to the exit reason and rule behaviour"
@@ -7487,7 +7487,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "Telegram-originated candidates now exist (G-19 closed) but need research, a decision, approval and a paper execution before any outcome exists, so channel outcomes are empty or small; duplicate and stale analysis unavailable"
@@ -7518,7 +7518,7 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "comparable-pattern listing missing (G-27); historical provider not wired (G-23)"
@@ -7550,7 +7550,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "figures rest on fixture-backed paper outcomes: not validated performance"
@@ -7582,7 +7582,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "no valid non-fixture outcomes exist, so nothing is or can be calibrated (G-24 stays open)"
@@ -7613,7 +7613,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": []
   },
@@ -7641,7 +7641,7 @@
    "status": "NOT_STARTED",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "MAE / MFE and reference prices are not recorded for paper fills; listed as missing on every outcome and as a research area"
@@ -7673,7 +7673,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "no MAE / MFE, so 'was the stop too tight / wide' cannot be judged"
@@ -7705,7 +7705,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "no MFE, so 'was the target too near / far' cannot be judged"
@@ -7737,7 +7737,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": []
   },
@@ -7766,7 +7766,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "estimates need later price bars from an OHLC provider; none is wired in the worker (G-20); verdict accuracy is not claimed"
@@ -7798,7 +7798,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "playbook version attribution is null (no playbook is bound to independent candidates or executed Telegram candidates yet)"
@@ -7829,7 +7829,7 @@
    "status": "IN_PROGRESS",
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": [
     "automatic adjustment is intentionally not implemented; any change must go through learning_versions with its own evaluation and activation controls"
@@ -7860,7 +7860,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ],
    "blockers": []
   },
@@ -10851,7 +10851,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -10876,7 +10876,7 @@
    "database": [],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -10903,7 +10903,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -10930,7 +10930,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -10955,7 +10955,7 @@
    "database": [],
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -10981,7 +10981,7 @@
    "evidence": [
     "tests/unit/outcomes/*.test.ts (73 tests, local 2026-11-11)",
     "tests/integration/outcomes/stage08.test.ts against Postgres 16 (CI green)",
-    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; hosted CI for the completion commit pending"
+    "Baseline a8e4ff5: hosted CI run 43073284600 green (Module 15 unit 52, integration stage08 12/12); Stage 08 completion (2026-11-11): local PostgreSQL 16 + Redis 7 run, see docs/product/STAGE_08_TEST_AND_ACCEPTANCE_REPORT.md; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11014,7 +11014,7 @@
     "tests/integration/outcomes/stage08Recovery.test.ts (4, reproduced red before the fix: 3 concurrent writers made 3 outcomes; an orphaned CLOSED position was never repaired)",
     "tests/integration/runtime/outcomeCrashRecovery.test.ts (6 real SIGKILL cases: inside the close transaction before COMMIT, immediately after it, during attribution before and after COMMIT, concurrent and repeated recovery)",
     "concurrent attribution writers fixed: insertAttribution serialised per position (found by the real-database test)",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11045,7 +11045,7 @@
     "tests/integration/outcomes/stage08Snapshots.test.ts (10: immutability, owner RLS, constraints, determinism, concurrent convergence, true snapshot isolation, STALE fallback)",
     "tests/unit/outcomes/completion.test.ts (hash and report determinism)",
     "tests/unit/database/outcomeIntegrityMigration.test.ts",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11070,7 +11070,7 @@
    "evidence": [
     "tests/integration/outcomes/stage08Snapshots.test.ts (API and learning cycle share one snapshot and verdicts; 9 invalid settings rejected by both)",
     "30-outcome floor and the 200 out-of-sample calibration requirement unchanged (tests/unit/outcomes/integrity.test.ts)",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11096,7 +11096,7 @@
    "evidence": [
     "tests/unit/outcomes/completion.test.ts (t critical values against published tables, float-trap decimals, 8-place R, interval widths)",
     "existing 52 Module 15 unit tests unchanged and passing",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11122,7 +11122,7 @@
    "evidence": [
     "tests/unit/outcomes/completion.test.ts",
     "tests/unit/api/userApi.test.ts (dimension and dataset narrow the response; unknown or misplaced values refused)",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   },
   {
@@ -11149,7 +11149,7 @@
    ],
    "evidence": [
     "tests/integration/outcomes/stage08Correction.test.ts (8: dry run, wrong token, written version with original preserved and one audit event, repeat, 3 concurrent confirmations, no change, cross-owner / unknown / inactive / PARTIAL / stale refusals, 14 invalid inputs, source scan)",
-    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; hosted CI for the completion commit pending"
+    "Verified 2026-11-11 against PostgreSQL 16.15 + Redis 7 (local, Docker): full integration suite 1,144 passed / 1 environment failure (offhostBackup needs pg_dump); crash job 12/12; unit 263 files / 4,209 tests; CI green on 444b759 (run 43089021401, 7/7 jobs): static, unit node 20 and 22 (263 files / 4,209 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (87 files passed, 5 skipped; 1,145 tests passed, 15 skipped; includes offhostBackup, stage08Recovery 4, stage08Snapshots 10, stage08Correction 8), crash recovery 12/12 (outcomeCrashRecovery 6), ci-gate"
    ]
   }
  ]

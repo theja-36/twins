@@ -1,6 +1,19 @@
 # Stage 08 — test and acceptance report (2026-11-11)
 
-State: **ENGINEERING IMPLEMENTED — CI PENDING.** Verified locally against PostgreSQL 16 and Redis 7; **hosted CI has not run** (nothing is committed or pushed), and **Node 20 and Node 22 are not installed locally**, so those two versions are unverified. It becomes ENGINEERING COMPLETE only after hosted CI is green on Node 20 and 22.
+State: **ENGINEERING COMPLETE** — hosted CI green on commit `444b759` (run 43089021401, 7/7 jobs, first attempt). The sections below the CI table record the earlier local verification against PostgreSQL 16.15 and Redis 7 (Node 20 and 22 were not installed locally; hosted CI covers them).
+
+## Hosted CI (GitHub Actions): the completion evidence
+Branch `feat/master-build`, commit `444b759` (pushed as a fast-forward from `a8e4ff5`; not merged, not deployed). Run [43089021401](https://github.com/theja-36/twins/actions/runs/43089021401): **success, all 7 jobs, first attempt**.
+| Job | Result |
+|---|---|
+| static (lint, typecheck, build, secret scan) | success |
+| unit, Node 20 | success: **263 files, 4,209 tests passed** |
+| unit, Node 22 | success: **263 files, 4,209 tests passed** |
+| integration, Node 20 (PostgreSQL 16, Redis 7) | success: **87 files passed, 5 skipped; 1,145 tests passed, 15 skipped** |
+| integration, Node 22 (PostgreSQL 16, Redis 7) | success: **87 files passed, 5 skipped; 1,145 tests passed, 15 skipped** |
+| crash recovery (real SIGKILL, Node 22) | success: **4 files, 12/12 tests**: worker 1, research 2, execution 3, **outcome 6** |
+| ci-gate | success |
+Inside the integration jobs (both Node versions): the fresh-chain migration recorded **47 migrations** and `verify-migrations` printed the 0046 line (*one trade outcome per paper position and append-only owner-only analytics snapshots present*); `stage08Recovery` 4/4, `stage08Snapshots` 10/10 and `stage08Correction` 8/8 passed; the post-run audit-chain verification passed (`audit_events` chain `ok`); and **`offhostBackup.test.ts` passed on both Node versions with the real `pg_dump`/`pg_restore`**, which could not run locally. The skipped tests are the real-SIGKILL files, which are gated and run in the dedicated crash-recovery job (all 12 passed there). No job failed and nothing was retried or changed after the push.
 
 ## Environment (local, Docker 29.6.1)
 `postgres:16-alpine` (PostgreSQL 16.15) and `redis:7-alpine`, loopback only, CI credentials (`twins_ci`). Node v26.13.0 for every run; v24.14.1 for the unit suite. Environment variables: `TWINS_CI=1 LIVE_TRADING=false NODE_ENV=test DATABASE_URL=postgresql://twins_ci:…@127.0.0.1:5432/twins_ci REDIS_URL=redis://127.0.0.1:6379` (crash job: Redis `…:16379`, `TWINS_CRASH_TEST=1`).
@@ -60,5 +73,5 @@ Student-t 95% critical values agree with the published table to < 0.0006 at df 2
 ## A4 — correction-command security evidence (`stage08Correction.test.ts`)
 Dry run writes nothing and prints a plan plus a 16-hex token; a wrong token, or a token from a different actor, is refused; a confirmed run appends version 2 (original row byte-identical, names its predecessor, reason + evidence + actor recorded, evidence marker added) and exactly one hash-chained `audit_events` row; repeating it → `ALREADY_APPLIED`; three concurrent confirmations → one version, one audit row; naming the superseded version → refused; no difference to write → `NO_CHANGE`. **Refusals (exit 3, nothing written):** another user's attribution, an unknown attribution, a nonexistent owner, an inactive owner, a PARTIAL attribution. **Usage errors (exit 2):** 14 invalid inputs (bad ids, short/long reason, malformed/missing/traversal evidence, bad actor, unknown flag such as `--sql`, repeated or valueless flags). A source scan proves the script has no SQL, no update/delete, and a single writer (`insertCorrectionWithAudit`).
 
-## Not proven / deferred
-Hosted CI on Node 20 and 22; `offhostBackup.test.ts`; MAE/MFE, OHLC estimates, real-price validation and the pattern provider (Stage 10/11, G-30/31/32/23); percent drawdown (no equity curve); snapshot paging beyond 5,000 rows (G-50); machine-readable OpenAPI for the user routes (G-51); the 12 live-mode rows stay deferred under G-48.
+## Remaining / deferred
+Real-price outcomes (G-30), MAE/MFE (G-31), OHLC estimates (G-32) and the pattern provider (G-23) are Stage 10/11 dependencies: the 8 Module 15 rows that depend on them or are limited by design (M15-01, 03, 04, 08, 09, 10, 12, 14) stay IN_PROGRESS / NOT_STARTED. Percent drawdown stays NOT_AVAILABLE (no equity curve). Open and minor: G-50 (snapshot inputs bounded at 5,000 rows, reported as `complete: false`) and G-51 (the user routes are not in the machine-readable OpenAPI document). The 12 live-mode rows stay deferred under G-48; Paper Trading is the only operational mode.

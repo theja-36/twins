@@ -1,6 +1,6 @@
 # Stage 08 — implementation report (Module 15 completion)
 
-Status: **ENGINEERING IMPLEMENTED — CI PENDING.** Local only (uncommitted) on `feat/master-build`, baseline `a8e4ff5`. Nothing merged or deployed. Paper Trading is the only operational mode; Assisted Live and Controlled Auto stay disabled (G-48).
+Status: **ENGINEERING COMPLETE** — hosted CI green on commit `444b759` (run 43089021401, 7/7 jobs). On `feat/master-build`, baseline `a8e4ff5`. Not merged, not deployed. Paper Trading is the only operational mode; Assisted Live and Controlled Auto stay disabled (G-48).
 
 Scope was the narrow completion approved after the baseline audit: Module 15 already existed and worked (attribution, metrics, calibration, drift, funnels, agent analytics, insights, the leased learning cycle, 11 owner-scoped endpoints). Nothing was rebuilt.
 
