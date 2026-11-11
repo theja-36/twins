@@ -1,6 +1,6 @@
 import { ACTION_APPROVE, checkExecutionGate, isQualifiedOutcome, type ExecutionMode } from "@twins/types";
 import { evaluateSafety } from "@twins/runtime-state";
-import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, createPaperPosition, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, setOrderStatus, updateExecutionRequest, updatePositionEntry, updatePositionExit, type PaperOrderRow, type PaperPositionRow, type StoredDecision } from "@twins/database";
+import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, applyPositionEntrySync, applyPositionExitSync, createPaperPositionOnce, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, setOrderStatus, updateExecutionRequest, type PaperOrderRow, type PaperPositionRow, type StoredDecision } from "@twins/database";
 import { revalidateDecision } from "@twins/decision";
 import { ceilTo2, dec, div, floorTo2, legCosts, mul, str, ZERO, type Dec, type EvaluationDeps, type FeeSchedule } from "@twins/planning";
 import type { ExecutionConfig } from "./config";
@@ -39,6 +39,18 @@ export async function requestPaperExecution(d: ExecutionDeps, o: { userId: strin
   const existing = await getExecutionRequest(d.eval.db, o.userId, dec0.id, "PAPER");
   if (existing && existing.state === "COMPLETED") { const ords = await listPaperOrders(d.eval.db, o.userId, { decisionId: dec0.id, limit: 20 }); const entry = ords.find((x) => x.purpose === "ENTRY"); return { status: "FILLED", requestId: existing.id, orderId: entry?.id ?? "", duplicate: true, filledQuantity: entry?.filledQuantity ?? "0" }; }
   if (existing && (existing.state === "REJECTED" || existing.state === "FAILED")) return { status: "REFUSED", reasons: ["request_previously_" + existing.state.toLowerCase()], checks };
+
+  // a retry after a crash: the entry already FILLED (committed). Executing again is meaningless and re-validating must not undo it, so only the follow-up is repaired (position + request), with no new order or fill.
+  if (existing) {
+    const prior = (await listPaperOrders(d.eval.db, o.userId, { decisionId: dec0.id, limit: 20 })).find((x) => x.purpose === "ENTRY" && x.status === "FILLED");
+    const c0 = prior ? await getCandidate(d.eval.db, dec0.candidateId) : null;
+    const s0 = c0 && d.eval.specs ? await d.eval.specs.instrument({ exchange: c0.exchange, underlying: c0.underlying, instrumentType: c0.strike !== null && c0.optionType !== null ? "option" : "equity", at: t }).catch(() => null) : null;
+    const f0 = s0 && d.eval.specs ? await d.eval.specs.fees({ segment: s0.segment, at: t }).catch(() => null) : null;
+    if (prior && c0 && s0 && f0) {
+      const healed = await healEntryFill(d, { userId: o.userId, orderId: prior.id, decision: dec0, rules: rulesFor(d, s0.lotSize, c0, f0, dec0, s0.instrumentType) });
+      return { status: "FILLED", requestId: existing.id, orderId: prior.id, duplicate: true, filledQuantity: healed.filledQuantity };
+    }
+  }
 
   add("execution_enabled", d.config.enabled, d.config.enabled ? "paper execution is enabled" : "paper execution is disabled (TWINS_EXECUTION_ENABLED)");
   const perm = await hasPaperPermission(d.eval.db, o.userId, dec0.accountId);
@@ -81,7 +93,7 @@ export function rulesFor(d: ExecutionDeps, lotSize: string, cand: { expiry: stri
 export async function fillOrder(d: ExecutionDeps, o: { userId: string; orderId: string; fees: FeeSchedule; lotSize: string; decision: StoredDecision; rules: PositionRules }): Promise<{ status: "ORDER_OPEN" | "PARTIALLY_FILLED" | "FILLED"; filledQuantity: string; reason?: string }> {
   const t = now(d), order = await getPaperOrder(d.eval.db, o.userId, o.orderId);
   if (!order) throw new Error("order not found");
-  if (order.status === "FILLED") return { status: "FILLED", filledQuantity: order.filledQuantity };
+  if (order.status === "FILLED") { await healEntryFill(d, o); return { status: "FILLED", filledQuantity: order.filledQuantity }; } // the fill is committed: make sure the position and the request reflect it (a worker may have died in between)
   if (order.status !== "ACCEPTED" && order.status !== "PARTIALLY_FILLED") return { status: "ORDER_OPEN", filledQuantity: order.filledQuantity, reason: `order is ${order.status}` };
   const px: FreshPrice = await freshPrice(d.prices, { exchange: order.exchange, symbol: order.instrument }, t, d.config.maxPriceAgeSeconds);
   if (!px.ok) { d.log?.("execution.no_price", { orderId: order.id, reason: px.reason }); return { status: order.status === "PARTIALLY_FILLED" ? "PARTIALLY_FILLED" : "ORDER_OPEN", filledQuantity: order.filledQuantity, reason: `no usable price: ${px.reason}` }; }
@@ -92,12 +104,24 @@ export async function fillOrder(d: ExecutionDeps, o: { userId: string; orderId: 
   let step = remaining;
   if (d.config.fillFraction < 1) { const part = (mul(dec(order.quantity), dec(d.config.fillFraction), "down") / lot) * lot; step = part < lot ? lot : part; if (step > remaining) step = remaining; } // partial fills, in whole lots
   const costs = legCosts(o.fees, order.side, fill, step / dec(1));
-  await insertPaperFill(d.eval.db, o.userId, { orderId: order.id, quantity: str(step, 8), price: str(fill, 8), costs: str(costs.total, 2), priceSource: px.source, priceAsOf: px.asOf });
-  const pos = await syncPosition(d, { userId: o.userId, decision: o.decision, rules: o.rules });
-  const after = (await getPaperOrder(d.eval.db, o.userId, order.id)) as PaperOrderRow;
-  if (order.purpose === "ENTRY" && after.status === "FILLED") { const rq = await getExecutionRequest(d.eval.db, o.userId, o.decision.id, "PAPER"); if (rq && rq.state === "ELIGIBLE") await updateExecutionRequest(d.eval.db, o.userId, rq.id, "COMPLETED", rq.checks, []); }
-  void pos;
+  const applied = await insertPaperFill(d.eval.db, o.userId, { orderId: order.id, quantity: str(step, 8), price: str(fill, 8), costs: str(costs.total, 2), priceSource: px.source, priceAsOf: px.asOf, expectedFilledQuantity: order.filledQuantity });
+  if (applied === null) { // another worker filled this order since we read it: nothing is applied twice; report the order as it now stands
+    const now2 = (await getPaperOrder(d.eval.db, o.userId, order.id)) as PaperOrderRow;
+    return { status: now2.status === "FILLED" ? "FILLED" : now2.status === "PARTIALLY_FILLED" ? "PARTIALLY_FILLED" : "ORDER_OPEN", filledQuantity: now2.filledQuantity, reason: "order was filled concurrently" };
+  }
+  const after = await healEntryFill(d, o);
   return { status: after.status === "FILLED" ? "FILLED" : "PARTIALLY_FILLED", filledQuantity: after.filledQuantity };
+}
+
+/**
+ * The step that follows every committed fill: re-derive the position from ALL fills (idempotent), then complete the entry's execution request once the entry order is FILLED. It is called after a new fill, when an order that is already
+ * FILLED is seen again (a retry), and by the recovery sweep, so a worker that died between the fill and this step is repaired by whichever of those comes first, and running it again changes nothing.
+ */
+export async function healEntryFill(d: ExecutionDeps, o: { userId: string; orderId: string; decision: StoredDecision; rules: PositionRules }): Promise<PaperOrderRow> {
+  await syncPosition(d, { userId: o.userId, decision: o.decision, rules: o.rules });
+  const after = (await getPaperOrder(d.eval.db, o.userId, o.orderId)) as PaperOrderRow;
+  if (after.purpose === "ENTRY" && after.status === "FILLED") { const rq = await getExecutionRequest(d.eval.db, o.userId, o.decision.id, "PAPER"); if (rq && rq.state === "ELIGIBLE") await updateExecutionRequest(d.eval.db, o.userId, rq.id, "COMPLETED", rq.checks, []); }
+  return after;
 }
 
 /**
@@ -113,23 +137,26 @@ export async function syncPosition(d: ExecutionDeps, o: { userId: string; decisi
   const cand = await getCandidate(db, o.decision.candidateId); if (!cand) throw new Error("candidate missing");
   const dirn = cand.side === "BUY" ? dec(1) : dec(-1);
   const rawPnl = mul(dec(tot.exitValue) - mul(avg, xq), dirn), pnl = rawPnl >= ZERO ? floorTo2(rawPnl) : -ceilTo2(-rawPnl), costs = ceilTo2(dec(tot.costs));
-  let pos = await getPositionForDecision(db, o.userId, o.decision.id);
+  let pos = await getPositionForDecision(db, o.userId, o.decision.id), justOpened = false;
   if (!pos) {
     const entryOrder = (await listPaperOrders(db, o.userId, { decisionId: o.decision.id, limit: 20 })).find((x) => x.purpose === "ENTRY");
-    pos = await createPaperPosition(db, o.userId, { accountId: o.decision.accountId, decisionId: o.decision.id, instrument: cand.underlying, exchange: cand.exchange, side: cand.side, quantity: str(open, 8), initialQuantity: entryOrder?.quantity ?? str(eq, 8), avgEntryPrice: str(avg, 8), stopLoss: String(cand.stopLoss), targets: cand.targets.map(String), rules: { ...o.rules, plannedMaxLoss: o.decision.permittedSize?.maxLossAtStop ?? null } });
-    await addPositionEvent(db, o.userId, pos.id, "OPENED", { quantity: str(open, 8), avgEntryPrice: str(avg, 8), decisionId: o.decision.id });
-    await addMonitoringEvent(db, o.userId, { accountId: pos.accountId, decisionId: o.decision.id, kind: "ENTRY_FILLED", payload: { quantity: str(open, 8), avgEntryPrice: str(avg, 8) } });
-  } else if (pos.status === "OPEN") {
+    const made = await createPaperPositionOnce(db, o.userId, { accountId: o.decision.accountId, decisionId: o.decision.id, instrument: cand.underlying, exchange: cand.exchange, side: cand.side, quantity: str(open, 8), initialQuantity: entryOrder?.quantity ?? str(eq, 8), avgEntryPrice: str(avg, 8), stopLoss: String(cand.stopLoss), targets: cand.targets.map(String), rules: { ...o.rules, plannedMaxLoss: o.decision.permittedSize?.maxLossAtStop ?? null } });
+    pos = made.position; justOpened = made.created;
+    if (made.created) { // only the run that created the position records its opening, so a recovery or a racing worker never duplicates it
+      await addPositionEvent(db, o.userId, pos.id, "OPENED", { quantity: str(open, 8), avgEntryPrice: str(avg, 8), decisionId: o.decision.id });
+      await addMonitoringEvent(db, o.userId, { accountId: pos.accountId, decisionId: o.decision.id, kind: "ENTRY_FILLED", payload: { quantity: str(open, 8), avgEntryPrice: str(avg, 8) } });
+    }
+  }
+  if (pos && !justOpened && pos.status === "OPEN") { // a position created by this very run already matches the fills; an existing one (earlier run, racing worker) is brought in line
     if (dec(pos.quantity) !== open || dec(pos.avgEntryPrice) !== avg) {
-      if (xq === ZERO) { await updatePositionEntry(db, o.userId, pos.id, str(open, 8), str(avg, 8)); await addPositionEvent(db, o.userId, pos.id, "ENTRY_FILL", { quantity: str(open, 8), avgEntryPrice: str(avg, 8) }); }
+      if (xq === ZERO) await applyPositionEntrySync(db, o.userId, pos.id, { quantity: str(open, 8), avgEntryPrice: str(avg, 8) }); // atomic with its event: one ENTRY_FILL per real change, even with racing workers
     }
     if (xq > ZERO && (dec(pos.quantity) !== open || dec(pos.realizedPnl) !== pnl)) {
       const closing = open === ZERO;
       const exitOrders = (await listPaperOrders(db, o.userId, { decisionId: o.decision.id, limit: 100 })).filter((x) => x.purpose === "EXIT" && dec(x.filledQuantity) > ZERO);
       const reason = exitOrders.length ? (exitOrders[exitOrders.length - 1] as PaperOrderRow).exitReason ?? "EXIT" : "EXIT";
-      await updatePositionExit(db, o.userId, pos.id, { quantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), close: closing ? { reason, at: t } : null });
-      await addPositionEvent(db, o.userId, pos.id, closing ? "CLOSED" : "PARTIAL_EXIT", { openQuantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), reason });
-      if (closing) {
+      const changed = await applyPositionExitSync(db, o.userId, pos.id, { quantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), close: closing ? { reason, at: t } : null, eventPayload: { openQuantity: str(open, 8), realizedPnl: str(pnl, 2), realizedCosts: str(costs, 2), reason } });
+      if (closing && changed) { // only the worker that actually closed the position records the outcome
         const net = pnl - costs, risk = mul(abs0(dec(pos.avgEntryPrice) - dec(pos.initialStop)), dec(pos.initialQuantity), "up");
         await recordPaperOutcome(db, o.userId, { accountId: pos.accountId, decisionId: pos.decisionId, positionId: pos.id, instrument: pos.instrument, side: pos.side, quantity: pos.initialQuantity, entryPrice: str(avg, 8), exitPrice: str(div(dec(tot.exitValue), xq, "down"), 8), pnl: str(net, 2), rMultiple: risk > ZERO ? str(div(net, risk, "down"), 2) : null, exitReason: reason, openedAt: pos.openedAt, closedAt: t });
       }

@@ -1,8 +1,8 @@
 import {
-  getAccountPortfolioFacts, getApproval, getDecision, getEffectiveCapitalProfile, getEffectiveRiskPolicy, latestAttributions, listActiveControls, listCapitalProfileVersions, listDecisionEvents, listDecisions, listInsights, listPaperFills, listPaperOrders, listPaperPositions, listUserAccounts, listPositionEvents,
+  getAccountPortfolioFacts, getApproval, getResearchPackageById, isDecisionWatched, recordDecisionWatch, getDecision, getEffectiveCapitalProfile, getEffectiveRiskPolicy, latestAttributions, listActiveControls, listCapitalProfileVersions, listDecisionEvents, listDecisions, listInsights, listPaperFills, listPaperOrders, listPaperPositions, listUserAccounts, listPositionEvents,
   type Db,
 } from "@twins/database";
-import { ApprovalError, approveDecision, cancelDecision, rejectDecision } from "@twins/decision";
+import { ApprovalError, approveDecision, cancelDecision, comparablePatterns, rejectDecision, type ComparablePatterns } from "@twins/decision";
 import { paperPortfolioProvider } from "@twins/execution";
 import { DEFAULT_OUTCOME_LEARNING, analyzeUser, type AnalyticsReport } from "@twins/outcomes";
 import { fileSpecProvider, memorySpecProvider } from "@twins/planning";
@@ -21,6 +21,9 @@ export interface UserOps {
   approve(userId: string, o: { decisionId: string; idempotencyKey: string; reason?: string }): Promise<unknown>;
   reject(userId: string, o: { decisionId: string; idempotencyKey: string; reason?: string }): Promise<unknown>;
   cancel(userId: string, o: { decisionId: string; reason: string }): Promise<string>;
+  watch(userId: string, o: { decisionId: string; action: "WATCH" | "UNWATCH"; idempotencyKey: string; reason: string | null }): Promise<{ status: "RECORDED" | "DUPLICATE" | "NOT_FOUND"; watching: boolean }>;
+  watched(userId: string, decisionId: string): Promise<boolean>;
+  comparables(userId: string, decisionId: string): Promise<ComparablePatterns | null>;
   capital(userId: string, accountId: string, now: Date): Promise<{ effective: Awaited<ReturnType<typeof getEffectiveCapitalProfile>>; versions: Awaited<ReturnType<typeof listCapitalProfileVersions>> }>;
   riskPolicy(userId: string, accountId: string, now: Date): Promise<Awaited<ReturnType<typeof getEffectiveRiskPolicy>>>;
   controls(userId: string, now: Date): Promise<Awaited<ReturnType<typeof listActiveControls>>>;
@@ -45,6 +48,9 @@ export function buildUserOps(db: Db, env: NodeJS.ProcessEnv = process.env): User
     approve: (u, o) => approveDecision(evalDeps, { userId: u, ...o }),
     reject: (u, o) => rejectDecision(evalDeps, { userId: u, ...o }),
     cancel: (u, o) => cancelDecision(evalDeps, { userId: u, decisionId: o.decisionId, reason: o.reason, actor: "user" }),
+    watch: (u, o) => recordDecisionWatch(db, u, o),
+    watched: (u, id) => isDecisionWatched(db, u, id),
+    comparables: async (u, id) => { const d = await getDecision(db, u, id); if (!d) return null; const p = d.researchPackageId ? await getResearchPackageById(db, d.researchPackageId) : null; return comparablePatterns(p ? p.agentResults : null); },
     capital: async (u, accountId, now) => ({ effective: await getEffectiveCapitalProfile(db, u, accountId, now), versions: await listCapitalProfileVersions(db, u, accountId) }),
     riskPolicy: (u, accountId, now) => getEffectiveRiskPolicy(db, u, accountId, now),
     controls: (u, now) => listActiveControls(db, u, now),

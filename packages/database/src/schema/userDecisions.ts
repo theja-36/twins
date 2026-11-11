@@ -188,3 +188,24 @@ export const tradeOutcomes = pgTable("trade_outcomes", {
   sourceCheck: check("trade_outcomes_source_check", sql`(${t.mode} = 'PAPER' and ((${t.paperTradeId} is not null) <> (${t.paperPositionId} is not null)) and ${t.orderId} is null) or (${t.mode} = 'LIVE' and ${t.orderId} is not null and ${t.paperTradeId} is null and ${t.paperPositionId} is null)`),
   timeCheck: check("trade_outcomes_time_check", sql`${t.closedAt} >= ${t.openedAt} and ${t.quantity} > 0`),
 }));
+
+/**
+ * Stage 07 (G-27, M13-09): the WATCH / UNWATCH actions on a decision. A watch is a private bookmark: it never approves, rejects, consumes an approval or changes the decision's workflow state, and it grants nothing.
+ * Append-only; the latest event of a decision decides whether it is watched. Owner-tied to the decision by a composite foreign key, protected by row-level security, idempotent per user and key.
+ */
+export const decisionWatches = pgTable("decision_watches", {
+  id: idColumn(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "restrict" }),
+  decisionId: uuid("decision_id").notNull(),
+  action: text("action").notNull(),
+  reason: text("reason"),
+  idempotencyKey: text("idempotency_key").notNull(),
+  at: timestamp("at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  idx: index("decision_watches_decision_idx").on(t.decisionId, t.at),
+  userIdx: index("decision_watches_user_idx").on(t.userId, t.at),
+  keyUnique: uniqueIndex("decision_watches_user_key_unique").on(t.userId, t.idempotencyKey),
+  decisionFk: foreignKey({ name: "decision_watches_decision_fk", columns: [t.decisionId, t.userId], foreignColumns: [userDecisions.id, userDecisions.userId] }),
+  actionCheck: check("decision_watches_action_check", oneOf(t.action, ["WATCH", "UNWATCH"])),
+  keyCheck: check("decision_watches_key_check", sql`length(${t.idempotencyKey}) between 8 and 128`),
+}));

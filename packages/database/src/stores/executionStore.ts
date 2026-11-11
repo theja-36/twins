@@ -35,6 +35,8 @@ const ordOf = (r: Record<string, unknown>): PaperOrderRow => ({ id: r["id"] as s
 /** Idempotent on (user, key): a retry of the same order request returns the stored order. */
 export async function createPaperOrder(db: Pick<Db, "transaction">, userId: string, o: { accountId: string; decisionId: string; executionRequestId: string; positionId: string | null; purpose: "ENTRY" | "EXIT"; exitReason: string | null; instrument: string; exchange: string; side: "BUY" | "SELL"; orderType: "MARKET" | "LIMIT"; quantity: string; limitPrice: string | null; idempotencyKey: string }): Promise<{ order: PaperOrderRow; created: boolean }> {
   return withUser(db, userId, async (tx) => {
+    // check-then-insert must be atomic: concurrent requests for one order key queue here, and the loser finds the winner's order instead of failing the quantity guard or the unique key
+    await x(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"paper_order:" + userId + ":" + o.idempotencyKey}, 0))`);
     const ex = await x(tx).execute(sql`select * from paper_orders where user_id = ${userId}::uuid and idempotency_key = ${o.idempotencyKey}`);
     if (ex.rows[0]) return { order: ordOf(row(ex.rows[0])), created: false };
     const r = await x(tx).execute(sql`insert into paper_orders (id, user_id, account_id, decision_id, execution_request_id, position_id, purpose, exit_reason, instrument, exchange, side, order_type, quantity, limit_price, idempotency_key) values (gen_random_uuid(), ${userId}::uuid, ${o.accountId}::uuid, ${o.decisionId}::uuid, ${o.executionRequestId}::uuid, ${o.positionId}::uuid, ${o.purpose}, ${o.exitReason}, ${o.instrument}, ${o.exchange}, ${o.side}, ${o.orderType}, ${o.quantity}::numeric, ${o.limitPrice}::numeric, ${o.idempotencyKey}) returning *`);
@@ -54,8 +56,20 @@ export async function listPaperOrders(db: Pick<Db, "transaction">, userId: strin
   });
 }
 /** Appends a fill. The database applies it to the order (filled quantity, average price, status) and refuses it if it exceeds the remaining quantity or breaks a limit price. */
-export async function insertPaperFill(db: Pick<Db, "transaction">, userId: string, f: { orderId: string; quantity: string; price: string; costs: string; priceSource: "FIXTURE" | "LIVE" | "HISTORICAL"; priceAsOf: Date }): Promise<string> {
-  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`insert into paper_fills (id, user_id, order_id, quantity, price, costs, price_source, price_as_of) values (gen_random_uuid(), ${userId}::uuid, ${f.orderId}::uuid, ${f.quantity}::numeric, ${f.price}::numeric, ${f.costs}::numeric, ${f.priceSource}, ${f.priceAsOf.toISOString()}::timestamptz) returning id`); return (r.rows[0] as { id: string }).id; });
+/**
+ * Records one fill. Stage 07 (G-47): when `expectedFilledQuantity` is given, the fill is applied only if the order's filled quantity is STILL that value, checked under a per-order advisory lock in the same transaction as
+ * the insert. Two concurrent fill attempts that read the same order state therefore apply ONE fill; the other returns null and re-reads. (The database also refuses over-fills and illegal order states on its own.)
+ */
+export async function insertPaperFill(db: Pick<Db, "transaction">, userId: string, f: { orderId: string; quantity: string; price: string; costs: string; priceSource: "FIXTURE" | "LIVE" | "HISTORICAL"; priceAsOf: Date; expectedFilledQuantity?: string }): Promise<string | null> {
+  return withUser(db, userId, async (tx) => {
+    if (f.expectedFilledQuantity !== undefined) {
+      await x(tx).execute(sql`select pg_advisory_xact_lock(hashtextextended(${"paper_fill:" + f.orderId}, 0))`);
+      const cur = await x(tx).execute(sql`select (filled_quantity = ${f.expectedFilledQuantity}::numeric) as same from paper_orders where id = ${f.orderId}::uuid and user_id = ${userId}::uuid`);
+      if (!cur.rows[0] || (cur.rows[0] as { same: boolean }).same !== true) return null;
+    }
+    const r = await x(tx).execute(sql`insert into paper_fills (id, user_id, order_id, quantity, price, costs, price_source, price_as_of) values (gen_random_uuid(), ${userId}::uuid, ${f.orderId}::uuid, ${f.quantity}::numeric, ${f.price}::numeric, ${f.costs}::numeric, ${f.priceSource}, ${f.priceAsOf.toISOString()}::timestamptz) returning id`);
+    return (r.rows[0] as { id: string }).id;
+  });
 }
 export async function listPaperFills(db: Pick<Db, "transaction">, userId: string, orderId: string): Promise<Array<{ id: string; quantity: string; price: string; costs: string; priceSource: string; filledAt: Date }>> {
   return withUser(db, userId, async (tx) => (await x(tx).execute(sql`select * from paper_fills where user_id = ${userId}::uuid and order_id = ${orderId}::uuid order by filled_at, id`)).rows.map((q) => { const w = row(q); return { id: w["id"] as string, quantity: String(w["quantity"]), price: String(w["price"]), costs: String(w["costs"]), priceSource: w["price_source"] as string, filledAt: d(w["filled_at"]) }; }));
@@ -65,6 +79,35 @@ export interface PaperPositionRow { id: string; userId: string; accountId: strin
 const posOf = (r: Record<string, unknown>): PaperPositionRow => ({ id: r["id"] as string, userId: r["user_id"] as string, accountId: r["account_id"] as string, decisionId: r["decision_id"] as string, instrument: r["instrument"] as string, exchange: r["exchange"] as string, side: r["side"] as "BUY" | "SELL", quantity: String(r["quantity"]), initialQuantity: String(r["initial_quantity"]), avgEntryPrice: String(r["avg_entry_price"]), initialStop: String(r["initial_stop"]), stopLoss: String(r["stop_loss"]), targets: ((r["targets"] ?? []) as unknown[]).map(String), rules: (r["rules"] ?? {}) as Record<string, unknown>, realizedPnl: String(r["realized_pnl"]), realizedCosts: String(r["realized_costs"]), status: r["status"] as "OPEN" | "CLOSED", exitReason: (r["exit_reason"] ?? null) as string | null, openedAt: d(r["opened_at"]), closedAt: r["closed_at"] ? d(r["closed_at"]) : null });
 export async function createPaperPosition(db: Pick<Db, "transaction">, userId: string, p: { accountId: string; decisionId: string; instrument: string; exchange: string; side: "BUY" | "SELL"; quantity: string; initialQuantity: string; avgEntryPrice: string; stopLoss: string; targets: readonly string[]; rules: unknown }): Promise<PaperPositionRow> {
   return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`insert into paper_positions (id, user_id, account_id, decision_id, instrument, exchange, side, quantity, initial_quantity, avg_entry_price, initial_stop, stop_loss, targets, rules) values (gen_random_uuid(), ${userId}::uuid, ${p.accountId}::uuid, ${p.decisionId}::uuid, ${p.instrument}, ${p.exchange}, ${p.side}, ${p.quantity}::numeric, ${p.initialQuantity}::numeric, ${p.avgEntryPrice}::numeric, ${p.stopLoss}::numeric, ${p.stopLoss}::numeric, ${JSON.stringify(p.targets)}::jsonb, ${JSON.stringify(p.rules)}::jsonb) returning *`); return posOf(row(r.rows[0])); });
+}
+/**
+ * Conflict-safe position creation (G-47): one position per decision, enforced by the unique index. When another worker (or an earlier, interrupted run) already created it, the existing row is returned with `created: false`,
+ * so the caller records the OPENED event exactly once instead of failing or duplicating.
+ */
+export async function createPaperPositionOnce(db: Pick<Db, "transaction">, userId: string, p: Parameters<typeof createPaperPosition>[2]): Promise<{ position: PaperPositionRow; created: boolean }> {
+  return withUser(db, userId, async (tx) => {
+    const ins = await x(tx).execute(sql`insert into paper_positions (id, user_id, account_id, decision_id, instrument, exchange, side, quantity, initial_quantity, avg_entry_price, initial_stop, stop_loss, targets, rules) values (gen_random_uuid(), ${userId}::uuid, ${p.accountId}::uuid, ${p.decisionId}::uuid, ${p.instrument}, ${p.exchange}, ${p.side}, ${p.quantity}::numeric, ${p.initialQuantity}::numeric, ${p.avgEntryPrice}::numeric, ${p.stopLoss}::numeric, ${p.stopLoss}::numeric, ${JSON.stringify(p.targets)}::jsonb, ${JSON.stringify(p.rules)}::jsonb) on conflict (decision_id) do nothing returning *`);
+    if (ins.rows[0]) return { position: posOf(row(ins.rows[0])), created: true };
+    const cur = await x(tx).execute(sql`select * from paper_positions where user_id = ${userId}::uuid and decision_id = ${p.decisionId}::uuid`);
+    return { position: posOf(row(cur.rows[0])), created: false };
+  });
+}
+/**
+ * Decisions whose committed ENTRY fills are not (yet) reflected in the position or the execution request: the footprint of a worker that died after a fill committed and before the position was written (G-47).
+ * Found when (a) an entry order has fills and the decision has no position, (b) an OPEN position's quantity differs from the quantity its fills imply, or (c) the entry order is FILLED and its request is still ELIGIBLE.
+ * Read-only; the caller repairs by re-deriving the position from the fills, which is idempotent.
+ */
+export async function listDecisionsNeedingPositionSync(db: Pick<Db, "transaction">, userId: string, limit: number): Promise<string[]> {
+  return withUser(db, userId, async (tx) => {
+    const r = await x(tx).execute(sql`select o.decision_id from paper_orders o
+      where o.user_id = ${userId}::uuid and o.purpose = 'ENTRY' and o.filled_quantity > 0 and (
+        not exists (select 1 from paper_positions p where p.user_id = o.user_id and p.decision_id = o.decision_id)
+        or exists (select 1 from paper_positions p where p.user_id = o.user_id and p.decision_id = o.decision_id and p.status = 'OPEN' and p.quantity <>
+             (select coalesce(sum(case when po.purpose = 'ENTRY' then f.quantity else -f.quantity end), 0) from paper_fills f join paper_orders po on po.id = f.order_id and po.user_id = f.user_id where po.user_id = o.user_id and po.decision_id = o.decision_id))
+        or (o.status = 'FILLED' and exists (select 1 from execution_requests r where r.user_id = o.user_id and r.decision_id = o.decision_id and r.mode = 'PAPER' and r.state = 'ELIGIBLE'))
+      ) group by o.decision_id order by min(o.created_at) limit ${limit}`);
+    return r.rows.map((q) => String(row(q)["decision_id"]));
+  });
 }
 export async function getPaperPosition(db: Pick<Db, "transaction">, userId: string, id: string): Promise<PaperPositionRow | null> {
   return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select * from paper_positions where user_id = ${userId}::uuid and id = ${id}::uuid`); return r.rows[0] ? posOf(row(r.rows[0])) : null; });
@@ -83,6 +126,33 @@ export async function updatePositionExit(db: Pick<Db, "transaction">, userId: st
   await withUser(db, userId, async (tx) => {
     if (p.close) await x(tx).execute(sql`update paper_positions set quantity = 0, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, status = 'CLOSED', exit_reason = ${p.close.reason}, closed_at = ${p.close.at.toISOString()}::timestamptz, updated_at = now() where id = ${id}::uuid and status = 'OPEN'`);
     else await x(tx).execute(sql`update paper_positions set quantity = ${p.quantity}::numeric, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, updated_at = now() where id = ${id}::uuid and status = 'OPEN'`);
+  });
+}
+/**
+ * Moves an OPEN position's entry quantity / average to the values its fills imply, and records the ENTRY_FILL event, in ONE transaction and only if the row actually changes. The UPDATE takes the row lock and is conditional on
+ * the target state (`quantity` or `avg` differs), so when two workers repair the same fill at once the second waits, re-reads the committed row, matches nothing and records nothing: exactly one event per logical change.
+ * Returns whether THIS call changed the position.
+ */
+export async function applyPositionEntrySync(db: Pick<Db, "transaction">, userId: string, id: string, p: { quantity: string; avgEntryPrice: string }): Promise<boolean> {
+  return withUser(db, userId, async (tx) => {
+    const r = await x(tx).execute(sql`update paper_positions set quantity = ${p.quantity}::numeric, avg_entry_price = ${p.avgEntryPrice}::numeric, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status = 'OPEN' and (quantity <> ${p.quantity}::numeric or avg_entry_price <> ${p.avgEntryPrice}::numeric) returning id`);
+    if (r.rows.length === 0) return false;
+    await x(tx).execute(sql`insert into paper_position_events (id, user_id, position_id, kind, payload) values (gen_random_uuid(), ${userId}::uuid, ${id}::uuid, 'ENTRY_FILL', ${JSON.stringify({ quantity: p.quantity, avgEntryPrice: p.avgEntryPrice })}::jsonb)`);
+    return true;
+  });
+}
+/**
+ * The exit counterpart: applies the exit figures the fills imply (partial exit, or the close) and records PARTIAL_EXIT / CLOSED in the same transaction, only if the OPEN row changes. A racing second worker matches nothing and
+ * records nothing. Returns whether THIS call changed the position (the caller records the trade outcome only then).
+ */
+export async function applyPositionExitSync(db: Pick<Db, "transaction">, userId: string, id: string, p: { quantity: string; realizedPnl: string; realizedCosts: string; close: { reason: string; at: Date } | null; eventPayload: unknown }): Promise<boolean> {
+  return withUser(db, userId, async (tx) => {
+    const r = p.close
+      ? await x(tx).execute(sql`update paper_positions set quantity = 0, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, status = 'CLOSED', exit_reason = ${p.close.reason}, closed_at = ${p.close.at.toISOString()}::timestamptz, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status = 'OPEN' returning id`)
+      : await x(tx).execute(sql`update paper_positions set quantity = ${p.quantity}::numeric, realized_pnl = ${p.realizedPnl}::numeric, realized_costs = ${p.realizedCosts}::numeric, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status = 'OPEN' and (quantity <> ${p.quantity}::numeric or realized_pnl <> ${p.realizedPnl}::numeric or realized_costs <> ${p.realizedCosts}::numeric) returning id`);
+    if (r.rows.length === 0) return false;
+    await x(tx).execute(sql`insert into paper_position_events (id, user_id, position_id, kind, payload) values (gen_random_uuid(), ${userId}::uuid, ${id}::uuid, ${p.close ? "CLOSED" : "PARTIAL_EXIT"}, ${JSON.stringify(p.eventPayload)}::jsonb)`);
+    return true;
   });
 }
 /** Tightens the stop. The database refuses a looser one. */

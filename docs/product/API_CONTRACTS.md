@@ -45,3 +45,14 @@ Same authentication and error codes as the other intelligence read APIs; permiss
 | `GET /opportunities/scans` | recent scans: slot, status, counts, recorded skip reasons (incl. MARKET_CLOSED, EVENT_WINDOW, REWARD_RISK_BELOW_MIN), parameters |
 Machine description: `docs/api/openapi-session.json`. Tests: `tests/unit/api/opportunityApi.test.ts`.
 
+
+## Decision watch and comparables (Stage 07; session-protected, owner-only)
+| Route | Behaviour |
+|---|---|
+| `POST /decisions/{id}/watch` and `/unwatch` | body `{idempotencyKey (8-128 chars), reason?}` only (strict; any other field 422). Records a private, append-only bookmark. 200 `{decisionId, status: RECORDED|DUPLICATE, watching, grantsApproval: false}`; 404 for a decision that is not the caller's. It never approves, rejects, consumes an approval or changes state. Permission **`decisions:watch`** (private, owner-scoped, TRADER only; a write, so it is not served under `decisions:read`, and it does not imply `decisions:approve`). |
+| `GET /decisions/{id}` | now also returns `watching` (latest watch event decides). |
+| `GET /decisions/{id}/comparables` | `{comparables: {state: AVAILABLE|NOT_AVAILABLE, patterns, ...}}` taken from the decision's stored research package (historical-pattern agent). NOT_AVAILABLE with a reason code when no pattern provider ran (G-23); never invented. 404 for another user's decision. |
+Tests: `tests/unit/api/userApi.test.ts`, `tests/unit/trading/comparables.test.ts`, integration `tests/integration/trading/stage07.test.ts`.
+
+## Execution modes and lifecycle contract (Stage 07)
+Decision outcome (QUALIFIED, WAIT, REJECT, EVALUATION_ONLY, NO_TRADE) is separate from workflow state (PENDING, APPROVED, REJECTED, EXPIRED, SUPERSEDED, CANCELLED), which is separate from order status (PROPOSED, SUBMITTED, ACCEPTED, PARTIALLY_FILLED, FILLED, REJECTED, CANCELLED, EXPIRED) and position status (OPEN, CLOSED). Approval never creates an order; execution re-checks ownership, permission, approval, gate, fresh revalidation and kill switch, then creates one keyed order; fills are applied once against the order state they were computed from; positions are derived from fills. PAPER is the only operational mode. ASSISTED_LIVE and CONTROLLED_AUTO are refused by `checkExecutionGate`; their rules are specified and tested in `packages/types/src/platform/liveArchitecture.ts` but are called by no application code.

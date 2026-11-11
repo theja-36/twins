@@ -1,6 +1,6 @@
-import { addMonitoringEvent, addPositionEvent, createPaperOrder, fillTotalsForDecision, getCandidate, getDecision, getExecutionRequest, getPaperOrder, listActiveAccounts, listPaperOrders, listPaperPositions, moveStopLoss, setOrderStatus, type PaperPositionRow } from "@twins/database";
+import { addMonitoringEvent, addPositionEvent, createPaperOrder, fillTotalsForDecision, listDecisionsNeedingPositionSync, getCandidate, getDecision, getExecutionRequest, getPaperOrder, listActiveAccounts, listPaperOrders, listPaperPositions, moveStopLoss, setOrderStatus, type PaperPositionRow } from "@twins/database";
 import { dec, div, str, ZERO, type FeeSchedule } from "@twins/planning";
-import { fillOrder, syncPosition, type AlertEvent, type ExecutionDeps } from "./execute";
+import { fillOrder, healEntryFill, syncPosition, type AlertEvent, type ExecutionDeps } from "./execute";
 import { evaluatePosition, unrealizedPnl, type PositionAction, type PositionRules } from "./position";
 import { freshPrice } from "./prices";
 
@@ -79,9 +79,10 @@ export async function reconcilePosition(d: ExecutionDeps, userId: string, positi
 }
 
 /** Advances open entry orders: fills at a fresh price when one exists, cancels entries whose decision was invalidated, expires orders past their time-to-live (a partial fill keeps the position it created). */
-export async function advanceOpenOrders(d: ExecutionDeps): Promise<{ examined: number; filled: number; expired: number; cancelled: number; waiting: number }> {
-  const db = d.eval.db, t = (d.eval.now ?? (() => new Date()))(), r = { examined: 0, filled: 0, expired: 0, cancelled: 0, waiting: 0 };
+export async function advanceOpenOrders(d: ExecutionDeps): Promise<{ examined: number; filled: number; expired: number; cancelled: number; waiting: number; healed: number }> {
+  const db = d.eval.db, t = (d.eval.now ?? (() => new Date()))(), r = { examined: 0, filled: 0, expired: 0, cancelled: 0, waiting: 0, healed: 0 };
   for (const userId of [...new Set((await listActiveAccounts(db)).map((a) => a.userId))]) {
+    r.healed += await healCommittedFills(d, userId, t); // first: repair what a worker that died after a fill commit left behind (G-47)
     for (const order of await listPaperOrders(db, userId, { statuses: ["ACCEPTED", "PARTIALLY_FILLED"], limit: 200 })) {
       r.examined++;
       const dec1 = await getDecision(db, userId, order.decisionId); if (!dec1) continue;
@@ -99,6 +100,33 @@ export async function advanceOpenOrders(d: ExecutionDeps): Promise<{ examined: n
     }
   }
   return r;
+}
+/**
+ * Recovery for a worker that died AFTER a fill committed and BEFORE the position/request were updated (G-47). The fills are the source of truth; any decision whose entry fills are not reflected in its position (none, a different quantity)
+ * or whose filled entry still has an ELIGIBLE request is re-derived from the fills. Idempotent: the position is created once (unique per decision) and every value is recomputed from the fills, so repeating this, or racing another
+ * worker, never adds a fill, a quantity or an amount. Needs the instrument specification and fee schedule exactly as a normal entry does; without them the decision is left for the next cycle.
+ */
+async function healCommittedFills(d: ExecutionDeps, userId: string, t: Date): Promise<number> {
+  const db = d.eval.db; let healed = 0;
+  for (const decisionId of await listDecisionsNeedingPositionSync(db, userId, 50)) {
+    try {
+      const dec1 = await getDecision(db, userId, decisionId); if (!dec1) continue;
+      const cand = await getCandidate(db, dec1.candidateId); if (!cand || !d.eval.specs) continue;
+      const kind = cand.strike !== null && cand.optionType !== null ? "option" : "equity";
+      const sp = await d.eval.specs.instrument({ exchange: cand.exchange, underlying: cand.underlying, instrumentType: kind, at: t }).catch(() => null);
+      const pos = await listPaperPositions(db, userId, { limit: 500 }).then((x) => x.find((p) => p.decisionId === dec1.id));
+      const fees = (pos ? (rulesOf(pos).fees as FeeSchedule | null) : null) ?? (sp ? await d.eval.specs.fees({ segment: sp.segment, at: t }).catch(() => null) : null);
+      const lot = pos ? rulesOf(pos).lotSize : sp?.lotSize;
+      if (!fees || !lot) continue;
+      const rules = pos ? rulesOf(pos) : ({ ...(await import("./position")).DEFAULT_RULES_BASE, ladder: d.config.ladder, trailAfterR: d.config.trailAfterR, sessionCloseExitMinutes: d.config.sessionCloseExitMinutes, instrumentKind: kind, stopBasis: kind === "option" ? "premium" : "price", lotSize: lot, expiry: cand.expiry, fees } as PositionRules);
+      const entry = (await listPaperOrders(db, userId, { decisionId: dec1.id, limit: 20 })).find((x) => x.purpose === "ENTRY");
+      if (!entry) continue;
+      await healEntryFill(d, { userId, orderId: entry.id, decision: dec1, rules });
+      d.log?.("execution.fill_recovered", { decisionId: dec1.id, orderId: entry.id });
+      healed++;
+    } catch (e) { d.log?.("execution.fill_recovery_failed", { decisionId, error: e instanceof Error ? e.message : String(e) }); } // one decision's failure never blocks the others; it is retried next cycle
+  }
+  return healed;
 }
 async function syncIfFilled(d: ExecutionDeps, userId: string, dec1: NonNullable<Awaited<ReturnType<typeof getDecision>>>, orderId: string): Promise<void> {
   const o = await getPaperOrder(d.eval.db, userId, orderId);

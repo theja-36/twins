@@ -104,7 +104,7 @@ export function registerUserRoutes(app: FastifyInstance, deps: { auth: AuthServi
     query(req, []); const id = uuid(req.params.id, "id"), d = await ops.getDecision(u, id);
     if (!d) throw new PlatformError("NOT_FOUND", "not found");
     const approval = await ops.approvalOf(u, id);
-    return { decision: decisionView(d), events: (await ops.decisionEvents(u, id)).map((e) => ({ ...e, at: e.at.toISOString() })), approval: approval ? { action: approval.action, at: approval.createdAt.toISOString() } : null };
+    return { decision: decisionView(d), events: (await ops.decisionEvents(u, id)).map((e) => ({ ...e, at: e.at.toISOString() })), approval: approval ? { action: approval.action, at: approval.createdAt.toISOString() } : null, watching: await ops.watched(u, id) };
   });
   get("/approvals", "decisions:read", async (u, req) => {
     query(req, []); const t = now().getTime(), pendingAll = await ops.listDecisions(u, { states: ["PENDING"], limit: 100 });
@@ -126,6 +126,20 @@ export function registerUserRoutes(app: FastifyInstance, deps: { auth: AuthServi
     if (result === "NOT_FOUND") throw new PlatformError("NOT_FOUND", "not found");
     return reply.code(200).send({ decisionId: id, result });
   });
+
+  get<{ id: string }>("/decisions/:id/comparables", "decisions:read", async (u, req) => {
+    query(req, []); const c = await ops.comparables(u, uuid(req.params.id, "id"));
+    if (!c) throw new PlatformError("NOT_FOUND", "not found");
+    return { decisionId: req.params.id, comparables: c };
+  });
+  // WATCH / UNWATCH: a private bookmark, under its own narrow write permission (`decisions:watch`; reading decisions does not allow writing a bookmark). It is not an approval: it consumes nothing and changes no decision state.
+  const watchRoute = (verb: "watch" | "unwatch") => post<{ id: string }>(`/decisions/:id/${verb}`, "decisions:watch", async (u, req, reply) => {
+    const b = body(req as never, ["idempotencyKey", "reason"], ["idempotencyKey"]), id = uuid(req.params.id, "id"), r = reason(b["reason"]);
+    const out = await ops.watch(u, { decisionId: id, action: verb === "watch" ? "WATCH" : "UNWATCH", idempotencyKey: key(b["idempotencyKey"]), reason: r ?? null });
+    if (out.status === "NOT_FOUND") throw new PlatformError("NOT_FOUND", "not found");
+    return reply.code(200).send({ decisionId: id, status: out.status, watching: out.watching, grantsApproval: false });
+  });
+  watchRoute("watch"); watchRoute("unwatch");
 
   // ── paper orders, fills, positions ────────────────────────────────────────
   get("/execution/orders", "orders:read", async (u, req) => {

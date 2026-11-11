@@ -185,10 +185,10 @@ jobs:
         run: npm ci
       - name: Database migration (fresh chain)
         run: npm run db:migrate -w @twins/database
-      - name: Crash and recovery (worker SIGKILL after the message commit; research SIGKILL before and after the package commit)
+      - name: Crash and recovery (worker SIGKILL after the message commit; research SIGKILL before and after the package commit; paper execution SIGKILL between a committed fill and the position update)
         run: |
           mkdir -p reports
-          npx vitest run --config vitest.integration.config.ts tests/integration/runtime/crashRecovery.test.ts tests/integration/runtime/researchCrashRecovery.test.ts --reporter=default --reporter=junit --outputFile.junit=reports/crash-junit.xml
+          npx vitest run --config vitest.integration.config.ts tests/integration/runtime/crashRecovery.test.ts tests/integration/runtime/researchCrashRecovery.test.ts tests/integration/runtime/executionCrashRecovery.test.ts --reporter=default --reporter=junit --outputFile.junit=reports/crash-junit.xml
       - name: Upload test reports on failure
         if: failure()
         uses: actions/upload-artifact@v4

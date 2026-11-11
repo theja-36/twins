@@ -8,3 +8,4 @@ export * from "./verdict";
 export * from "./opportunity";
 export * from "./execution";
 export * from "./aiGateway";
+export * from "./liveArchitecture";

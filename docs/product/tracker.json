@@ -6178,13 +6178,14 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "packages/decision/src/comparables.ts; tests/unit/trading/comparables.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
    ],
    "blockers": [
-    "no separate listing of comparable historical patterns; the historical provider is not wired (G-23)"
+    "no historical pattern provider wired (G-23): the view lists patterns only when the historical agent completed"
    ]
   },
   {
@@ -6438,7 +6439,7 @@
    "area": "Approval interface",
    "feature": "Approve / reject / watch actions.",
    "existing": "none identified in the Phase 00 audit | schema in migration 0033 (written, not yet applied or integration-tested)",
-   "change": "Stage 07: approve and reject (watch is not implemented)",
+   "change": "Stage 07: approve and reject (decisions:approve); watch/unwatch as a private append-only bookmark under its own permission decisions:watch (migration 0045)",
    "packages": [
     "packages/decision/src/approval.ts",
     "scripts/ops/decision-control.ts"
@@ -6450,15 +6451,15 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "IN_PROGRESS",
+   "status": "IMPLEMENTED",
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "decision_watches (migration 0045); userApi.test.ts (local); integration stage07 hardening (CI pending); docs/product/STAGE_07_REQUIREMENT_MATRIX.md",
+    "Permission decision: watch is served under its own narrow private permission `decisions:watch` (TRADER, owner-only), not decisions:read; contracts.test.ts + userApi.test.ts authorization tests (local)"
    ],
-   "blockers": [
-    "no WATCH action; no user-facing approval API until authentication sessions exist (G-26, Stage 01)"
-   ]
+   "blockers": []
   },
   {
    "id": "M13-10",
@@ -6544,7 +6545,8 @@
     "Stage 07 (master-build path): simulated order placement: paper_orders (PROPOSED > SUBMITTED > ACCEPTED), idempotent",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47: createPaperOrder is serialised per order key (advisory lock): concurrent execution requests for one decision converge on one order instead of failing the quantity guard (found by the real-database run); stage07Concurrency.test.ts + stage07.test.ts hardening (passed locally on PostgreSQL 16)"
    ],
    "blockers": []
   },
@@ -6575,7 +6577,8 @@
     "Stage 07 (master-build path): simulated fills at a FRESH observed price with adverse slippage, partial fills in lots",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47 recovery: a FILLED order is never left without its position: fillOrder heals an already-filled order; tests/unit/trading/fillRecovery.test.ts (local); real-SIGKILL tests/integration/runtime/executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending)"
    ],
    "blockers": []
   },
@@ -6607,7 +6610,8 @@
     "Stage 07 (master-build path): simulated trade lifecycle: order, fill, position, exits, close",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47 recovery: healEntryFill + advanceOpenOrders recovery sweep complete the entry request once; fillRecovery.test.ts (local); executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending)"
    ],
    "blockers": []
   },
@@ -6720,9 +6724,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-19",
@@ -6740,9 +6748,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-20",
@@ -6760,9 +6772,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-21",
@@ -6780,9 +6796,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-22",
@@ -6800,9 +6820,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-23",
@@ -6820,9 +6844,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-24",
@@ -6840,9 +6868,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-25",
@@ -6860,9 +6892,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-26",
@@ -6880,9 +6916,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-27",
@@ -6900,9 +6940,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-28",
@@ -6920,9 +6964,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M13-29",
@@ -6940,9 +6988,13 @@
    "screens": [],
    "dependencies": [],
    "stage": "07",
-   "status": "NOT_STARTED",
-   "evidence": [],
-   "blockers": []
+   "status": "IN_PROGRESS",
+   "evidence": [
+    "packages/types/src/platform/liveArchitecture.ts; tests/unit/trading/liveArchitecture.test.ts (local); docs/product/STAGE_07_REQUIREMENT_MATRIX.md"
+   ],
+   "blockers": [
+    "architecture designed and validated; the mode stays DISABLED (no broker adapter, no live path) until Stage 10/11 integrations and safety gates"
+   ]
   },
   {
    "id": "M14-01",
@@ -6967,7 +7019,8 @@
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47 recovery: position opened exactly once from committed fills (createPaperPositionOnce, OPENED/ENTRY_FILLED recorded only by the creator); fillRecovery.test.ts (local); executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending)"
    ],
    "blockers": []
   },
@@ -7272,7 +7325,8 @@
     "Stage 07 master-build path: trade status. for paper positions (ladder exits, breakeven and trailing stop validated by the mandatory rule and tighten-only, session/expiry/max-hold exits, outcome rows)",
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47 recovery: position status/quantity re-derived from fills after a crash; fillRecovery.test.ts (local); executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending)"
    ],
    "blockers": []
   },
@@ -7299,7 +7353,9 @@
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47 recovery sweep (listDecisionsNeedingPositionSync) detects fills not reflected in the position and repairs them idempotently; reconcilePosition agrees afterwards; executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending)",
+    "Update-event race fixed: applyPositionEntrySync / applyPositionExitSync are conditional on the target state and write their event in the same transaction; 8 concurrent workers record exactly one ENTRY_FILL / PARTIAL_EXIT / CLOSED and one outcome (tests/integration/trading/stage07Concurrency.test.ts, passed locally; reproduced as 8 events before the fix)"
    ],
    "blockers": []
   },
@@ -10704,7 +10760,9 @@
    "evidence": [
     "tests/unit/trading/*.test.ts and tests/unit/safety/qualifiedProducerStage07.test.ts (local)",
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
-    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate"
+    "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
+    "G-47: real worker SIGKILL between a committed fill and the position update, restart, single repair, no duplicate fill/position/amount: tests/integration/runtime/executionCrashRecovery.test.ts (passed locally against PostgreSQL 16 + Redis 7 (real SIGKILL); hosted CI on Node 20/22 pending; in the crash-recovery CI job)",
+    "stage07Concurrency.test.ts (2 cases) passed locally on PostgreSQL 16; full integration suite run 2026-11-11: 1,122 passed / 1 environment failure (pg_dump missing); hosted CI pending"
    ]
   },
   {

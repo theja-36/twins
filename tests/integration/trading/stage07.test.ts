@@ -9,6 +9,8 @@ import { appendCapitalProfile, appendRiskPolicy, beginScan, createCandidateQueue
 import { evaluateCandidateForAccount, memorySpecProvider, type InstrumentSpec, type PortfolioProvider } from "../../../packages/planning/src/index";
 import { ApprovalError, approveDecision, cancelDecision, rejectDecision, runDecisionCycle, DEFAULT_DECISION_CONFIG } from "../../../packages/decision/src/index";
 import { advanceOpenOrders, DEFAULT_EXECUTION_CONFIG, monitorPositions, paperPortfolioProvider, reconcilePosition, requestPaperExecution, type ExecutionDeps, type PriceObservation } from "../../../packages/execution/src/index";
+import { getPaperOrder, setRiskControl, insertPaperFill, isDecisionWatched, listPaperFills, recordDecisionWatch, setOrderStatus } from "../../../packages/database/src/index";
+import { fillOrder, rulesFor, syncPosition } from "../../../packages/execution/src/index";
 import { FEES, SPEC } from "../../unit/planning/fixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
 
@@ -287,5 +289,136 @@ describe("paper execution and trade management", () => {
     const sa = await session(a.userId);
     expect((await sa.query("select 1 from paper_positions where user_id = $1", [a.userId])).rows.length).toBe(1);
     expect(await listPaperPositions(db, b.userId, { limit: 10 })).toEqual([]);
+  });
+});
+
+describe("Stage 07 hardening: concurrency, idempotency, revocation, watch (G-27, G-47)", () => {
+  it("concurrent approve / reject attempts on one decision record exactly one action; every other attempt is ALREADY_ACTIONED", async () => {
+    const p = await pipeline();
+    const attempts = [
+      ...Array.from({ length: 5 }, (_, i) => approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: `conc-approve-${i}-0001` })),
+      ...Array.from({ length: 3 }, (_, i) => rejectDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: `conc-reject-${i}-00001` })),
+    ];
+    const settled = await Promise.allSettled(attempts);
+    expect(settled.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    for (const r of settled) if (r.status === "rejected") expect((r.reason as { code?: string }).code).toBe("ALREADY_ACTIONED");
+    const raw = await owner();
+    expect((await raw.query("select count(*)::int n from decision_approvals where decision_id = $1", [p.decisionId])).rows[0].n).toBe(1);
+  });
+  it("concurrent execution requests (same and different keys) create one order, one position and fills that sum to the permitted quantity", async () => {
+    price = { price: 100, asOf: NOW.toISOString() };
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const qty = (await getDecision(db, p.userId, p.decisionId))!.permittedSize!.quantity;
+    const outs = await Promise.all(Array.from({ length: 6 }, (_, i) => requestPaperExecution(execDeps(), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: i < 3 ? "exec-conc-same-1" : `exec-conc-diff-${i}` })));
+    for (const o of outs) expect(["FILLED", "PARTIALLY_FILLED", "ORDER_OPEN"]).toContain(o.status);
+    const orders = await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 20 });
+    expect(orders).toHaveLength(1);
+    const fills = await listPaperFills(db, p.userId, orders[0]!.id);
+    expect(fills.reduce((a, f) => a + Number(f.quantity), 0)).toBe(qty);
+    const pos = (await getPositionForDecision(db, p.userId, p.decisionId))!;
+    expect(Number(pos.quantity)).toBe(qty);
+    expect((await reconcilePosition(execDeps(), p.userId, pos.id))?.ok).toBe(true);
+    expect((await listPaperPositions(db, p.userId, { limit: 10 })).filter((x) => x.decisionId === p.decisionId)).toHaveLength(1);
+  });
+  it("concurrent fill attempts on a partly filled order apply each step once (no double fill, position follows the fills)", async () => {
+    price = { price: 100, asOf: NOW.toISOString() };
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const deps = execDeps({ fillFraction: 0.5 });
+    const first = await requestPaperExecution(deps, { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(first.status).toBe("PARTIALLY_FILLED");
+    const dec0 = (await getDecision(db, p.userId, p.decisionId))!, qty = dec0.permittedSize!.quantity, cand = (await getCandidate(db, dec0.candidateId))!;
+    const order = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!;
+    const one = () => fillOrder(deps, { userId: p.userId, orderId: order.id, fees: FEES, lotSize: SPEC.lotSize, decision: dec0, rules: rulesFor(deps, SPEC.lotSize, cand, FEES, dec0, "equity") });
+    const outs = await Promise.all([one(), one(), one(), one()]);
+    for (const o of outs) expect(["FILLED", "PARTIALLY_FILLED"]).toContain(o.status);
+    const fills = await listPaperFills(db, p.userId, order.id);
+    expect(fills.reduce((a, f) => a + Number(f.quantity), 0)).toBe(qty); // never more than the order
+    expect(fills.length).toBeLessThanOrEqual(3);
+    expect((await getPaperOrder(db, p.userId, order.id))!.status).toBe("FILLED");
+    expect(Number((await getPositionForDecision(db, p.userId, p.decisionId))!.quantity)).toBe(qty);
+  });
+  it("a fill is applied only against the order state it was computed from (optimistic check under a per-order lock)", async () => {
+    price = { price: 100, asOf: NOW.toISOString() };
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    await requestPaperExecution(execDeps({ fillFraction: 0.5 }), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    const order = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!, step = String(Number(order.quantity) / 4);
+    const f = (expected: string) => insertPaperFill(db, p.userId, { orderId: order.id, quantity: step, price: "100.05", costs: "1.00", priceSource: "FIXTURE", priceAsOf: NOW, expectedFilledQuantity: expected });
+    const results = await Promise.all([f(order.filledQuantity), f(order.filledQuantity), f(order.filledQuantity)]);
+    expect(results.filter((r) => r !== null)).toHaveLength(1);
+    expect(await f(order.filledQuantity)).toBeNull(); // the state has moved on: a stale attempt applies nothing
+  });
+  it("permission revoked after approval: execution is refused, nothing is created, the refusal is recorded", async () => {
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const raw = await owner(); await raw.query("update user_execution_permissions set enabled = false where user_id = $1 and account_id = $2", [p.userId, p.accountId]);
+    const x = await requestPaperExecution(execDeps(), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(x.status).toBe("REFUSED"); expect(x.status === "REFUSED" && x.checks.find((c) => c.name === "permission")?.ok).toBe(false);
+    expect(await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 })).toEqual([]);
+    expect(await getPositionForDecision(db, p.userId, p.decisionId)).toBeNull();
+  });
+  it("risk failing immediately before execution (a user restriction set after approval) refuses and creates nothing", async () => {
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    await setRiskControl(db, { scope: "USER", scopeKey: p.userId, kind: "RESTRICTION", userId: p.userId }, { reason: "test restriction after approval", actor: "test", actorKind: "OWNER" });
+    const x = await requestPaperExecution(execDeps(), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(x.status).toBe("REFUSED");
+    expect(await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 })).toEqual([]);
+    expect(await getPositionForDecision(db, p.userId, p.decisionId)).toBeNull();
+  });
+  it("a cancelled order never fills, never opens a position, and cannot be revived", async () => {
+    price = null;
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const x = await requestPaperExecution(execDeps(), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(x.status).toBe("ORDER_OPEN");
+    const order = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!;
+    await setOrderStatus(db, p.userId, order.id, "CANCELLED", "user cancelled");
+    price = { price: 100, asOf: NOW.toISOString() };
+    const dec0 = (await getDecision(db, p.userId, p.decisionId))!, cand = (await getCandidate(db, dec0.candidateId))!, deps = execDeps();
+    const after = await fillOrder(deps, { userId: p.userId, orderId: order.id, fees: FEES, lotSize: SPEC.lotSize, decision: dec0, rules: rulesFor(deps, SPEC.lotSize, cand, FEES, dec0, "equity") });
+    expect(after.status).toBe("ORDER_OPEN"); expect(after.reason).toMatch(/CANCELLED/);
+    expect(await listPaperFills(db, p.userId, order.id)).toEqual([]);
+    expect(await getPositionForDecision(db, p.userId, p.decisionId)).toBeNull();
+    await expect(setOrderStatus(db, p.userId, order.id, "ACCEPTED", "revive")).rejects.toThrow();
+    price = { price: 100, asOf: NOW.toISOString() };
+  });
+  it("a crash between a committed fill and the position update heals: the position is derived from the fills and a retry converges without a second fill", async () => {
+    price = null;
+    const p = await pipeline(); await approveDecision(evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    expect((await requestPaperExecution(execDeps(), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" })).status).toBe("ORDER_OPEN");
+    const dec0 = (await getDecision(db, p.userId, p.decisionId))!, qty = dec0.permittedSize!.quantity, cand = (await getCandidate(db, dec0.candidateId))!;
+    const order = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!;
+    // the worker committed the fill and died before it wrote the position
+    expect(await insertPaperFill(db, p.userId, { orderId: order.id, quantity: String(qty), price: "100.05", costs: "10.00", priceSource: "FIXTURE", priceAsOf: NOW, expectedFilledQuantity: "0" })).not.toBeNull();
+    expect(await getPositionForDecision(db, p.userId, p.decisionId)).toBeNull();
+    price = { price: 100, asOf: NOW.toISOString() };
+    const deps = execDeps(), rules = rulesFor(deps, SPEC.lotSize, cand, FEES, dec0, "equity");
+    const healed = await syncPosition(deps, { userId: p.userId, decision: dec0, rules });
+    expect(healed).toMatchObject({ status: "OPEN" }); expect(Number(healed!.quantity)).toBe(qty); expect(Number(healed!.avgEntryPrice)).toBeCloseTo(100.05, 4);
+    // restart: the retried request and a repeated sync add nothing
+    const again = await requestPaperExecution(deps, { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(["FILLED", "ORDER_OPEN", "PARTIALLY_FILLED"]).toContain(again.status);
+    await syncPosition(deps, { userId: p.userId, decision: dec0, rules });
+    expect((await listPaperFills(db, p.userId, order.id)).reduce((a, f) => a + Number(f.quantity), 0)).toBe(qty);
+    expect((await listPaperPositions(db, p.userId, { limit: 10 })).filter((x) => x.decisionId === p.decisionId)).toHaveLength(1);
+    expect((await reconcilePosition(deps, p.userId, healed!.id))?.ok).toBe(true);
+    price = { price: 100, asOf: NOW.toISOString() };
+  });
+  it("WATCH is a private, idempotent, append-only bookmark: it approves nothing and another user cannot see or write it", async () => {
+    const p = await pipeline(), other = await pipeline(), raw = await owner();
+    const results = await Promise.all(Array.from({ length: 4 }, () => recordDecisionWatch(db, p.userId, { decisionId: p.decisionId, action: "WATCH", idempotencyKey: "watch-conc-0001", reason: "interesting" })));
+    expect(results.filter((r) => r.status === "RECORDED")).toHaveLength(1); expect(results.every((r) => r.watching)).toBe(true);
+    expect(await isDecisionWatched(db, p.userId, p.decisionId)).toBe(true);
+    expect((await recordDecisionWatch(db, p.userId, { decisionId: p.decisionId, action: "UNWATCH", idempotencyKey: "watch-conc-0002", reason: null })).watching).toBe(false);
+    expect(await isDecisionWatched(db, p.userId, p.decisionId)).toBe(false);
+    // it changed nothing about the decision or its approval
+    expect((await getDecision(db, p.userId, p.decisionId))!.workflowState).toBe("PENDING");
+    expect((await raw.query("select count(*)::int n from decision_approvals where decision_id = $1", [p.decisionId])).rows[0].n).toBe(0);
+    // isolation
+    expect(await recordDecisionWatch(db, other.userId, { decisionId: p.decisionId, action: "WATCH", idempotencyKey: "watch-other-001", reason: null })).toEqual({ status: "NOT_FOUND", watching: false });
+    const sb = await session(other.userId);
+    expect((await sb.query("select id from decision_watches where decision_id = $1", [p.decisionId])).rows).toEqual([]);
+    await expect(sb.query("insert into decision_watches (id, user_id, decision_id, action, idempotency_key) values (gen_random_uuid(), $1, $2, 'WATCH', 'raw-cross-watch-1')", [other.userId, p.decisionId])).rejects.toThrow();
+    // append-only
+    await expect(raw.query("update decision_watches set action = 'WATCH' where decision_id = $1", [p.decisionId])).rejects.toThrow(/append-only/);
+    await expect(raw.query("delete from decision_watches where decision_id = $1", [p.decisionId])).rejects.toThrow(/append-only/);
+    expect((await raw.query("select count(*)::int n from decision_watches where decision_id = $1", [p.decisionId])).rows[0].n).toBe(2);
   });
 });

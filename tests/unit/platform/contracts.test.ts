@@ -13,6 +13,18 @@ describe("ids", () => {
 });
 
 describe("authorisation and user isolation (Part 4)", () => {
+  it("decisions:watch is a private, owner-only permission distinct from decisions:read and decisions:approve (M13-09)", () => {
+    expect(T.PRIVATE_PERMISSIONS).toContain("decisions:watch");
+    for (const list of [T.SHARED_PERMISSIONS, T.ADMIN_PERMISSIONS] as readonly string[][]) expect(list).not.toContain("decisions:watch");
+    expect(new Set(["decisions:read", "decisions:watch", "decisions:approve"]).size).toBe(3);
+    expect(T.hasPermission(trader(A), "decisions:watch")).toBe(true);
+    expect(T.hasPermission(admin, "decisions:watch")).toBe(false);
+    expect(T.hasPermission(system, "decisions:watch")).toBe(false);
+    expect(code(() => T.authorize(trader(A), "decisions:watch", A))).toBeNull();
+    expect(code(() => T.authorize(trader(A), "decisions:watch", B))).toBe("NOT_FOUND"); // another user's decision: existence is not revealed
+    expect(code(() => T.authorize(admin, "decisions:watch", A))).toBe("NOT_FOUND");
+    expect(code(() => T.authorize(null, "decisions:watch", A))).toBe("UNAUTHENTICATED");
+  });
   it("a trader can use own private data", () => { for (const p of T.PRIVATE_PERMISSIONS) expect(code(() => T.authorize(trader(A), p, A)), p).toBeNull(); });
   it("one user can never reach another user's private data, and the refusal does not reveal existence", () => {
     for (const p of T.PRIVATE_PERMISSIONS) expect(code(() => T.authorize(trader(A), p, B)), p).toBe("NOT_FOUND");

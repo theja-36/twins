@@ -59,3 +59,20 @@ export async function hasPaperPermission(db: Pick<Db, "transaction">, userId: st
 export async function getApproval(db: Pick<Db, "transaction">, userId: string, decisionId: string): Promise<{ action: string; revalidation: unknown; createdAt: Date; approverUserId: string } | null> {
   return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select action, revalidation, created_at, approver_user_id from decision_approvals where user_id = ${userId}::uuid and decision_id = ${decisionId}::uuid`); const w = r.rows[0] as Record<string, unknown> | undefined; return w ? { action: w["action"] as string, revalidation: w["revalidation"], createdAt: new Date(w["created_at"] as string), approverUserId: w["approver_user_id"] as string } : null; });
 }
+
+/**
+ * Stage 07 (G-27, M13-09): WATCH / UNWATCH. A private, append-only bookmark: it never approves, rejects, consumes an approval or changes a decision's state. Idempotent per user and key (a repeat returns the stored event);
+ * a decision that is not the caller's is invisible (NOT_FOUND). The latest event decides whether the decision is currently watched.
+ */
+export async function recordDecisionWatch(db: Pick<Db, "transaction">, userId: string, w: { decisionId: string; action: "WATCH" | "UNWATCH"; idempotencyKey: string; reason: string | null }): Promise<{ status: "RECORDED" | "DUPLICATE" | "NOT_FOUND"; watching: boolean }> {
+  return withUser(db, userId, async (tx) => {
+    const d = await x(tx).execute(sql`select 1 from user_decisions where id = ${w.decisionId}::uuid and user_id = ${userId}::uuid`);
+    if (d.rows.length === 0) return { status: "NOT_FOUND" as const, watching: false };
+    const ins = await x(tx).execute(sql`insert into decision_watches (id, user_id, decision_id, action, reason, idempotency_key) values (gen_random_uuid(), ${userId}::uuid, ${w.decisionId}::uuid, ${w.action}, ${w.reason}, ${w.idempotencyKey}) on conflict (user_id, idempotency_key) do nothing returning id`);
+    const cur = await x(tx).execute(sql`select action from decision_watches where decision_id = ${w.decisionId}::uuid and user_id = ${userId}::uuid order by at desc, id desc limit 1`);
+    return { status: ins.rows.length > 0 ? ("RECORDED" as const) : ("DUPLICATE" as const), watching: (cur.rows[0] as { action: string } | undefined)?.action === "WATCH" };
+  });
+}
+export async function isDecisionWatched(db: Pick<Db, "transaction">, userId: string, decisionId: string): Promise<boolean> {
+  return withUser(db, userId, async (tx) => { const r = await x(tx).execute(sql`select action from decision_watches where decision_id = ${decisionId}::uuid and user_id = ${userId}::uuid order by at desc, id desc limit 1`); return (r.rows[0] as { action: string } | undefined)?.action === "WATCH"; });
+}

@@ -11,8 +11,12 @@ export type Principal = { kind: "user"; userId: UserId; roles: readonly Role[] }
 
 /** Permissions on shared platform intelligence. */
 export const SHARED_PERMISSIONS = ["signals:read", "research:read", "market:read", "strategies:read", "opportunities:read", "channels:read"] as const;
-/** Permissions on private, user-owned data: only the owner ever holds these, on their own resources. */
-export const PRIVATE_PERMISSIONS = ["capital:read", "capital:write", "risk-policy:read", "risk-policy:write", "broker:read", "broker:write", "orders:read", "orders:write", "positions:read", "decisions:approve", "trades:read", "analytics:read", "settings:write", "decisions:read", "risk:read"] as const;
+/**
+ * Permissions on private, user-owned data: only the owner ever holds these, on their own resources.
+ * Reads and writes are separate permissions (capital, risk-policy, broker, orders). On decisions: `decisions:read` only reads; `decisions:watch` appends to the owner's private bookmark list and nothing else; `decisions:approve` is the only one that
+ * can approve, reject or cancel. Holding one never implies another.
+ */
+export const PRIVATE_PERMISSIONS = ["capital:read", "capital:write", "risk-policy:read", "risk-policy:write", "broker:read", "broker:write", "orders:read", "orders:write", "positions:read", "decisions:approve", "trades:read", "analytics:read", "settings:write", "decisions:read", "decisions:watch", "risk:read"] as const;
 export const ADMIN_PERMISSIONS = ["users:manage", "audit:read", "channels:manage", "system:read"] as const;
 export type Permission = (typeof SHARED_PERMISSIONS)[number] | (typeof PRIVATE_PERMISSIONS)[number] | (typeof ADMIN_PERMISSIONS)[number];
 

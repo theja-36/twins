@@ -24,9 +24,11 @@ describe("migration 0044: research run records", () => {
     expect(sql).toContain('CREATE TRIGGER "research_agent_runs_no_update_delete" BEFORE UPDATE OR DELETE ON "research_agent_runs" FOR EACH ROW EXECUTE FUNCTION "twins_audit_forbid_change"()');
     expect(sql).toContain('CREATE TRIGGER "research_agent_runs_no_truncate" BEFORE TRUNCATE ON "research_agent_runs" FOR EACH STATEMENT EXECUTE FUNCTION "twins_audit_forbid_change"()');
   });
-  it("is registered in the journal as the last migration with its snapshot, and the rollback is documented", () => {
+  it("is registered in the journal with its snapshot, after its predecessor, and the rollback is documented", () => {
     const journal = JSON.parse(readFileSync(join(DIR, "meta/_journal.json"), "utf8")) as { entries: Array<{ tag: string; when: number }> };
-    const last = journal.entries[journal.entries.length - 1]!, prev = journal.entries[journal.entries.length - 2]!;
+    const at = journal.entries.findIndex((e) => e.tag === "0044_research_run_records");
+    expect(at).toBeGreaterThan(0);
+    const last = journal.entries[at]!, prev = journal.entries[at - 1]!;
     expect(last.tag).toBe("0044_research_run_records"); expect(last.when).toBeGreaterThan(prev.when); expect(existsSync(join(DIR, "meta/0044_snapshot.json"))).toBe(true);
     expect(readFileSync(join(__dirname, "../../../scripts/product/append-0044.py"), "utf8")).toMatch(/Rollback \(forward-only/);
   });
