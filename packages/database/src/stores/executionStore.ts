@@ -43,6 +43,14 @@ export async function createPaperOrder(db: Pick<Db, "transaction">, userId: stri
     return { order: ordOf(row(r.rows[0])), created: true };
   });
 }
+/**
+ * Compare-and-set order status step: moves the order to `to` ONLY if it is currently in one of the `from` states, and says whether THIS call did. A concurrent worker may already have advanced the order (for example filled it completely); that is not an error
+ * for the late caller, the step is simply no longer needed, so it is a quiet no-op (false) instead of a refused FILLED -> ACCEPTED transition. The database's lifecycle guard is unchanged and still refuses every illegal transition.
+ */
+export async function advanceOrderStatus(db: Pick<Db, "transaction">, userId: string, id: string, from: string | readonly string[], to: "SUBMITTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "EXPIRED", reason: string | null): Promise<boolean> {
+  const froms = typeof from === "string" ? [from] : [...from];
+  return withUser(db, userId, async (tx) => (await x(tx).execute(sql`update paper_orders set status = ${to}, state_reason = ${reason}, updated_at = now() where id = ${id}::uuid and user_id = ${userId}::uuid and status in (${sql.join(froms.map((f) => sql`${f}`), sql`, `)}) returning id`)).rows.length > 0);
+}
 export async function setOrderStatus(db: Pick<Db, "transaction">, userId: string, id: string, status: "SUBMITTED" | "ACCEPTED" | "REJECTED" | "CANCELLED" | "EXPIRED", reason: string | null): Promise<void> {
   await withUser(db, userId, async (tx) => { await x(tx).execute(sql`update paper_orders set status = ${status}, state_reason = ${reason}, updated_at = now() where id = ${id}::uuid`); });
 }

@@ -1,6 +1,6 @@
 import { ACTION_APPROVE, checkExecutionGate, isQualifiedOutcome, type ExecutionMode } from "@twins/types";
 import { evaluateSafety } from "@twins/runtime-state";
-import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, applyPositionEntrySync, applyPositionExitSync, createPaperPositionOnce, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, setOrderStatus, updateExecutionRequest, type PaperOrderRow, type PaperOutcomeInput, type PaperPositionRow, type StoredDecision } from "@twins/database";
+import { addMonitoringEvent, addPositionEvent, createExecutionRequest, createPaperOrder, applyPositionEntrySync, applyPositionExitSync, createPaperPositionOnce, fillTotalsForDecision, getApproval, getCandidate, getDecision, getExecutionRequest, getPaperOrder, getPositionForDecision, hasPaperPermission, insertPaperFill, invalidateDecision, listPaperOrders, recordPaperOutcome, advanceOrderStatus, updateExecutionRequest, type PaperOrderRow, type PaperOutcomeInput, type PaperPositionRow, type StoredDecision } from "@twins/database";
 import { revalidateDecision } from "@twins/decision";
 import { ceilTo2, dec, div, floorTo2, legCosts, mul, str, ZERO, type Dec, type EvaluationDeps, type FeeSchedule } from "@twins/planning";
 import type { ExecutionConfig } from "./config";
@@ -77,9 +77,9 @@ export async function requestPaperExecution(d: ExecutionDeps, o: { userId: strin
   if (request.state === "REQUESTED") await updateExecutionRequest(d.eval.db, o.userId, request.id, "ELIGIBLE", checks, []);
   const qty = String(dec0.permittedSize.quantity);
   const { order } = await createPaperOrder(d.eval.db, o.userId, { accountId: dec0.accountId, decisionId: dec0.id, executionRequestId: request.id, positionId: null, purpose: "ENTRY", exitReason: null, instrument: cand.underlying, exchange: cand.exchange, side: cand.side, orderType: "MARKET", quantity: qty, limitPrice: null, idempotencyKey: `entry:${dec0.id}` });
-  if (order.status === "PROPOSED") await setOrderStatus(d.eval.db, o.userId, order.id, "SUBMITTED", "submitted to the paper broker");
+  if (order.status === "PROPOSED") await advanceOrderStatus(d.eval.db, o.userId, order.id, "PROPOSED", "SUBMITTED", "submitted to the paper broker"); // compare-and-set: a concurrent caller may already have moved this order on
   const fresh = (await getPaperOrder(d.eval.db, o.userId, order.id)) as PaperOrderRow;
-  if (fresh.status === "SUBMITTED") await setOrderStatus(d.eval.db, o.userId, order.id, "ACCEPTED", "acknowledged by the paper broker (simulated)");
+  if (fresh.status === "SUBMITTED") await advanceOrderStatus(d.eval.db, o.userId, order.id, "SUBMITTED", "ACCEPTED", "acknowledged by the paper broker (simulated)"); // a rival that already accepted or filled it makes this step a no-op, not an error
   const res = await fillOrder(d, { userId: o.userId, orderId: order.id, fees, lotSize: spec.lotSize, decision: dec0, rules: rulesFor(d, spec.lotSize, cand, fees, dec0, spec.instrumentType) });
   return { status: res.status, requestId: request.id, orderId: order.id, duplicate: !created, filledQuantity: res.filledQuantity, ...(res.reason ? { reason: res.reason } : {}) };
 }

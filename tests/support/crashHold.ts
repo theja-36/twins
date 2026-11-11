@@ -64,3 +64,25 @@ export function holdAtStatement<T extends object>(db: T, o: { match: RegExp; whe
     },
   }) as T;
 }
+
+/**
+ * Deterministic interleaving seam: runs `action` (typically a rival worker finishing the same job on another connection) immediately BEFORE the `nth` statement matching `match` is executed inside a transaction, once.
+ * It lets a test place a concurrent actor in the exact gap between two steps of the code under test, instead of hoping a race happens.
+ */
+export function beforeNthStatement<T extends object>(db: T, o: { match: RegExp; nth: number; action: () => Promise<void> }): T {
+  let seen = 0, fired = false;
+  const wrapTx = (tx: object): object => new Proxy(tx, {
+    get(target, prop) {
+      const v = Reflect.get(target, prop, target) as unknown;
+      if (prop === "execute" && typeof v === "function") return async (q: unknown, ...rest: unknown[]) => { if (!fired && o.match.test(sqlText(q)) && ++seen === o.nth) { fired = true; await o.action(); } return (v as (...x: unknown[]) => Promise<unknown>).call(target, q, ...rest); };
+      return typeof v === "function" ? (v as (...x: unknown[]) => unknown).bind(target) : v;
+    },
+  });
+  return new Proxy(db, {
+    get(target, prop) {
+      const v = Reflect.get(target, prop, target) as unknown;
+      if (prop === "transaction" && typeof v === "function") return (fn: (tx: object) => Promise<unknown>, ...rest: unknown[]) => (v as (...x: unknown[]) => Promise<unknown>).call(target, (tx: object) => fn(wrapTx(tx)), ...rest);
+      return typeof v === "function" ? (v as (...x: unknown[]) => unknown).bind(target) : v;
+    },
+  }) as T;
+}

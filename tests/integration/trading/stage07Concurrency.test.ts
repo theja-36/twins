@@ -7,8 +7,9 @@
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import { approveDecision } from "../../../packages/decision/src/index";
-import { createDb, createPaperOrder, getDecision, getExecutionRequest, getPositionForDecision, insertPaperFill, listPaperFills, listPaperOrders, setOrderStatus, getCandidate } from "../../../packages/database/src/index";
+import { createDb, createPaperOrder, getDecision, getExecutionRequest, getPositionForDecision, insertPaperFill, listPaperFills, listPaperOrders, setOrderStatus, getCandidate, advanceOrderStatus } from "../../../packages/database/src/index";
 import { requestPaperExecution, rulesFor, syncPosition } from "../../../packages/execution/src/index";
+import { beforeNthStatement } from "../../support/crashHold";
 import { makeFixtures, NOW, pricesFor } from "../../support/executionFixtures";
 import { FEES, SPEC } from "../../unit/planning/fixtures";
 import { requireTestDatabaseUrl } from "../targetConfig";
@@ -100,5 +101,51 @@ describe("workers repairing the same fill concurrently (G-47)", () => {
     expect(pos).toHaveLength(1); expect(pos[0]!.quantity).toBe(qty);
     expect(await eventCount(p.decisionId, "OPENED")).toBe(1);
     expect((await getPositionForDecision(db, p.userId, p.decisionId))?.status).toBe("OPEN");
+  }, 120_000);
+
+  it("concurrent execution requests never fail: across repeated rounds every caller gets a normal result and each decision ends with one order, one position and one OPENED event (no stale status step)", async () => {
+    const c = await owner();
+    for (let round = 0; round < 8; round++) {
+      const p = await fx.pipeline(async (text, params) => c.query(text, params as unknown[]));
+      await approveDecision(fx.evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+      const qty = (await getDecision(db, p.userId, p.decisionId))!.permittedSize!.quantity, deps = fx.execDeps(pricesFor(p.u));
+      const settled = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => requestPaperExecution(deps, { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: i < 5 ? "exec-conc-same-1" : `exec-conc-diff-${i}` })));
+      expect(settled.filter((x) => x.status === "rejected").map((x) => String((x as PromiseRejectedResult).reason?.cause?.message ?? (x as PromiseRejectedResult).reason)), `round ${round}`).toEqual([]);
+      for (const x of settled) expect(["FILLED", "PARTIALLY_FILLED", "ORDER_OPEN"]).toContain((x as PromiseFulfilledResult<{ status: string }>).value.status);
+      expect(await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 20 })).toHaveLength(1);
+      expect((await fillsOf(p.decisionId)).reduce((a, f) => a + f.q, 0)).toBe(qty);
+      expect(await positionRow(p.decisionId)).toHaveLength(1); expect(await eventCount(p.decisionId, "OPENED")).toBe(1);
+    }
+  }, 180_000);
+
+  it("a caller whose order is advanced by a rival between its own status steps still gets a normal result: the stale step is a no-op, not an error", async () => {
+    const c = await owner(), p = await fx.pipeline(async (text, params) => c.query(text, params as unknown[]));
+    await approveDecision(fx.evalDeps(), { userId: p.userId, decisionId: p.decisionId, idempotencyKey: "approve-key-0001" });
+    const qty = (await getDecision(db, p.userId, p.decisionId))!.permittedSize!.quantity;
+    // the rival completes the WHOLE entry (accept, then fill in full) on another connection, exactly between this caller's SUBMITTED and ACCEPTED steps
+    const rival = async (): Promise<void> => {
+      const o = (await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 5 }))[0]!;
+      await setOrderStatus(db, p.userId, o.id, "ACCEPTED", "rival acknowledged");
+      expect(await insertPaperFill(db, p.userId, { orderId: o.id, quantity: String(qty), price: "100.05000000", costs: "10.00", priceSource: "FIXTURE", priceAsOf: NOW, expectedFilledQuantity: "0" })).not.toBeNull();
+    };
+    const hooked = makeFixtures(beforeNthStatement(db, { match: /update paper_orders set status/, nth: 2, action: rival }));
+    hooked.instruments.push({ ...hooked.spec, underlying: p.u });
+    const out = await requestPaperExecution(hooked.execDeps(pricesFor(p.u)), { userId: p.userId, decisionId: p.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(out).toMatchObject({ status: "FILLED", filledQuantity: String(qty) });
+    expect(await listPaperOrders(db, p.userId, { decisionId: p.decisionId, limit: 20 })).toHaveLength(1);
+    expect(await fillsOf(p.decisionId)).toHaveLength(1); // only the rival's fill: the stale caller added none
+    expect(await positionRow(p.decisionId)).toHaveLength(1); expect(await eventCount(p.decisionId, "OPENED")).toBe(1); // and its follow-up repaired the position exactly once
+  }, 120_000);
+
+  it("advancing an order is compare-and-set: it applies only from the expected state, once, and is a quiet no-op when the order has moved on", async () => {
+    const c = await owner(), a = await fx.openPosition(async (t, q) => c.query(t, q as unknown[])); // a FILLED entry order
+    expect(await advanceOrderStatus(db, a.userId, a.entry.id, "SUBMITTED", "ACCEPTED", "stale step")).toBe(false); // it is FILLED: nothing happens, nothing throws
+    const p2 = await fx.pipeline(async (t, q) => c.query(t, q as unknown[]));
+    await approveDecision(fx.evalDeps(), { userId: p2.userId, decisionId: p2.decisionId, idempotencyKey: "approve-key-0001" });
+    const rq = await requestPaperExecution(fx.execDeps(pricesFor(p2.u, () => false)), { userId: p2.userId, decisionId: p2.decisionId, mode: "PAPER", idempotencyKey: "exec-key-00001" });
+    expect(rq.status).toBe("ORDER_OPEN"); // ACCEPTED, unfilled
+    const ord = (await listPaperOrders(db, p2.userId, { decisionId: p2.decisionId, limit: 5 }))[0]!;
+    expect(await advanceOrderStatus(db, p2.userId, ord.id, "SUBMITTED", "ACCEPTED", "x")).toBe(false); // already ACCEPTED
+    expect((await listPaperOrders(db, p2.userId, { decisionId: p2.decisionId, limit: 5 }))[0]!.status).toBe("ACCEPTED");
   }, 120_000);
 });

@@ -1,4 +1,4 @@
-import { addMonitoringEvent, addPositionEvent, createPaperOrder, fillTotalsForDecision, listDecisionsNeedingPositionSync, getCandidate, getDecision, getExecutionRequest, getPaperOrder, listActiveAccounts, listPaperOrders, listPaperPositions, moveStopLoss, setOrderStatus, type PaperPositionRow } from "@twins/database";
+import { advanceOrderStatus, addMonitoringEvent, addPositionEvent, createPaperOrder, fillTotalsForDecision, listDecisionsNeedingPositionSync, getCandidate, getDecision, getExecutionRequest, getPaperOrder, listActiveAccounts, listPaperOrders, listPaperPositions, moveStopLoss, type PaperPositionRow } from "@twins/database";
 import { dec, div, str, ZERO, type FeeSchedule } from "@twins/planning";
 import { fillOrder, healEntryFill, syncPosition, type AlertEvent, type ExecutionDeps } from "./execute";
 import { evaluatePosition, unrealizedPnl, type PositionAction, type PositionRules } from "./position";
@@ -43,8 +43,8 @@ export async function monitorPositions(d: ExecutionDeps): Promise<MonitorReport>
             const rq = await getExecutionRequest(db, userId, pos.decisionId, "PAPER"); if (!rq) continue;
             const key = `exit:${pos.id}:${a.reason}:${a.targetIndex ?? "all"}:${str(dec(pos.quantity), 8)}`; // the same remaining quantity and reason is the same order: a retry cannot double-exit
             const { order } = await createPaperOrder(db, userId, { accountId: pos.accountId, decisionId: pos.decisionId, executionRequestId: rq.id, positionId: pos.id, purpose: "EXIT", exitReason: a.reason, instrument: pos.instrument, exchange: pos.exchange, side: pos.side === "BUY" ? "SELL" : "BUY", orderType: "MARKET", quantity: str(a.quantity, 8), limitPrice: null, idempotencyKey: key });
-            if (order.status === "PROPOSED") await setOrderStatus(db, userId, order.id, "SUBMITTED", "exit submitted (simulated)");
-            if ((await getPaperOrder(db, userId, order.id))?.status === "SUBMITTED") await setOrderStatus(db, userId, order.id, "ACCEPTED", "exit acknowledged (simulated)");
+            if (order.status === "PROPOSED") await advanceOrderStatus(db, userId, order.id, "PROPOSED", "SUBMITTED", "exit submitted (simulated)");
+            if ((await getPaperOrder(db, userId, order.id))?.status === "SUBMITTED") await advanceOrderStatus(db, userId, order.id, "SUBMITTED", "ACCEPTED", "exit acknowledged (simulated)");
             const dec1 = await getDecision(db, userId, pos.decisionId); if (!dec1) continue;
             const res = await fillOrder(d, { userId, orderId: order.id, fees, lotSize: rules.lotSize, decision: dec1, rules });
             r.exits++;
@@ -86,8 +86,8 @@ export async function advanceOpenOrders(d: ExecutionDeps): Promise<{ examined: n
     for (const order of await listPaperOrders(db, userId, { statuses: ["ACCEPTED", "PARTIALLY_FILLED"], limit: 200 })) {
       r.examined++;
       const dec1 = await getDecision(db, userId, order.decisionId); if (!dec1) continue;
-      if (order.purpose === "ENTRY" && dec1.invalidated) { await setOrderStatus(db, userId, order.id, "CANCELLED", `decision invalidated: ${dec1.invalidated.reasonCode}`); r.cancelled++; await syncIfFilled(d, userId, dec1, order.id); continue; }
-      if (t.getTime() - order.createdAt.getTime() > d.config.orderTtlMinutes * 60_000) { await setOrderStatus(db, userId, order.id, "EXPIRED", "order time-to-live passed"); r.expired++; await syncIfFilled(d, userId, dec1, order.id); continue; }
+      if (order.purpose === "ENTRY" && dec1.invalidated) { if (await advanceOrderStatus(db, userId, order.id, ["ACCEPTED", "PARTIALLY_FILLED"], "CANCELLED", `decision invalidated: ${dec1.invalidated.reasonCode}`)) r.cancelled++; await syncIfFilled(d, userId, dec1, order.id); continue; }
+      if (t.getTime() - order.createdAt.getTime() > d.config.orderTtlMinutes * 60_000) { if (await advanceOrderStatus(db, userId, order.id, ["ACCEPTED", "PARTIALLY_FILLED"], "EXPIRED", "order time-to-live passed")) r.expired++; await syncIfFilled(d, userId, dec1, order.id); continue; }
       const cand = await getCandidate(db, dec1.candidateId); const rq = await getExecutionRequest(db, userId, dec1.id, "PAPER");
       const pos = await listPaperPositions(db, userId, { limit: 500 }).then((x) => x.find((p) => p.decisionId === dec1.id));
       const fees = (pos ? (rulesOf(pos).fees as FeeSchedule | null) : null) ?? (cand && d.eval.specs ? await (async () => { const sp = await d.eval.specs!.instrument({ exchange: cand.exchange, underlying: cand.underlying, instrumentType: cand.strike !== null && cand.optionType !== null ? "option" : "equity", at: t }).catch(() => null); return sp ? d.eval.specs!.fees({ segment: sp.segment, at: t }).catch(() => null) : null; })() : null);

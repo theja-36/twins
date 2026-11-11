@@ -6548,7 +6548,8 @@
     "tests/integration/trading/stage07.test.ts against Postgres 16 (CI green)",
     "CI green on 51430f3 (run 42466542084): static, unit node 20/22, integration node 20/22 on Postgres 16 + Redis 7, crash recovery, ci-gate",
     "G-47: createPaperOrder is serialised per order key (advisory lock): concurrent execution requests for one decision converge on one order instead of failing the quantity guard (found by the real-database run); stage07Concurrency.test.ts + stage07.test.ts hardening (passed locally on PostgreSQL 16)",
-    "CI green on 4dbea3f (run 43071795582, all 7 jobs): static, unit node 20 and 22 (261 files / 4,178 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (84 files passed, 4 skipped; 1,123 tests passed, 9 skipped; includes offhostBackup and stage07Concurrency), crash recovery (6/6 incl. the 3 real-SIGKILL execution cases), ci-gate"
+    "CI green on 4dbea3f (run 43071795582, all 7 jobs): static, unit node 20 and 22 (261 files / 4,178 tests each), integration node 20 and 22 on Postgres 16 + Redis 7 (84 files passed, 4 skipped; 1,123 tests passed, 9 skipped; includes offhostBackup and stage07Concurrency), crash recovery (6/6 incl. the 3 real-SIGKILL execution cases), ci-gate",
+    "G-52 (2026-11-11): order status steps are compare-and-set (advanceOrderStatus) so a stale step after a concurrent fill is a no-op, not an error; deterministic reproduction + stress in tests/integration/trading/stage07Concurrency.test.ts (passed locally on PostgreSQL 16; hosted CI verification pending)"
    ],
    "blockers": []
   },
