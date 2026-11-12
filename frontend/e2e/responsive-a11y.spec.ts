@@ -16,7 +16,10 @@ for (const v of VIEWPORTS) for (const theme of ["dark", "light"] as const) {
       await setTheme(page, theme);
       if (p.who) await signIn(page, p.who);
       await page.goto(p.path); await page.waitForLoadState("networkidle"); await expect(page.locator("main#main, main.login").first()).toBeVisible();
-      const overflow = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth })); expect(overflow.sw, "page must not scroll sideways").toBeLessThanOrEqual(overflow.iw);
+      const overflow = await page.evaluate(() => ({ sw: document.documentElement.scrollWidth, iw: window.innerWidth }));
+      // When the page is too wide, name the elements that poke out (text metrics differ between operating systems, so the failure message must say WHICH element).
+      const offenders = overflow.sw > overflow.iw ? await page.evaluate(() => [...document.querySelectorAll("body *")].filter((e) => e.getBoundingClientRect().right > window.innerWidth + 0.5 && getComputedStyle(e).position !== "fixed").slice(0, 8).map((e) => `${e.tagName.toLowerCase()}.${String(e.getAttribute("class") ?? "").slice(0, 40)} right=${Math.round(e.getBoundingClientRect().right)} "${(e.textContent ?? "").trim().slice(0, 40)}"`)) : [];
+      expect(overflow.sw, `page must not scroll sideways (sw ${overflow.sw} > iw ${overflow.iw}); offenders: ${offenders.join(" || ")}`).toBeLessThanOrEqual(overflow.iw);
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
       expect(results.violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
       if (SHOTS && (p.name !== "admin-blocked") && (v.name !== "tablet" || p.name === "trader-overview")) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/${p.name}.${theme}.${v.width}.png`, fullPage: true }); }

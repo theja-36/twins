@@ -60,7 +60,7 @@ a{color:inherit;text-decoration:none} button{font:inherit;color:inherit}
 .iconbtn{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:var(--s1);cursor:pointer;color:var(--tx2)}.iconbtn:hover{color:var(--tx);border-color:var(--line2)}.iconbtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.6}
 .safety{display:flex;align-items:center;gap:10px;padding:7px 28px;font-size:12.5px;background:var(--s1);border-bottom:1px solid var(--line);color:var(--tx2)}
 .safety .dot{width:8px;height:8px;border-radius:50%;background:var(--ord)} .safety b{color:var(--tx);font-weight:600}
-.page{padding:26px 28px 80px;max-width:1360px;width:100%}
+.page{padding:26px 28px 80px;max-width:1360px;width:100%;overflow-wrap:anywhere}
 .pagehead{display:flex;align-items:flex-end;gap:16px;margin-bottom:22px;flex-wrap:wrap}.pagehead p{margin:6px 0 0;color:var(--tx3);max-width:64ch}.pagehead .sp{flex:1}
 .grid{display:grid;gap:22px;grid-template-columns:minmax(0,1fr)}.grid>*{min-width:0}.g2{grid-template-columns:minmax(0,1.55fr) minmax(0,1fr)}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
 .sect{border-top:1px solid var(--line);padding-top:14px}.sect>header{display:flex;align-items:baseline;gap:10px;margin-bottom:12px}.sect>header .sp{flex:1}
