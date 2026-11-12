@@ -166,7 +166,7 @@ export class PgBotDb implements BotDb {
     const others = await q(
       `select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
         where n.nspname = 'public' and c.relkind in ('r','v','m','p','f') and c.relname <> all($1)
-          and (has_any_column_privilege(c.oid,'SELECT') or has_any_column_privilege(c.oid,'INSERT') or has_any_column_privilege(c.oid,'UPDATE') or has_table_privilege(c.oid,'DELETE') or has_table_privilege(c.oid,'TRUNCATE'))
+          and ((has_any_column_privilege(c.oid,'SELECT') and c.relname <> 'twins_txn_identity') /* PUBLIC may read the RLS-limited identity table (migration 0049): the bot never binds, so it sees no row; any write is still flagged */ or has_any_column_privilege(c.oid,'INSERT') or has_any_column_privilege(c.oid,'UPDATE') or has_table_privilege(c.oid,'DELETE') or has_table_privilege(c.oid,'TRUNCATE'))
         order by c.relname limit 5`,
       [READABLE],
     );

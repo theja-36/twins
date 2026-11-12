@@ -3,6 +3,7 @@
  * append-only evidence, the mandatory-stop floor). Everything is synthetic; rows are keyed by fresh UUIDs because protected tables cannot be cleaned up.
  * The connection role owns the tables, and FORCE ROW LEVEL SECURITY applies the policies to it, so these tests exercise the real policies.
  */
+import { allowSystemBinding, bindEveryTransaction } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
@@ -25,9 +26,9 @@ async function owner(): Promise<pg.Client> { const c = new pg.Client({ connectio
 /** An application-like session: unprivileged role, with `twins.user_id` set to the user (or no user at all for a system-style session). */
 async function session(userId: string | null): Promise<pg.Client> {
   const c = await owner();
+  await allowSystemBinding(c, ROLE);
   await c.query(`set role ${ROLE}`);
-  if (userId) await c.query("select set_config('twins.user_id', $1, false)", [userId]);
-  return c;
+  return bindEveryTransaction(c, userId);
 }
 afterAll(async () => { await Promise.all(clients.map((c) => c.end().catch(() => undefined))); });
 const rows = async (c: pg.Client, sql: string, p: unknown[] = []) => (await c.query(sql, p)).rows as Array<Record<string, unknown>>;

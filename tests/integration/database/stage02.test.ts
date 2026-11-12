@@ -41,7 +41,7 @@ describe("ownership is enforced by the database, not only by the API", () => {
     const r = await c.query(`select c.relname, c.relrowsecurity, c.relforcerowsecurity from pg_class c join information_schema.columns k on k.table_name = c.relname and k.table_schema = 'public' and k.column_name = 'user_id'
                               where c.relnamespace = 'public'::regnamespace and c.relkind = 'r' order by 1`);
     const unprotected = r.rows.filter((x: { relname: string; relrowsecurity: boolean; relforcerowsecurity: boolean }) => !(x.relrowsecurity && x.relforcerowsecurity)).map((x: { relname: string }) => x.relname);
-    expect(unprotected).toEqual(["user_sessions"]); // looked up by the SHA-256 of a 256-bit secret before any user is known; never listed, never exposed by a route
+    expect(unprotected).toEqual(["twins_txn_identity", "user_sessions"]); // user_sessions: looked up by the SHA-256 of a 256-bit secret before any user is known; never listed, never exposed by a route. twins_txn_identity (0049): row-level secured but not forced, because the owner-run bind doors must write it; no runtime role holds any write on it
     expect(r.rows.length).toBeGreaterThan(20);
   });
   it("every account-owned legacy table (account id, no user id) is protected through its account", async () => {

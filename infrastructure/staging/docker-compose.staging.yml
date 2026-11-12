@@ -315,7 +315,7 @@ services:
     command: ["node", "--import", "tsx", "/app/services/worker/src/index.ts"]
     environment:
       <<: *app-env
-      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # runtime role, see api
+      DATABASE_URL: postgresql://twins_system:${TWINS_SYSTEM_DB_PASSWORD:?set TWINS_SYSTEM_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # F5: the SYSTEM role (may bind a named user for background cycles); the API keeps twins_app
       # Same intake guards as the API; the worker enforces them again on every queued job (a job queued earlier or by
       # another producer is still checked). Empty = no chat approved. Options-only is a literal.
       TWINS_TELEGRAM_ALLOWED_CHAT_IDS: ${TWINS_TELEGRAM_ALLOWED_CHAT_IDS:-}
@@ -365,7 +365,7 @@ services:
     command: ["node", "--import", "tsx", "/app/services/scheduler/src/index.ts"]
     environment:
       <<: *app-env
-      DATABASE_URL: postgresql://twins_app:${TWINS_APP_DB_PASSWORD:?set TWINS_APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # runtime role, see api
+      DATABASE_URL: postgresql://twins_system:${TWINS_SYSTEM_DB_PASSWORD:?set TWINS_SYSTEM_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:?set POSTGRES_DB}   # F5: the SYSTEM role (may bind a named user for background cycles); the API keeps twins_app
       MARKET_WATCHLIST: ""
     depends_on:
       redis: { condition: service_healthy }

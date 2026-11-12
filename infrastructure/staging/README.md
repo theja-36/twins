@@ -50,8 +50,21 @@ Order matters; each step is safe to stop after.
 2. Deploy the application image that calls the door (`recordUserHalt`), then re-run `app-role.sql` as the owner: it removes the runtime INSERT on `risk_control_events` and grants EXECUTE on the door. Re-running it before the new image is live would stop the old worker writing halts.
 3. The API, worker and scheduler refuse to start (exit 82) outside `APP_ENV=development` unless the role matches this design, including the risk-control checks; the channel-news job refuses with exit 82 too.
 4. Platform-wide controls and CLEARs are written only with the owner CLI: `risk-control controls list|set|clear` (compose service `risk-control`, profile `ops`, owner credential). It needs a login role on `twins_control_privileged_roles`; nothing but a new migration removes a role from that list.
-5. Known limitation, not solved here: the database does not authenticate the user binding (`twins.user_id`).
+5. F5 is closed by migration 0049 (see "Authenticated user binding" below): the database binds the acting user from a session token or the system door.
 
 ## SECURITY DEFINER EXECUTE hardening (migration 0048)
 
 0048 revokes PUBLIC EXECUTE on the user-management, decision-door, account-lister and audit-chain trigger functions, and re-grants the application doors to `twins_app` when that role exists. Re-run `app-role.sql` after migrating as usual (it also grants `twins_paper_set_switch`, `twins_record_risk_approval` and `twins_set_user_halt`, which 0048 does not). The approval bot is unaffected. `scripts/ops/audit-definer-functions.sql` (read-only) lists every definer function with its owner, search_path and grantees.
+
+## Authenticated user binding (migration 0049, closes F5)
+
+Policies and doors read `twins_bound_user_id()`, never a setting. Two runtime database roles are required:
+
+| Role | Used by | Door it holds |
+|---|---|---|
+| `twins_app` | api, channel-news-writer | `twins_bind_session(token)` (api) - binds only the owner of a live session token |
+| `twins_system` | worker, scheduler | `twins_bind_system_user(uid)` - binds a named active user for background cycles |
+
+One-time and after every migration (as the database owner): `CREATE ROLE twins_system LOGIN;` then set its password (`\password twins_system`, never on a command line), then
+`psql -v app_role=twins_app -f app-role.sql`, `psql -v app_role=twins_system -f app-role.sql`, `psql -v system_role=twins_system -f system-role.sql`.
+Put the password in `TWINS_SYSTEM_DB_PASSWORD` (distinct from `TWINS_APP_DB_PASSWORD`). The API, worker and scheduler refuse to start (exit 82) if their role holds the wrong door. Until the roles are applied, background cycles fail closed. Residual limitations: ADR-015 Amendment 2.

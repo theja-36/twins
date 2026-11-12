@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { withUser } from "../../../packages/database/src/withUser";
+import { hasSessionCredential, runWithSessionCredential, withUser } from "../../../packages/database/src/withUser";
 
 /**
  * Static checks of migration 0033 (no database is available where this runs; the integration suite is what will apply it).
@@ -88,13 +88,25 @@ describe("migration 0033 review hardening", () => {
   it("independent playbooks have unique names too (a nullable unique index alone would allow duplicates)", () => { expect(sql).toContain('CREATE UNIQUE INDEX "strategy_playbooks_independent_name_unique" ON "strategy_playbooks" USING btree ("name") WHERE "strategy_playbooks"."telegram_source_id" is null'); });
 });
 
-describe("withUser", () => {
-  const U = "11111111-1111-4111-8111-111111111111";
-  it("sets the transaction-local user before running the callback and returns its result", async () => {
+describe("withUser (F5, migration 0049: the database binds the user)", () => {
+  const U = "11111111-1111-4111-8111-111111111111", V = "22222222-2222-4222-8222-222222222222";
+  const dbReturning = (uid: string | null, calls: string[]) => ({ transaction: async (f: (tx: unknown) => Promise<unknown>) => f({ execute: async () => { calls.push("bind"); return { rows: uid ? [{ uid }] : [] }; } }) }) as never;
+  it("with no request credential it binds the named user through the system door, then runs the callback", async () => {
     const calls: string[] = [];
-    const db = { transaction: async (f: (tx: unknown) => Promise<unknown>) => f({ execute: async () => { calls.push("set"); } }) } as never;
-    const out = await withUser(db, U, async () => { calls.push("body"); return 42; });
-    expect(out).toBe(42); expect(calls).toEqual(["set", "body"]);
+    const out = await withUser(dbReturning(U, calls), U, async () => { calls.push("body"); return 42; });
+    expect(out).toBe(42); expect(calls).toEqual(["bind", "body"]);
+  });
+  it("inside a request it binds by the caller's own session token and refuses a different requested user", async () => {
+    const seen: unknown[] = [];
+    const db = { transaction: async (f: (tx: unknown) => Promise<unknown>) => f({ execute: async (q: unknown) => { seen.push(JSON.stringify(q)); return { rows: [{ uid: U }] }; } }) } as never;
+    const token = "tws_" + "A".repeat(43);
+    await runWithSessionCredential(token, async () => { expect(hasSessionCredential()).toBe(true); await expect(withUser(db, U, async () => "ok")).resolves.toBe("ok"); await expect(withUser(db, V, async () => "no")).rejects.toThrow(/does not match/); });
+    expect(seen.some((q) => String(q).includes("twins_bind_session"))).toBe(true);
+    expect(hasSessionCredential()).toBe(false);
+  });
+  it("fails closed when the database returns no bound identity, and never runs the callback", async () => {
+    let ran = false;
+    await expect(withUser(dbReturning(null, []), U, async () => { ran = true; })).rejects.toThrow(/does not match/); expect(ran).toBe(false);
   });
   it("refuses a non-UUID user id before touching the database", async () => {
     let touched = false; const db = { transaction: async () => { touched = true; } } as never;

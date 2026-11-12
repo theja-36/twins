@@ -2,6 +2,7 @@
  * Stage 06 against REAL PostgreSQL (migration 0037, the planning stores and the evaluation path): versioned capital and risk policy, owner isolation by row-level security, append-only risk controls with the recovery
  * policy enforced by the database, the risk verdict and simulation owner constraints, and a full candidate evaluation. Synthetic data only; every test uses fresh users and instrument names.
  */
+import { allowSystemBinding, bindEveryTransaction } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
@@ -20,7 +21,7 @@ async function owner(): Promise<pg.Client> {
   if (!prepared) { await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${ROLE}') then create role ${ROLE} nologin nosuperuser nobypassrls; end if; end $$`); await c.query(`grant usage on schema public to ${ROLE}`); await c.query(`grant select, insert, update, delete, truncate on all tables in schema public to ${ROLE}`); prepared = true; }
   return c;
 }
-async function session(userId: string | null): Promise<pg.Client> { const c = await owner(); await c.query(`set role ${ROLE}`); if (userId) await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c; }
+async function session(userId: string | null): Promise<pg.Client> { const c = await owner(); await allowSystemBinding(c, ROLE); await c.query(`set role ${ROLE}`); return bindEveryTransaction(c, userId); }
 afterAll(async () => { await Promise.all(clients.map((c) => c.end().catch(() => undefined))); });
 const sym = (): string => `T${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
 async function newUser(): Promise<{ userId: string; accountId: string }> {

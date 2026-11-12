@@ -2,12 +2,13 @@
  * Stage 08 A2 / A3 against REAL PostgreSQL (migration 0046): immutable, owner-scoped, reproducible analytics snapshots built from ONE consistent database snapshot; one authoritative configuration for the API and the worker.
  * Synthetic data, FIXTURE prices. The connection is a superuser (it bypasses row-level security, not triggers or constraints), so isolation is checked through an unprivileged role session.
  */
+import { allowSystemBinding, bindEveryTransaction } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import { buildUserOps } from "../../../apps/api/src/userOps";
 import { advanceOpenOrders } from "../../../packages/execution/src/index";
-import { evidenceFingerprint, findSnapshotByEvidence } from "../../../packages/database/src/index";
+import { evidenceFingerprint, findSnapshotByEvidence, makeTransactionReadOnly, withUser } from "../../../packages/database/src/index";
 import { canonicalJson, captureSnapshot, currentAnalytics, currentHashes, DEFAULT_OUTCOME_LEARNING, loadOutcomeLearningConfig, readSnapshotInputs, reportOf, runLearningCycle, sha256 } from "../../../packages/outcomes/src/index";
 import { NOW } from "../../support/executionFixtures";
 import { makeOutcomeHarness } from "../../support/outcomeHarness";
@@ -17,7 +18,7 @@ const URL_ = requireTestDatabaseUrl(), ROLE = "twins_rls_test";
 const { db, fx, owner, close, learn, unsyncedClose } = makeOutcomeHarness(URL_);
 const clients: pg.Client[] = [];
 afterAll(async () => { await close(); await Promise.all(clients.map((c) => c.end().catch(() => undefined))); });
-async function session(userId: string): Promise<pg.Client> { const c = new pg.Client({ connectionString: URL_ }); await c.connect(); clients.push(c); await c.query(`set role ${ROLE}`); await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c; }
+async function session(userId: string): Promise<pg.Client> { const c = new pg.Client({ connectionString: URL_ }); await c.connect(); clients.push(c); await allowSystemBinding(c, ROLE); await c.query(`set role ${ROLE}`); return bindEveryTransaction(c, userId); }
 const cfg = { ...DEFAULT_OUTCOME_LEARNING, enabled: true };
 const deps = (config = cfg, now = NOW) => ({ db, config, now: () => now });
 /** a user with one CLOSED position, its trade outcome and (after a learning cycle) a FINAL attribution */
@@ -111,14 +112,15 @@ describe("reproducible snapshots (A2)", () => {
     const facts = (await loadAttributionFacts(db, a.userId, a.pos.id))!, prev = (await latestAttributionForPosition(db, a.userId, a.pos.id))!;
     const corr = buildCorrection({ ...facts, outcome: { ...facts.outcome!, pnl: (Number(facts.outcome!.pnl) + 1).toFixed(2) } as never }, prev, "consistency test: a reasoned correction committed during a read");
     expect(corr).not.toBeNull();
-    const seen = await db.transaction(async (tx) => {
+    const seen = await withUser(db, a.userId, async (tx) => {   // bind first (it writes the identity row), then read only; REPEATABLE READ takes its snapshot at the bind statement
+      await makeTransactionReadOnly(tx);
       const t = tx as unknown as typeof db;
       const fp1 = await evidenceFingerprint(t, a.userId), rows1 = await latestAttributions(t, a.userId, { mode: "PAPER", limit: 5000 });
       const id = await insertAttribution(db, a.userId, corr!); // ANOTHER connection commits while this read is in progress
       expect(id).not.toBeNull();
       const fp2 = await evidenceFingerprint(t, a.userId), rows2 = await latestAttributions(t, a.userId, { mode: "PAPER", limit: 5000 });
       return { fp1, fp2, v1: rows1.map((r) => r.version), v2: rows2.map((r) => r.version) };
-    }, { isolationLevel: "repeatable read", accessMode: "read only" });
+    }, { isolationLevel: "repeatable read" });
     expect(seen.fp2).toEqual(seen.fp1); expect(seen.v2).toEqual(seen.v1); // the snapshot did not move during the read
     const after = await evidenceFingerprint(db, a.userId);
     expect(after.attributions.count).toBe(seen.fp1.attributions.count + 1); // the committed correction is visible to the next read

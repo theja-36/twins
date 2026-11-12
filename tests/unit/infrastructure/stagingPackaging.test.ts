@@ -167,8 +167,8 @@ describe("staging packaging (static)", () => {
     expect(service("api")).toMatch(/REDIS_URL: redis:\/\/:\$\{REDIS_PASSWORD:\?[^}]*\}@twins-staging-redis-1:6379/);
     // services that are NOT on the shared network keep the shared anchor (bare names are unambiguous on twins_data only)
     expect(compose).toMatch(/x-app-env: &app-env[\s\S]*?@postgres:5432[\s\S]*?@redis:6379/);
-    for (const n of ["worker", "scheduler"]) {
-      expect(service(n), n).toMatch(/DATABASE_URL: postgresql:\/\/twins_app:\$\{TWINS_APP_DB_PASSWORD:\?[^}]*\}@postgres:5432\/\$\{POSTGRES_DB:\?[^}]*\}/);
+    for (const n of ["worker", "scheduler"]) { // F5 (migration 0049): the background cycles use the SYSTEM role, the only runtime role that may bind a named user; the API keeps twins_app
+      expect(service(n), n).toMatch(/DATABASE_URL: postgresql:\/\/twins_system:\$\{TWINS_SYSTEM_DB_PASSWORD:\?[^}]*\}@postgres:5432\/\$\{POSTGRES_DB:\?[^}]*\}/);
       expect(service(n), n).not.toMatch(/REDIS_URL/);
     }
     for (const n of ["migrate", "safety-control", "audit-verify"]) expect(service(n), n).not.toMatch(/DATABASE_URL|REDIS_URL|twins_app/); // owner credential via the shared anchor

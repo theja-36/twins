@@ -4,7 +4,7 @@ PostgreSQL, forward-only Drizzle migrations 0000-0041, SQL hand-appended by `scr
 
 ## Ownership model
 - `users` owns everything private. `accounts(id, user_id)` is the ownership anchor: every account-owned table has a composite foreign key `(account_id, user_id) -> accounts(id, user_id)`, so a row can never name another user's account.
-- Row-level security (`FORCE`, owner-only policy on `user_id = twins.user_id`) covers every table with a `user_id`, plus the legacy account-owned tables through their account. `twins.user_id` is bound per transaction by `withUser`. Exception: `user_sessions` (see ADR-018).
+- Row-level security (`FORCE`, owner-only policy on `user_id = twins_bound_user_id()` (the identity the database bound to the transaction from a session token or the system door — migration 0049; formerly the settable `twins.user_id`)) covers every table with a `user_id`, plus the legacy account-owned tables through their account. `twins.user_id` is bound per transaction by `withUser`. Exception: `user_sessions` (see ADR-018).
 - Runtime role (`app-role.sql`): read/append only; no UPDATE/DELETE on append-only evidence; `users` read-only except password hash and display name; privileged changes only through SECURITY DEFINER doors (`twins_create_user`, `twins_set_user_role`, `twins_set_user_active`, `twins_create_user_decision`, `twins_record_decision_approval`, ...).
 - ADMIN holds no private permission: the pure model (`packages/types/src/platform/auth.ts`) and every route return NOT_FOUND for private data.
 

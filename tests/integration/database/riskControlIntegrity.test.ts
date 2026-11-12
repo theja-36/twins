@@ -4,6 +4,7 @@
  * Proves: the runtime role cannot INSERT directly, cannot create platform-wide controls, CLEAR events or OWNER-labelled events; the one door accepts only valid USER-scope SYSTEM SET halts; the guard also holds against an over-granted role
  * and against a SUPERUSER that is not on the allowlist; RLS and append-only protections remain; the privilege self-check detects each regression. It does NOT and cannot prove that twins.user_id is authenticated (it is not: documented limitation).
  */
+import { mintSessionToken } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import pg from "pg";
@@ -20,7 +21,8 @@ const mkUser = async (): Promise<string> => {
 };
 /** Run `fn` as the role's own login identity (session_user and current_user), optionally with a user bound to the transaction; always rolled back. */
 async function as<T>(role: string, fn: () => Promise<T>, userId?: string): Promise<T> {
-  await c.query("begin"); await c.query(`set local session authorization ${role}`); if (userId) await c.query("select set_config('twins.user_id', $1, true)", [userId]);
+  const token = userId ? await mintSessionToken(c, userId) : undefined;
+  await c.query("begin"); await c.query(`set local session authorization ${role}`); if (userId) await c.query("select public.twins_bind_session($1)", [token]);
   try { return await fn(); } finally { await c.query("rollback"); }
 }
 const attempt = async (role: string, q: string, p: unknown[] = [], user?: string): Promise<{ ok: boolean; code: string; msg: string }> =>
@@ -37,7 +39,7 @@ beforeAll(async () => {
   await c.query(roleSql);
   await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${PROBE}') then create role ${PROBE} login; end if; end $$`);
   await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${SUPER}') then create role ${SUPER} login superuser; end if; end $$`);
-  await c.query(`grant usage on schema public to ${PROBE}`); await c.query(`grant select, insert on risk_control_events to ${PROBE}`); // an OVER-GRANTED role: the guard must hold even if a grant is wrong
+  await c.query(`grant usage on schema public to ${PROBE}`); await c.query(`grant select, insert on risk_control_events to ${PROBE}`); await c.query(`grant execute on function public.twins_bind_session(text) to ${PROBE}`); // an OVER-GRANTED role: the guard must hold even if a grant is wrong
   [A, B] = [await mkUser(), await mkUser()];
   await c.query(INSERT, row({ user: null, scope: "MARKET", key: `PLAT-${A.slice(0, 8)}`, kind: "RESTRICTION" })); // a platform control written on the owner path
   await c.query(INSERT, planning(A, { exp: null, kind: "DRAWDOWN_HALT" })); await c.query(INSERT, planning(B, { exp: null, kind: "DRAWDOWN_HALT" }));
@@ -116,7 +118,8 @@ describe("twins_set_user_halt: the one runtime door", () => {
   });
   it("is idempotent: an identical halt is returned, not appended again; a different expiry appends; a hostile reason is stored verbatim as data", async () => {
     const uid = await mkUser(), hostile = "x'; delete from risk_control_events; -- <script>alert(1)</script>", e1 = "2031-01-07T00:00:00Z", e2 = "2031-01-08T00:00:00Z";
-    await c.query("begin"); await c.query(`set local session authorization ${APP}`); await c.query("select set_config('twins.user_id', $1, true)", [uid]);
+    const tok = await mintSessionToken(c, uid);
+    await c.query("begin"); await c.query(`set local session authorization ${APP}`); await c.query("select public.twins_bind_session($1)", [tok]);
     const one = ((await c.query(door, ["DAILY_LOSS_HALT", hostile, e1])).rows[0] as { id: string }).id, again = ((await c.query(door, ["DAILY_LOSS_HALT", hostile, e1])).rows[0] as { id: string }).id, next = ((await c.query(door, ["DAILY_LOSS_HALT", hostile, e2])).rows[0] as { id: string }).id;
     await c.query("commit"); // the rows must outlive the rolled-back helper: they belong to a fresh user
     expect(again).toBe(one); expect(next).not.toBe(one); expect(await count("select count(*) as n from risk_control_events where user_id = $1", [uid])).toBe(2);
@@ -124,7 +127,7 @@ describe("twins_set_user_halt: the one runtime door", () => {
     expect(await count("select count(*) as n from risk_control_events")).toBeGreaterThan(2); // the hostile statement deleted nothing
   });
   it("two concurrent identical calls (separate connections) record ONE row (advisory lock)", async () => {
-    const uid = await mkUser(), call = async (cl: pg.Client): Promise<string> => { await cl.query("begin"); await cl.query(`set local session authorization ${APP}`); await cl.query("select set_config('twins.user_id', $1, true)", [uid]); const id = ((await cl.query(door, ["DRAWDOWN_HALT", "concurrent drawdown halt", null])).rows[0] as { id: string }).id; await cl.query("commit"); return id; };
+    const uid = await mkUser(), call = async (cl: pg.Client): Promise<string> => { const tok = await mintSessionToken(c, uid); await cl.query("begin"); await cl.query(`set local session authorization ${APP}`); await cl.query("select public.twins_bind_session($1)", [tok]); const id = ((await cl.query(door, ["DRAWDOWN_HALT", "concurrent drawdown halt", null])).rows[0] as { id: string }).id; await cl.query("commit"); return id; };
     const [x, y] = await Promise.all([call(c), call(c2)]); expect(x).toBe(y); expect(await count("select count(*) as n from risk_control_events where user_id = $1", [uid])).toBe(1);
   });
   it("is not executable by PUBLIC or by a role that was not granted it", async () => {

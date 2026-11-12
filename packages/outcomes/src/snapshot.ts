@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { CONFIDENCE_MODEL_VERSION } from "@twins/confidence";
-import { candidateFunnelCounts, claimFunnelCounts, evidenceFingerprint, findSnapshotByEvidence, insertSnapshot, latestAttributions, latestSnapshot, listDecisionRows, researchReportsForDecisions, type AttributionRow, type Db, type EvidenceFingerprint, type SnapshotRow } from "@twins/database";
+import { makeTransactionReadOnly, withUser, candidateFunnelCounts, claimFunnelCounts, evidenceFingerprint, findSnapshotByEvidence, insertSnapshot, latestAttributions, latestSnapshot, listDecisionRows, researchReportsForDecisions, type AttributionRow, type Db, type EvidenceFingerprint, type SnapshotRow } from "@twins/database";
 import { ATTRIBUTION_VERSION } from "./attribution";
 import { AGENT_ANALYTICS_VERSION } from "./agents";
 import { ANALYTICS_REPORT_VERSION, buildAnalyticsReport, type AnalyticsReport } from "./analytics";
@@ -41,8 +41,10 @@ type Pipeline = { claims: Awaited<ReturnType<typeof claimFunnelCounts>>; telegra
 export interface SnapshotInputs { records: AttributionRow[]; decisions: Awaited<ReturnType<typeof listDecisionRows>>; packages: Awaited<ReturnType<typeof researchReportsForDecisions>>; pipeline: Pipeline; fingerprint: EvidenceFingerprint; complete: boolean }
 export interface SnapshotHashes { evidenceHash: string; inputHash: string; configHash: string; asOf: Date }
 const asDb = (tx: unknown): Db => tx as Db;
-/** Runs `fn` against ONE consistent, read-only database snapshot. */
-async function consistently<T>(db: Db, fn: (tx: Db) => Promise<T>): Promise<T> { return db.transaction((tx) => fn(asDb(tx)), { isolationLevel: "repeatable read", accessMode: "read only" }); }
+/** Runs `fn` against ONE consistent, read-only database snapshot for `userId`. The user is bound first (a bind writes the identity row, which a read-only transaction cannot do), then the transaction is made READ ONLY before any data is read; REPEATABLE READ takes its snapshot at the bind statement. */
+async function consistently<T>(db: Db, userId: string, fn: (tx: Db) => Promise<T>): Promise<T> {
+  return withUser(db, userId, async (tx) => { await makeTransactionReadOnly(tx); return fn(asDb(tx)); }, { isolationLevel: "repeatable read" });
+}
 async function readPipeline(tx: Db): Promise<Pipeline> { return { claims: await claimFunnelCounts(tx), telegram: await candidateFunnelCounts(tx, "TELEGRAM"), independent: await candidateFunnelCounts(tx, "INDEPENDENT") }; }
 export function hashesOf(fp: EvidenceFingerprint, pipeline: Pipeline, config: OutcomeLearningConfig): SnapshotHashes {
   const settings = analysisSettingsOf(config), configHash = sha256(canonicalJson({ settings, versions: algorithmVersions() }));
@@ -52,7 +54,7 @@ export function hashesOf(fp: EvidenceFingerprint, pipeline: Pipeline, config: Ou
 }
 /** Reads every input inside one consistent snapshot. */
 export async function readSnapshotInputs(db: Db, userId: string): Promise<SnapshotInputs> {
-  return consistently(db, async (tx) => {
+  return consistently(db, userId, async (tx) => {
     const fingerprint = await evidenceFingerprint(tx, userId);
     const records = await latestAttributions(tx, userId, { mode: "PAPER", limit: SNAPSHOT_ROW_LIMIT }), decisions = await listDecisionRows(tx, userId, SNAPSHOT_ROW_LIMIT), packages = await researchReportsForDecisions(tx, userId, SNAPSHOT_ROW_LIMIT);
     return { records, decisions, packages, pipeline: await readPipeline(tx), fingerprint, complete: decisions.length < SNAPSHOT_ROW_LIMIT && packages.length < SNAPSHOT_ROW_LIMIT && fingerprint.attributions.count <= SNAPSHOT_ROW_LIMIT * 4 };
@@ -60,7 +62,7 @@ export async function readSnapshotInputs(db: Db, userId: string): Promise<Snapsh
 }
 /** The cheap check: the hashes of the CURRENT state, without loading any rows. */
 export async function currentHashes(db: Db, userId: string, config: OutcomeLearningConfig): Promise<SnapshotHashes> {
-  return consistently(db, async (tx) => hashesOf(await evidenceFingerprint(tx, userId), await readPipeline(tx), config));
+  return consistently(db, userId, async (tx) => hashesOf(await evidenceFingerprint(tx, userId), await readPipeline(tx), config));
 }
 /** PURE: the report derived from the inputs. Deterministic: depends on nothing but the inputs, the settings and `asOf`. */
 export function reportOf(i: SnapshotInputs, config: OutcomeLearningConfig, asOf: Date): AnalyticsReport {

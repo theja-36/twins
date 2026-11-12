@@ -33,6 +33,7 @@
 
 import { AuthService, sqlAuditSink, sqlAuthStore } from "@twins/auth";
 import { registerAuthRoutes } from "./authApi.js";
+import { registerSessionCredentialHook } from "./sessionCredential.js";
 import { registerUserRoutes } from "./userApi.js";
 import { buildUserOps } from "./userOps.js";
 import { buildTelegramIntelOps, registerTelegramIntelRoutes } from "./telegramIntelApi.js";
@@ -251,6 +252,7 @@ export async function buildApp(options: ApiOptions = {}): Promise<FastifyInstanc
     requestIdHeader: false,
     genReqId: () => newRequestId(),
   });
+  registerSessionCredentialHook(app); // F5: the caller's own session token reaches the database for this request only
   const structuredLog = (options.structuredLogger ?? observe("api").logger).child({ service: "api" });
 
   // Owned Redis/Queue diagnostics. ioredis emits an `error` on every reconnect attempt and BullMQ re-emits it;

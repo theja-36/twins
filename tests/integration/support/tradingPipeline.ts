@@ -2,6 +2,7 @@
  * Shared fixture for integration tests that need a real approved, executed (and optionally closed) PAPER trade. Fixture providers only: the clock is Monday 10:30 IST in 2031, prices come from a memory provider declared FIXTURE,
  * instrument specifications are test data. (Extracted from the Stage 07 test setup; the Stage 07 test keeps its own copy so that it stays self-contained.)
  */
+import { allowSystemBinding, bindEveryTransaction } from "./boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { appendCapitalProfile, appendRiskPolicy, beginScan, createCandidateQueue, createDb, getCandidate, getDecision, getPositionForDecision, insertScanCandidates, listDecisions, storeResearchPackage, type CandidateInsert } from "../../../packages/database/src/index";
@@ -24,7 +25,7 @@ export async function session(userId: string): Promise<pg.Client> {
   await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = 'twins_rls_test') then create role twins_rls_test nologin nosuperuser nobypassrls; end if; end $$`); await c.query("grant usage on schema public to twins_rls_test"); await c.query("grant select, insert, update, delete, truncate on all tables in schema public to twins_rls_test");
   // migration 0048 removed PUBLIC EXECUTE from the definer doors: the session role holds exactly the doors the runtime role is granted in app-role.sql (not the guard, trigger or card-state functions)
   await c.query("grant execute on function twins_clear_login_failures(text), twins_create_user(text, text, text, text, uuid), twins_set_user_role(uuid, uuid, text), twins_set_user_active(uuid, uuid, boolean), twins_create_user_decision(jsonb), twins_end_user_decision(uuid, text, text, text), twins_invalidate_decision(uuid, text, jsonb, text), twins_record_decision_approval(uuid, text, jsonb, text, text), twins_list_active_accounts(), twins_list_active_account_users(integer) to twins_rls_test");
-  await c.query("set role twins_rls_test"); await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c;
+  await allowSystemBinding(c, "twins_rls_test"); await c.query("set role twins_rls_test"); return bindEveryTransaction(c, userId);
 }
 export const closeClients = (): Promise<unknown> => Promise.all(clients.map((c) => c.end().catch(() => undefined)));
 export const sym = (): string => `T${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;

@@ -12,5 +12,5 @@ export {
   type PoolErrorStats,
   type PoolErrorSink,
 } from "./client";
-export { withUser, type UserTx } from "./withUser";
+export { withUser, runWithSessionCredential, hasSessionCredential, makeTransactionReadOnly, type UserTx, type WithUserOptions } from "./withUser";
 export * from "./stores/index";

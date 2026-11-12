@@ -2,6 +2,7 @@
  * Stage 07 against REAL PostgreSQL (migration 0038 and the decision / approval / paper-execution / trade-management path). Fixture providers only: the clock is Monday 10:30 IST in 2031, prices come from a memory provider
  * declared FIXTURE, instrument specifications are test data. The CI connection is a superuser (it bypasses row-level security, not triggers or constraints), so isolation is checked through an unprivileged session.
  */
+import { allowSystemBinding, bindEveryTransaction } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
@@ -24,7 +25,7 @@ async function owner(): Promise<pg.Client> {
   if (!prepared) { await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = '${ROLE}') then create role ${ROLE} nologin nosuperuser nobypassrls; end if; end $$`); await c.query(`grant usage on schema public to ${ROLE}`); await c.query(`grant select, insert, update, delete, truncate on all tables in schema public to ${ROLE}`); prepared = true; }
   return c;
 }
-async function session(userId: string): Promise<pg.Client> { const c = await owner(); await c.query(`set role ${ROLE}`); await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c; }
+async function session(userId: string): Promise<pg.Client> { const c = await owner(); await allowSystemBinding(c, ROLE); await c.query(`set role ${ROLE}`); return bindEveryTransaction(c, userId); }
 afterAll(async () => { await Promise.all(clients.map((c) => c.end().catch(() => undefined))); });
 
 const NOW = new Date("2031-01-06T05:00:00Z"); // Monday 10:30 IST

@@ -51,7 +51,8 @@ describe("migration 0010 and the verifier specification agree", () => {
 describe("role separation in the staging stack", () => {
   const role = read("infrastructure/staging/app-role.sql");
   it("the runtime services connect as twins_app; migrate, safety-control and audit-verify use the owner credential via the shared anchor", () => {
-    for (const n of ["api", "worker", "scheduler"]) expect(service(n), n).toMatch(/DATABASE_URL: postgresql:\/\/twins_app:\$\{TWINS_APP_DB_PASSWORD:\?/);
+    expect(service("api")).toMatch(/DATABASE_URL: postgresql:\/\/twins_app:\$\{TWINS_APP_DB_PASSWORD:\?/);
+    for (const n of ["worker", "scheduler"]) expect(service(n), n).toMatch(/DATABASE_URL: postgresql:\/\/twins_system:\$\{TWINS_SYSTEM_DB_PASSWORD:\?/); // F5 (0049): only the system role may bind a named user
     for (const n of ["migrate", "safety-control", "audit-verify"]) {
       expect(service(n), n).toContain("environment: *app-env");
       expect(service(n), n).toMatch(/profiles: \["(?:migrate|ops)"\]/);

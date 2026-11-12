@@ -10,7 +10,7 @@
 --   OWNER_SUPERUSER     it is owned by a superuser, so it runs with every privilege and bypasses row-level security (its body is then the only control);
 --   RUNTIME_EXECUTE     the runtime role (twins_app) may execute it;
 --   BOT_EXECUTE         the approval-bot role (twins_bot) may execute it;
---   TRUSTS_USER_BINDING its body reads the transaction setting twins.user_id (a TRUSTED, unauthenticated setting: documented limitation).
+--   TRUSTS_USER_BINDING its body reads the transaction setting twins.user_id (since migration 0049 NO function should: this flag now signals a regression to the settable, unauthenticated setting).
 BEGIN READ ONLY;
 \pset format unaligned
 \pset fieldsep '|'

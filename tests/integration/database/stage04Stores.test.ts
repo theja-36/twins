@@ -2,6 +2,7 @@
  * Stage 04 persistence against REAL PostgreSQL (migration 0035 and the stores): regimes are idempotent, research packages version per candidate, AI usage is append-only and
  * isolated per user by row-level security. Everything is synthetic; rows use fresh UUIDs because protected tables cannot be cleaned up.
  */
+import { allowSystemBinding, bindEveryTransaction } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
@@ -19,7 +20,7 @@ async function owner(): Promise<pg.Client> {
   await c.query(`grant usage on schema public to ${ROLE}`); await c.query(`grant select, insert, update, delete, truncate on all tables in schema public to ${ROLE}`);
   return c;
 }
-async function session(userId: string | null): Promise<pg.Client> { const c = await owner(); await c.query(`set role ${ROLE}`); if (userId) await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c; }
+async function session(userId: string | null): Promise<pg.Client> { const c = await owner(); await allowSystemBinding(c, ROLE); await c.query(`set role ${ROLE}`); return bindEveryTransaction(c, userId); }
 afterAll(async () => { await Promise.all(clients.map((c) => c.end().catch(() => undefined))); });
 
 const usage = (o: Partial<Parameters<ReturnType<typeof createAiUsageStore>["record"]>[0]> = {}) => ({

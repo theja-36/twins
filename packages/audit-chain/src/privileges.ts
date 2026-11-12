@@ -62,7 +62,7 @@ const RISK_TRIGGERS = ["risk_control_events_guard", "risk_control_events_no_upda
  *  - the door twins_set_user_halt exists, is SECURITY DEFINER, is owned by twins_control_writer, has a fixed search_path, is executable by the runtime role and NOT by PUBLIC;
  *  - twins_control_writer: NOLOGIN, not superuser / createrole / createdb / replication / bypassrls, owns exactly one function and no relation, has no CREATE on public, and the runtime role is not a member;
  *  - twins_control_privileged_roles (the owner allowlist): the runtime role has no privilege on it at all.
- * It does NOT prove that twins.user_id is authenticated: it is a trusted session setting (documented limitation).
+ * It does not prove who the acting user is: see checkIdentityBinding (migration 0049) for the database-bound identity checks.
  */
 export async function checkRiskControlProtection(db: Queryable): Promise<string[]> {
   const problems: string[] = [];
@@ -103,6 +103,41 @@ export async function checkRiskControlProtection(db: Queryable): Promise<string[
   return problems;
 }
 
+/** Which identity door this process's database role is meant to hold (migration 0049). "api" binds only by session token; "system" binds a named user for background cycles; "other" must hold neither door that names a user. */
+export type IdentityKind = "api" | "system" | "other";
+export const identityKindOf = (processName: string): IdentityKind => (processName === "worker" || processName === "scheduler" ? "system" : processName === "api" ? "api" : "other");
+
+/**
+ * Database-bound user identity (migration 0049), checked from the runtime role's own connection. Stable problem codes (empty = as designed):
+ *  - identity_door_missing:<fn>, identity_table_missing;
+ *  - the API role must NOT be able to name a user (api_can_bind_system); the system role must (system_cannot_bind_system) and must not also hold the session door (system_can_bind_session);
+ *  - an "other" role (e.g. the channel-news job) must not be able to name a user (other_can_bind_system);
+ *  - neither door is executable by PUBLIC (public_can_bind); no role may write twins_txn_identity (can_write:twins_txn_identity); the reader is present.
+ * This proves the database-side separation of duties from this role's connection. It does not prove the credential itself is safe: a process that holds a user's session token can bind that user.
+ */
+export async function checkIdentityBinding(db: Queryable, kind: IdentityKind): Promise<string[]> {
+  const problems: string[] = [];
+  const r = (await db.query(
+    "select to_regprocedure('public.twins_bind_session(text)') is not null as has_session, to_regprocedure('public.twins_bind_system_user(uuid)') is not null as has_system, to_regprocedure('public.twins_bound_user_id()') is not null as has_reader, to_regclass('public.twins_txn_identity') is not null as has_table",
+  )).rows[0] as Record<string, boolean> | undefined;
+  if (!r?.["has_session"]) problems.push("identity_door_missing:twins_bind_session");
+  if (!r?.["has_system"]) problems.push("identity_door_missing:twins_bind_system_user");
+  if (!r?.["has_reader"]) problems.push("identity_door_missing:twins_bound_user_id");
+  if (!r?.["has_table"]) problems.push("identity_table_missing");
+  if (problems.length) return problems;
+  const p = (await db.query(
+    "select has_function_privilege(current_user, 'public.twins_bind_session(text)', 'EXECUTE') as s, has_function_privilege(current_user, 'public.twins_bind_system_user(uuid)', 'EXECUTE') as y, exists (select 1 from aclexplode(coalesce(f.proacl, acldefault('f', f.proowner))) a where a.grantee = 0 and a.privilege_type = 'EXECUTE') as pub_s, exists (select 1 from aclexplode(coalesce(g.proacl, acldefault('f', g.proowner))) a where a.grantee = 0 and a.privilege_type = 'EXECUTE') as pub_y, (select string_agg(x, ',') from unnest(array['INSERT','UPDATE','DELETE','TRUNCATE']) x where has_table_privilege(current_user, 'public.twins_txn_identity', x)) as writes from pg_proc f, pg_proc g where f.oid = 'public.twins_bind_session(text)'::regprocedure and g.oid = 'public.twins_bind_system_user(uuid)'::regprocedure",
+  )).rows[0] as { s: boolean; y: boolean; pub_s: boolean; pub_y: boolean; writes: string | null };
+  if (p.pub_s || p.pub_y) problems.push("public_can_bind");
+  if (p.writes) problems.push("can_write:twins_txn_identity");
+  if (kind === "api" && p.y) problems.push("api_can_bind_system");
+  if (kind === "api" && !p.s) problems.push("api_cannot_bind_session");
+  if (kind === "system" && !p.y) problems.push("system_cannot_bind_system");
+  if (kind === "system" && p.s) problems.push("system_can_bind_session");
+  if (kind === "other" && p.y) problems.push("other_can_bind_system");
+  return problems;
+}
+
 export async function assertRuntimeRoleSeparation(db: Queryable): Promise<void> {
   const problems = await checkRuntimeRolePrivileges(db);
   if (problems.length > 0) throw new AuditRoleSeparationError(problems);
@@ -124,7 +159,7 @@ export async function enforceRuntimeRoleSeparation(
   const exit = options.exit ?? ((code: number) => process.exit(code));
   let problems: string[];
   try {
-    problems = await checkRuntimeRolePrivileges(db);
+    problems = [...(await checkRuntimeRolePrivileges(db)), ...(await checkIdentityBinding(db, identityKindOf(processName)))];
   } catch (error) {
     const code = (error as { code?: unknown } | null)?.code;
     problems = [`check_failed:${typeof code === "string" && /^[A-Za-z0-9_]{1,24}$/.test(code) ? code : "error"}`];

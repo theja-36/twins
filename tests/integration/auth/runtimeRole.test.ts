@@ -2,6 +2,7 @@
  * G-13, runtime-role half. Applies the ACTUAL infrastructure/staging/app-role.sql to PostgreSQL and proves what the runtime role can and cannot do to users, the decision and execution tables and the auth log.
  * (tests/integration/auth/stage01.test.ts proves the second layer, the trigger, using a deliberately over-granted role. This file proves the first layer, the real grants.)
  */
+import { mintSessionToken } from "../support/boundSession";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import pg from "pg";
@@ -12,7 +13,8 @@ const ROLE = "twins_app_stage01";
 const roleSql = readFileSync("infrastructure/staging/app-role.sql", "utf8").replaceAll(':"app_role"', `"${ROLE}"`).replaceAll(":'app_role'", `'${ROLE}'`);
 let c: pg.Client; let admin: string, trader: string, other: string;
 const asApp = async <T>(fn: () => Promise<T>, userId?: string): Promise<T> => {
-  await c.query("begin"); await c.query(`set local role ${ROLE}`); if (userId) await c.query("select set_config('twins.user_id', $1, true)", [userId]);
+  const token = userId ? await mintSessionToken(c, userId) : undefined;
+  await c.query("begin"); await c.query(`set local role ${ROLE}`); if (userId) await c.query("select public.twins_bind_session($1)", [token]);
   try { return await fn(); } finally { await c.query("rollback"); }
 };
 const code = async (q: string, p: unknown[] = [], user?: string): Promise<string> => asApp(async () => { try { await c.query(q, p); return "ok"; } catch (e) { return (e as { code?: string }).code ?? "error"; } }, user);

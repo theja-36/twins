@@ -58,9 +58,9 @@ describe("G-13: role and active changes only through the doors", () => {
     const o = await owner(); expect((await o.query("select role from users where id = $1", [t.id])).rows[0].role).toBe("TRADER");
   });
   it("a direct INSERT of an ADMIN is refused; creating one needs an active administrator", async () => {
-    const c = await session(randomUUID());
+    const s = svc(); const t = await s.register({ email: email(), password: PW }); const c = await session(t.id); // F5: a bound identity must be a real user
     await expectRefused(() => c.query("insert into users (id, email, password_hash, role) values (gen_random_uuid(), $1, 'x', 'ADMIN')", [email()]), /only through twins_create_user/);
-    const s = svc(); const t = await s.register({ email: email(), password: PW }); await makeAdmin(); // an active administrator exists
+    await makeAdmin(); // an active administrator exists
     const mk = (actorId: string | null) => () => sqlAuthStore(db).createUser({ email: email(), passwordHash: "x", displayName: null, role: "ADMIN", actorId: actorId as never });
     await expectRefused(mk(t.id), /only an active administrator can create an administrator/);
     await expectRefused(mk(null), /an administrator already exists/);

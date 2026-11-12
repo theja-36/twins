@@ -158,6 +158,9 @@ describe("risk decision expiry", () => {
     expect(rows).toHaveLength(3);
   });
   it("the batch job is idempotent, honours dry-run, and two jobs running at once expire each decision once", async () => {
+    // The job is bounded (200 per run, oldest first) by design. In the full integration suite earlier files leave hundreds of unexpired decisions in the shared database, so on a run that starts with a backlog the two concurrent
+    // runs below would spend their whole batch on OLD rows and never reach this test's two decisions (observed: zero EXPIRED rows, no duplicates). Drain the backlog first so the concurrency assertions are about concurrency only.
+    for (let i = 0; i < 50; i += 1) if ((await expireStaleRiskDecisions(db(), { asOf: new Date(Date.now() + 31 * MIN), limit: 1000 })).expired.length === 0) break;
     const a = await makeSized(), b = await makeSized();
     const asOf = new Date(Date.now() + 31 * MIN);
     const dry = await expireStaleRiskDecisions(db(), { asOf, dryRun: true });

@@ -198,7 +198,7 @@ describe("C. review-only: analytics, snapshots and insights change nothing that 
     const { p, token } = await closedUser();
     for (const m of ["POST", "PUT", "PATCH", "DELETE"] as const) for (const s of ["overview", "insights", "outcomes", "calibration"]) { const r = await app.inject({ method: m, url: `/analytics/${s}`, headers: { authorization: `Bearer ${token}` }, payload: {} }); expect([404, 405], `${m} /analytics/${s}`).toContain(r.statusCode); }
     const c = await owner(), tables = (await c.query(`select table_name from information_schema.columns where table_schema = 'public' and column_name = 'user_id'
-      and table_name !~ '^(outcome_|analytics_|learning_|calibration_|audit_|job_|user_sessions|idempotency)' and table_name not in ('users') order by table_name`)).rows.map((r: { table_name: string }) => r.table_name);
+      and table_name !~ '^(outcome_|analytics_|learning_|calibration_|audit_|job_|user_sessions|idempotency)' and table_name not in ('users', 'twins_txn_identity') order by table_name`)).rows.map((r: { table_name: string }) => r.table_name);
     expect(tables).toEqual(expect.arrayContaining(["user_decisions", "user_risk_policies", "user_capital_profiles", "user_execution_permissions"]));
     const fingerprint = async (): Promise<Record<string, string>> => { const out: Record<string, string> = {}; for (const t of tables) out[t] = ((await c.query(`select count(*)::text || ':' || coalesce(md5(string_agg(x::text, '|' order by x::text)), '') as f from "${t}" x where user_id = $1`, [p.userId])).rows[0] as { f: string }).f; return out; };
     const before = await fingerprint();

@@ -344,6 +344,13 @@
       "when": 1794593831283,
       "tag": "0048_definer_execute_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1794680231283,
+      "tag": "0049_authenticated_user_binding",
+      "breakpoints": true
     }
   ]
 }
