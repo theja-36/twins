@@ -29,7 +29,7 @@ describe("application shell: role-specific navigation", () => {
   });
   it("ADMIN: no private screen, no account selector, Administrator chip and the console label", () => {
     view(ADMIN, "/admin/system"); const links = railLinks();
-    expect(links.sort()).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Research", "Users & Access"].sort());
+    expect(links.sort()).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Playbooks", "Research", "Users & Access"].sort());
     for (const p of ["Approval Center", "Paper Trading", "Portfolio", "Capital & Risk", "Learning Insights", "Decision History", "Outcomes & Performance", "Overview"]) expect(links, p).not.toContain(p);
     expect(screen.queryByTestId("account-single")).toBeNull(); expect(screen.queryByRole("combobox")).toBeNull(); expect(screen.getByTestId("role-chip").textContent).toBe("Administrator"); expect(screen.getByText("Administration console")).toBeTruthy(); expect(document.documentElement.dataset["role"]).toBe("admin");
   });

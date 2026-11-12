@@ -5,11 +5,11 @@ import { SCREENS, WORKSPACES, breadcrumbFor, canView, findScreen, landingFor, mo
 describe("screen registry", () => {
   it("has the documented screens with unique ids and paths, each with a purpose, and permissions that exist", () => {
     expect(new Set(SCREENS.map((s) => s.id)).size).toBe(SCREENS.length); expect(new Set(SCREENS.map((s) => s.path)).size).toBe(SCREENS.length);
-    expect(SCREENS.map((s) => s.id).sort((a, b) => a - b)).toEqual([1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]); // 4 (detail) is a sub-screen of Opportunities
+    expect(SCREENS.map((s) => s.id).sort((a, b) => a - b)).toEqual([1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]); // 4 (detail) is a sub-screen of Opportunities; 16 is Playbooks (09.3B.4)
     for (const s of SCREENS) { expect(s.purpose.length).toBeGreaterThan(20); if (s.permission) expect(ALL_PERMISSIONS).toContain(s.permission); }
   });
   it("ADMIN never sees a private screen: only shared intelligence, administration and the account", () => {
-    const admin = screensFor("ADMIN"); expect(admin.map((s) => s.title).sort()).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Research", "Users & Access"].sort());
+    const admin = screensFor("ADMIN"); expect(admin.map((s) => s.title).sort()).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Playbooks", "Research", "Users & Access"].sort());
     for (const s of admin) { expect(s.kind).not.toBe("private"); if (s.permission && s.kind === "shared") expect(roleHasPermission("ADMIN", s.permission)).toBe(true); }
     for (const s of SCREENS.filter((x) => x.kind === "private")) { expect(canView("ADMIN", s), s.title).toBe(false); if (s.permission) expect(PRIVATE_PERMISSIONS as readonly string[]).toContain(s.permission); }
   });
@@ -29,4 +29,14 @@ describe("screen registry", () => {
   });
   it("every screen that has a backend gap says so (UNAVAILABLE text present)", () => { for (const id of [2, 6, 8, 9, 10, 13, 14]) expect(SCREENS.find((s) => s.id === id)?.gap, String(id)).toBeTruthy(); });
   it("breadcrumbs name the workspace and the screen; unknown paths say so", () => { expect(breadcrumbFor("/paper")).toEqual([{ label: "Control" }, { label: "Paper Trading" }]); expect(breadcrumbFor("/")).toEqual([{ label: "Overview" }]); expect(breadcrumbFor("/nope")).toEqual([{ label: "Not found" }]); expect(breadcrumbFor("/design-system")).toEqual([{ label: "Design system" }]); expect(breadcrumbFor("/opportunities", "ADMIN")).toEqual([{ label: "Understand" }, { label: "Opportunities" }]); });
+});
+
+describe("Stage 09.3B.4 screens", () => {
+  it("Decision History is private (TRADER only) and Playbooks are shared (both roles); their detail routes share the gate and have breadcrumbs", () => {
+    expect(canView("TRADER", findScreen("/decisions")!)).toBe(true); expect(canView("ADMIN", findScreen("/decisions")!)).toBe(false);
+    expect(canView("TRADER", findScreen("/strategies")!)).toBe(true); expect(canView("ADMIN", findScreen("/strategies")!)).toBe(true);
+    const id = "00000000-0000-4000-8000-000000000500";
+    expect(breadcrumbFor(`/decisions/${id}`)).toEqual([{ label: "Review" }, { label: "Decision History", href: "/decisions" }, { label: "Decision detail" }]);
+    expect(breadcrumbFor(`/strategies/${id}`, "ADMIN")).toEqual([{ label: "Understand" }, { label: "Playbooks", href: "/strategies" }, { label: "Playbook detail" }]);
+  });
 });

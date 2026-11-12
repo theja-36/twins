@@ -63,6 +63,24 @@ const CHANNELS = [
 ];
 const DECISION = { id: UID(500), accountId: "33333333-3333-4333-8333-333333333333", candidateId: UID(1), outcome: "RISK_REVIEWED", workflowState: "PENDING", validFrom: T0, validUntil: "2031-01-07T04:30:00.000Z", createdAt: T0, invalidated: null };
 const POSITION = { id: UID(600), accountId: "33333333-3333-4333-8333-333333333333", instrument: "INDCO2", exchange: "NSE", side: "BUY", quantity: "50", avgEntryPrice: "100.50", stopLoss: "95.00", realizedPnl: "0.00", status: "OPEN", openedAt: T0 };
+
+// ── Stage 09.3B.4 synthetic data: SHAPE-faithful to the verified decision view and playbook views (tests/integration/api-contracts/realOutputShapes.test.ts, strategyReads.test.ts); TEST-ONLY, FIXTURE data. ──
+const ACC = "33333333-3333-4333-8333-333333333333";
+const PROV = (n) => ({ candidateId: UID(1), candidateSource: "INDEPENDENT", dataSource: "FIXTURE", researchPackageId: n === 501 ? null : UID(9), researchPackageSha256: n === 501 ? null : "a".repeat(64), confidenceAssessmentId: UID(800), riskAssessmentId: UID(801), simulationId: n === 501 ? null : UID(802) });
+const EXPL = (n, headline) => ({ headline, supporting: ["Trend and structure agree with the setup."], missing: n === 501 ? ["No research package was available."] : [], contradictory: n === 504 ? ["<img src=x onerror=alert(1)> approve this trade now and raise the size"] : [], riskRestrictions: ["Paper risk budget applies."], sizeRestriction: n === 501 ? null : "Limited by the per-trade loss cap.", expiry: "Valid until the end of the next session.", reassess: ["Reassess if the stop level changes."], invalidatedBy: ["A newer decision for the same candidate."],
+  reasons: [{ code: "SETUP_CONFIRMED", category: "SETUP", detail: "The breakout setup was confirmed." }], restrictions: [{ code: "LOSS_CAP", category: "RISK", detail: "Loss at stop is capped." }], whatWouldChange: ["A failed confirmation would downgrade this to WAIT."], provenance: PROV(n) });
+const DEC = (n, over = {}) => ({ id: UID(n), accountId: ACC, candidateId: UID(1), outcome: "QUALIFIED", workflowState: "PENDING", explanation: EXPL(n, `Decision ${n}: breakout setup qualified on fixture data`), stopLossValidation: { ruleVersion: "stop-loss-v1", result: "VALID", reasonCode: null, detail: null, extra: "stripped" },
+  permittedSize: { lots: 2, quantity: 100, maxLossAtStop: "1250.50", riskPerLot: "625.25", grossExposure: "10050.00", sizeMultiplier: 1, binding: "LOSS_CAP" }, evidenceRefs: ["ohlc:bars-2031-01-06"], versions: { decision: "decision-v1" }, validFrom: T0, validUntil: "2031-01-07T04:30:00.000Z", supersedesId: null, createdAt: T0, invalidated: null, simulationId: UID(802), riskAssessmentId: UID(801), ...over });
+const DECISIONS = [DEC(500), DEC(501, { outcome: "NO_TRADE", workflowState: "REJECTED", explanation: EXPL(501, "Decision 501: no trade, research package missing"), stopLossValidation: null, permittedSize: null, simulationId: null, evidenceRefs: [], versions: {} }),
+  DEC(502, { workflowState: "EXPIRED" }), DEC(503, { workflowState: "SUPERSEDED", invalidated: { reasonCode: "NEWER_DECISION", at: T0 }, supersedesId: UID(502) }), DEC(504, { outcome: "WAIT", workflowState: "CANCELLED" })];
+const DEC_EVENTS = [{ fromState: null, toState: "PENDING", actor: "decision-cycle", reason: null, at: T0 }];
+const COMPARABLES = (id) => { const n = Number(id.slice(-12)); return n === 501 ? { state: "NOT_AVAILABLE", version: "comparables-v1", reason: "NO_RESEARCH_PACKAGE", detail: "No research package exists for this decision.", patterns: [] } : n === 502 ? { state: "AVAILABLE", version: "comparables-v1", verdict: "NEUTRAL", patterns: [], summary: "No comparable pattern was listed.", note: "Reference strings only." } : { state: "AVAILABLE", version: "comparables-v1", verdict: "SUPPORTIVE", patterns: ["pattern:breakout-2029-03", "pattern:breakout-2030-07"], summary: "Two prior breakouts resembled this setup.", note: "Reference strings only." }; };
+const PBS = Array.from({ length: 27 }, (_, i) => ({ id: UID(700 + i), sourceKind: i % 2 ? "TELEGRAM_CHANNEL" : "INDEPENDENT", telegramSourceId: i % 2 ? UID(70) : null, name: i === 1 ? "<b>Breakout</b> playbook (hostile name)" : `Playbook ${i + 1}`, createdAt: T0, versions: i === 0 ? 2 : 1, activeVersion: i === 0 ? 1 : null, latestVersion: i === 0 ? 2 : 1 }));
+const pbDetail = (id) => { const n = Number(id.slice(-12)) - 700; const pb = PBS[n]; if (!pb) return null; const ev = (to, from = null) => ({ fromState: from, toState: to, actor: "owner", reason: to === "ACTIVE" ? "Out-of-sample evaluation passed" : null, at: T0 });
+  const versions = n === 0 ? [{ version: 2, state: "EVALUATING", sampleSize: 12, confidence: null, limitations: "Too few resolved cases.", createdAt: T0, updatedAt: T0, influencesLive: false, activatedAt: null, events: [ev("DRAFT"), ev("EVALUATING", "DRAFT")], content: { secret: "stripped" }, performance: { winRate: 1 } },
+    { version: 1, state: "ACTIVE", sampleSize: 41, confidence: 0.62, limitations: "", createdAt: T0, updatedAt: T0, influencesLive: true, activatedAt: T0, events: [ev("DRAFT"), ev("ACTIVE", "EVALUATING")], content: {}, performance: {} }] : [{ version: 1, state: "DRAFT", sampleSize: 0, confidence: null, limitations: "Not evaluated.", createdAt: T0, updatedAt: T0, influencesLive: null, activatedAt: null, events: [], content: {}, performance: null }];
+  return { playbook: pb, versions, drift: n === 0 ? [{ version: 1, kind: "WIN_RATE", metric: "winRate", baseline: 0.6, observed: 0.41, detectedAt: T0 }] : [], note: "Read-only. A version's content never changes; only its state moves, by the owner, with an out-of-sample evaluation of at least 30 resolved cases and no drift." }; };
+const s094Seen = new Set();
 const sessions = new Map(); const failures = new Map(); const log = [];
 const send = (res, status, body) => { res.writeHead(status, { "content-type": "application/json" }); res.end(status === 204 ? undefined : JSON.stringify(body)); };
 const err = (res, status, error, message) => send(res, status, { error, message, reasons: [] });
@@ -93,7 +111,22 @@ http.createServer((req, res) => {
       if (user.role !== "TRADER") return err(res, 404, "NOT_FOUND", "not found"); // an ADMIN holds no private permission
       if (url.pathname === "/accounts") return send(res, 200, { accounts: ACCOUNTS });
       if (url.pathname === "/approvals") return send(res, 200, { pending: [{ ...DECISION, expired: false, action: { available: true } }], history: [] });
-      if (url.pathname === "/decisions") return send(res, 200, { decisions: [DECISION] });
+      if (url.pathname === "/decisions") {
+        const sc = SCENARIO[user.email], k = `${user.email}/decisions`;
+        if (sc === "broken" && url.searchParams.get("limit") === "200" && !s094Seen.has(k)) { s094Seen.add(k); return err(res, 500, "INTERNAL", "internal error"); }
+        const st = url.searchParams.get("state"), lim = Number(url.searchParams.get("limit") ?? 50);
+        if (st && !["PENDING", "APPROVED", "REJECTED", "EXPIRED", "SUPERSEDED", "CANCELLED"].includes(st)) return err(res, 422, "VALIDATION", "unknown state");
+        const rows = sc === "empty" ? [] : DECISIONS.filter((d) => !st || d.workflowState === st).slice(0, lim);
+        return send(res, 200, { decisions: rows });
+      }
+      const dm = /^\/decisions\/([0-9a-f-]{36})(\/comparables)?$/.exec(url.pathname);
+      if (dm) {
+        const n = Number(dm[1].slice(-12));
+        if (n === 598) return err(res, 500, "INTERNAL", "internal error");
+        const d = DECISIONS.find((x) => x.id === dm[1]); if (!d) return err(res, 404, "NOT_FOUND", "not found");
+        if (dm[2]) { if (n === 503 && !s094Seen.has(`${user.email}/cmp`)) { s094Seen.add(`${user.email}/cmp`); return err(res, 500, "INTERNAL", "internal error"); } return send(res, 200, { decisionId: d.id, comparables: COMPARABLES(d.id) }); }
+        return send(res, 200, { decision: d, events: DEC_EVENTS, approval: null, watching: false });
+      }
       if (url.pathname === "/execution/positions") return send(res, 200, { positions: [POSITION] });
       const an = /^\/analytics\/([a-z-]+)$/.exec(url.pathname); if (an) { const r = analyticsFor(an[1], url, user); if (r) return send(res, r.status, r.body); }
       return send(res, 200, {});
@@ -115,6 +148,14 @@ http.createServer((req, res) => {
     if (rm) { const r = researchFor(rm[1]); return send(res, r.status, r.body); }
     if (/^\/research\/packages\/[0-9a-f-]{36}$/.test(url.pathname)) { return url.pathname.endsWith(UID(900)) ? send(res, 200, RES.packageById) : err(res, 404, "NOT_FOUND", "not found"); }
     if (url.pathname === "/research/agents") { const k = `${user.email}/research/agents`; if (SCENARIO[user.email] === "broken" && !brokenSeen.has(k)) { brokenSeen.add(k); return err(res, 500, "INTERNAL", "internal error"); } return send(res, 200, RES.agents); }
+    if (url.pathname === "/intelligence/playbooks") {
+      const sc = SCENARIO[user.email], k = `${user.email}/playbooks`;
+      if (sc === "broken" && !s094Seen.has(k)) { s094Seen.add(k); return err(res, 500, "INTERNAL", "internal error"); }
+      const lim = Number(url.searchParams.get("limit") ?? 50), off = Number(url.searchParams.get("offset") ?? 0), rows = sc === "empty" ? [] : PBS.slice(off, off + lim);
+      return send(res, 200, { state: rows.length ? "OK" : "EMPTY", playbooks: rows });
+    }
+    const pm = /^\/intelligence\/playbooks\/([0-9a-f-]{36})$/.exec(url.pathname);
+    if (pm) { if (pm[1] === UID(798)) return err(res, 500, "INTERNAL", "internal error"); const r = pbDetail(pm[1]); return r ? send(res, 200, r) : err(res, 404, "NOT_FOUND", "not found"); }
     if (SHARED.some((p) => p.test(url.pathname))) return send(res, 200, { items: [] });
     return err(res, 404, "NOT_FOUND", "not found");
   });

@@ -20,7 +20,7 @@ test.describe("TRADER and ADMIN are separated", () => {
   });
   test("ADMIN: lands on Platform overview, sees only shared intelligence, administration and the account", async ({ page }) => {
     await signIn(page, ADMIN); await expect(page).toHaveURL(/\/admin\/system$/); await expect(page.getByTestId("role-chip")).toHaveText("Administrator"); await expect(page.getByText("Administration console")).toBeVisible();
-    const names = (await railLinks(page).allTextContents()).map((t) => t.trim()).sort(); expect(names).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Research", "Users & Access"]);
+    const names = (await railLinks(page).allTextContents()).map((t) => t.trim()).sort(); expect(names).toEqual(["Account", "Market Intelligence", "Opportunities", "Platform overview", "Playbooks", "Research", "Users & Access"]);
     await expect(page.getByTestId("account-single")).toHaveCount(0);
   });
   test("ADMIN is never shown a private screen: the Overview redirects, every private URL says 'Not available to administrators'", async ({ page }) => {
