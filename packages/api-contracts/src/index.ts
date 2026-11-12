@@ -11,3 +11,6 @@ export * from "./wire";
 export * from "./analytics";
 export * from "./catalogue";
 export * from "./opportunities";
+export * from "./research";
+export * from "./decisions";
+export * from "./learning";

@@ -8,8 +8,8 @@
 export const ANALYTICS_CONTRACT_VERSION = "analytics-contract-v1" as const;
 export const ANALYTICS_NOTICE = "Simulated paper-trading results. Figures based on fixture data are not validated performance. Confidence is a strength score, not a probability. Nothing here changes any setting." as const;
 
-/** `SnapshotMeta` (snapshot.ts:72). `algorithmVersions` is not guaranteed beyond being present. */
-export interface SnapshotMetaView { id: string; asOf: string; createdAt: string; verifiedAt: string; evidenceHash: string; inputHash: string; configHash: string; algorithmVersions: unknown; createdBy: string; freshness: "CURRENT" | "STALE"; staleReason: string | null; complete: boolean; maxAgeSeconds: number }
+/** `SnapshotMeta` (snapshot.ts:72). `algorithmVersions` is a map of component name to version string (verified against real output in 09.3B.1). */
+export interface SnapshotMetaView { id: string; asOf: string; createdAt: string; verifiedAt: string; evidenceHash: string; inputHash: string; configHash: string; algorithmVersions: Record<string, string>; createdBy: string; freshness: "CURRENT" | "STALE"; staleReason: string | null; complete: boolean; maxAgeSeconds: number }
 
 export interface AnalyticsEnvelope<T> { contractVersion: typeof ANALYTICS_CONTRACT_VERSION; generatedAt: string; dataset: "PAPER"; mode: "PAPER"; liveStatus: "UNAVAILABLE"; notice: string; data: T }
 /** What every analytics route returns (the 11 endpoints). */

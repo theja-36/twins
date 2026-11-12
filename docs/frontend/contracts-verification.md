@@ -83,3 +83,6 @@ Browser-safety is itself tested (`contractsBoundary.test.ts`): only relative imp
 ## 6. Stage 09.3A additions (local; hosted CI not run)
 
 `src/opportunities.ts` adds typed views for `/opportunities/candidates`, `/opportunities/candidates/:id`, `/opportunities/scans`, `/research/candidates/:id/package` (envelope only) and `/intelligence/channels`. Evidence: `opportunityParity.test.ts` (4 tests) compares the exact key sets with the real routes — **TESTED** for key sets with synthetic data. Still unverified: candidate `evidence` item shapes, the research `package` body, scan `skipped`/`parameters`, `/intelligence/pipeline` and every other shared route.
+
+## 7. Stage 09.3B.1 additions (local; hosted CI not run)
+Research package, decision explanation/size/events, comparables, all analytics section payloads, snapshot metadata and insight rows are now **TESTED against real engine output** (`tests/integration/api-contracts/realOutputShapes.test.ts`); see `stage09-3b1-verification.md` for the verified/unverified split, the analytics-GET snapshot-write finding, the cross-user HTTP evidence and the review-only evidence. This corrects §4 for the items listed there as "inner shape of `explanation`" and "`data` payload of each analytics section".
