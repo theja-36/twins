@@ -10,9 +10,9 @@ test.describe("TRADER and ADMIN are separated", () => {
     await expect(page.getByTestId("account-single")).toContainText("Paper account");
   });
   test("TRADER reaches a screen and sees an honest placeholder with UNAVAILABLE where the backend has no capability", async ({ page }) => {
-    await signIn(page, TRADER); await page.goto("/paper");
-    await expect(page.getByRole("heading", { name: "Paper Trading", level: 1 })).toBeVisible(); await expect(page.getByText("This screen is built in Stage 09.3")).toBeVisible();
-    await expect(page.getByText("There is no browser route to request execution")).toBeVisible(); await expect(page.getByText("NOT AVAILABLE").first()).toBeVisible();
+    await signIn(page, TRADER); await page.goto("/capital-risk"); // Capital & Risk is deliberately still a placeholder (held behind the runtime-role verification); Paper Trading is a real screen since Stage 09.4
+    await expect(page.getByRole("heading", { name: "Capital & Risk", level: 1 })).toBeVisible(); await expect(page.getByText("This screen is built in Stage 09.3")).toBeVisible();
+    await expect(page.getByText("Capital and risk-policy changes have no write routes")).toBeVisible(); await expect(page.getByText("NOT AVAILABLE").first()).toBeVisible();
   });
   test("TRADER opening an ADMIN page is told it is not available (no data, no redirect loop)", async ({ page }) => {
     await signIn(page, TRADER);

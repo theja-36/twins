@@ -121,7 +121,7 @@ describe("GET /api/session/* (allow-listed relay)", () => {
     expect(f.seen).toHaveLength(0);
   });
   it("validates the query against the catalogue before calling the backend", async () => {
-    const f = fakeFetch(() => ({ status: 200, body: {} })); const d = { cfg: cfgHost(), fetcher: f.fetcher };
+    const f = fakeFetch(() => ({ status: 200, body: { accountId: ID, mode: "PAPER", isolation: "PER_USER_ACCOUNT", facts: null, notes: [] } })); const d = { cfg: cfgHost(), fetcher: f.fetcher }; // /portfolio now has a strict relay schema, so the backend double answers with a valid portfolio
     expect((await relay(rel("/portfolio"), ["portfolio"], d)).status).toBe(422); expect((await relay(rel(`/portfolio?accountId=${ID}&userId=${ID}`), ["portfolio"], d)).status).toBe(422); expect(f.seen).toHaveLength(0);
     expect((await relay(rel(`/portfolio?accountId=${ID}`), ["portfolio"], d)).status).toBe(200); expect(f.seen[0]!.url).toBe(`http://api.invalid:3000/portfolio?accountId=${ID}`);
   });

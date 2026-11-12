@@ -14,7 +14,7 @@ const USERS = {
 };
 // Learning & Insights scenarios: one TRADER per scenario, so no global state is shared between parallel tests. The base data is a real-output sample (e2e/fixtures/analytics.sample.json: synthetic FIXTURE data, test-only).
 const SAMPLE = JSON.parse(readFileSync(new URL("./fixtures/analytics.sample.json", import.meta.url), "utf8"));
-const SCENARIO = { "stale@example.test": "stale", "empty@example.test": "empty", "partial@example.test": "partial", "broken@example.test": "broken" };
+const SCENARIO = { "stale@example.test": "stale", "empty@example.test": "empty", "partial@example.test": "partial", "broken@example.test": "broken", "capital@example.test": "capital" };
 for (const [email, name] of Object.entries(SCENARIO)) USERS[email] = { password: `${name}-pass-123`, user: { id: `4444444${Object.keys(SCENARIO).indexOf(email)}-4444-4444-8444-444444444444`, email, displayName: `${name} trader`, role: "TRADER", isActive: true } };
 const RES = JSON.parse(readFileSync(new URL("./fixtures/research.sample.json", import.meta.url), "utf8"));
 /** Research packages: candidates 1 and 2 use the REAL orchestrator output (e2e/fixtures/research.sample.json). Ids 5 and 8 are TEST-ONLY synthetic variants built from it (verdicts, contradictions, risk flags, a hostile summary, no asOf);
@@ -35,6 +35,43 @@ function researchFor(id) {
   }
   if (n === 8) delete b.package.asOf;
   return { status: 200, body: b };
+}
+
+// ── Stage 09.4: paper trading and portfolio. Real engine output (e2e/fixtures/paper.sample.json) plus TEST-ONLY variants; query rules mirror the real routes (orders: decisionId, status, limit; positions: status, limit; no account filter, no offset). ──
+const PAPER = JSON.parse(readFileSync(new URL("./fixtures/paper.sample.json", import.meta.url), "utf8"));
+const PAPER_ACCOUNT = "33333333-3333-4333-8333-333333333333";
+const VALIDATION = (m, r = []) => ({ status: 422, body: { error: "VALIDATION", message: m, reasons: r } });
+const paperSeen = new Set();
+function paperLimit(url, allowed) {
+  for (const k of url.searchParams.keys()) if (!allowed.includes(k)) return VALIDATION("unknown parameter", [`not allowed: ${k}`]);
+  const l = url.searchParams.get("limit"); if (l !== null && !(/^\d+$/.test(l) && Number(l) >= 1 && Number(l) <= 200)) return VALIDATION("limit must be an integer between 1 and 200");
+  return null;
+}
+function paperFor(url, user) {
+  const sc = SCENARIO[user.email], p = url.pathname, once = (k) => { const key = `${user.email}${k}`; if (paperSeen.has(key)) return false; paperSeen.add(key); return true; };
+  if (sc === "broken" && /^\/(execution\/(orders|positions)|portfolio)$/.test(p) && once(p + url.search)) return { status: 500, body: { error: "INTERNAL", message: "internal error", reasons: [] } };
+  if (p === "/execution/orders") {
+    const bad = paperLimit(url, ["decisionId", "status", "limit"]); if (bad) return bad; const st = url.searchParams.get("status"), dec = url.searchParams.get("decisionId");
+    if (dec !== null && !/^[0-9a-f-]{36}$/.test(dec)) return VALIDATION("invalid id", ["invalid: decisionId"]);
+    const rows = sc === "empty" ? [] : [...PAPER.orders, PAPER.orderPartialVariant].filter((o) => (!st || o.status === st) && (!dec || o.decisionId === dec)); return { status: 200, body: { orders: rows } };
+  }
+  const fm = /^\/execution\/orders\/([0-9a-f-]{36})\/fills$/.exec(p);
+  if (fm) { const o = [...PAPER.orders, PAPER.orderPartialVariant].find((x) => x.id === fm[1]); if (!o || sc === "empty") return { status: 200, body: { fills: [] } };
+    if (o.purpose === "ENTRY" && o.id === PAPER.orders[0].id) return { status: 200, body: { fills: PAPER.fillsEntry } };
+    return { status: 200, body: { fills: [{ id: UID(700), quantity: o.filledQuantity, price: o.avgFillPrice ?? "100.00", costs: "12.34", priceSource: "FIXTURE", filledAt: T0 }] } }; }
+  if (p === "/execution/positions") {
+    const bad = paperLimit(url, ["status", "limit"]); if (bad) return bad; const st = url.searchParams.get("status"); if (st !== null && st !== "OPEN" && st !== "CLOSED") return VALIDATION("status must be OPEN or CLOSED");
+    const all = sc === "empty" ? [] : [POSITION, PAPER.positionOpenVariant, PAPER.positionClosed]; return { status: 200, body: { positions: all.filter((x) => !st || x.status === st) } };
+  }
+  const em = /^\/execution\/positions\/([0-9a-f-]{36})\/events$/.exec(p);
+  if (em) return { status: 200, body: { events: sc === "empty" || em[1] !== PAPER.positionClosed.id ? [] : PAPER.events } };
+  if (p === "/portfolio") {
+    const bad = paperLimit(url, ["accountId"]); if (bad) return bad; const a = url.searchParams.get("accountId"); if (!a || !/^[0-9a-f-]{36}$/.test(a)) return VALIDATION("invalid id", ["invalid: accountId"]);
+    if (a !== PAPER_ACCOUNT) return { status: 404, body: { error: "NOT_FOUND", message: "not found", reasons: [] } };
+    if (sc === "empty") return { status: 200, body: { accountId: a, mode: "PAPER", isolation: "PER_USER_ACCOUNT", facts: { accountId: a, openPositions: 0, allocatedNotional: "0", realizedPnl: "0", totalCapital: null, availableCapital: null, unallocatedCapital: null, capitalProfileVersion: null }, notes: PAPER.portfolioReal.notes } };
+    return { status: 200, body: sc === "capital" ? PAPER.portfolioCapitalVariant : PAPER.portfolioReal }; // the default trader gets the REAL output (capital null); the "capital" scenario gets a TEST-ONLY variant with capital figures
+  }
+  return null;
 }
 const brokenSeen = new Set();
 function analyticsFor(section, url, user) {
@@ -62,7 +99,7 @@ const CHANNELS = [
   { id: UID(71), channel: "***1111", name: null, messages: 3, messages24h: 0, claims: { claim: 0, ambiguous: 0, unsupported: 0 }, candidates: {}, firstMessageAt: T0, lastMessageAt: T0, health: { status: "SILENT", lastMessageAgeSeconds: 900000, messages24h: 0, capture: "NO_DATA", reasons: ["NO_MESSAGE_FOR_DAYS"], reliability: "NOT_AVAILABLE" } },
 ];
 const DECISION = { id: UID(500), accountId: "33333333-3333-4333-8333-333333333333", candidateId: UID(1), outcome: "RISK_REVIEWED", workflowState: "PENDING", validFrom: T0, validUntil: "2031-01-07T04:30:00.000Z", createdAt: T0, invalidated: null };
-const POSITION = { id: UID(600), accountId: "33333333-3333-4333-8333-333333333333", instrument: "INDCO2", exchange: "NSE", side: "BUY", quantity: "50", avgEntryPrice: "100.50", stopLoss: "95.00", realizedPnl: "0.00", status: "OPEN", openedAt: T0 };
+const POSITION = { id: UID(600), userId: "11111111-1111-4111-8111-111111111111", accountId: "33333333-3333-4333-8333-333333333333", decisionId: UID(500), instrument: "INDCO2", exchange: "NSE", side: "BUY", quantity: "50", initialQuantity: "50", avgEntryPrice: "100.50", initialStop: "95.00", stopLoss: "95.00", targets: ["110.00"], rules: { fees: { secret: "must never reach the browser" } }, realizedPnl: "0.00", realizedCosts: "0.00", status: "OPEN", exitReason: null, openedAt: T0, closedAt: null };
 
 // ── Stage 09.3B.4 synthetic data: SHAPE-faithful to the verified decision view and playbook views (tests/integration/api-contracts/realOutputShapes.test.ts, strategyReads.test.ts); TEST-ONLY, FIXTURE data. ──
 const ACC = "33333333-3333-4333-8333-333333333333";
@@ -127,7 +164,7 @@ http.createServer((req, res) => {
         if (dm[2]) { if (n === 503 && !s094Seen.has(`${user.email}/cmp`)) { s094Seen.add(`${user.email}/cmp`); return err(res, 500, "INTERNAL", "internal error"); } return send(res, 200, { decisionId: d.id, comparables: COMPARABLES(d.id) }); }
         return send(res, 200, { decision: d, events: DEC_EVENTS, approval: null, watching: false });
       }
-      if (url.pathname === "/execution/positions") return send(res, 200, { positions: [POSITION] });
+      { const r = paperFor(url, user); if (r) return send(res, r.status, r.body); }
       const an = /^\/analytics\/([a-z-]+)$/.exec(url.pathname); if (an) { const r = analyticsFor(an[1], url, user); if (r) return send(res, r.status, r.body); }
       return send(res, 200, {});
     }

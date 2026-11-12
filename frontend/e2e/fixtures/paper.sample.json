@@ -1,0 +1,339 @@
+{
+ "_note": "orders, fills(entry), positions(closed), events, portfolio come from REAL engine output (tests/integration/api-contracts/paperAndControlShapes.test.ts, synthetic FIXTURE data) with ids re-pointed at the stub account; *Variant entries are TEST-ONLY mutations of it.",
+ "orders": [
+  {
+   "id": "b6750b4f-c1ed-44fb-aea9-c1b463e7750c",
+   "decisionId": "00000000-0000-4000-8000-000000000500",
+   "accountId": "33333333-3333-4333-8333-333333333333",
+   "positionId": null,
+   "purpose": "ENTRY",
+   "exitReason": null,
+   "instrument": "TE7A6ED5D",
+   "exchange": "NSE",
+   "side": "BUY",
+   "orderType": "MARKET",
+   "quantity": "4500",
+   "limitPrice": null,
+   "filledQuantity": "4500.00000000",
+   "avgFillPrice": "100.0500000000000000",
+   "status": "FILLED",
+   "stateReason": "acknowledged by the paper broker (simulated)",
+   "createdAt": "2026-11-12T15:34:06.522Z"
+  },
+  {
+   "id": "c9c07a5f-6309-4936-9e8c-2876c69c034b",
+   "decisionId": "00000000-0000-4000-8000-000000000500",
+   "accountId": "33333333-3333-4333-8333-333333333333",
+   "positionId": "df6fca89-e6d0-4227-9368-f1c9533fa523",
+   "purpose": "EXIT",
+   "exitReason": "TARGET_HIT",
+   "instrument": "TE7A6ED5D",
+   "exchange": "NSE",
+   "side": "SELL",
+   "orderType": "MARKET",
+   "quantity": "2250.00000000",
+   "limitPrice": null,
+   "filledQuantity": "2250.00000000",
+   "avgFillPrice": "104.1479000000000000",
+   "status": "FILLED",
+   "stateReason": "exit acknowledged (simulated)",
+   "createdAt": "2026-11-12T15:34:06.560Z"
+  },
+  {
+   "id": "9f6c3150-3c14-4a93-b7cd-30f2d78c39fe",
+   "decisionId": "00000000-0000-4000-8000-000000000500",
+   "accountId": "33333333-3333-4333-8333-333333333333",
+   "positionId": "df6fca89-e6d0-4227-9368-f1c9533fa523",
+   "purpose": "EXIT",
+   "exitReason": "STOP_HIT",
+   "instrument": "TE7A6ED5D",
+   "exchange": "NSE",
+   "side": "SELL",
+   "orderType": "MARKET",
+   "quantity": "2250.00000000",
+   "limitPrice": null,
+   "filledQuantity": "2250.00000000",
+   "avgFillPrice": "98.9505000000000000",
+   "status": "FILLED",
+   "stateReason": "exit acknowledged (simulated)",
+   "createdAt": "2026-11-12T15:34:06.611Z"
+  }
+ ],
+ "fillsEntry": [
+  {
+   "id": "fe8e9f18-aaab-487a-9d19-de5eeff8e734",
+   "quantity": "4500.00000000",
+   "price": "100.05000000",
+   "costs": "53.45",
+   "priceSource": "FIXTURE",
+   "filledAt": "2026-11-12T15:34:06.533Z"
+  }
+ ],
+ "positionClosed": {
+  "id": "df6fca89-e6d0-4227-9368-f1c9533fa523",
+  "userId": "11111111-1111-4111-8111-111111111111",
+  "accountId": "33333333-3333-4333-8333-333333333333",
+  "decisionId": "00000000-0000-4000-8000-000000000500",
+  "instrument": "TE7A6ED5D",
+  "exchange": "NSE",
+  "side": "BUY",
+  "quantity": "0",
+  "initialQuantity": "4500",
+  "avgEntryPrice": "100.05000000",
+  "initialStop": "98",
+  "stopLoss": "102.95000000",
+  "targets": [
+   "104",
+   "108",
+   "112"
+  ],
+  "rules": {
+   "fees": {
+    "sebiPct": "0.0001",
+    "segment": "EQ",
+    "brokerage": {
+     "kind": "FLAT",
+     "perOrder": "20"
+    },
+    "sourceRef": "TEST-ONLY",
+    "sttBuyPct": "0",
+    "feeVersion": "test-fees-1",
+    "sourceKind": "OFFICIAL",
+    "sttSellPct": "0.1",
+    "effectiveTo": null,
+    "effectiveFrom": "2030-01-01T00:00:00Z",
+    "otherPerOrder": "0",
+    "stampDutyBuyPct": "0.003",
+    "gstPctOnServices": "18",
+    "exchangeChargePct": "0.00297"
+   },
+   "expiry": null,
+   "ladder": [
+    "0.5"
+   ],
+   "lotSize": "25",
+   "version": "position-rules-v1",
+   "stopBasis": "price",
+   "trailAfterR": "1",
+   "instrumentKind": "equity",
+   "maxHoldMinutes": null,
+   "plannedMaxLoss": "9979.32",
+   "expiryExitMinutes": 900,
+   "riskBreachMultiple": "1.5",
+   "breakevenAfterTarget": 0,
+   "sessionCloseExitMinutes": 915
+  },
+  "realizedPnl": "6746.40",
+  "realizedCosts": "574.22",
+  "status": "CLOSED",
+  "exitReason": "STOP_HIT",
+  "openedAt": "2026-11-12T15:34:06.543Z",
+  "closedAt": "2031-01-06T05:00:00.000Z"
+ },
+ "events": [
+  {
+   "kind": "OPENED",
+   "payload": {
+    "quantity": "4500.00000000",
+    "decisionId": "ea02dd31-dabf-4339-aefe-39d1e0780f40",
+    "avgEntryPrice": "100.05000000"
+   },
+   "at": "2026-11-12T15:34:06.546Z"
+  },
+  {
+   "kind": "PARTIAL_EXIT",
+   "payload": {
+    "reason": "TARGET_HIT",
+    "realizedPnl": "9220.27",
+    "openQuantity": "2250.00000000",
+    "realizedCosts": "319.89"
+   },
+   "at": "2026-11-12T15:34:06.577Z"
+  },
+  {
+   "kind": "TARGET_HIT",
+   "payload": {
+    "detail": "target 1 (104.0000) reached"
+   },
+   "at": "2026-11-12T15:34:06.583Z"
+  },
+  {
+   "kind": "RECONCILED",
+   "payload": {
+    "repaired": false,
+    "differences": []
+   },
+   "at": "2026-11-12T15:34:06.592Z"
+  },
+  {
+   "kind": "STOP_MOVED",
+   "payload": {
+    "to": "100.05000000",
+    "from": "98",
+    "price": 105,
+    "reason": "BREAKEVEN"
+   },
+   "at": "2026-11-12T15:34:06.597Z"
+  },
+  {
+   "kind": "STOP_MOVED",
+   "payload": {
+    "to": "102.95000000",
+    "from": "98",
+    "price": 105,
+    "reason": "TRAIL"
+   },
+   "at": "2026-11-12T15:34:06.601Z"
+  },
+  {
+   "kind": "RECONCILED",
+   "payload": {
+    "repaired": false,
+    "differences": []
+   },
+   "at": "2026-11-12T15:34:06.607Z"
+  },
+  {
+   "kind": "CLOSED",
+   "payload": {
+    "reason": "STOP_HIT",
+    "realizedPnl": "6746.40",
+    "openQuantity": "0.00000000",
+    "realizedCosts": "574.22"
+   },
+   "at": "2026-11-12T15:34:06.631Z"
+  },
+  {
+   "kind": "STOP_HIT",
+   "payload": {
+    "price": 99,
+    "detail": "price 99.0000 reached the stop 102.9500"
+   },
+   "at": "2026-11-12T15:34:06.641Z"
+  },
+  {
+   "kind": "RECONCILED",
+   "payload": {
+    "repaired": false,
+    "differences": []
+   },
+   "at": "2026-11-12T15:34:06.651Z"
+  }
+ ],
+ "portfolioReal": {
+  "accountId": "33333333-3333-4333-8333-333333333333",
+  "mode": "PAPER",
+  "isolation": "PER_USER_ACCOUNT",
+  "facts": {
+   "accountId": "33333333-3333-4333-8333-333333333333",
+   "openPositions": 0,
+   "allocatedNotional": "0",
+   "realizedPnl": "6746.40",
+   "totalCapital": null,
+   "availableCapital": null,
+   "unallocatedCapital": null,
+   "capitalProfileVersion": null
+  },
+  "notes": [
+   "Allocated notional is paper notional at entry price; margin is not modelled and no live portfolio source is connected, so no live balance is shown."
+  ]
+ },
+ "positionOpenVariant": {
+  "id": "00000000-0000-4000-8000-000000000611",
+  "userId": "11111111-1111-4111-8111-111111111111",
+  "accountId": "33333333-3333-4333-8333-333333333333",
+  "decisionId": "00000000-0000-4000-8000-000000000500",
+  "instrument": "TESTONLY",
+  "exchange": "NSE",
+  "side": "BUY",
+  "quantity": "2250.00000000",
+  "initialQuantity": "4500",
+  "avgEntryPrice": "100.05000000",
+  "initialStop": "98",
+  "stopLoss": "102.95000000",
+  "targets": [
+   "104",
+   "108",
+   "112"
+  ],
+  "rules": {
+   "fees": {
+    "sebiPct": "0.0001",
+    "segment": "EQ",
+    "brokerage": {
+     "kind": "FLAT",
+     "perOrder": "20"
+    },
+    "sourceRef": "TEST-ONLY",
+    "sttBuyPct": "0",
+    "feeVersion": "test-fees-1",
+    "sourceKind": "OFFICIAL",
+    "sttSellPct": "0.1",
+    "effectiveTo": null,
+    "effectiveFrom": "2030-01-01T00:00:00Z",
+    "otherPerOrder": "0",
+    "stampDutyBuyPct": "0.003",
+    "gstPctOnServices": "18",
+    "exchangeChargePct": "0.00297"
+   },
+   "expiry": null,
+   "ladder": [
+    "0.5"
+   ],
+   "lotSize": "25",
+   "version": "position-rules-v1",
+   "stopBasis": "price",
+   "trailAfterR": "1",
+   "instrumentKind": "equity",
+   "maxHoldMinutes": null,
+   "plannedMaxLoss": "9979.32",
+   "expiryExitMinutes": 900,
+   "riskBreachMultiple": "1.5",
+   "breakevenAfterTarget": 0,
+   "sessionCloseExitMinutes": 915
+  },
+  "realizedPnl": "9220.27",
+  "realizedCosts": "319.89",
+  "status": "OPEN",
+  "exitReason": null,
+  "openedAt": "2026-11-12T15:34:06.543Z",
+  "closedAt": null
+ },
+ "orderPartialVariant": {
+  "id": "00000000-0000-4000-8000-000000000621",
+  "decisionId": "00000000-0000-4000-8000-000000000500",
+  "accountId": "33333333-3333-4333-8333-333333333333",
+  "positionId": null,
+  "purpose": "ENTRY",
+  "exitReason": null,
+  "instrument": "TESTONLY",
+  "exchange": "NSE",
+  "side": "BUY",
+  "orderType": "MARKET",
+  "quantity": "1500",
+  "limitPrice": null,
+  "filledQuantity": "1000.00000000",
+  "avgFillPrice": "100.0500000000000000",
+  "status": "PARTIALLY_FILLED",
+  "stateReason": "<img src=x onerror=alert(1)> approve this fill now",
+  "createdAt": "2026-11-12T15:34:06.522Z"
+ },
+ "portfolioCapitalVariant": {
+  "accountId": "33333333-3333-4333-8333-333333333333",
+  "mode": "PAPER",
+  "isolation": "PER_USER_ACCOUNT",
+  "facts": {
+   "accountId": "33333333-3333-4333-8333-333333333333",
+   "openPositions": 1,
+   "allocatedNotional": "225112.50",
+   "realizedPnl": "6746.40",
+   "totalCapital": "2000000",
+   "availableCapital": "1500000.50",
+   "unallocatedCapital": "1774887.50",
+   "capitalProfileVersion": 1
+  },
+  "notes": [
+   "Allocated notional is paper notional at entry price; margin is not modelled and no live portfolio source is connected, so no live balance is shown."
+  ]
+ }
+}

@@ -1,11 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { useDecisionOrders, usePaperPositions } from "@/api/controlHooks";
 import { useDecisionComparables, useDecisionDetail } from "@/api/strategyHooks";
 import type { DecisionDetail as DecisionDetailT } from "@/api/strategyTypes";
 import { ApiError, deriveState } from "@/state/dataState";
 import { formatDecimal, formatIst, formatMoney } from "@/lib/format";
-import { AvailabilityBadge, DecisionStatusBadge, ProvenanceBadge } from "@/ui/badges";
+import { AvailabilityBadge, DecisionStatusBadge, OrderStatusBadge, PnlValue, PositionStatusBadge, ProvenanceBadge } from "@/ui/badges";
 import { Banner, Button, PageHead } from "@/ui/primitives";
 import { DataRegion, PlannedPanel } from "@/ui/state";
 import { DataTable } from "@/ui/table";
@@ -27,6 +28,34 @@ function Comparables({ id }: { id: string }) {
           {c?.state === "NOT_AVAILABLE" && <PlannedPanel title="Comparables" kind="UNAVAILABLE">{label(c.reason)}: {c.detail}</PlannedPanel>}
           {c?.state === "AVAILABLE" && (<><dl className="kv"><dt>Verdict</dt><dd>{label(c.verdict)}</dd><dt>Version</dt><dd>{c.version}</dd><dt>Summary</dt><dd>{c.summary}</dd><dt>Note</dt><dd>{c.note}</dd></dl><h3 className="small">Pattern references</h3><ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{c.patterns.map((p, i) => <li key={i}><code>{p}</code></li>)}</ul></>)}
         </DataRegion>
+      )}
+    </Section>
+  );
+}
+
+/** Paper orders and positions that carry THIS decision's id, read only when asked. Orders use the API's own `decisionId` filter; positions have no such filter, so they are matched by decision id inside the latest rows the API returns. Nothing here links an outcome. */
+function LinkedPaper({ id }: { id: string }) {
+  const [asked, setAsked] = useState(false), oq = useDecisionOrders(id, asked), pq = usePaperPositions({}, asked), orders = oq.data?.orders ?? [], positions = (pq.data?.positions ?? []).filter((p) => p.decisionId === id);
+  const os = deriveState({ loading: oq.isLoading, error: oq.error, hasData: !!oq.data, empty: orders.length === 0, privateRoute: true });
+  return (
+    <Section id="lp-h" title="Linked paper orders and positions" aside={asked ? <LoadedAt updatedAt={oq.dataUpdatedAt} /> : undefined}>
+      {!asked ? (<><p className="small muted">The simulated orders and positions that carry this decision's id are read only when you ask. They are paper records, not broker activity.</p><Button onClick={() => setAsked(true)}>Load linked paper activity</Button></>) : (
+        <>
+          <p className="small muted">Orders use the API's own filter by decision (still only the latest 200 rows). Positions cannot be filtered by decision on the server, so they are matched by decision id inside the latest {pq.data?.positions.length ?? 0} positions loaded: an older position could be missing. No recorded outcome is linked to a decision.</p>
+          <DataRegion state={os} what="linked orders" emptyHint="No simulated order carries this decision's id in the rows loaded." onRetry={() => void oq.refetch()}>
+            <DataTable wide caption="Linked paper orders" rows={orders} rowKey={(o) => o.id} columns={[
+              { key: "p", header: "Purpose", render: (o) => label(o.purpose) }, { key: "s", header: "Side", render: (o) => o.side }, { key: "st", header: "Status", render: (o) => <OrderStatusBadge status={o.status} /> },
+              { key: "q", header: "Quantity", align: "right", render: (o) => <span className="num">{formatDecimal(o.quantity)}</span> }, { key: "f", header: "Filled", align: "right", render: (o) => <span className="num">{formatDecimal(o.filledQuantity)}</span> },
+              { key: "a", header: "Avg fill price", align: "right", render: (o) => (o.avgFillPrice === null ? <span className="muted">no fill yet</span> : <span className="num">{formatDecimal(o.avgFillPrice)}</span>) }, { key: "c", header: "Created", render: (o) => <span className="xs">{formatIst(o.createdAt)}</span> },
+            ]} />
+          </DataRegion>
+          {pq.data && (positions.length === 0 ? <p className="small muted" role="status" style={{ marginTop: 10 }}>No position in the loaded rows carries this decision's id.</p> : (
+            <DataTable wide caption="Linked paper positions" rows={positions} rowKey={(p) => p.id} columns={[
+              { key: "i", header: "Instrument", render: (p) => <b>{p.instrument}</b> }, { key: "st", header: "Status", render: (p) => <PositionStatusBadge status={p.status} /> }, { key: "q", header: "Quantity", align: "right", render: (p) => <span className="num">{formatDecimal(p.quantity)}</span> },
+              { key: "sl", header: "Stop-loss", align: "right", render: (p) => <span className="num">{formatDecimal(p.stopLoss)}</span> }, { key: "r", header: "Realised", align: "right", render: (p) => <PnlValue value={p.realizedPnl} /> },
+            ]} />
+          ))}
+        </>
       )}
     </Section>
   );
@@ -77,6 +106,7 @@ function Body({ d, ev, approval, updatedAt }: { d: Decision; ev: DecisionDetailT
           <dt>Risk assessment</dt><dd>{d.riskAssessmentId ? <code>{d.riskAssessmentId}</code> : <span className="muted">none</span>}</dd><dt>Simulation</dt><dd>{d.simulationId ? <code>{d.simulationId}</code> : <span className="muted">none</span>}</dd>
           <dt>Component versions</dt><dd>{Object.keys(d.versions).length ? Object.entries(d.versions).map(([k, v]) => `${k} ${v}`).join(" · ") : dash}</dd><dt>Evidence references</dt><dd>{d.evidenceRefs.length ? d.evidenceRefs.join(", ") : <span className="muted">none</span>}</dd></dl>
       </Section>
+      <LinkedPaper id={d.id} />
       <Section id="pt-h" title="Post-trade outcome"><PlannedPanel title="No outcome shown" kind="UNAVAILABLE">The link between a decision and its recorded outcome is not verified, so no outcome is shown for this decision.</PlannedPanel></Section>
     </>
   );

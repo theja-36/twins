@@ -9,6 +9,7 @@ import { ANALYTICS_RELAY_SCHEMAS } from "./schemas.insights";
 import { RESEARCH_RELAY_SCHEMAS } from "./schemas.research";
 import { DECISION_RELAY_SCHEMAS } from "./schemas.decisions";
 import { STRATEGY_RELAY_SCHEMAS } from "./schemas.strategies";
+import { CONTROL_RELAY_SCHEMAS } from "./schemas.control";
 
 export const LoginBody = z.strictObject({ email: z.string().min(3).max(254), password: z.string().min(1).max(1024) });
 export type LoginBody = z.infer<typeof LoginBody>;
@@ -61,8 +62,8 @@ export const PositionsResponse = z.object({
 /** Relay response schema per catalogue route id. Absent = pass-through JSON object (no verified schema yet). */
 export const RELAY_RESPONSE_SCHEMAS: Readonly<Record<string, z.ZodType | undefined>> = {
   "accounts.list": AccountsResponse, "opportunities.candidates": CandidatesResponse, "opportunities.candidate": CandidateDetailResponse, "opportunities.scans": ScansResponse,
-  "intelligence.channels": ChannelsResponse, "approvals.list": ApprovalsResponse, "positions.list": PositionsResponse,
-  ...ANALYTICS_RELAY_SCHEMAS, ...RESEARCH_RELAY_SCHEMAS, ...DECISION_RELAY_SCHEMAS, ...STRATEGY_RELAY_SCHEMAS,
+  "intelligence.channels": ChannelsResponse, "approvals.list": ApprovalsResponse,
+  ...ANALYTICS_RELAY_SCHEMAS, ...RESEARCH_RELAY_SCHEMAS, ...DECISION_RELAY_SCHEMAS, ...STRATEGY_RELAY_SCHEMAS, ...CONTROL_RELAY_SCHEMAS,
 };
 export const relaySchemaFor = (routeId: string): z.ZodType => RELAY_RESPONSE_SCHEMAS[routeId] ?? AnyJsonObject;
 export const hasVerifiedSchema = (routeId: string): boolean => RELAY_RESPONSE_SCHEMAS[routeId] !== undefined;

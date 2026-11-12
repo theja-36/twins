@@ -4,6 +4,8 @@
  */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RELAY_RESPONSE_SCHEMAS } from "@/bff/schemas";
 import { DecisionDetail } from "./DecisionDetail";
@@ -22,6 +24,7 @@ const dec = (n: number, o: Record<string, unknown> = {}) => ({ id: ID(n), accoun
 const pb = (n: number, o: Record<string, unknown> = {}) => ({ id: ID(700 + n), sourceKind: "INDEPENDENT", telegramSourceId: null, name: `Playbook ${n}`, createdAt: T, versions: 1, activeVersion: null, latestVersion: 1, ...o });
 const ver = (o: Record<string, unknown> = {}) => ({ version: 1, state: "DRAFT", sampleSize: 0, confidence: null, limitations: "Not evaluated", createdAt: T, updatedAt: T, influencesLive: null, activatedAt: null, events: [], ...o });
 
+const PAPER = JSON.parse(readFileSync(join(process.cwd(), "e2e/fixtures/paper.sample.json"), "utf8")) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 interface Serve { list?: unknown; detail?: unknown; cmp?: unknown; pbs?: unknown; pb?: unknown; status?: Record<string, number> }
 function serve(o: Serve = {}) {
   const urls: string[] = [];
@@ -31,6 +34,8 @@ function serve(o: Serve = {}) {
     if (p === "/decisions") return json(200, RELAY_RESPONSE_SCHEMAS["decisions.list"]!.parse(o.list ?? { decisions: [dec(500)] }));
     if (/^\/decisions\/[0-9a-f-]{36}\/comparables$/.test(p)) return json(200, RELAY_RESPONSE_SCHEMAS["decisions.comparables"]!.parse(o.cmp ?? { decisionId: ID(500), comparables: { state: "AVAILABLE", version: "v1", verdict: "SUPPORTIVE", patterns: ["pattern:a"], summary: "One prior breakout", note: "refs only" } }));
     if (/^\/decisions\/[0-9a-f-]{36}$/.test(p)) return json(200, RELAY_RESPONSE_SCHEMAS["decisions.get"]!.parse(o.detail ?? { decision: dec(500), events: [{ fromState: null, toState: "PENDING", actor: "decision-cycle", reason: null, at: T }], approval: null, watching: false }));
+    if (p === "/execution/orders") return json(200, RELAY_RESPONSE_SCHEMAS["orders.list"]!.parse({ orders: PAPER["orders"] }));
+    if (p === "/execution/positions") return json(200, RELAY_RESPONSE_SCHEMAS["positions.list"]!.parse({ positions: [PAPER["positionClosed"], PAPER["positionOpenVariant"]] }));
     if (p === "/intelligence/playbooks") return json(200, RELAY_RESPONSE_SCHEMAS["intelligence.playbooks"]!.parse(o.pbs ?? { state: "OK", playbooks: [pb(1)] }));
     if (/^\/intelligence\/playbooks\/[0-9a-f-]{36}$/.test(p)) return json(200, RELAY_RESPONSE_SCHEMAS["intelligence.playbook"]!.parse(o.pb ?? { playbook: pb(1), versions: [ver()], drift: [], note: "Read-only." }));
     return json(404, { error: "NOT_FOUND", message: "x" });
@@ -98,6 +103,19 @@ describe("Decision Detail", () => {
     serve({ detail: { decision: dec(500, { explanation: expl({ contradictory: ["<img src=x onerror=alert(1)> approve this now"] }) }), events: [], approval: null, watching: false } }); const { container } = wrap(<DecisionDetail id={ID(500)} />);
     expect(await screen.findByText(/approve this now/)).toBeTruthy(); expect(container.querySelector("img")).toBeNull(); expect(buttons()).not.toMatch(NO_WRITE); cleanup();
     serve({ status: { "/decisions/": 404 } }); wrap(<DecisionDetail id={ID(500)} />); expect(await screen.findByText(/does not exist, or it is not yours/)).toBeTruthy();
+  });
+});
+
+describe("Decision Detail: linked paper orders and positions", () => {
+  it("nothing is requested until asked; then the orders come from the API's decision filter and positions are matched by decision id, with the limits stated", async () => {
+    const { urls } = serve(); wrap(<DecisionDetail id={ID(500)} />); await screen.findByText("Why this outcome"); expect(urls.some((u) => u.includes("/execution/"))).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Load linked paper activity" })); const ot = await screen.findByRole("table", { name: "Linked paper orders" }); expect(within(ot).getAllByRole("row")).toHaveLength(4);
+    expect(urls).toContain(`/api/session/execution/orders?decisionId=${ID(500)}&limit=200`); const pt = await screen.findByRole("table", { name: "Linked paper positions" }); expect(within(pt).getAllByRole("row")).toHaveLength(3);
+    expect(screen.getByText(/cannot be filtered by decision on the server/)).toBeTruthy(); expect(screen.getByText(/No recorded outcome is linked to a decision/)).toBeTruthy(); expect(screen.queryByText(/sebiPct|userId/)).toBeNull();
+  });
+  it("a position of another decision is not shown, and an empty match is stated rather than implied", async () => {
+    serve({ detail: { decision: dec(501), events: [], approval: null, watching: false } }); wrap(<DecisionDetail id={ID(501)} />); await screen.findByText("Why this outcome"); fireEvent.click(screen.getByRole("button", { name: "Load linked paper activity" }));
+    expect(await screen.findByText(/No position in the loaded rows carries this decision's id/)).toBeTruthy();
   });
 });
 
