@@ -1,6 +1,6 @@
 # TWINS Frontend — Stage 09.2 Implementation Record (Foundation and Design System)
 
-Status: **IMPLEMENTED LOCALLY. Hosted CI NOT run** (nothing committed or pushed; the new `frontend` workflow has therefore never executed on GitHub). Scope: the standalone app, the secure BFF, the sign-in foundation, the design system and the application shell. **No product screen is built**: every screen route renders an honest placeholder (PLANNED, with backend gaps shown as NOT AVAILABLE). Companion: [architecture](architecture.md), [permissions-and-navigation](permissions-and-navigation.md), [contracts-verification](contracts-verification.md).
+Status: **IMPLEMENTED. Hosted CI for the final fix is recorded in the completion report** (first hosted run of the `frontend` workflow, `afa5a36`, found two real problems that are fixed below). Scope: the standalone app, the secure BFF, the sign-in foundation, the design system and the application shell. **No product screen is built**: every screen route renders an honest placeholder (PLANNED, with backend gaps shown as NOT AVAILABLE). Companion: [architecture](architecture.md), [permissions-and-navigation](permissions-and-navigation.md), [contracts-verification](contracts-verification.md).
 
 ## 1. What exists
 
@@ -63,25 +63,31 @@ Gallery: `/design-system` renders every component and all eight states; it exist
 
 TRADER sees all private and shared screens and no administration. ADMIN sees only Platform overview, Opportunities, Research, Market Intelligence, Users & Access (planned) and Account; the Overview redirects to Platform overview; every private URL shows "Not available to administrators"; a TRADER opening `/admin/*` sees "Not available to you". Account selection appears for TRADER only (the relay `GET /accounts` through the BFF is the one real data call in this stage).
 
-## 6. Test evidence (local; hosted CI not run)
+## 6. Test evidence (local; hosted CI result in the completion report)
 
 | Check | Result |
 |---|---|
 | `npm run typecheck` (frontend) | passes |
 | `npm run lint` (frontend; includes no-browser-storage, no-numeric-parsing, no-`any`, no non-null assertions) | passes, 0 warnings |
-| Unit and BFF security tests (Vitest 5; 13 files) | **123 passed** |
-| Playwright (real Chrome against the production standalone server and the stub API) | **70 passed**: auth/session 9, roles and relay 8, security headers/CSP 4, responsive + accessibility **42** (7 pages × 3 viewports × 2 themes, each asserting no horizontal page scroll and **0 axe violations** under WCAG 2.0/2.1/2.2 A+AA tags **including colour contrast**), layout/keyboard/dialog/theme/gallery 7 |
+| Unit and BFF security tests (Vitest 5; 13 files) | **123 passed** on Node 26 and on real Node 20.20.2 |
+| Playwright (production standalone server + stub API; run on installed Chrome, on Playwright's bundled Chromium, and under real Node 20.20.2) | **84 passed** in every combination: auth/session 9, roles and relay 8, security headers/CSP 4, responsive + accessibility **56** (7 pages × **4 viewports: 1440, 820, 390 and 320 px** × 2 themes, each asserting no horizontal page scroll and **0 axe violations** under WCAG 2.0/2.1/2.2 A+AA **including colour contrast**), layout/keyboard/dialog/theme/gallery 7 |
 | `npm run build` (standalone) | passes (fonts fetched from Google Fonts at build time and self-hosted) |
 | Production dependency audit | 0 vulnerabilities (Zod and Vitest were upgraded and PostCSS overridden to clear findings) |
 | Dev-dependency audit | 7 moderate (typescript-eslint → minimatch ReDoS, tooling only; no fix available) |
 | Drift-detection check | three BFF guards deliberately broken (writes relay on, CSRF dropped, origin check weakened): 3 test failures; one mutation (missing-Origin) was an equivalent mutant (equality still refuses it); all restored |
 | Backend side after the root edits | root `tsc -b` passes; root lint 0 errors (831 pre-existing warnings, none new); secret scan clean; `tests/unit/api-contracts` + `tests/unit/safety` 304 passed |
 
-Screenshots: `docs/frontend/foundation/screenshots/` (sign-in, trader overview/paper/account/gallery, admin platform, desktop 1440 and phone 390 in dark and light, plus a tablet 820 overview).
+Screenshots: `docs/frontend/foundation/screenshots/` (38 files: sign-in, trader overview/paper/account/gallery and admin platform at desktop 1440, phone 390 and narrow-phone 320 in dark and light, plus a tablet 820 overview).
 
 ## 7. Frontend CI
 
-`.github/workflows/frontend.yml`: a separate workflow (path-filtered to `frontend/**`, `packages/api-contracts/**` and itself), Node 20 and 22, `npm ci` against the frontend lockfile, production audit (fails on high), typecheck, lint, unit tests, build, standalone preparation, Playwright chromium install, e2e. It starts no database or Redis and needs no secret. It is **not** part of `ci-gate`; connecting it is a planned, separately approved step. **Result: not run** (no push).
+`.github/workflows/frontend.yml`: a separate workflow (path-filtered to `frontend/**`, `packages/api-contracts/**` and itself), Node 20 and 22, `npm ci` against the frontend lockfile, production audit (fails on high), typecheck, lint, unit tests, build, standalone preparation, Playwright chromium install, e2e. It starts no database or Redis and needs no secret. It is **not** part of `ci-gate`; connecting it is a planned, separately approved step. **Result:** the first run (`afa5a36`) failed on both Node versions for the two reasons in §7a; the fix run's result is in the completion report.
+
+### 7a. What the first hosted run found (and the fixes)
+
+The first run of `frontend.yml` (commit `afa5a36`) failed, which is what it is for:
+1. **Node 20:** `jsdom 31` requires Node 22+ (its `undici` needs an API Node 20 lacks), so the jsdom test files could not start. Fixed by moving to `jsdom 27` (Node ^20.19); verified under real Node 20.20.2 (123 unit and 84 Playwright tests).
+2. **Both Node versions, Linux only:** at phone width the topbar (breadcrumb, account selector, role chip and three icon buttons) did not wrap, so a few pixels of Linux font-width difference pushed the Account icon past the screen edge (`sw 394 > iw 390`). This did not reproduce on macOS at 390 px. A first fix (wrapping long words) did not address it; the assertion was changed to **name the offending elements**, which identified the topbar, and a **320 px viewport** was added to the matrix, which reproduces the defect on any machine. The phone topbar now wraps onto a second row instead of overflowing.
 
 ## 8. Security findings and residual risks
 

@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { mkdirSync } from "node:fs";
 import { ADMIN, TRADER, expect, setTheme, signIn, test } from "./fixtures";
 
-const VIEWPORTS = [{ name: "desktop", width: 1440, height: 900 }, { name: "tablet", width: 820, height: 1000 }, { name: "phone", width: 390, height: 844 }] as const;
+const VIEWPORTS = [{ name: "desktop", width: 1440, height: 900 }, { name: "tablet", width: 820, height: 1000 }, { name: "phone", width: 390, height: 844 }, { name: "narrow phone", width: 320, height: 640 }] as const; // 320 px is the narrowest supported screen; it also exposes text-width differences between operating systems
 const PAGES = [
   { name: "sign-in", path: "/login", who: null }, { name: "trader-overview", path: "/", who: TRADER }, { name: "trader-paper", path: "/paper", who: TRADER }, { name: "trader-account", path: "/account", who: TRADER },
   { name: "trader-gallery", path: "/design-system", who: TRADER }, { name: "admin-platform", path: "/admin/system", who: ADMIN }, { name: "admin-blocked", path: "/approvals", who: ADMIN },
@@ -22,7 +22,7 @@ for (const v of VIEWPORTS) for (const theme of ["dark", "light"] as const) {
       expect(overflow.sw, `page must not scroll sideways (sw ${overflow.sw} > iw ${overflow.iw}); offenders: ${offenders.join(" || ")}`).toBeLessThanOrEqual(overflow.iw);
       const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
       expect(results.violations.map((x) => `${x.id}: ${x.nodes.map((n) => n.target.join(" ")).join(" | ")}`)).toEqual([]);
-      if (SHOTS && (p.name !== "admin-blocked") && (v.name !== "tablet" || p.name === "trader-overview")) { mkdirSync(SHOTS, { recursive: true }); await page.screenshot({ path: `${SHOTS}/${p.name}.${theme}.${v.width}.png`, fullPage: true }); }
+      if (SHOTS && (p.name !== "admin-blocked") && (v.name !== "tablet" || p.name === "trader-overview")) { mkdirSync(SHOTS, { recursive: true }); await page.evaluate(() => { document.querySelector<HTMLElement>(".mobnav")?.style.setProperty("position", "static", "important"); }); await page.screenshot({ path: `${SHOTS}/${p.name}.${theme}.${v.width}.png`, fullPage: true }); }
     });
   });
 }
