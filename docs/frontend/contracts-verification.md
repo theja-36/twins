@@ -79,3 +79,7 @@ Browser-safety is itself tested (`contractsBoundary.test.ts`): only relative imp
 - Full backend unit suite after the final change (`npx vitest run`, which includes the safety suites): 272 files, 4,279 tests passed, exit 0.
 - `npm run lint` (whole repository): 0 errors; the 831 warnings are pre-existing, none are in the new files.
 - **Hosted CI: not run** (nothing pushed).
+
+## 6. Stage 09.3A additions (local; hosted CI not run)
+
+`src/opportunities.ts` adds typed views for `/opportunities/candidates`, `/opportunities/candidates/:id`, `/opportunities/scans`, `/research/candidates/:id/package` (envelope only) and `/intelligence/channels`. Evidence: `opportunityParity.test.ts` (4 tests) compares the exact key sets with the real routes — **TESTED** for key sets with synthetic data. Still unverified: candidate `evidence` item shapes, the research `package` body, scan `skipped`/`parameters`, `/intelligence/pipeline` and every other shared route.

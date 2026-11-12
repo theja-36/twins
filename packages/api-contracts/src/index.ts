@@ -10,3 +10,4 @@ export * from "./rules";
 export * from "./wire";
 export * from "./analytics";
 export * from "./catalogue";
+export * from "./opportunities";

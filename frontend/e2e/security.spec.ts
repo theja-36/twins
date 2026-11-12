@@ -8,10 +8,10 @@ test.describe("security headers and CSP", () => {
     const api = await page.request.get("/api/auth/me"); expect(api.headers()["cache-control"]).toContain("no-store");
     const nonces = new Set<string>(); for (let i = 0; i < 3; i++) nonces.add(((await (await page.request.get("/login")).headers())["content-security-policy"] ?? "").match(/nonce-([^']+)/)?.[1] ?? ""); expect(nonces.size).toBe(3);
   });
-  test("no CSP violation on sign-in, the signed-in shell, the account page or the design gallery (scripts, styles and fonts all load under the policy)", async ({ page }) => {
+  test("no CSP violation on sign-in, the signed-in shell, the account page, the design gallery or the four Stage 09.3A screens (scripts, styles and fonts all load under the policy)", async ({ page }) => {
     const bad: string[] = []; page.on("console", (m) => { if (/Content Security Policy|Refused to/i.test(m.text())) bad.push(m.text()); });
     await page.addInitScript(() => { document.addEventListener("securitypolicyviolation", (e) => console.error(`Refused to: ${e.violatedDirective} ${e.blockedURI}`)); });
-    await page.goto("/login"); await signIn(page, TRADER); for (const p of ["/", "/account", "/design-system", "/paper"]) { await page.goto(p); await page.waitForLoadState("networkidle"); }
+    await page.goto("/login"); await signIn(page, TRADER); for (const p of ["/", "/account", "/design-system", "/paper", "/market", "/opportunities", "/opportunities/00000000-0000-4000-8000-000000000001"]) { await page.goto(p); await page.waitForLoadState("networkidle"); }
     expect(bad).toEqual([]);
   });
   test("the page loads nothing from another origin", async ({ page }) => {
