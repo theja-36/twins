@@ -48,3 +48,7 @@ export const OUTCOME_ROW_KEYS = ["id", "paperPositionId", "decisionId", "version
 export const INSIGHT_RECOMMENDATION_REVIEW = "REVIEW" as const;
 /** One stored insight (learning_insights row), as GET /analytics/insights returns it. `provenance`, `evidenceRefs` and `metrics` are typed unknown: their inner shapes vary by insight kind and are not verified. */
 export const INSIGHT_ROW_KEYS = ["id", "insightKey", "kind", "scope", "subject", "outcomeCount", "periodStart", "periodEnd", "provenance", "method", "algorithmVersion", "evidenceRefs", "reliability", "severity", "statement", "metrics", "limitations", "recommendation", "createdAt"] as const;
+
+/** The insight kinds the DATABASE accepts (check constraint `learning_insights_kind_check`, mirrored from INSIGHT_KINDS; proven equal by a unit parity test). Real runs produce only some of them: absence of a kind is not an error. */
+export const INSIGHT_KINDS = ["PERFORMANCE", "STRATEGY", "CHANNEL", "PATTERN", "REGIME", "AGENT", "DECISION_QUALITY", "RISK_EXECUTION", "DRIFT", "DATA_QUALITY", "CALIBRATION", "RESEARCH_AREA"] as const;
+export type InsightKind = (typeof INSIGHT_KINDS)[number];

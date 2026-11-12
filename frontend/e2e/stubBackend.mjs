@@ -6,11 +6,30 @@
 // It also records every request it receives (GET /__log) so tests can prove the BFF never forwards a cookie, the service key or a browser header.
 import http from "node:http";
 import { randomBytes } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 const USERS = {
   "trader@example.test": { password: "trader-pass-123", user: { id: "11111111-1111-4111-8111-111111111111", email: "trader@example.test", displayName: "Alex Rao", role: "TRADER", isActive: true } },
   "admin@example.test": { password: "admin-pass-123", user: { id: "22222222-2222-4222-8222-222222222222", email: "admin@example.test", displayName: "Priya Nair", role: "ADMIN", isActive: true } },
 };
+// Learning & Insights scenarios: one TRADER per scenario, so no global state is shared between parallel tests. The base data is a real-output sample (e2e/fixtures/analytics.sample.json: synthetic FIXTURE data, test-only).
+const SAMPLE = JSON.parse(readFileSync(new URL("./fixtures/analytics.sample.json", import.meta.url), "utf8"));
+const SCENARIO = { "stale@example.test": "stale", "empty@example.test": "empty", "partial@example.test": "partial", "broken@example.test": "broken" };
+for (const [email, name] of Object.entries(SCENARIO)) USERS[email] = { password: `${name}-pass-123`, user: { id: `4444444${Object.keys(SCENARIO).indexOf(email)}-4444-4444-8444-444444444444`, email, displayName: `${name} trader`, role: "TRADER", isActive: true } };
+const brokenSeen = new Set();
+function analyticsFor(section, url, user) {
+  const base = SAMPLE[section]; if (!base) return null;
+  const b = JSON.parse(JSON.stringify(base)), scenario = SCENARIO[user.email];
+  const lim = url.searchParams.get("limit"), fin = url.searchParams.get("finality"), kind = url.searchParams.get("kind");
+  if (lim !== null && !/^\d+$/.test(lim)) return { status: 422, body: { error: "VALIDATION", message: "limit must be an integer between 1 and 200", reasons: [] } };
+  if (scenario === "broken") { const k = `${user.email}${url.pathname}${url.search}`; if (!brokenSeen.has(k)) { brokenSeen.add(k); return { status: 500, body: { error: "INTERNAL", message: "internal error", reasons: [] } }; } }
+  if (section === "outcomes" && fin) b.data = b.data.filter((r) => r.finality === fin);
+  if (section === "insights" && kind) { b.data = b.data.filter((r) => r.kind === kind); b.state = b.data.length ? "OK" : "EMPTY"; }
+  if (scenario === "stale") { b.freshness = "STALE"; b.snapshot.freshness = "STALE"; b.snapshot.staleReason = "the current evidence could not be analysed; this is the newest stored snapshot"; }
+  if (scenario === "empty") { b.state = "EMPTY"; if (section === "outcomes" || section === "insights") b.data = []; }
+  if (scenario === "partial") b.state = "PARTIAL";
+  return { status: 200, body: b };
+}
 const ACCOUNTS = [{ id: "33333333-3333-4333-8333-333333333333", name: "Paper account", tradingMode: "paper", baseCurrency: "INR", isActive: true }];
 // ── Stage 09.3A synthetic data (shapes mirror the verified backend views; asserted by tests/unit/api-contracts/opportunityParity.test.ts) ──
 const T0 = "2031-01-06T04:30:00.000Z", UID = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
@@ -56,6 +75,7 @@ http.createServer((req, res) => {
       if (url.pathname === "/approvals") return send(res, 200, { pending: [{ ...DECISION, expired: false, action: { available: true } }], history: [] });
       if (url.pathname === "/decisions") return send(res, 200, { decisions: [DECISION] });
       if (url.pathname === "/execution/positions") return send(res, 200, { positions: [POSITION] });
+      const an = /^\/analytics\/([a-z-]+)$/.exec(url.pathname); if (an) { const r = analyticsFor(an[1], url, user); if (r) return send(res, r.status, r.body); }
       return send(res, 200, {});
     }
     if (url.pathname === "/opportunities/candidates") {

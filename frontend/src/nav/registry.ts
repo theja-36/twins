@@ -15,7 +15,7 @@ export interface Screen {
   /** What the screen is for, in one sentence (from docs/frontend/screen-map.md). */
   purpose: string;
   /** The stage in which the real screen is built. */
-  arrivesIn: "09.3" | "09.3A" | "09.4" | "09.5" | "foundation";
+  arrivesIn: "09.3" | "09.3A" | "09.3B.2" | "09.4" | "09.5" | "foundation";
   /** A backend capability that does not exist, shown as UNAVAILABLE on the screen. */
   gap?: string;
   /** For ADMIN the shared screens are grouped under UNDERSTAND (an administrator has no DECIDE workspace). */
@@ -29,7 +29,7 @@ export const SCREENS: readonly Screen[] = [
   { id: 3, title: "Opportunities", path: "/opportunities", workspace: "DECIDE", adminWorkspace: "UNDERSTAND", kind: "shared", permission: "opportunities:read", purpose: "Scanner candidates from the latest scans, with their evidence and skip reasons.", arrivesIn: "09.3A", icon: "decide" },
   { id: 5, title: "Research", path: "/research", workspace: "UNDERSTAND", kind: "shared", permission: "research:read", purpose: "Research packages: agent verdicts, contradictions, evidence and coverage.", arrivesIn: "09.4", icon: "understand" },
   { id: 6, title: "Market Intelligence", path: "/market", workspace: "UNDERSTAND", kind: "shared", permission: "market:read", purpose: "Channel, claim and playbook intelligence from the archive.", arrivesIn: "09.3A", gap: "Market regime and live quotes have no backend route (G-16, G-20).", icon: "understand" },
-  { id: 7, title: "Learning Insights", path: "/insights", workspace: "UNDERSTAND", kind: "private", permission: "analytics:read", purpose: "What the recorded evidence supports, with sample sizes, freshness and drift. Advisory only.", arrivesIn: "09.4", icon: "understand" },
+  { id: 7, title: "Learning Insights", path: "/insights", workspace: "UNDERSTAND", kind: "private", permission: "analytics:read", purpose: "What the recorded evidence supports, with sample sizes, freshness and drift. Advisory only.", arrivesIn: "09.3B.2", icon: "understand" },
   { id: 8, title: "Capital & Risk", path: "/capital-risk", workspace: "CONTROL", kind: "private", permission: "capital:read", purpose: "Your capital profile, risk policy and active controls (read-only).", arrivesIn: "09.3", gap: "Capital and risk-policy changes have no write routes; the operator changes them.", icon: "control" },
   { id: 9, title: "Paper Trading", path: "/paper", workspace: "CONTROL", kind: "private", permission: "orders:read", purpose: "Simulated orders, fills and positions with their status history.", arrivesIn: "09.3", gap: "There is no browser route to request execution or to exit or move a stop.", icon: "control" },
   { id: 10, title: "Portfolio", path: "/portfolio", workspace: "CONTROL", kind: "private", permission: "positions:read", purpose: "Allocated notional, open positions, realised result and capital facts for the selected account.", arrivesIn: "09.3", gap: "No unrealised P&L, mark price or live balance exists in the backend.", icon: "control" },

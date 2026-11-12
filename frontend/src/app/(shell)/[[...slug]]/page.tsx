@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { serverSession } from "@/bff/handlers";
 import { AccountPanel } from "@/components/AccountPanel";
+import { InsightsScreen } from "@/components/insights/InsightsScreen";
 import { MarketScreen } from "@/components/desk/MarketScreen";
 import { OpportunitiesScreen } from "@/components/desk/OpportunitiesScreen";
 import { OverviewScreen } from "@/components/desk/OverviewScreen";
@@ -20,6 +21,7 @@ export default async function ScreenPage({ params }: { params: Promise<{ slug?: 
   if (screen.path === "/account") return <AccountPanel user={s.user} />;
   if (screen.path === "/") return <OverviewScreen user={s.user} />;
   if (screen.path === "/market") return <MarketScreen />;
+  if (screen.path === "/insights") return <InsightsScreen />;
   if (screen.path === "/opportunities") return <OpportunitiesScreen />;
   return <ScreenFoundation screen={screen} />;
 }

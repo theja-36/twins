@@ -1,6 +1,7 @@
 /** Stage 09.3B.1 (unit level, no database): the mirrored vocabularies equal the backend's, key lists are duplicate-free, and the review-only recommendation is the single value the backend allows. The shapes themselves are proven against real engines in tests/integration/api-contracts/realOutputShapes.test.ts. */
 import { describe, expect, it } from "vitest";
 import { SPEC_VERDICTS as BACKEND_VERDICTS } from "../../../packages/types/src/index";
+import { INSIGHT_KINDS as BACKEND_INSIGHT_KINDS } from "../../../packages/database/src/schema/outcomeLearning";
 import * as C from "../../../packages/api-contracts/src/index";
 
 const LISTS: Record<string, readonly string[]> = {
@@ -10,6 +11,7 @@ const LISTS: Record<string, readonly string[]> = {
 describe("Stage 09.3B.1 contracts", () => {
   it("the research verdict vocabulary equals the backend's", () => { expect([...C.SPEC_VERDICTS].sort()).toEqual([...BACKEND_VERDICTS].sort()); });
   it("every key list is duplicate-free", () => { for (const [n, l] of Object.entries(LISTS)) expect(new Set(l).size, n).toBe(l.length); });
+  it("the mirrored insight kinds equal the database constraint list", () => { expect([...C.INSIGHT_KINDS].sort()).toEqual([...BACKEND_INSIGHT_KINDS].sort()); });
   it("an insight can only recommend a human REVIEW", () => { expect(C.INSIGHT_RECOMMENDATION_REVIEW).toBe("REVIEW"); });
   it("the decision OUTCOME vocabulary is deliberately not mirrored (it stays an opaque string)", () => { expect(Object.keys(C).filter((k) => /OUTCOMES?$/.test(k) && /DECISION/.test(k))).toEqual([]); });
 });

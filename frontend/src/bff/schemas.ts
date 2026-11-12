@@ -5,6 +5,7 @@
  */
 import { z } from "zod";
 import { APPROVAL_ERROR_CODES, PLATFORM_ERROR_CODES } from "@twins/api-contracts";
+import { ANALYTICS_RELAY_SCHEMAS } from "./schemas.insights";
 
 export const LoginBody = z.strictObject({ email: z.string().min(3).max(254), password: z.string().min(1).max(1024) });
 export type LoginBody = z.infer<typeof LoginBody>;
@@ -59,6 +60,7 @@ export const PositionsResponse = z.object({
 export const RELAY_RESPONSE_SCHEMAS: Readonly<Record<string, z.ZodType | undefined>> = {
   "accounts.list": AccountsResponse, "opportunities.candidates": CandidatesResponse, "opportunities.candidate": CandidateDetailResponse, "opportunities.scans": ScansResponse,
   "research.package": ResearchPackageResponse, "intelligence.channels": ChannelsResponse, "decisions.list": DecisionsResponse, "approvals.list": ApprovalsResponse, "positions.list": PositionsResponse,
+  ...ANALYTICS_RELAY_SCHEMAS,
 };
 export const relaySchemaFor = (routeId: string): z.ZodType => RELAY_RESPONSE_SCHEMAS[routeId] ?? AnyJsonObject;
 export const hasVerifiedSchema = (routeId: string): boolean => RELAY_RESPONSE_SCHEMAS[routeId] !== undefined;

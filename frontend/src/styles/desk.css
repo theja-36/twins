@@ -126,3 +126,9 @@ caption{caption-side:top;text-align:left;padding:0 0 8px;color:var(--tx3);font-s
 .crumbs{display:flex;gap:6px;align-items:center;list-style:none;margin:0;padding:0}.crumbs li+li::before{content:"/";margin-right:6px;color:var(--tx3)}
 .login{min-height:100vh;display:grid;place-items:center;padding:24px 16px}.login .panel{width:min(420px,100%)}
 @media (max-width:720px){.mobnav a{min-height:44px}}
+/* Wide data tables (opt-in via DataTable `wide`): natural width, sideways scroll inside the region, every column visible at every width, no mid-word or mid-number breaks.
+   The page's `overflow-wrap:anywhere` shrinks a column's minimum width to one character, so an auto-layout table at 100% width would otherwise squeeze columns letter by letter. */
+.tbl-wide{width:max-content;min-width:100%}
+.tbl-wide th,.tbl-wide td{white-space:nowrap;overflow-wrap:normal;word-break:normal}
+.tbl-wide th.hide-m,.tbl-wide td.hide-m{display:table-cell!important}
+.tbl-wide td.wrap{white-space:normal;min-width:15rem;max-width:24rem}
