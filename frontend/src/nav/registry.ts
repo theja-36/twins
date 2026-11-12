@@ -15,7 +15,7 @@ export interface Screen {
   /** What the screen is for, in one sentence (from docs/frontend/screen-map.md). */
   purpose: string;
   /** The stage in which the real screen is built. */
-  arrivesIn: "09.3" | "09.3A" | "09.3B.2" | "09.4" | "09.5" | "foundation";
+  arrivesIn: "09.3" | "09.3A" | "09.3B.2" | "09.3B.3" | "09.4" | "09.5" | "foundation";
   /** A backend capability that does not exist, shown as UNAVAILABLE on the screen. */
   gap?: string;
   /** For ADMIN the shared screens are grouped under UNDERSTAND (an administrator has no DECIDE workspace). */
@@ -27,7 +27,7 @@ export const SCREENS: readonly Screen[] = [
   { id: 1, title: "Overview", path: "/", workspace: null, kind: "private", permission: "decisions:read", purpose: "One-glance desk state: what needs a decision, open paper positions, and how far each number can be trusted.", arrivesIn: "09.3A", icon: "desk" },
   { id: 2, title: "Approval Center", path: "/approvals", workspace: "DECIDE", kind: "private", permission: "decisions:read", purpose: "The decision queue: read each proposal and approve, reject or cancel it (paper only).", arrivesIn: "09.3", gap: "Requesting the paper order after an approval has no HTTP route; the operator does it today.", icon: "decide" },
   { id: 3, title: "Opportunities", path: "/opportunities", workspace: "DECIDE", adminWorkspace: "UNDERSTAND", kind: "shared", permission: "opportunities:read", purpose: "Scanner candidates from the latest scans, with their evidence and skip reasons.", arrivesIn: "09.3A", icon: "decide" },
-  { id: 5, title: "Research", path: "/research", workspace: "UNDERSTAND", kind: "shared", permission: "research:read", purpose: "Research packages: agent verdicts, contradictions, evidence and coverage.", arrivesIn: "09.4", icon: "understand" },
+  { id: 5, title: "Research", path: "/research", workspace: "UNDERSTAND", kind: "shared", permission: "research:read", purpose: "Research packages: agent verdicts, contradictions, evidence and coverage.", arrivesIn: "09.3B.3", icon: "understand" },
   { id: 6, title: "Market Intelligence", path: "/market", workspace: "UNDERSTAND", kind: "shared", permission: "market:read", purpose: "Channel, claim and playbook intelligence from the archive.", arrivesIn: "09.3A", gap: "Market regime and live quotes have no backend route (G-16, G-20).", icon: "understand" },
   { id: 7, title: "Learning Insights", path: "/insights", workspace: "UNDERSTAND", kind: "private", permission: "analytics:read", purpose: "What the recorded evidence supports, with sample sizes, freshness and drift. Advisory only.", arrivesIn: "09.3B.2", icon: "understand" },
   { id: 8, title: "Capital & Risk", path: "/capital-risk", workspace: "CONTROL", kind: "private", permission: "capital:read", purpose: "Your capital profile, risk policy and active controls (read-only).", arrivesIn: "09.3", gap: "Capital and risk-policy changes have no write routes; the operator changes them.", icon: "control" },
@@ -51,6 +51,8 @@ export const screensFor = (role: Role): Screen[] => SCREENS.filter((s) => canVie
 export const landingFor = (role: Role): string => (role === "ADMIN" ? "/admin/system" : "/");
 /** Screen 4 (Opportunity Detail) is a dynamic route under Opportunities: it has no navigation entry of its own and shares that screen's gate. */
 export const OPPORTUNITY_DETAIL = /^\/opportunities\/[0-9a-fA-F-]{36}$/;
+/** The Research Workspace for one candidate is a dynamic route under Research (no navigation entry of its own, same gate). */
+export const RESEARCH_DETAIL = /^\/research\/[0-9a-fA-F-]{36}$/;
 export const findScreen = (path: string): Screen | undefined => SCREENS.find((s) => s.path === path);
 
 export interface NavGroup { workspace: Workspace | null; items: Screen[] }
@@ -68,6 +70,7 @@ export function mobileNavFor(role: Role): Array<{ label: string; href: string; i
   return [{ label: "Desk", href: "/", icon: "desk", workspace: null }, ...WORKSPACES.filter((w) => w !== "OPERATE").flatMap((w) => { const s = first(w); return s ? [{ label: w[0] + w.slice(1).toLowerCase(), href: s.path, icon: s.icon, workspace: w }] : []; })];
 }
 export function breadcrumbFor(path: string, role: Role = "TRADER"): Array<{ label: string; href?: string }> {
+  if (RESEARCH_DETAIL.test(path)) { const w = workspaceFor(role, findScreen("/research") as Screen); return [...(w ? [{ label: w[0] + w.slice(1).toLowerCase() }] : []), { label: "Research", href: "/research" }, { label: "Research workspace" }]; }
   const detail = OPPORTUNITY_DETAIL.test(path);
   if (detail) { const w = workspaceFor(role, findScreen("/opportunities") as Screen); return [...(w ? [{ label: w[0] + w.slice(1).toLowerCase() }] : []), { label: "Opportunities", href: "/opportunities" }, { label: "Opportunity detail" }]; }
   if (path === "/design-system") return [{ label: "Design system" }]; // the development/CI gallery is not a product screen

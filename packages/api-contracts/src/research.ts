@@ -31,3 +31,14 @@ export interface ResearchPackageBody {
   score: number | null; synthesisAlgorithmVersion: string; reports: AgentReportView[]; contradictions: ContradictionView[]; roleCoverage: RoleCoverageView;
   optionsRisk?: unknown; agentVersions: Record<string, string>; evidenceIndex: string[]; missingRequired: string[]; grantsApproval: false; synthesisInputSha256: string; packageSha256: string;
 }
+
+/** GET /research/agents (apps/api/src/researchApi.ts), verified against the REAL handler and registry in Stage 09.3B.3 (tests/unit/api-contracts/researchParity.test.ts). Contract metadata only: it contains no candidate data. */
+export const AGENT_REGISTRY_KEYS = ["agents", "roles", "extraSpecialists", "note"] as const;
+export const AGENT_REGISTRY_ROW_KEYS = ["agentId", "name", "version", "role", "supplementsRoles", "required", "canBlock", "advisoryOnly", "weight", "timeoutMs", "dependsOn", "softDependsOn", "requiredInputs", "optionalInputs"] as const;
+export const ROLE_ROW_KEYS = ["role", "name", "kind", "components"] as const;
+export interface AgentRegistryRow {
+  agentId: string; name: string; version: string; role: string | null; supplementsRoles: string[]; required: boolean; canBlock: boolean; advisoryOnly: boolean; weight: number; timeoutMs: number;
+  dependsOn: string[]; softDependsOn: string[]; requiredInputs: string[]; optionalInputs: string[];
+}
+export interface RoleRow { role: string; name: string; kind: string; components: string[] }
+export interface AgentRegistryResponse { agents: AgentRegistryRow[]; roles: RoleRow[]; extraSpecialists: string[]; note: string }

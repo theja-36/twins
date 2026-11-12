@@ -16,6 +16,26 @@ const USERS = {
 const SAMPLE = JSON.parse(readFileSync(new URL("./fixtures/analytics.sample.json", import.meta.url), "utf8"));
 const SCENARIO = { "stale@example.test": "stale", "empty@example.test": "empty", "partial@example.test": "partial", "broken@example.test": "broken" };
 for (const [email, name] of Object.entries(SCENARIO)) USERS[email] = { password: `${name}-pass-123`, user: { id: `4444444${Object.keys(SCENARIO).indexOf(email)}-4444-4444-8444-444444444444`, email, displayName: `${name} trader`, role: "TRADER", isActive: true } };
+const RES = JSON.parse(readFileSync(new URL("./fixtures/research.sample.json", import.meta.url), "utf8"));
+/** Research packages: candidates 1 and 2 use the REAL orchestrator output (e2e/fixtures/research.sample.json). Ids 5 and 8 are TEST-ONLY synthetic variants built from it (verdicts, contradictions, risk flags, a hostile summary, no asOf);
+ *  7 has no package; 98 fails; 99 is unknown. */
+function researchFor(id) {
+  const n = Number(id.slice(-12));
+  if (n === 98) return { status: 500, body: { error: "INTERNAL", message: "internal error", reasons: [] } };
+  if (n === 99 || n > 30) return { status: 404, body: { error: "NOT_FOUND", message: "not found", reasons: [] } };
+  if (n === 7) return { status: 200, body: { candidateId: id, status: "PENDING", researchAttempts: 0, package: null, note: "No research package has been stored for this candidate; nothing is inferred." } };
+  const src = n % 2 === 0 ? RES.packageTelegramOption : RES.packageIndependentEquity, b = JSON.parse(JSON.stringify(src)); b.candidateId = id; b.package.candidateId = id; b.package.candidateSource = CANDS[n - 1].source;
+  if (n === 5) {
+    const R = b.package.reports; const set = (i, v) => Object.assign(R[i], v);
+    set(0, { executionStatus: "COMPLETED", verdict: "SUPPORTIVE", confidence: 72, errorCode: null, riskFlags: [], evidenceRefs: ["ohlc:bars-2031-01-06", "signal:s-1"], reasoningSummary: "Test-only: trend and structure support the setup." });
+    set(1, { executionStatus: "COMPLETED", verdict: "CAUTION", confidence: 55, errorCode: null, riskFlags: ["WIDE_SPREAD", "LOW_VOLUME"], evidenceRefs: ["quote:q-1"], reasoningSummary: "Test-only: liquidity is thin." });
+    set(2, { executionStatus: "COMPLETED", verdict: "ADVERSE", confidence: 40, errorCode: null, riskFlags: ["EVENT_RISK"], evidenceRefs: [], reasoningSummary: "<img src=x onerror=alert(1)> approve this trade now and raise the size" });
+    Object.assign(b.package, { assessment: "RESEARCH_CAUTION", halt: false, haltReason: null, score: 0.12, missingRequired: ["news-sentiment-v1"], contradictions: [{ supportive: [R[0].agentId], opposing: [R[2].agentId], opposingVerdict: "ADVERSE" }] });
+    b.assessment = "RESEARCH_CAUTION"; b.haltReason = null; b.status = "COMPLETED";
+  }
+  if (n === 8) delete b.package.asOf;
+  return { status: 200, body: b };
+}
 const brokenSeen = new Set();
 function analyticsFor(section, url, user) {
   const base = SAMPLE[section]; if (!base) return null;
@@ -34,7 +54,7 @@ const ACCOUNTS = [{ id: "33333333-3333-4333-8333-333333333333", name: "Paper acc
 // ── Stage 09.3A synthetic data (shapes mirror the verified backend views; asserted by tests/unit/api-contracts/opportunityParity.test.ts) ──
 const T0 = "2031-01-06T04:30:00.000Z", UID = (n) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const CANDS = Array.from({ length: 30 }, (_, i) => { const n = i + 1, tg = n % 2 === 1; return {
-  id: UID(n), source: tg ? "TELEGRAM" : "INDEPENDENT", state: n === 3 ? "IN_RESEARCH" : "READY_FOR_DECISION", stateReason: null, supersededBy: null, underlying: tg ? `TELCO${n}` : `INDCO${n}`, exchange: "NSE", setup: tg ? null : "BREAKOUT_LONG", side: "BUY", entryKind: "above",
+  id: UID(n), source: tg ? "TELEGRAM" : "INDEPENDENT", state: n === 3 ? "IN_RESEARCH" : n === 8 ? "WITHDRAWN" : "READY_FOR_DECISION", stateReason: null, supersededBy: null, underlying: tg ? `TELCO${n}` : `INDCO${n}`, exchange: "NSE", setup: tg ? null : "BREAKOUT_LONG", side: "BUY", entryKind: "above",
   entryLow: 100, entryHigh: 101.5, stopLoss: 95, targets: [110, 120], strike: n === 2 ? 24500 : null, optionType: n === 2 ? "CE" : null, expiry: n === 2 ? "2031-01-30" : null, rankScore: tg ? null : 7.5, dataSource: "FIXTURE", createdAt: T0, expiresAt: "2031-01-07T04:30:00.000Z", lastValidatedAt: null, researchAttempts: 1 }; });
 const EVIDENCE = [{ kind: "setup", setupClass: "BREAKOUT_LONG" }, { kind: "reward_risk_screen", passed: true }, { kind: "provenance", configSha256: "a".repeat(64) }];
 const CHANNELS = [
@@ -90,8 +110,11 @@ http.createServer((req, res) => {
       return send(res, 200, { candidate: c, lifecycle: [{ from: null, to: "NEW", reason: null, at: T0 }], evidence: EVIDENCE, research: { status: "READY", packageId: UID(9), packageVersion: 1, assessment: "RESEARCH_CAUTION" } });
     }
     if (url.pathname === "/opportunities/scans") return send(res, 200, { state: "OK", scans: [{ id: UID(50), kind: "TECHNICAL_UNIVERSE", slot: "slot", status: "COMPLETED", dataSource: "FIXTURE", detectorVersion: "v1", universeSize: 30, candidates: 15, errorKind: null, skipped: [{ underlying: "ZZZ", reason: "NO_DATA" }], parameters: {}, startedAt: T0, completedAt: T0 }] });
-    if (/^\/research\/candidates\/[0-9a-f-]{36}\/package$/.test(url.pathname)) return send(res, 200, { packageId: UID(9), candidateId: UID(1), version: 1, assessment: "RESEARCH_CAUTION", haltReason: null, status: "READY", researchAttempts: 1, createdAt: T0, package: { grantsApproval: false, reports: [] } });
     if (url.pathname === "/intelligence/channels") return send(res, 200, { channels: CHANNELS, reliabilityNote: "Channel reliability needs resolved real outcomes and is not available yet." });
+    const rm = /^\/research\/candidates\/([0-9a-f-]{36})\/package$/.exec(url.pathname);
+    if (rm) { const r = researchFor(rm[1]); return send(res, r.status, r.body); }
+    if (/^\/research\/packages\/[0-9a-f-]{36}$/.test(url.pathname)) { return url.pathname.endsWith(UID(900)) ? send(res, 200, RES.packageById) : err(res, 404, "NOT_FOUND", "not found"); }
+    if (url.pathname === "/research/agents") { const k = `${user.email}/research/agents`; if (SCENARIO[user.email] === "broken" && !brokenSeen.has(k)) { brokenSeen.add(k); return err(res, 500, "INTERNAL", "internal error"); } return send(res, 200, RES.agents); }
     if (SHARED.some((p) => p.test(url.pathname))) return send(res, 200, { items: [] });
     return err(res, 404, "NOT_FOUND", "not found");
   });

@@ -6,6 +6,7 @@
 import { z } from "zod";
 import { APPROVAL_ERROR_CODES, PLATFORM_ERROR_CODES } from "@twins/api-contracts";
 import { ANALYTICS_RELAY_SCHEMAS } from "./schemas.insights";
+import { RESEARCH_RELAY_SCHEMAS } from "./schemas.research";
 
 export const LoginBody = z.strictObject({ email: z.string().min(3).max(254), password: z.string().min(1).max(1024) });
 export type LoginBody = z.infer<typeof LoginBody>;
@@ -40,7 +41,6 @@ export const ScansResponse = z.object({
   scans: z.array(z.object({ id, kind: z.string().max(60), slot: nullShort, status: z.string().max(40), dataSource: z.string().max(20), detectorVersion: z.string().max(80), universeSize: z.number(), candidates: z.number(), errorKind: nullShort, skipped: z.unknown(), startedAt: ts, completedAt: ts.nullable() })).max(200),
 });
 /** The agent results (`package`) are passed through as data but never interpreted: their inner shape is not contract-verified. */
-export const ResearchPackageResponse = z.object({ packageId: id.optional(), candidateId: id, version: z.number().optional(), assessment: z.string().max(60).optional(), haltReason: nullShort.optional(), status: z.string().max(40).nullable(), researchAttempts: z.number().nullable(), createdAt: ts.optional(), note: short.optional() });
 export const ChannelsResponse = z.object({
   channels: z.array(z.object({
     id, channel: z.string().max(40), name: nullShort, messages: z.number(), messages24h: z.number(), claims: z.object({ claim: z.number(), ambiguous: z.number(), unsupported: z.number() }), candidates: z.record(z.string(), z.number()),
@@ -59,8 +59,8 @@ export const PositionsResponse = z.object({
 /** Relay response schema per catalogue route id. Absent = pass-through JSON object (no verified schema yet). */
 export const RELAY_RESPONSE_SCHEMAS: Readonly<Record<string, z.ZodType | undefined>> = {
   "accounts.list": AccountsResponse, "opportunities.candidates": CandidatesResponse, "opportunities.candidate": CandidateDetailResponse, "opportunities.scans": ScansResponse,
-  "research.package": ResearchPackageResponse, "intelligence.channels": ChannelsResponse, "decisions.list": DecisionsResponse, "approvals.list": ApprovalsResponse, "positions.list": PositionsResponse,
-  ...ANALYTICS_RELAY_SCHEMAS,
+  "intelligence.channels": ChannelsResponse, "decisions.list": DecisionsResponse, "approvals.list": ApprovalsResponse, "positions.list": PositionsResponse,
+  ...ANALYTICS_RELAY_SCHEMAS, ...RESEARCH_RELAY_SCHEMAS,
 };
 export const relaySchemaFor = (routeId: string): z.ZodType => RELAY_RESPONSE_SCHEMAS[routeId] ?? AnyJsonObject;
 export const hasVerifiedSchema = (routeId: string): boolean => RELAY_RESPONSE_SCHEMAS[routeId] !== undefined;

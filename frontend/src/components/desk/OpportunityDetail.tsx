@@ -65,7 +65,7 @@ function Body({ d, role, updatedAt }: { d: NonNullable<ReturnType<typeof useCand
           {pkg.data && "createdAt" in pkg.data && <><dt>Package stored</dt><dd>{formatIst(pkg.data.createdAt)}</dd></>}
         </dl>
         {pkg.data && "note" in pkg.data && <p className="small muted">{pkg.data.note}</p>}
-        <PlannedPanel title="Agent-level findings" kind="UNAVAILABLE">The per-agent verdicts inside a research package are not yet contract-verified, so they are not shown here. The package assessment above is the backend’s own summary; the Research screen arrives in a later stage. Research is evidence and never an approval.</PlannedPanel>
+        <p className="small" style={{ margin: "10px 0 0" }}><Link href={`/research/${c.id}`}>Open the research workspace</Link> for the agent reports, contradictions, missing evidence and provenance. Research is evidence and never an approval.</p>
       </Section>
       <Section id="prov-h" title="Source provenance">
         <dl className="kv">

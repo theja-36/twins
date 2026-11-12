@@ -84,12 +84,12 @@ for (const width of WIDTHS) for (const theme of ["dark", "light"] as const) {
         const m = await page.evaluate((t) => {
           const region = [...document.querySelectorAll<HTMLElement>(".tblwrap")].find((r) => r.getAttribute("aria-label") === `${t} (scrollable)`)!, tb = region.querySelector("table")!;
           const cells = [...tb.querySelectorAll<HTMLElement>("th, td:not(.wrap)")];
-          const tall = cells.filter((c) => c.getBoundingClientRect().height > 70).map((c) => `${c.tagName} "${(c.textContent ?? "").slice(0, 20)}" ${Math.round(c.getBoundingClientRect().height)}px`);
-          const clipped = cells.filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => (c.textContent ?? "").slice(0, 20));
+          const tall = [...tb.querySelectorAll<HTMLElement>("th")].filter((c) => c.getBoundingClientRect().height > 60).map((c) => `TH "${(c.textContent ?? "").slice(0, 20)}" ${Math.round(c.getBoundingClientRect().height)}px`).concat(cells.filter((c) => getComputedStyle(c).whiteSpace !== "nowrap").map((c) => `${c.tagName} "${(c.textContent ?? "").slice(0, 20)}" may break`));
+          const clipped = [...tb.querySelectorAll<HTMLElement>("th, td")].filter((c) => c.scrollWidth > c.clientWidth + 1).map((c) => (c.textContent ?? "").slice(0, 20));
           const before = region.scrollLeft; region.scrollLeft = region.scrollWidth; const last = [...tb.querySelectorAll<HTMLElement>("th")].at(-1)!.getBoundingClientRect(), box = region.getBoundingClientRect();
           return { headers: tb.querySelectorAll("th").length, regionScrollable: region.scrollWidth > region.clientWidth, canScroll: region.scrollLeft > before || region.scrollWidth <= region.clientWidth, lastVisibleAfterScroll: last.right <= box.right + 1 && last.left >= box.left - 1, tall, clipped, page: { sw: document.documentElement.scrollWidth, iw: window.innerWidth }, rowH: Math.round(tb.querySelector("tbody tr")!.getBoundingClientRect().height) };
         }, table);
-        expect(m.headers, "every column is present at every width").toBe(columns); expect(m.tall, "no cell is stretched by mid-word breaks").toEqual([]); expect(m.clipped, "no cell clips its own text").toEqual([]);
+        expect(m.headers, "every column is present at every width").toBe(columns); expect(m.tall, "headers stay on one line and every non-wrapping cell is nowrap").toEqual([]); expect(m.clipped, "no cell clips its own text").toEqual([]);
         expect(m.page.sw, "the page itself must not scroll sideways").toBeLessThanOrEqual(m.page.iw); expect(m.canScroll).toBe(true); expect(m.lastVisibleAfterScroll, "the last column is reachable by scrolling inside the table").toBe(true); expect(m.rowH).toBeLessThan(110);
         if (width <= 820) expect(m.regionScrollable, "on narrow screens the table scrolls inside its own region").toBe(true);
         await expect(page.getByRole("table", { name: table })).toContainText(name === "Outcomes" ? "6,172.18" : "BREAKOUT");

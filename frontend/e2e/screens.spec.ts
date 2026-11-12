@@ -52,7 +52,7 @@ test.describe("Opportunity detail", () => {
     await expect(page.getByRole("heading", { name: "TELCO1", level: 1 })).toBeVisible(); await expect(page.getByText("Proposal only")).toBeVisible(); await expect(page.getByText("This candidate was built on synthetic fixture data")).toBeVisible();
     const ev = page.locator("section[aria-labelledby=ev-h]"); await expect(ev).toContainText("setup"); await expect(ev).toContainText("reward risk screen");
     await expect(page.locator("section[aria-labelledby=liq-h]")).toContainText("NOT AVAILABLE"); await expect(page.locator("section[aria-labelledby=ctx-h]")).toContainText("No trader-authorised route");
-    await expect(page.getByText("Agent-level findings")).toBeVisible(); await expect(page.getByRole("table", { name: "Decisions for this candidate" })).toContainText("PENDING");
+    await expect(page.getByRole("link", { name: "Open the research workspace" })).toBeVisible(); await expect(page.getByRole("table", { name: "Decisions for this candidate" })).toContainText("PENDING");
     await expect(page.getByRole("button", { name: /approve|reject|execute|order/i })).toHaveCount(0);
   });
   test("an option candidate shows strike, type and expiry as recorded", async ({ page }) => {
