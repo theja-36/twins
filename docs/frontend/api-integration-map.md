@@ -151,6 +151,8 @@ Existing seeds (verified):
 
 G-51, restated: the session intelligence routes and the analytics routes have machine-readable descriptions; the `userApi` routes (accounts, capital, risk, portfolio, decisions, approvals, execution) do **not**. Stage 09.1 adds that, seeding from the two sources above. `packages/api-contracts` must **re-declare** types/enums (no runtime import of `@twins/outcomes`, which pulls backend code) and prove equality with parity tests: catalogue vs the Fastify route table; catalogue vs `openapi-session.json` and `ANALYTICS_ENDPOINTS`; permission/role constants vs `auth.ts`; error codes and both HTTP maps; response schemas vs existing test fixtures.
 
+*Implemented in 09.2:* the BFF relay serves **GET only**, generated from the route catalogue (`frontend/src/bff/allowlist.ts`); write actions are intentionally not relayed until the screens that use them (09.3). `/accounts` is the only relayed read with a verified response schema so far.
+
 ## 8. Client conventions
 
 One typed function and one query hook per catalogue entry; keys `[endpoint, accountId?, params]`; cache purged on logout/user change. Responses validated against contract schemas at the BFF edge (failure → ERROR, never partial render). Mutations send `idempotencyKey` in the **body** (generated when the confirmation dialog opens, reused on retry); success invalidates `approvals`, `decisions`, `portfolio`; the UI shows the server-returned status, never an optimistic one. Polling: 15 s approvals/positions while visible, 60 s elsewhere. Limit-only pagination → "Load more". Fixture mode (dev/CI only) points the BFF at a stub generated from the contracts; production bundles exclude fixtures.

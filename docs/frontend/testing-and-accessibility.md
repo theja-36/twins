@@ -33,6 +33,8 @@ These tests only read code and fixtures; they cannot alter risk, ownership, appr
 
 **Implemented in Stage 09.1** (backend `unit` job, 9 files, 70 tests): import/browser-safety guard, role parity, error parity (platform + approval + login), route-table/OpenAPI/analytics catalogue parity, request-rule behaviour, response-key parity, analytics envelope, vocabulary parity, ADMIN restrictions. Registered in [contracts-verification](contracts-verification.md).
 
+**Implemented in Stage 09.2** (frontend, local evidence; hosted CI not run): 123 Vitest tests (BFF security, configuration, CSP, middleware, throttle, allow-list, navigation registry, formatting, data states, components with axe, shell by role, session expiry and cache isolation) and 70 Playwright tests (auth/session, roles and relay, headers/CSP, responsive + accessibility matrix with 0 axe violations including contrast, keyboard, dialog, theme). See [foundation](foundation.md) §6.
+
 ## 4. Unit/component acceptance examples
 
 - `formatMoney("1100920.00") === "₹ 11,00,920.00"`; `formatMoney("-310.5")` → `−₹ 310.50`; input never passes through `Number`.

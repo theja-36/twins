@@ -1,6 +1,6 @@
 # TWINS Stage 09 — Implementation Plan
 
-Status: PROPOSED (corrected after the Stage 09.0 final review). **Stage 09.1 is IMPLEMENTED LOCALLY, CI PENDING** — see [contracts-verification](contracts-verification.md); phases 09.2 onward have not started. **No implementation has started.** Each phase below needs its own go-ahead; nothing is committed, pushed, merged or deployed without explicit authorisation. The old frontend repository is read-only throughout.
+Status: PROPOSED (corrected after the Stage 09.0 final review). **Stage 09.1 is COMPLETE with hosted CI green** (commit `ee58650`, run 43113185775; see [contracts-verification](contracts-verification.md)). **Stage 09.2 is IMPLEMENTED LOCALLY, hosted CI not run** — see [foundation](foundation.md); phases 09.3 onward have not started. **No implementation has started.** Each phase below needs its own go-ahead; nothing is committed, pushed, merged or deployed without explicit authorisation. The old frontend repository is read-only throughout.
 
 ## 1. Phases
 
@@ -8,7 +8,7 @@ Status: PROPOSED (corrected after the Stage 09.0 final review). **Stage 09.1 is 
 |---|---|---|---|
 | **09.0 Documentation & mockups** (this set) | 7 docs + 7 mockups + screenshots | – | reviewer sign-off |
 | **09.1 Contracts** | `packages/api-contracts` (types/enums **re-declared**, no runtime import of backend packages) + parity tests in the backend `unit` job: catalogue vs Fastify route table, vs `openapi-session.json`, vs `ANALYTICS_ENDPOINTS`; `ROLE_PERMS` mirror; platform and approval error maps; request-rule constants; response schemas vs existing fixtures. Narrows G-51 for `userApi` routes | 09.0 approved | backend CI green (run id); no behaviour change; forbidden-import scan passes |
-| **09.2 Frontend foundation** | `frontend/` scaffold (Next 15 / React 19 / Tailwind 3.4 / TS strict), design tokens, BFF (hardened), sign-in, shell, role-based nav, 8-state `DataRegion`, availability registry, stub backend from contracts, `frontend` CI job (trial, not yet gating) | 09.1 | frontend CI green on a trial branch; BFF security suite; axe on shell |
+| **09.2 Frontend foundation** (implemented locally; see foundation.md) | `frontend/` scaffold (Next 15 / React 19 / Tailwind 3.4 / TS strict), design tokens, BFF (hardened), sign-in, shell, role-based nav, 8-state `DataRegion`, availability registry, stub backend from contracts, `frontend` CI job (trial, not yet gating) | 09.1 | frontend CI green on a trial branch; BFF security suite; axe on shell |
 | **09.3 DECIDE + CONTROL read screens** | Overview, Approval Center (with approve/reject/cancel/watch), Capital & Risk (read), Paper Trading, Portfolio | 09.2 | Playwright journeys 1–3; axe 0; CI green |
 | **09.4 UNDERSTAND + REVIEW** | Opportunities, Opportunity Detail, Research Package, Market Intelligence (with UNAVAILABLE panels), Learning Insights, Decision History, Outcomes | 09.3 | journeys 4, 8; chart table alternatives |
 | **09.5 OPERATE + hardening** | Account, System Health (ADMIN), Users & Access (planned page), visual regression, perf budgets, docs, **add `frontend` to `ci-gate`**, README, GAP_REGISTER updates | 09.4 | full suite green; gate wired and proven by a deliberately failing branch; Stage 09 completion record with CI run id |

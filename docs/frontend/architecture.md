@@ -139,6 +139,8 @@ Implementation note (09.1): the package is `packages/api-contracts` as specified
 
 ## 10. CI integration
 
+*Implemented in 09.2:* `.github/workflows/frontend.yml` is a separate, path-filtered workflow (Node 20 and 22) and is **not** yet in `ci-gate`; connecting the gate remains a planned, separately approved step. The text below is the original specification.
+
 New workflow job `frontend` in `.github/workflows/ci.yml`: Node 22, `npm ci --prefix frontend`, typecheck, lint, unit (Vitest), contract tests, `next build`, Playwright (stub backend), axe, bundle-leak check. It is added to `ci-gate.needs` **only after it has been green on a trial branch** and is path-filtered so backend-only changes still require it to *succeed or be skipped-as-unchanged* (gate treats `skipped` from the path filter as pass). Backend jobs are untouched; the frontend job never starts Postgres/Redis. Contract-drift tests run in the existing backend `unit` job (they only need the backend source).
 
 ## 11. Observability & operations (frontend)

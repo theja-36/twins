@@ -14,6 +14,8 @@ export default [
       "package-lock.json",
       "**/*.tsbuildinfo",
       "eslint.config.js",
+      // The standalone frontend (Stage 09.2) has its own ESLint config and lockfile; it is linted by its own CI job.
+      "frontend/**",
     ],
   },
 

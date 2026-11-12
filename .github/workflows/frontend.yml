@@ -1,0 +1,72 @@
+# TWINS frontend CI (Stage 09.2): verification only, INDEPENDENT of the backend `ci` workflow (no database, no Redis, no secrets, no market data, no deployment).
+# It runs only when the frontend, the browser-safe contracts it consumes, or this file change. It is NOT yet part of the backend `ci-gate`: that connection is a planned,
+# separately approved step (docs/frontend/stage09-implementation-plan.md, Stage 09.5) made only after this workflow has been green repeatedly.
+# The end-to-end run talks to a local STUB of the API (frontend/e2e/stubBackend.mjs) with synthetic users; nothing here is a secret.
+name: frontend
+
+on:
+  push:
+    branches-ignore: ["dependabot/**"]
+    paths: ["frontend/**", "packages/api-contracts/**", ".github/workflows/frontend.yml"]
+  pull_request:
+    paths: ["frontend/**", "packages/api-contracts/**", ".github/workflows/frontend.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+
+jobs:
+  frontend:
+    name: frontend (node ${{ matrix.node }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install (frontend lockfile, clean; independent of the backend workspaces)
+        run: npm ci
+      - name: Production dependency audit (fails on high or critical)
+        run: npm audit --omit=dev --audit-level=high
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Unit and BFF security tests
+        run: npm test
+      - name: Build (standalone)
+        run: npm run build
+      - name: Prepare the standalone server
+        run: npm run prepare:standalone
+      - name: Install the Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end, security, responsive and accessibility tests
+        run: npx playwright test
+      - name: Upload the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-playwright-node-${{ matrix.node }}
+          path: |
+            frontend/playwright-report
+            frontend/test-results
+          retention-days: 7
