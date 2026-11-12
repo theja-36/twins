@@ -15,6 +15,7 @@ import { buildChannelNewsFeed, parseChannelNewsFile, selectNewsCandidates, FEED_
 import { analyzeTelegramText } from "../../packages/signals/src/index";
 import { publishJson } from "../../packages/providers/src/publish";
 import { createBoundedDb, schema, type Db } from "../../packages/database/src/index";
+import { checkRuntimeRolePrivileges } from "../../packages/audit-chain/src/index";
 import { enforceLiveTradingGuard } from "../../packages/config/src/liveGuard";
 
 export interface CliDeps {
@@ -57,6 +58,12 @@ export async function runCli(argv: string[], deps: CliDeps): Promise<number> {
   const now = (deps.now ?? (() => new Date()))();
   const handle = deps.openDb ? deps.openDb(url) : createBoundedDb(url, { max: 2, idleTimeoutMillis: 5000 });
   try {
+    // Role separation (risk-control hardening): this job runs as the runtime role (twins_app) in the compose profile `news`, so outside local development (anything but APP_ENV=development) it refuses to run as a privileged role.
+    // Checked on the real connection only (tests inject a database handle). Exit 82 is the same code the long-running services use.
+    if (!deps.openDb && deps.env["APP_ENV"] !== "development") {
+      const problems = await checkRuntimeRolePrivileges((handle as ReturnType<typeof createBoundedDb>).pool);
+      if (problems.length > 0) { deps.err(`refused: runtime role separation violated (${problems.slice(0, 3).join(", ")}${problems.length > 3 ? `, +${problems.length - 3} more` : ""})`); return 82; }
+    }
     const M = schema.telegramMessages, S = schema.telegramSources;
     const since = new Date(now.getTime() - FEED_WINDOW_HOURS * 3_600_000);
     const rows = await handle.db.select({ id: M.id, channel: S.channelIdentifier, at: M.messageTimestamp, text: M.rawText }).from(M).innerJoin(S, eq(S.id, M.telegramSourceId)).where(and(gte(M.messageTimestamp, since)));

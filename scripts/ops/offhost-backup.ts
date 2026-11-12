@@ -96,7 +96,7 @@ export function restoreHooks(repoRoot: string): ScratchHooks {
       await c.end();
       if (n !== journal.entries.length) return { ok: true, detail: `structure check skipped: backup is at migration level ${n}, this checkout at ${journal.entries.length}` };
       try {
-        await execFileP("node", [join(repoRoot, "scripts/ci/verify-migrations.mjs")], { env: { ...process.env, DATABASE_URL: url } });
+        await execFileP("node", [join(repoRoot, "scripts/ci/verify-migrations.mjs")], { env: { ...process.env, DATABASE_URL: url, TWINS_VERIFY_RESTORED_COPY: "1" } }); // the scratch restore is --no-owner --no-privileges: ownership, ACLs and roles are not part of the dump
         return { ok: true, detail: `${n} migrations; structures verified` };
       } catch {
         return { ok: false, detail: "verify-migrations failed" };

@@ -42,3 +42,16 @@ Nothing here has been built, pulled, started, deployed or scheduled. `LIVE_TRADI
 
 ## Telegram intake guards (prepared, not deployed)
 `TWINS_TELEGRAM_ALLOWED_CHAT_IDS` (empty = approve no chat) and `TWINS_TELEGRAM_OPTIONS_ONLY` (literal `true`) are passed to the API and the worker only. The approved numeric test-chat id is added to `staging.env` later, under separate approval. The `api` build context is `../../src` (host layout `/opt/twins-staging/{infrastructure/staging,src}`); app images are selected by `TWINS_IMAGE_TAG` (default `local`). See `docs/implementation/staging/TELEGRAM_INTAKE_DEPLOYMENT_PLAN.md`.
+
+## Risk-control hardening (migration 0047): apply order
+
+Order matters; each step is safe to stop after.
+1. Run the migrations as the owner (`migrate`). 0047 adds the writer role, the owner allowlist, the guard trigger and the door `twins_set_user_halt`. The guard already allows the exact row the current planning cycle writes, so a running worker keeps working.
+2. Deploy the application image that calls the door (`recordUserHalt`), then re-run `app-role.sql` as the owner: it removes the runtime INSERT on `risk_control_events` and grants EXECUTE on the door. Re-running it before the new image is live would stop the old worker writing halts.
+3. The API, worker and scheduler refuse to start (exit 82) outside `APP_ENV=development` unless the role matches this design, including the risk-control checks; the channel-news job refuses with exit 82 too.
+4. Platform-wide controls and CLEARs are written only with the owner CLI: `risk-control controls list|set|clear` (compose service `risk-control`, profile `ops`, owner credential). It needs a login role on `twins_control_privileged_roles`; nothing but a new migration removes a role from that list.
+5. Known limitation, not solved here: the database does not authenticate the user binding (`twins.user_id`).
+
+## SECURITY DEFINER EXECUTE hardening (migration 0048)
+
+0048 revokes PUBLIC EXECUTE on the user-management, decision-door, account-lister and audit-chain trigger functions, and re-grants the application doors to `twins_app` when that role exists. Re-run `app-role.sql` after migrating as usual (it also grants `twins_paper_set_switch`, `twins_record_risk_approval` and `twins_set_user_halt`, which 0048 does not). The approval bot is unaffected. `scripts/ops/audit-definer-functions.sql` (read-only) lists every definer function with its owner, search_path and grantees.

@@ -330,6 +330,20 @@
       "when": 1794421031283,
       "tag": "0046_outcome_integrity_analytics_snapshots",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794507431283,
+      "tag": "0047_risk_control_door",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794593831283,
+      "tag": "0048_definer_execute_hardening",
+      "breakpoints": true
     }
   ]
 }

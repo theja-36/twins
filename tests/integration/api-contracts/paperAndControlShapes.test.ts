@@ -5,6 +5,7 @@
  *
  * What this file proves (and what it deliberately does NOT prove) is listed in the final describe block, "unverified and limits". The key lists below are the CONTRACT these screens may rely on: they are declared here, from the real output, not imported from production code.
  *
+ * (Risk controls: since migration 0047 the control read also filters by owner explicitly; see the last test in section G.)
  * Findings that later screens must respect (each is asserted below):
  *  - `/execution/orders` and `/execution/positions` take only `limit` (1 to 200): no account filter, no offset, no total or "has more" field. A limited response cannot be shown as a complete history.
  *  - Positions return `userId` and a large free-form `rules` object; events return a free-form `payload`. They exist in the real output and must never be forwarded to the browser; the frontend allow-lists below exclude them.
@@ -267,9 +268,9 @@ describe("G. risk controls (real rows written by the real setRiskControl)", () =
     expect((await get("/risk/controls", ADMIN_TOKEN)).status).toBe(404);
   });
   it("controls take no parameters", async () => { await withControls(); expect((await get(`/risk/controls?accountId=${A.p.accountId}`, A.token)).status).toBe(422); });
-  it("RLS is the ONLY owner filter on controls: under the restricted role another trader's control is invisible, but on the superuser connection (RLS bypassed) `listActiveControls` returns it, so the isolation of /risk/controls rests entirely on row-level security", async () => {
+  it("the control read filters by owner EXPLICITLY (risk-control hardening, defence in depth beside forced RLS): another trader's control is invisible both under the restricted role and on the superuser connection where RLS is bypassed", async () => {
     await withControls(); const asX = (await listActiveControls(dbRls, X.userId, NOW)).filter((c) => c.userId === A.p.userId); expect(asX).toEqual([]);
-    const asSuper = (await listActiveControls(db, X.userId, NOW)).filter((c) => c.userId === A.p.userId); expect(asSuper.length).toBe(2); // documents the dependency; it is a property of the test database role, not of production
+    const asSuper = (await listActiveControls(db, X.userId, NOW)).filter((c) => c.userId === A.p.userId); expect(asSuper).toEqual([]); // before the explicit filter this returned 2 rows on a superuser connection: isolation then rested on row-level security alone
   });
 });
 

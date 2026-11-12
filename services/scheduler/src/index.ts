@@ -30,6 +30,7 @@ import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
 import { YAHOO_PROVIDER_NAME } from "@twins/adapter-market";
 import { configureRuntimeState, createPooledStateSource } from "@twins/runtime-state";
 import { createBoundedDb } from "@twins/database";
+import { enforceRuntimeRoleSeparation } from "@twins/audit-chain";
 import { alerterFromEnv } from "@twins/alerting";
 import { createStructuredLogger } from "@twins/shared";
 import { breakerAlert, evaluateCircuitBreakers, expireStaleRiskDecisions, loadBreakerConfig, loadExpiryConfig, loadSizingConfig } from "@twins/risk";
@@ -42,6 +43,14 @@ const config = loadConfig();
 console.log(
   `[scheduler] starting appEnv=${config.appEnv} tradingMode=${config.tradingMode} liveTradingEnabled=${config.liveTradingEnabled}`,
 );
+
+// ─── Role separation (risk-control hardening) ───────────────────────────────
+// The scheduler writes to the database as the runtime role (risk housekeeping), so outside local development it must run as the least-privilege role or refuse to start (exit 82), exactly like the API and the worker.
+// A short-lived single connection is used for the check; not run under NODE_ENV=test, where the vitest setup installs its own state.
+if (process.env["NODE_ENV"] !== "test" && config.appEnv !== "development") {
+  const roleCheckDb = createBoundedDb(config.databaseUrl, { max: 1, idleTimeoutMillis: 2000 });
+  try { await enforceRuntimeRoleSeparation("scheduler", roleCheckDb.pool); } finally { await roleCheckDb.close().catch(() => undefined); }
+}
 
 // ─── Runtime safety state (Stage 1 / Task 2) ───────────────────────────────
 // The scheduler reads the database-backed controls through its own small lazy pool; an unreadable state fails closed for every

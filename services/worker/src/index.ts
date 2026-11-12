@@ -44,6 +44,9 @@ import { describeErrorSafely, type StructuredLogger } from "@twins/shared";
 import { buildJobLogContext } from "./correlationLog.js";
 import { InvalidJobInputError, ReconciliationRequiredError } from "./jobErrors.js";
 import { parseJobTimestamp } from "./jobTimestamp.js";
+/** Consecutive planning cycles in which at least one account's halt state could not be established (see runEvaluationCycle: fail closed). Alerts after this many, or at once on a configuration fault. */
+let planningHaltFailureStreak = 0;
+const PLANNING_HALT_ALERT_AFTER = 2;
 import { parseCapture, processTelegramEventsJob, type CapturePayload, type TelegramEventsJobPayload } from "./telegramEvents.js";
 import { randomUUID } from "node:crypto";
 import { enforceLiveTradingGuard, loadConfig } from "@twins/config";
@@ -966,7 +969,15 @@ export const opportunityWorker =
           if (evaluationConfig.enabled) {
             // the portfolio is the PAPER portfolio (open paper positions and today's paper result); quotes, strategy performance and the live regime have no source yet (G-16, G-23): they are null, so their inputs are reported missing / restricted, never assumed
             const ev = await runEvaluationCycle({ db: workerDb.db, config: evaluationConfig, specs: specProvider, regime: null, portfolio: paperPortfolioProvider(workerDb.db), quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });
-            defaultWorkerLogger.info("planning.cycle.done", { evaluated: ev.evaluated, failed: ev.failed, verdicts: ev.verdicts, skipped: ev.skipped });
+            defaultWorkerLogger.info("planning.cycle.done", { evaluated: ev.evaluated, failed: ev.failed, haltCheckFailed: ev.haltCheckFailed, haltConfigFault: ev.haltConfigFault, verdicts: ev.verdicts, skipped: ev.skipped });
+            // Fail-closed escalation (risk-control hardening): accounts whose halt state could not be established were NOT evaluated. A configuration fault (the runtime role cannot call the halt door) alerts at once; a transient one after two consecutive cycles.
+            if (ev.haltCheckFailed > 0) {
+              planningHaltFailureStreak++;
+              defaultWorkerLogger.warn("planning.halt_failure_streak", { accounts: ev.haltCheckFailed, consecutiveCycles: planningHaltFailureStreak, configFault: ev.haltConfigFault });
+              if (ev.haltConfigFault || planningHaltFailureStreak >= PLANNING_HALT_ALERT_AFTER) {
+                try { (marketAlerter ?? alerterFromEnv(process.env, "worker", defaultWorkerLogger)).alert({ event: "planning.halt_write_failed", severity: "CRITICAL", code: ev.haltConfigFault ? "HALT_CONFIG_FAULT" : "HALT_WRITE_FAILED", summary: `risk halt state could not be established for ${ev.haltCheckFailed} account(s); their candidates were not evaluated (fail closed)`.slice(0, 300), details: { accounts: ev.haltCheckFailed, consecutiveCycles: planningHaltFailureStreak, configFault: ev.haltConfigFault }, dedupeKey: "planning.halt_write_failed" }); } catch { defaultWorkerLogger.warn("planning.halt_alert_failed", {}); }
+              }
+            } else planningHaltFailureStreak = 0;
           }
           if (decisionConfig.enabled) {
             const dr = await runDecisionCycle({ db: workerDb.db, config: decisionConfig, specs: specProvider, regime: null, portfolio: paperPortfolioProvider(workerDb.db), quotes: null, strategy: null, log: (event, fields) => defaultWorkerLogger.info(event, fields) });

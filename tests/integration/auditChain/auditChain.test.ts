@@ -680,6 +680,7 @@ describe("real processes refuse to start as a privileged database role outside d
   it.each([
     ["api", ["--import", "tsx", `${process.cwd()}/apps/api/src/index.ts`]],
     ["worker", ["--import", "tsx", "services/worker/src/index.ts"]],
+    ["scheduler", ["--import", "tsx", "services/scheduler/src/index.ts"]], // risk-control hardening: the scheduler writes as the runtime role too, so it gets the same guard
   ])("%s as the owner/superuser role in APP_ENV=staging", (_name, args) => {
     const r = spawnSync("node", args as string[], { cwd: process.cwd(), env: { ...base, APP_ENV: "staging", DATABASE_URL: scratchUrl }, encoding: "utf8", timeout: 60_000 });
     expect(r.status).toBe(82);

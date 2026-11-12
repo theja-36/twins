@@ -117,3 +117,40 @@ describe("ops one-shot services accept arguments (found in the first real stagin
     }
   });
 });
+
+describe("risk-control hardening (migration 0047): the files agree with the design", () => {
+  const sql = read("packages/database/drizzle/0047_risk_control_door.sql"), appRole = read("infrastructure/staging/app-role.sql");
+  const noComments = (s: string) => s.split("\n").filter((l) => !l.trim().startsWith("--")).join("\n");
+  it("app-role.sql: risk_control_events is READ-ONLY for the runtime role, the owner allowlist is NO-ACCESS, and the one door is granted explicitly (and revoked from PUBLIC)", () => {
+    const readOnly = must(/read_only text\[\] := ARRAY\[([^\]]*)\]/.exec(appRole))[1] ?? "", none = must(/none_for_runtime text\[\] := ARRAY\[([^\]]*)\]/.exec(appRole))[1] ?? "", insertOnly = must(/insert_only text\[\] := ARRAY\[([^\]]*)\]/.exec(appRole))[1] ?? "";
+    expect(readOnly).toContain("'risk_control_events'"); expect(insertOnly).not.toContain("risk_control_events"); expect(none).toContain("'twins_control_privileged_roles'");
+    expect(appRole).toMatch(/REVOKE ALL ON FUNCTION twins_set_user_halt\(text, text, timestamptz\) FROM PUBLIC;/); expect(appRole).toMatch(/GRANT EXECUTE ON FUNCTION twins_set_user_halt\(text, text, timestamptz\) TO :"app_role";/);
+  });
+  it("migration 0047: the writer role is NOLOGIN NOSUPERUSER NOBYPASSRLS, owns only the door, and the door is a fixed-search_path SECURITY DEFINER that PUBLIC cannot execute", () => {
+    const body = noComments(sql);
+    expect(body).toMatch(/CREATE ROLE twins_control_writer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT/); expect(body).toMatch(/ALTER ROLE twins_control_writer NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS NOINHERIT/);
+    expect(body).toMatch(/GRANT SELECT, INSERT ON public\.risk_control_events TO twins_control_writer/); expect(body).not.toMatch(/GRANT (ALL|UPDATE|DELETE|TRUNCATE)[^;]*twins_control_writer/);
+    expect(body).toMatch(/CREATE FUNCTION public\.twins_set_user_halt\([^)]*\) RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path = pg_catalog, pg_temp/);
+    expect(body).toMatch(/ALTER FUNCTION public\.twins_set_user_halt\(text, text, timestamptz\) OWNER TO twins_control_writer/); expect(body).toMatch(/REVOKE ALL ON FUNCTION public\.twins_set_user_halt\(text, text, timestamptz\) FROM PUBLIC/);
+    expect(body).toMatch(/REVOKE CREATE ON SCHEMA public FROM twins_control_writer/);
+  });
+  it("migration 0047: the door's fixed columns cannot be chosen by the caller, and the guard keys on session_user", () => {
+    const door = noComments(must(/CREATE FUNCTION public\.twins_set_user_halt[\s\S]*?\n\$\$;/.exec(sql))[0]), guard = noComments(must(/CREATE FUNCTION public\.twins_risk_control_guard[\s\S]*?\n\$\$;/.exec(sql))[0]);
+    expect(door).toMatch(/VALUES \(nid, uid, 'USER', uid::text, p_kind, 'SET', p_reason, 'planning-cycle', 'SYSTEM', p_expires\)/); expect(door).not.toMatch(/'CLEAR'|'OWNER'|'KILL_SWITCH'|'RESTRICTION'(?!,\s*'DAILY)/);
+    expect(guard).toMatch(/role_name = session_user/); expect(guard).not.toMatch(/current_user/); expect(guard).toMatch(/NEW\.actor_kind = 'SYSTEM' AND NEW\.actor = 'planning-cycle'/);
+  });
+  it("migration 0047: the guard, the owner allowlist and both existing append-only triggers are ENABLE ALWAYS, and the allowlist is append-only", () => {
+    const body = noComments(sql);
+    for (const [table, trg] of [["risk_control_events", "risk_control_events_guard"], ["risk_control_events", "risk_control_events_no_update_delete"], ["risk_control_events", "risk_control_events_no_truncate"], ["twins_control_privileged_roles", "twins_control_privileged_roles_no_update_delete"], ["twins_control_privileged_roles", "twins_control_privileged_roles_no_truncate"]] as const)
+      expect(body, trg).toContain(`ALTER TABLE public.${table} ENABLE ALWAYS TRIGGER ${trg};`);
+    expect(body).toMatch(/REVOKE ALL ON public\.twins_control_privileged_roles FROM PUBLIC/);
+  });
+  it("the runtime services that connect as twins_app all enforce role separation at start: the API, the worker and the scheduler (and the channel-news job)", () => {
+    for (const f of ["apps/api/src/index.ts", "services/worker/src/index.ts", "services/scheduler/src/index.ts"]) expect(noComments(read(f)), f).toMatch(/enforceRuntimeRoleSeparation\(/);
+    expect(read("scripts/ops/channel-news-export.ts")).toMatch(/checkRuntimeRolePrivileges\(/);
+    expect(read("services/scheduler/package.json")).toContain('"@twins/audit-chain"'); expect(read("services/scheduler/tsconfig.json")).toContain("packages/audit-chain");
+  });
+  it("the planning cycle writes halts only through the door (no direct control-event insert remains in the runtime path)", () => {
+    const cycle = noComments(read("packages/planning/src/cycle.ts")); expect(cycle).toMatch(/recordUserHalt\(/); expect(cycle).not.toMatch(/setRiskControl|clearRiskControl/);
+  });
+});

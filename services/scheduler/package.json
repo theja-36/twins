@@ -19,6 +19,7 @@
     "@twins/opportunity": "*",
     "@twins/risk": "*",
     "@twins/alerting": "*",
+    "@twins/audit-chain": "*",
     "@twins/shared": "*"
   },
   "devDependencies": {

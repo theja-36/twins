@@ -20,10 +20,10 @@ DO $$
 DECLARE
 	r text := current_setting('twins.app_role');
 	t record;
-	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch
-	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads', 'agent_engine_state_events'];
+	-- no access at all: the approval bot's tables (the bot has its own role) and anything only the owner/admin path may touch. twins_control_privileged_roles (migration 0047) is the allowlist of owner roles for risk_control_events: if the runtime role could append to it, it could allow-list itself
+	none_for_runtime text[] := ARRAY['claim_review_cards', 'claim_reviews', 'approval_bot_events', 'approval_bot_state', 'system_control_events', 'audit_chain_heads', 'agent_engine_state_events', 'twins_control_privileged_roles'];
 	-- read only: the runtime safety controls are changed only through the owner-run safety-control CLI
-	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals', 'agent_engine_state', 'orders', 'fills', 'positions', 'paper_switch', 'paper_switch_events', 'user_decisions', 'user_decision_events', 'users']; -- the replay log is written only by the owner-run operations CLI (dead-letter replay); orders / fills / positions are the execution tables: no execution service exists and the runtime role gets SELECT only (P1 hardening, migration 0029); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
+	read_only text[] := ARRAY['system_controls', 'telegram_intake_outbox_replays', 'risk_approvals', 'agent_engine_state', 'orders', 'fills', 'positions', 'paper_switch', 'paper_switch_events', 'user_decisions', 'user_decision_events', 'users', 'risk_control_events']; -- risk_control_events (migration 0047): the runtime role keeps SELECT only and records a halt ONLY through twins_set_user_halt (SECURITY DEFINER, owned by twins_control_writer); the generic append-only rule below would otherwise give it INSERT. -- the replay log is written only by the owner-run operations CLI (dead-letter replay); orders / fills / positions are the execution tables: no execution service exists and the runtime role gets SELECT only (P1 hardening, migration 0029); risk_approvals is written ONLY by twins_record_risk_approval (SECURITY DEFINER), never by an INSERT of this role
 	-- insert only: the approval card is created by the application and then only ever advanced by the approval bot's SECURITY DEFINER functions
 	insert_only text[] := ARRAY['risk_approval_cards'];
 BEGIN
@@ -62,3 +62,7 @@ GRANT EXECUTE ON FUNCTION twins_create_user(text, text, text, text, uuid), twins
 -- Stage 02: accounts and broker_connections are row-level protected; the worker / scheduler cycles list accounts across users only through these identifier-only definer functions.
 GRANT EXECUTE ON FUNCTION twins_list_active_accounts(), twins_list_active_account_users(integer) TO :"app_role";
 GRANT EXECUTE ON FUNCTION twins_paper_set_switch(boolean, text, text) TO :"app_role";
+
+-- Risk-control hardening (migration 0047, amends ADR-015): the one door through which the planning cycle records a USER-scope halt. Not executable by PUBLIC; the runtime role has no direct INSERT on risk_control_events (read_only above).
+REVOKE ALL ON FUNCTION twins_set_user_halt(text, text, timestamptz) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION twins_set_user_halt(text, text, timestamptz) TO :"app_role";

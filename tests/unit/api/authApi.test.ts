@@ -93,7 +93,7 @@ describe("migration 0040 and the runtime grants (G-13)", () => {
     expect(sql).toMatch(/twins_create_user[\s\S]*an administrator already exists/);
   });
   it("the runtime role has no INSERT/UPDATE on users beyond password and display name, and may execute the doors", () => {
-    expect(role).toMatch(/'users'\];/); expect(role).toContain("GRANT UPDATE (password_hash, display_name, updated_at) ON users");
+    expect(role).toMatch(/read_only text\[\] := ARRAY\[[^\]]*'users'[^\]]*\];/); // (users is read-only for the runtime role apart from the column grants below; the list also holds risk_control_events since migration 0047) expect(role).toContain("GRANT UPDATE (password_hash, display_name, updated_at) ON users");
     expect(role).toContain("twins_set_user_role(uuid, uuid, text)"); expect(role).not.toMatch(/GRANT[^;]*\(role[^)]*\) ON users/);
   });
 });

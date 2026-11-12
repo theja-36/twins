@@ -248,16 +248,32 @@ describe("verifier CLI (unit)", () => {
 describe("runtime-role privilege self-check (logic)", () => {
   const okRole = { rolsuper: false, rolcreaterole: false, rolcreatedb: false, rolreplication: false, rolbypassrls: false };
   const table = (over: Record<string, boolean>) => ({ owner: false, sel: true, ins: true, upd: false, del: false, trunc: false, refs: false, trg: false, ...over });
-  function db(role: Record<string, boolean>, perTable: (t: string) => Record<string, boolean>): Queryable {
+  /** The state of the risk-control protection (migration 0047) as the runtime role would see it: correct unless a test overrides a part. */
+  const goodRisk = {
+    table: { rls: true, forced: true, policies: 1, owner: "twins_owner" } as Record<string, unknown>,
+    triggers: [{ tgname: "risk_control_events_guard", enabled: "A" }, { tgname: "risk_control_events_no_update_delete", enabled: "A" }, { tgname: "risk_control_events_no_truncate", enabled: "A" }],
+    member: { m: false, same: false } as Record<string, unknown>,
+    fn: { owner: "twins_control_writer", definer: true, cfg: ["search_path=pg_catalog, pg_temp"], can_exec: true, public_exec: false } as Record<string, unknown> | undefined,
+    writer: { rolsuper: false, rolcreaterole: false, rolcreatedb: false, rolreplication: false, rolbypassrls: false, rolcanlogin: false, procs: 1, rels: 0, can_create: false, runtime_member: false } as Record<string, unknown> | undefined,
+    allow: { s: false, i: false, u: false, d: false } as Record<string, unknown>,
+  };
+  type Risk = typeof goodRisk;
+  function db(role: Record<string, boolean>, perTable: (t: string) => Record<string, boolean>, risk: Risk = goodRisk): Queryable {
     return {
       async query(text, params = []) {
+        if (text.includes("relforcerowsecurity")) return { rows: [risk.table] };
+        if (text.includes("from pg_trigger")) return { rows: risk.triggers };
+        if (text.includes("pg_has_role(current_user, $1::name")) return { rows: [risk.member] };
+        if (text.includes("to_regprocedure")) return { rows: risk.fn ? [risk.fn] : [] };
+        if (text.includes("rolcanlogin")) return { rows: risk.writer ? [risk.writer] : [] };
+        if (text.includes("twins_control_privileged_roles")) return { rows: [risk.allow] };
         if (text.includes("from pg_roles")) return { rows: [role] };
         if (text.includes("has_schema_privilege")) return { rows: [{ c: false }] };
         return { rows: [perTable(String(params[0]).replace("public.", ""))] };
       },
     };
   }
-  const ro = (t: string) => (["system_controls", "system_control_events"].includes(t) ? table({ ins: false }) : ["audit_chain_heads"].includes(t) ? table({ ins: false, sel: false }) : table({}));
+  const ro = (t: string) => (["system_controls", "system_control_events", "risk_control_events"].includes(t) ? table({ ins: false }) : ["audit_chain_heads"].includes(t) ? table({ ins: false, sel: false }) : table({}));
   it("a correctly separated runtime role has no problems", async () => {
     expect(await checkRuntimeRolePrivileges(db(okRole, ro))).toEqual([]);
   });
@@ -265,4 +281,33 @@ describe("runtime-role privilege self-check (logic)", () => {
     const problems = await checkRuntimeRolePrivileges(db({ ...okRole, rolsuper: true }, (t) => (t === "audit_events" ? table({ owner: true, upd: true, trg: true }) : t === "telegram_messages" ? table({ del: true, trunc: true }) : t === "system_controls" ? table({ ins: true }) : t === "options_claims" ? table({ ins: false }) : ro(t))));
     expect(problems).toEqual(expect.arrayContaining(["role_is:rolsuper", "owns:audit_events", "can_update:audit_events", "can_trigger:audit_events", "can_delete:telegram_messages", "can_truncate:telegram_messages", "can_insert:system_controls", "cannot_append:options_claims"]));
   });
+  it("flags a runtime role that can INSERT into risk_control_events", async () => {
+    expect(await checkRuntimeRolePrivileges(db(okRole, (t) => (t === "risk_control_events" ? table({ ins: true }) : ro(t))))).toEqual(expect.arrayContaining(["can_insert:risk_control_events"]));
+  });
+  const faults: Array<[string, (r: Risk) => Risk, string]> = [
+    ["RLS not enabled", (r) => ({ ...r, table: { ...r.table, rls: false } }), "rls_not_enabled:risk_control_events"],
+    ["RLS not forced", (r) => ({ ...r, table: { ...r.table, forced: false } }), "rls_not_forced:risk_control_events"],
+    ["no policy", (r) => ({ ...r, table: { ...r.table, policies: 0 } }), "policy_missing:risk_control_events"],
+    ["a trigger missing", (r) => ({ ...r, triggers: r.triggers.filter((t) => t.tgname !== "risk_control_events_guard") }), "trigger_missing:risk_control_events_guard"],
+    ["a trigger not ALWAYS", (r) => ({ ...r, triggers: r.triggers.map((t) => (t.tgname === "risk_control_events_no_truncate" ? { ...t, enabled: "O" } : t)) }), "trigger_not_always:risk_control_events_no_truncate"],
+    ["runtime a member of the table owner role", (r) => ({ ...r, member: { m: true, same: false } }), "member_of_table_owner:risk_control_events"],
+    ["door missing", (r) => ({ ...r, fn: undefined }), "function_missing:twins_set_user_halt"],
+    ["door not SECURITY DEFINER", (r) => ({ ...r, fn: { ...r.fn, definer: false } }), "function_not_definer:twins_set_user_halt"],
+    ["door with another owner", (r) => ({ ...r, fn: { ...r.fn, owner: "twins_owner" } }), "function_wrong_owner:twins_set_user_halt"],
+    ["door without a fixed search_path", (r) => ({ ...r, fn: { ...r.fn, cfg: null } }), "function_search_path_not_fixed:twins_set_user_halt"],
+    ["door with a search_path that includes public", (r) => ({ ...r, fn: { ...r.fn, cfg: ["search_path=public, pg_temp"] } }), "function_search_path_not_fixed:twins_set_user_halt"],
+    ["door not executable by the runtime role", (r) => ({ ...r, fn: { ...r.fn, can_exec: false } }), "cannot_execute:twins_set_user_halt"],
+    ["door executable by PUBLIC", (r) => ({ ...r, fn: { ...r.fn, public_exec: true } }), "public_can_execute:twins_set_user_halt"],
+    ["writer role missing", (r) => ({ ...r, writer: undefined }), "writer_role_missing"],
+    ["writer role superuser", (r) => ({ ...r, writer: { ...r.writer, rolsuper: true } }), "writer_role_is:rolsuper"],
+    ["writer role can log in", (r) => ({ ...r, writer: { ...r.writer, rolcanlogin: true } }), "writer_role_is:rolcanlogin"],
+    ["writer role bypasses RLS", (r) => ({ ...r, writer: { ...r.writer, rolbypassrls: true } }), "writer_role_is:rolbypassrls"],
+    ["writer role owns another function", (r) => ({ ...r, writer: { ...r.writer, procs: 2 } }), "writer_role_owns_unexpected_functions"],
+    ["writer role owns a table", (r) => ({ ...r, writer: { ...r.writer, rels: 1 } }), "writer_role_owns_relations"],
+    ["writer role can CREATE in public", (r) => ({ ...r, writer: { ...r.writer, can_create: true } }), "writer_role_can_create_in_public"],
+    ["runtime a member of the writer role", (r) => ({ ...r, writer: { ...r.writer, runtime_member: true } }), "runtime_is_member_of_writer_role"],
+    ["runtime can read the owner allowlist", (r) => ({ ...r, allow: { ...r.allow, s: true } }), "can_access:twins_control_privileged_roles"],
+    ["runtime can write the owner allowlist", (r) => ({ ...r, allow: { ...r.allow, i: true } }), "can_access:twins_control_privileged_roles"],
+  ];
+  for (const [name, mutate, code] of faults) it(`risk-control protection flags: ${name}`, async () => { expect(await checkRuntimeRolePrivileges(db(okRole, ro, mutate(goodRisk)))).toEqual(expect.arrayContaining([code])); });
 });

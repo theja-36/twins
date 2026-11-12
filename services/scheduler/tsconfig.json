@@ -29,6 +29,9 @@
       "path": "../../packages/alerting"
     },
     {
+      "path": "../../packages/audit-chain"
+    },
+    {
       "path": "../../packages/shared"
     }
   ],

@@ -22,6 +22,8 @@ export async function owner(): Promise<pg.Client> { const c = new pg.Client({ co
 export async function session(userId: string): Promise<pg.Client> {
   const c = await owner();
   await c.query(`do $$ begin if not exists (select 1 from pg_roles where rolname = 'twins_rls_test') then create role twins_rls_test nologin nosuperuser nobypassrls; end if; end $$`); await c.query("grant usage on schema public to twins_rls_test"); await c.query("grant select, insert, update, delete, truncate on all tables in schema public to twins_rls_test");
+  // migration 0048 removed PUBLIC EXECUTE from the definer doors: the session role holds exactly the doors the runtime role is granted in app-role.sql (not the guard, trigger or card-state functions)
+  await c.query("grant execute on function twins_clear_login_failures(text), twins_create_user(text, text, text, text, uuid), twins_set_user_role(uuid, uuid, text), twins_set_user_active(uuid, uuid, boolean), twins_create_user_decision(jsonb), twins_end_user_decision(uuid, text, text, text), twins_invalidate_decision(uuid, text, jsonb, text), twins_record_decision_approval(uuid, text, jsonb, text, text), twins_list_active_accounts(), twins_list_active_account_users(integer) to twins_rls_test");
   await c.query("set role twins_rls_test"); await c.query("select set_config('twins.user_id', $1, false)", [userId]); return c;
 }
 export const closeClients = (): Promise<unknown> => Promise.all(clients.map((c) => c.end().catch(() => undefined)));
